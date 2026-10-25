@@ -71,7 +71,7 @@ fun KasirScreen() {
     if (showScanner) BarcodeScanner(onDetected = { code -> showScanner = false; scope.launch { val r = repo.findByBarcode(code); val med = (r as? ApiResult.Success)?.data?.medicine; if (med != null) { val ex = cart.firstOrNull { it.medicine.id == med.id }; if (ex != null) ex.qty++ else cart.add(CartItem(med, 1)); scanMsg = "${med.name} ditambahkan" } else scanMsg = "Barcode $code tidak ditemukan" } }, onClose = { showScanner = false })
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Kasir", style = MaterialTheme.typography.headlineSmall); DemoBanner()
-        OutlinedTextField(value = search, onValueChange = { search = it }, label = { Text("Cari obat, kategori, atau barcode…") }, modifier = Modifier.fillMaxWidth(), trailingIcon = { IconButton(onClick = { showScanner = true }) { Icon(Icons.Default.BarcodeReader, "Scan barcode") } })
+        OutlinedTextField(value = search, onValueChange = { search = it }, label = { Text("Cari obat, kategori, atau barcode…") }, modifier = Modifier.fillMaxWidth(), trailingIcon = { IconButton(onClick = { showScanner = true }) { Icon(Icons.Default.QrCodeScanner, "Scan barcode") } })
         if (scanMsg.isNotEmpty()) Text(scanMsg, style = MaterialTheme.typography.bodySmall)
         LazyColumn(Modifier.weight(1f)) {
             items(medicines.filter { search.isBlank() || it.name.contains(search, true) || (it.barcode?.contains(search) == true) }) { m ->
@@ -102,7 +102,7 @@ fun StokScreen() {
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row { Text("Stok Obat", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f)); Button(onClick = { showForm = true }) { Text("Tambah Obat") } }
         Text("${medicines.size} jenis obat tercatat", style = MaterialTheme.typography.bodySmall); DemoBanner()
-        OutlinedTextField(value = search, onValueChange = { search = it; reload() }, label = { Text("Cari obat, kategori, atau barcode…") }, modifier = Modifier.fillMaxWidth(), trailingIcon = { IconButton(onClick = { showScanner = true }) { Icon(Icons.Default.BarcodeReader, "Scan barcode stok") } })
+        OutlinedTextField(value = search, onValueChange = { search = it; reload() }, label = { Text("Cari obat, kategori, atau barcode…") }, modifier = Modifier.fillMaxWidth(), trailingIcon = { IconButton(onClick = { showScanner = true }) { Icon(Icons.Default.QrCodeScanner, "Scan barcode stok") } })
         if (msg.isNotEmpty()) Text(msg, style = MaterialTheme.typography.bodySmall)
         Text("Import & Export Excel tersedia penuh di versi web (mode server). Di Kotlin, tambah/edit obat lewat form di bawah.", style = MaterialTheme.typography.bodySmall)
         LazyColumn(Modifier.weight(1f)) { items(medicines) { m -> ListItem(headlineContent = { Text(m.name) }, supportingContent = { Text("${m.category} • ${formatIDR(m.sellPrice)} • Exp ${m.expiryDate ?: "-"} • Barcode ${m.barcode ?: "-"}") }, trailingContent = { AssistChip(onClick = {}, label = { Text("${m.stock} • ${stockLabel(m.stock)}") }) }) } }
