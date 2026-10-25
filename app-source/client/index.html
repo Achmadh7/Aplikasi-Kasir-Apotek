@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Aplikasi Apotik Lestari — kasir, stok obat, keuangan, dan laporan laba apotek. Bisa dipasang di HP dan tablet Android seperti aplikasi biasa." />
+    <!-- PWA / installable web app (Android phone & tablet) -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#00696D" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0E1514" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Apotik Lestari" />
+    <meta name="application-name" content="Apotik Lestari" />
+    <!-- Empty inline icon: stops the browser fetching /favicon.ico, which
+         lives outside the space's routes and fails auth. At runtime App.tsx
+         points the icon links at the bundled logo and links the Web App
+         Manifest — a real file served from ./assets/manifest.json (copied
+         into the build by client/build.mjs), with a server-blob fallback. -->
+    <link rel="icon" href="data:," />
+    <title>Aplikasi Apotik Lestari</title>
+    <script src="./src/main.tsx" type="module"></script>
+  </head>
+  <body>
+    <div
+      data-generated-space-root=""
+      data-generated-space-slug="aplikasi-penjualan-apotik"
+    ></div>
+  </body>
+</html>
