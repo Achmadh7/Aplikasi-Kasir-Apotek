@@ -1,0 +1,1539 @@
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, type ApiResponse } from "./api";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+/* XLSX (SheetJS, ~400 KB) is deliberately NOT imported at the top: it is
+   only needed when the user imports an Excel file in Stok, so it is loaded
+   on demand inside handleFileChange via dynamic import(). Keeping it out
+   of the first-load bundle makes the page much lighter to parse on
+   low-memory Android phones (Chrome force-closed on open when the initial
+   payload also carried the 5.4 MB full icon font — see theme.css). */
+import apotekLogo from "./assets/apotek-lestari-logo.jpg";
+import appIcon192 from "./assets/icon-192.png";
+
+type Medicine = ApiResponse<typeof api, "listMedicines">["medicines"][number];
+type CashEntry = ApiResponse<typeof api, "listCashEntries">["entries"][number];
+type Sale = ApiResponse<typeof api, "listSales">["sales"][number];
+
+const fmtIDR = (n: number) => "Rp " + n.toLocaleString("id-ID");
+/* Business timezone is Asia/Jakarta (WIB): all dates/times are displayed
+   and all "today / this month" boundaries are computed in Jakarta time,
+   matching the server — a device (or server) clock in another timezone
+   must not shift what counts as "hari ini". */
+const JAKARTA_TZ = "Asia/Jakarta";
+const fmtDate = (s: string) => new Date(s).toLocaleDateString("id-ID", { timeZone: JAKARTA_TZ, day: "numeric", month: "short", year: "numeric" });
+const fmtDateTime = (s: string) => new Date(s).toLocaleString("id-ID", { timeZone: JAKARTA_TZ, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const fmtDateOnly = (s: string) => new Date(s).toLocaleDateString("id-ID", { timeZone: JAKARTA_TZ, weekday: "long", day: "numeric", month: "long", year: "numeric" });
+function jakartaDateKey(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: JAKARTA_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+function jakartaDayStartMs(d: Date): number {
+  return new Date(`${jakartaDateKey(d)}T00:00:00+07:00`).getTime();
+}
+function jakartaMonthStartMs(d: Date): number {
+  return new Date(`${jakartaDateKey(d).slice(0, 7)}-01T00:00:00+07:00`).getTime();
+}
+/* Live Jakarta calendar day (YYYY-MM-DD): re-renders the component shortly
+   after midnight WIB (checked every 20s and whenever the page becomes
+   visible again), so "hari ini" views roll over without a manual reload. */
+function useJakartaTodayKey(): string {
+  const [key, setKey] = useState<string>(() => jakartaDateKey(new Date()));
+  useEffect(() => {
+    const check = () => setKey(jakartaDateKey(new Date()));
+    check();
+    const id = window.setInterval(check, 20000);
+    const onVisible = () => { if (document.visibilityState === "visible") check(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { window.clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
+  }, []);
+  return key;
+}
+
+/* --- Installable web app (PWA) — pasang di HP / tablet Android ---
+   The app ships a real Web App Manifest as a same-origin file,
+   ./assets/manifest.json (source: client/pwa/manifest.json plus the logo
+   icons, copied into the build by client/build.mjs under stable names,
+   because the bundler hashes imported asset file names), plus the
+   standard install meta tags in index.html. Chrome on Android can then
+   install the app: an "Apotik Lestari" icon lands on the home screen /
+   app drawer and the app opens full screen, without browser chrome —
+   like a native app, no Play Store and no APK file needed. If the static
+   manifest file cannot be fetched, the client falls back to a manifest
+   served as a real URL by the getWebAppManifest action (blob storage);
+   a blob: or data: URL created in the page is never used as the manifest.
+   A service worker (client/pwa/sw.js, copied to the build root so its
+   scope covers the app) is registered alongside: it only caches the app
+   shell and content-hashed static assets — server actions and blob
+   downloads are never intercepted — so all data stays server-side and
+   the installed app and the browser version always show the same
+   records. On hosts that cannot serve the root worker script the
+   registration simply fails and is ignored; installation then relies on
+   the manifest alone. When Chrome offers its native install prompt
+   (beforeinstallprompt) we surface it on the "Pasang Sekarang" button;
+   otherwise the install card shows the manual ⋮-menu steps, which work on
+   every Android browser. */
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+};
+type InstallState = { installed: boolean; canPrompt: boolean; promptInstall: () => Promise<boolean> };
+
+function isStandaloneDisplay(): boolean {
+  try {
+    if (window.matchMedia("(display-mode: standalone)").matches) return true;
+    if (window.matchMedia("(display-mode: fullscreen)").matches) return true;
+    const nav = window.navigator as Navigator & { standalone?: boolean };
+    return nav.standalone === true;
+  } catch { return false; }
+}
+
+function useInstallableApp(): InstallState {
+  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState<boolean>(isStandaloneDisplay);
+
+  // Link the Web App Manifest once. Primary source: the real same-origin
+  // file ./assets/manifest.json from the client build. Fallback (only when
+  // that file cannot be fetched): the getWebAppManifest action, which
+  // serves the same manifest from blob storage as a real URL. The document
+  // URL's hash/query are stripped first — the app mirrors the active tab
+  // into the hash, and a manifest must never inherit it.
+  useEffect(() => {
+    let cancelled = false;
+    const base = (window.location.href.split("#")[0] ?? "").split("?")[0] ?? "";
+    const docBase = base.endsWith("/") ? base : `${base}/`;
+    const abs = (p: string) => new URL(p, docBase).href;
+    try {
+      const touch = document.createElement("link");
+      touch.rel = "apple-touch-icon";
+      touch.href = abs(appIcon192);
+      document.head.appendChild(touch);
+      const fav = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (fav) { fav.type = "image/png"; fav.href = abs(appIcon192); }
+    } catch { /* icon links are a progressive enhancement */ }
+    const linkManifest = (href: string) => {
+      if (cancelled || !href) return;
+      const link = document.createElement("link");
+      link.rel = "manifest";
+      link.href = href;
+      document.head.appendChild(link);
+    };
+    (async () => {
+      const staticUrl = abs("./assets/manifest.json");
+      try {
+        const res = await fetch(staticUrl, { method: "GET" });
+        if (res.ok) { linkManifest(staticUrl); return; }
+      } catch { /* fall through to the server-served manifest */ }
+      try {
+        const r = await api.getWebAppManifest({});
+        if (r.ok && r.url) linkManifest(new URL(r.url, docBase).href);
+      } catch { /* manifest is a progressive enhancement — the app still works without it */ }
+    })();
+    // Register the service worker from the build root so its scope covers
+    // the whole app (the file ships as ./sw.JS — see client/build.mjs for
+    // why the extension is uppercase). Hosts that cannot serve it (or
+    // sandboxed frames that forbid workers) make this reject — that is
+    // fine and silent: installation then relies on the manifest alone.
+    try {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register(abs("./sw.JS")).catch(() => undefined);
+      }
+    } catch { /* service workers unavailable in this context */ }
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    const onPrompt = (e: Event) => { e.preventDefault(); setDeferred(e as BeforeInstallPromptEvent); };
+    const onInstalled = () => { setInstalled(true); setDeferred(null); };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    const mq = window.matchMedia("(display-mode: standalone)");
+    const onMode = () => setInstalled(isStandaloneDisplay());
+    mq.addEventListener?.("change", onMode);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("appinstalled", onInstalled);
+      mq.removeEventListener?.("change", onMode);
+    };
+  }, []);
+
+  const promptInstall = async (): Promise<boolean> => {
+    if (!deferred) return false;
+    try {
+      await deferred.prompt();
+      const choice = await deferred.userChoice;
+      setDeferred(null);
+      if (choice.outcome === "accepted") { setInstalled(true); return true; }
+      return false;
+    } catch { return false; }
+  };
+
+  return { installed, canPrompt: deferred != null, promptInstall };
+}
+
+const CATEGORIES = ["Umum","Antibiotik","Vitamin","Pereda Nyeri","Obat Batuk & Flu","Pencernaan","Kulit","Mata","Lainnya"];
+const UNITS = ["Strip","Botol","Box","Tablet","Kapsul","Tube","Sachet","Pcs"];
+const EXPENSE_CATS = ["Beli Stok","Gaji","Listrik & Air","Sewa","Transport","Operasional","Lainnya"];
+const INCOME_CATS = ["Modal","Penjualan Manual","Lainnya"];
+
+type Tab = "beranda" | "kasir" | "stok" | "keuangan" | "laba" | "pengingat" | "riwayat";
+
+/* --- Persisted navigation state (survives page refresh) --- */
+const TAB_VALUES: Tab[] = ["beranda", "kasir", "stok", "keuangan", "laba", "pengingat", "riwayat"];
+const TAB_STORAGE_KEY = "apotik.activeTab";
+const RIWAYAT_OPEN_KEY = "apotik.riwayatOpenId";
+const RIWAYAT_DETAIL_KEY = "apotik.riwayatDetailId";
+function isTab(v: string | null | undefined): v is Tab { return !!v && (TAB_VALUES as string[]).includes(v); }
+function readStoredTab(): Tab {
+  try {
+    const fromHash = window.location.hash.replace(/^#\/?/, "");
+    if (isTab(fromHash)) return fromHash;
+    const stored = window.localStorage.getItem(TAB_STORAGE_KEY);
+    if (isTab(stored)) return stored;
+  } catch { /* storage / location unavailable */ }
+  return "beranda";
+}
+function storeValue(key: string, value: string | null) {
+  try {
+    if (value == null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, value);
+  } catch { /* storage unavailable */ }
+}
+function readStoredId(key: string): number | null {
+  try {
+    const v = window.localStorage.getItem(key);
+    const n = v ? Number(v) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch { return null; }
+}
+
+/* --- Excel Import / Export helpers --- */
+function normalizeHeader(s: string) { return s.toLowerCase().replace(/[^a-z0-9]/g, ""); }
+const HEADER_MAP: Record<string, string> = {
+  namaobat: "name", nama: "name", name: "name", obat: "name", namaproduk: "name",
+  barcode: "barcode", kodebarcode: "barcode", ean: "barcode", upc: "barcode",
+  kategori: "category", category: "category",
+  satuan: "unit", unit: "unit",
+  hargabeli: "buyPrice", buyprice: "buyPrice", modal: "buyPrice",
+  hargajual: "sellPrice", sellprice: "sellPrice", harga: "sellPrice",
+  stok: "stock", stock: "stock", jumlahstok: "stock", jumlah: "stock", qty: "stock",
+  stokminimum: "minStock", stokmin: "minStock", stokminimal: "minStock", minstock: "minStock", batasstokmenipis: "minStock", batasstok: "minStock", minimumstok: "minStock",
+  tanggalkadaluarsa: "expiryDate", kadaluarsa: "expiryDate", expirydate: "expiryDate", expiry: "expiryDate", exp: "expiryDate", expired: "expiryDate", expireddate: "expiryDate", tanggalexpired: "expiryDate",
+};
+function parseExcelNumber(v: unknown): number {
+  if (typeof v === "number") return Number.isFinite(v) ? Math.max(0, Math.round(v)) : 0;
+  if (v == null) return 0;
+  const s = String(v).trim();
+  if (!s) return 0;
+  // Remove currency & thousand separators (id-ID uses . as thousand, , as decimal)
+  const cleaned = s.replace(/rp/gi, "").replace(/\s/g, "").replace(/\./g, "").replace(/,/g, ".");
+  const n = Number(cleaned.replace(/[^0-9.\-]/g, ""));
+  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
+}
+function parseExcelDate(v: unknown): string | null {
+  if (v == null || v === "") return null;
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    const y = v.getFullYear(); const m = String(v.getMonth() + 1).padStart(2, "0"); const d = String(v.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  if (typeof v === "number" && v > 20000 && v < 80000) {
+    // Excel serial date
+    const dt = new Date(Math.round((v - 25569) * 86400 * 1000));
+    if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
+    return null;
+  }
+  const s = String(v).trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const slash = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (slash) return `${slash[3]}-${String(slash[2]).padStart(2, "0")}-${String(slash[1]).padStart(2, "0")}`;
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+  return null;
+}
+type ImportRow = { name: string; barcode: string; category: string; unit: string; buyPrice: number; sellPrice: number; stock: number; minStock: number; expiryDate: string | null; _row: number; _error?: string };
+function rowsToImportRows(rawRows: Record<string, unknown>[]): ImportRow[] {
+  return rawRows.map((raw, idx) => {
+    const mapped: Record<string, unknown> = {};
+    for (const [k, val] of Object.entries(raw)) {
+      const field = HEADER_MAP[normalizeHeader(k)];
+      if (field) mapped[field] = val;
+    }
+    const name = mapped.name != null ? String(mapped.name).trim() : "";
+    const barcode = mapped.barcode != null ? String(mapped.barcode).trim() : "";
+    const categoryRaw = mapped.category != null ? String(mapped.category).trim() : "";
+    const category = CATEGORIES.includes(categoryRaw) ? categoryRaw : (categoryRaw || "Umum");
+    const unitRaw = mapped.unit != null ? String(mapped.unit).trim() : "";
+    const unit = unitRaw || "Strip";
+    const row: ImportRow = {
+      name,
+      barcode,
+      category,
+      unit,
+      buyPrice: parseExcelNumber(mapped.buyPrice),
+      sellPrice: parseExcelNumber(mapped.sellPrice),
+      stock: parseExcelNumber(mapped.stock),
+      minStock: mapped.minStock != null && String(mapped.minStock).trim() !== "" ? parseExcelNumber(mapped.minStock) : 10,
+      expiryDate: parseExcelDate(mapped.expiryDate),
+      _row: idx + 2,
+    };
+    if (!name) row._error = "Nama obat kosong";
+    return row;
+  }).filter(r => !(r.name === "" && r.buyPrice === 0 && r.sellPrice === 0 && r.stock === 0));
+}
+/* Downloads (template & export) are generated on the server and served from
+   a real same-origin URL: client-side Blob object URLs are silently blocked
+   inside the sandboxed webview, so the buttons below fetch a file URL from
+   the server and hand it to a real anchor with a `download` attribute. */
+function triggerFileDownload(url: string, filename: string) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.target = "_blank";
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/* --- Material 3 helpers --- */
+function Icon({ name, filled, className = "text-[24px]" }: { name: string; filled?: boolean; className?: string }) {
+  return <span aria-hidden="true" data-fill={filled ? "1" : undefined} className={`material-symbols-rounded ${className}`}>{name}</span>;
+}
+function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: ReactNode }) {
+  return <div><label htmlFor={htmlFor} className="block text-[12px] leading-4 font-medium tracking-[0.4px] text-[var(--dim)] uppercase mb-1.5 pl-1">{label}</label>{children}</div>;
+}
+/* --- Stock level status — fixed rule: stock above 20 is Aman (safe),
+   exactly 20 is Sedang (medium), below 20 is Rendah (low), 0 is Habis (out).
+   This is a display classification only; the per-medicine minimum stock
+   (minStock) still drives the Pengingat restock reminders. --- */
+type StockLevel = { label: string; badge: string; text: string };
+function stockLevel(stock: number): StockLevel {
+  if (stock <= 0) return { label: "Habis", badge: "bg-[var(--md-error-container)] text-[var(--md-on-error-container)]", text: "text-[var(--md-error)]" };
+  if (stock < 20) return { label: "Rendah", badge: "bg-[var(--md-error-container)] text-[var(--md-on-error-container)]", text: "text-[var(--md-error)]" };
+  if (stock === 20) return { label: "Sedang", badge: "bg-[#FFECB3] text-[#7A5901] dark:bg-[var(--md-tertiary-container)] dark:text-[var(--md-on-tertiary-container)]", text: "text-[#7A5901] dark:text-[var(--md-tertiary)]" };
+  return { label: "Aman", badge: "bg-[#E6F4EA] text-[#137333] dark:bg-[var(--md-primary-container)] dark:text-[var(--md-on-primary-container)]", text: "text-[#137333] dark:text-[var(--md-primary)]" };
+}
+
+const filledBtn = "inline-flex items-center justify-center gap-2 h-[48px] px-6 rounded-full bg-[var(--md-primary)] text-[var(--md-on-primary)] text-[14px] leading-5 font-medium tracking-[0.1px] shadow-[var(--elevation-1)] hover:shadow-[var(--elevation-2)] active:scale-[0.99] disabled:opacity-40 disabled:shadow-none transition-all";
+const tonalBtn = "inline-flex items-center justify-center gap-2 h-[40px] px-4 rounded-full bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] text-[14px] font-medium hover:brightness-[0.98] active:scale-[0.99] transition-all";
+const chipBase = "inline-flex items-center gap-1.5 h-[36px] px-4 rounded-[8px] text-[14px] font-medium border transition-all active:scale-[0.98]";
+
+/* --- Detailed invoice view (shared by Kasir receipt & Riwayat detail) --- */
+type InvoiceItem = { name: string; qty: number; price: number; subtotal: number; meta?: string };
+function InvoiceDetail({ invoiceNo, dateLabel, paymentMethod, amountPaid, changeAmount, total, items }: { invoiceNo: string; dateLabel: string; paymentMethod: string; amountPaid: number; changeAmount: number; total: number; items: InvoiceItem[] }) {
+  const totalQty = items.reduce((s, i) => s + i.qty, 0);
+  return (
+    <div className="bg-white text-black rounded-[20px] overflow-hidden text-left shadow-[var(--elevation-1)]">
+      {/* Header — detailed, centered (original) */}
+      <div className="px-5 pt-5 pb-4 text-center border-b border-dashed border-neutral-300">
+        <img src={apotekLogo} alt="Logo Apotek Lestari" className="w-16 h-16 mx-auto rounded-full object-cover" />
+        <p className="font-bold text-[20px] leading-7 tracking-[0.18em] text-[#00696D] mt-2">APOTEK LESTARI</p>
+        <p className="text-[13px] text-neutral-500 mt-1">Invoice Penjualan</p>
+        <span className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full bg-[#E6F4EA] text-[#137333] text-[11px] font-bold tracking-wide uppercase"><Icon name="check_circle" filled className="text-[14px]" />Lunas</span>
+      </div>
+      {/* Transaction info — detailed grid boxes (original) */}
+      <div className="px-5 pt-4">
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="col-span-2 bg-[#F5FAF9] rounded-[12px] px-3.5 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-neutral-500">No. Invoice</p>
+            <p className="font-mono font-semibold text-[13px] mt-1 break-all">{invoiceNo}</p>
+          </div>
+          <div className="col-span-2 bg-[#F5FAF9] rounded-[12px] px-3.5 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-neutral-500">Tanggal</p>
+            <p className="font-medium text-[13px] mt-1">{dateLabel}</p>
+          </div>
+          <div className="bg-[#F5FAF9] rounded-[12px] px-3.5 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-neutral-500">Metode Bayar</p>
+            <p className="font-medium text-[13px] mt-1">{paymentMethod}</p>
+          </div>
+          <div className="bg-[#F5FAF9] rounded-[12px] px-3.5 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-neutral-500">Isi Invoice</p>
+            <p className="font-medium text-[13px] mt-1">{totalQty} item</p>
+          </div>
+        </div>
+      </div>
+      {/* Items — detailed rows with numbered circles (original) */}
+      <div className="px-5 mt-5">
+        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-neutral-500">Rincian Obat</p>
+        <div className="mt-1">
+          {items.map((it, idx) => (
+            <div key={idx} className="flex gap-3 py-3 border-b border-dashed border-neutral-200 last:border-0">
+              <span className="w-7 h-7 shrink-0 rounded-full bg-[#CCE8E7] text-[#00696D] flex items-center justify-center text-[12px] font-bold">{idx + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-[14px] leading-5">{it.name}</p>
+                {it.meta ? <p className="text-[12px] leading-4 text-neutral-500 mt-0.5">{it.meta}</p> : null}
+                <p className="text-[12px] leading-5 text-neutral-500 mt-0.5">{it.qty} × {fmtIDR(it.price)}</p>
+              </div>
+              <p className="font-semibold text-[14px] whitespace-nowrap">{fmtIDR(it.subtotal)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Payment summary — detailed (original) */}
+      <div className="mx-5 mb-3 mt-4 bg-[#F5FAF9] rounded-[12px] px-4 py-4 space-y-2.5 text-[13px]">
+        <div className="flex justify-between"><span className="text-neutral-500">Subtotal ({totalQty} item)</span><span className="font-medium">{fmtIDR(total)}</span></div>
+        <div className="flex justify-between items-baseline pt-2.5 border-t border-neutral-200"><span className="font-bold text-[14px]">Total Bayar</span><span className="font-bold text-[20px] leading-7 text-[#00696D]">{fmtIDR(total)}</span></div>
+        <div className="flex justify-between"><span className="text-neutral-500">Dibayar ({paymentMethod})</span><span className="font-medium">{fmtIDR(amountPaid)}</span></div>
+        <div className="flex justify-between"><span className="text-neutral-500">Kembalian</span><span className={`font-semibold ${changeAmount > 0 ? "text-[#137333]" : ""}`}>{fmtIDR(changeAmount)}</span></div>
+      </div>
+      <p className="text-center text-[12px] leading-5 text-neutral-500 px-5 pb-5">Terima kasih, semoga lekas sembuh 🙏<br />Simpan invoice ini sebagai bukti pembelian.</p>
+    </div>
+  );
+}
+
+export function App() {
+  const [tab, setTab] = useState<Tab>(readStoredTab);
+  useInstallableApp();
+  // Keep the active menu across refreshes: persist it and mirror it in the URL hash.
+  useEffect(() => {
+    storeValue(TAB_STORAGE_KEY, tab);
+    try {
+      if (window.location.hash !== `#${tab}`) window.history.replaceState(null, "", `#${tab}`);
+    } catch { /* history unavailable */ }
+  }, [tab]);
+  const nav: [Tab, string, string][] = [
+    ["beranda","home","Beranda"],
+    ["kasir","point_of_sale","Kasir"],
+    ["stok","medication","Stok"],
+    ["keuangan","account_balance_wallet","Keuangan"],
+    ["laba","trending_up","Laba"],
+    ["pengingat","notifications_active","Pengingat"],
+    ["riwayat","receipt_long","Riwayat"],
+  ];
+  return (
+    <div className="min-h-screen app-bg text-[var(--text)] pb-[104px]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+        {tab === "beranda" && <Dashboard onGoKasir={() => setTab("kasir")} onGoStok={() => setTab("stok")} onGoPengingat={() => setTab("pengingat")} />}
+        {tab === "kasir" && <Kasir />}
+        {tab === "stok" && <Stok />}
+        {tab === "keuangan" && <Keuangan />}
+        {tab === "laba" && <LaporanLaba />}
+        {tab === "pengingat" && <Pengingat onGoStok={() => setTab("stok")} />}
+        {tab === "riwayat" && <Riwayat />}
+      </div>
+
+      {/* Material 3 Navigation Bar — 80dp, surface-container, pill active indicator */}
+      <nav aria-label="Navigasi utama" className="fixed bottom-0 left-0 right-0 z-40 glass-nav pb-[env(safe-area-inset-bottom)]">
+        <div className="max-w-6xl mx-auto grid grid-cols-7 px-0.5 sm:px-2 pt-3 pb-2">
+          {nav.map(([k, icon, label]) => {
+            const active = tab === k;
+            return (
+              <button key={k} onClick={() => setTab(k)} aria-label={label} aria-current={active ? "page" : undefined} className="flex flex-col items-center gap-1 group min-w-0">
+                <span className={`flex items-center justify-center w-10 sm:w-14 h-[28px] sm:h-[32px] rounded-full transition-colors ${active ? "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)]" : "text-[var(--md-on-surface-variant)] group-hover:bg-[var(--md-surface-container-high)]"}`}>
+                  <Icon name={icon} filled={active} className="text-[20px] sm:text-[24px]" />
+                </span>
+                <span className={`text-[10px] sm:text-[12px] leading-4 tracking-[0.2px] truncate max-w-full ${active ? "font-bold text-[var(--text)]" : "font-medium text-[var(--md-on-surface-variant)]"}`}>{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+function Dashboard({ onGoKasir, onGoStok, onGoPengingat }: { onGoKasir: () => void; onGoStok: () => void; onGoPengingat: () => void }) {
+  const qc = useQueryClient();
+  // Current Jakarta calendar day: when it rolls over at midnight WIB the
+  // query key changes (fresh "Hari Ini" figures from the server) and all
+  // cached data is invalidated — no manual reload needed.
+  const todayKey = useJakartaTodayKey();
+  const firstDayRef = useRef(true);
+  useEffect(() => {
+    if (firstDayRef.current) { firstDayRef.current = false; return; }
+    qc.invalidateQueries();
+  }, [todayKey, qc]);
+  const q = useQuery({ queryKey: ["dashboard", todayKey], queryFn: () => api.getDashboard({}) });
+  const medsQ = useQuery({ queryKey: ["medicines",""], queryFn: () => api.listMedicines({ search: "" }) });
+  if (q.isPending) return <p className="py-10 text-center text-[var(--dim)]">Memuat ringkasan…</p>;
+  if (q.error) return <p className="py-10 text-center text-[var(--md-error)]">Gagal memuat data.</p>;
+  const d = q.data!;
+  const lowMeds = (medsQ.data?.medicines ?? []).filter(m => m.stock <= m.minStock);
+  const now = new Date(); const in30 = new Date(now.getTime()+30*86400000);
+  const expMeds = (medsQ.data?.medicines ?? []).filter(m => m.expiryDate && new Date(m.expiryDate) <= in30);
+
+  return (
+    <div className="space-y-4">
+      <header className="flex items-center gap-3">
+        <img src={apotekLogo} alt="Logo Apotek Lestari" className="w-12 h-12 shrink-0 rounded-full object-cover shadow-[var(--elevation-1)]" />
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-[13px] font-medium text-[var(--md-primary)]"><Icon name="calendar_today" className="text-[16px]" />{new Date(`${todayKey}T12:00:00+07:00`).toLocaleDateString("id-ID",{ timeZone: JAKARTA_TZ, weekday:"long", day:"numeric", month:"long", year:"numeric"})}</p>
+          <h1 className="text-[24px] leading-[32px] font-normal tracking-tight mt-1">Ringkasan Penjualan Hari Ini</h1>
+        </div>
+      </header>
+
+      {(d.lowStockCount>0 || d.expiringCount>0) && (
+        <section className="glass-warn rounded-[20px] p-3.5 space-y-2">
+          <p className="flex items-center gap-2 font-medium text-[14px] text-[#7A5901] dark:text-[var(--text)]"><span className="w-7 h-7 rounded-full bg-[#FFECB3] dark:bg-[var(--md-tertiary-container)] flex items-center justify-center"><Icon name="warning" className="text-[16px]" /></span>Perlu Perhatian<span className="ml-auto text-[12px] font-medium text-[var(--dim)]">{d.lowStockCount} stok menipis • {d.expiringCount} dekat kadaluarsa</span></p>
+          <div className="space-y-1.5">
+            {lowMeds.slice(0,4).map(m => <div key={m.id} className="flex justify-between gap-3 text-[13px] bg-white/60 dark:bg-black/10 rounded-[8px] px-2.5 py-1.5"><span className="font-medium truncate">{m.name}</span><span className="font-medium text-[var(--md-error)] whitespace-nowrap">Sisa {m.stock} {m.unit}</span></div>)}
+            {expMeds.slice(0,3).map(m => <div key={"e"+m.id} className="flex justify-between gap-3 text-[13px] bg-white/60 dark:bg-black/10 rounded-[8px] px-2.5 py-1.5"><span className="font-medium truncate">{m.name}</span><span className="whitespace-nowrap">Exp {m.expiryDate ? fmtDate(m.expiryDate) : "-"}</span></div>)}
+          </div>
+          <div className="flex flex-wrap gap-1 -ml-2">
+            <button onClick={onGoPengingat} className="inline-flex items-center gap-1 h-[32px] px-2.5 rounded-full text-[13px] font-medium text-[var(--md-primary)] hover:bg-[var(--md-primary)]/10"><Icon name="notifications_active" className="text-[16px]" />Lihat Daftar Prioritas</button>
+            <button onClick={onGoStok} className="inline-flex items-center gap-1 h-[32px] px-2.5 rounded-full text-[13px] font-medium text-[var(--md-primary)] hover:bg-[var(--md-primary)]/10">Lihat semua stok <Icon name="arrow_forward" className="text-[16px]" /></button>
+          </div>
+        </section>
+      )}
+
+      {/* Compact summary strip — same figures, tighter like Keuangan/Riwayat */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="glass-card rounded-[16px] px-3.5 py-3">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium tracking-[0.6px] uppercase text-[var(--dim)]"><Icon name="arrow_downward" className="text-[15px] text-[#137333] dark:text-[var(--md-primary)]" />Pemasukan Hari Ini</p>
+          <p className="text-[16px] leading-6 font-medium mt-1 text-[#137333] dark:text-[var(--md-primary)] break-words">{fmtIDR(d.todayIn)}</p>
+          <p className="text-[11px] leading-4 text-[var(--dim)] mt-0.5">{d.totalSalesToday} transaksi</p>
+        </div>
+        <div className="glass-card rounded-[16px] px-3.5 py-3">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium tracking-[0.6px] uppercase text-[var(--dim)]"><Icon name="arrow_upward" className="text-[15px] text-[var(--md-error)]" />Pengeluaran Hari Ini</p>
+          <p className="text-[16px] leading-6 font-medium mt-1 text-[var(--md-error)] break-words">{fmtIDR(d.todayOut)}</p>
+        </div>
+        <div className="bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] rounded-[16px] px-3.5 py-3 col-span-2 lg:col-span-2">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium tracking-[0.6px] uppercase opacity-80"><Icon name="account_balance" className="text-[15px]" />Selisih Kas Hari Ini</p>
+          <p className="text-[16px] leading-6 font-medium mt-1 break-words">{fmtIDR(d.todayProfit)}</p>
+        </div>
+        <div className="glass-card rounded-[16px] px-3.5 py-2.5 col-span-2 lg:col-span-4 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <p className="text-[13px] text-[var(--dim)]">Selisih bulan ini <span className="font-semibold text-[14px] text-[var(--text)]">{fmtIDR(d.monthProfit)}</span></p>
+          <p className="text-[12px] text-[var(--dim)]">Masuk <span className="font-medium text-[var(--text)]">{fmtIDR(d.monthIn)}</span> • Keluar <span className="font-medium text-[var(--text)]">{fmtIDR(d.monthOut)}</span></p>
+          <p className="text-[12px] font-medium text-[var(--dim)] ml-auto">{d.totalMedicines} jenis obat</p>
+        </div>
+      </div>
+
+      {/* Quick actions — Kasir stays the primary action */}
+      <div className="flex gap-2">
+        <button onClick={onGoKasir} className="flex-1 inline-flex items-center justify-center gap-2 h-[44px] px-4 rounded-full bg-[var(--md-primary)] text-[var(--md-on-primary)] text-[14px] font-medium shadow-[var(--elevation-1)] hover:shadow-[var(--elevation-2)] active:scale-[0.99] transition-all">
+          <Icon name="point_of_sale" filled className="text-[20px]" /> Mulai Kasir
+        </button>
+        <button onClick={onGoStok} aria-label="Tambah stok obat" className="inline-flex items-center justify-center gap-1.5 h-[44px] px-4 rounded-full bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] text-[14px] font-medium active:scale-[0.99] transition-all">
+          <Icon name="add" className="text-[18px]" /> Stok
+        </button>
+        <button onClick={onGoPengingat} aria-label="Lihat pengingat" className="inline-flex items-center justify-center gap-1.5 h-[44px] px-4 rounded-full bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] text-[14px] font-medium active:scale-[0.99] transition-all">
+          <Icon name="notifications_active" className="text-[18px]" /> Pengingat
+        </button>
+      </div>
+
+      <section className="glass-card rounded-[20px] p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[15px] leading-6 font-medium">Arus Kas 7 Hari Terakhir</h2>
+          <span className="flex items-center gap-3 text-[11px] font-medium text-[var(--dim)]"><span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[3px] bg-[#00696D]" />Masuk</span><span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[3px] bg-[#BA1A1A]" />Keluar</span></span>
+        </div>
+        {d.last7Days.every(x=>x.income===0 && x.expense===0) ? <div className="py-6 text-center"><Icon name="bar_chart" className="text-[32px] text-[var(--dim)]" /><p className="text-[13px] text-[var(--dim)] mt-1.5">Belum ada transaksi. Grafik akan muncul setelah ada penjualan atau pencatatan kas.</p></div> : (
+          <div className="h-44">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={d.last7Days} barGap={3}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--md-outline-variant)"/><XAxis dataKey="label" tick={{fontSize:12, fill:"var(--md-on-surface-variant)"}} axisLine={false} tickLine={false}/><YAxis tickFormatter={(v:number)=> v>=1000000? `${v/1000000}jt` : v>=1000? `${v/1000}rb` : `${v}`} tick={{fontSize:12, fill:"var(--md-on-surface-variant)"}} axisLine={false} tickLine={false}/><Tooltip formatter={(v:any)=>fmtIDR(Number(v))} contentStyle={{borderRadius:12, border:"1px solid var(--md-outline-variant)", background:"var(--md-surface-container-lowest)"}}/><Bar dataKey="income" name="Masuk" fill="#00696D" radius={[6,6,0,0]}/><Bar dataKey="expense" name="Keluar" fill="#BA1A1A" radius={[6,6,0,0]}/></BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </section>
+
+      <div className="grid sm:grid-cols-2 gap-3 pb-1">
+        <section className="glass-card rounded-[20px] p-4">
+          <h2 className="flex items-center gap-2 text-[15px] font-medium mb-1"><Icon name="medication" className="text-[18px] text-[var(--md-primary)]" />Obat yang Terjual</h2>
+          {d.bestSellers.length===0 ? <p className="text-[13px] text-[var(--dim)] py-2">Belum ada penjualan hari ini.</p> : d.bestSellers.map((b,i)=>(<div key={b.name} className="flex justify-between gap-3 py-2 border-b border-[var(--md-outline-variant)] last:border-0 text-[13px]"><span className="flex items-center gap-2.5 min-w-0"><span className="w-6 h-6 shrink-0 rounded-full bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] flex items-center justify-center text-[11px] font-bold">{i+1}</span><span className="truncate">{b.name}</span></span><span className="font-medium whitespace-nowrap">{b.qty} • {fmtIDR(b.revenue)}</span></div>))}
+        </section>
+        <section className="glass-card rounded-[20px] p-4">
+          <h2 className="flex items-center gap-2 text-[15px] font-medium mb-1"><Icon name="receipt_long" className="text-[18px] text-[var(--md-primary)]" />Penjualan Terakhir</h2>
+          {d.recentSales.length===0 ? <p className="text-[13px] text-[var(--dim)] py-2">Belum ada penjualan hari ini.</p> : d.recentSales.map(s=>(<div key={s.id} className="flex justify-between gap-3 py-2 border-b border-[var(--md-outline-variant)] last:border-0 text-[13px]"><span className="min-w-0"><span className="font-medium block truncate">{s.invoiceNo}</span><span className="text-[var(--dim)] text-[11px]">{fmtDateTime(s.createdAt)}</span></span><span className="font-medium whitespace-nowrap">{fmtIDR(s.total)}</span></div>))}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- SCAN BARCODE ----------------
+   Camera barcode scanning. Detection uses the browser's built-in
+   BarcodeDetector when available (Chrome on Android/desktop); otherwise the
+   camera preview still runs and the user can type / paste the code, or use a
+   USB barcode scanner (which types the code followed by Enter). No external
+   scanning service is involved: frames never leave the device. */
+type DetectedBarcode = { rawValue?: string };
+type BarcodeDetectorCtor = new (opts?: { formats?: string[] }) => { detect: (source: HTMLVideoElement) => Promise<DetectedBarcode[]> };
+function getBarcodeDetectorCtor(): BarcodeDetectorCtor | null {
+  const w = window as unknown as { BarcodeDetector?: BarcodeDetectorCtor };
+  return typeof w.BarcodeDetector === "function" ? w.BarcodeDetector : null;
+}
+
+function BarcodeScanner({ title, hint, onDetected, onClose }: { title: string; hint: string; onDetected: (code: string) => void; onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const handledRef = useRef(false);
+  const onDetectedRef = useRef(onDetected);
+  onDetectedRef.current = onDetected;
+  const [status, setStatus] = useState<"starting" | "scanning" | "manual" | "error">("starting");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [manualCode, setManualCode] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    let raf = 0;
+    const stop = () => {
+      cancelAnimationFrame(raf);
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    };
+    const start = async () => {
+      const Detector = getBarcodeDetectorCtor();
+      if (!Detector || !navigator.mediaDevices?.getUserMedia) {
+        if (!cancelled) setStatus("manual");
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+        streamRef.current = stream;
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        await video.play().catch(() => undefined);
+        if (cancelled) return;
+        setStatus("scanning");
+        const detector = new Detector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "code_93", "codabar", "itf", "qr_code"] });
+        const tick = async () => {
+          if (cancelled || handledRef.current) return;
+          try {
+            if (video.readyState >= 2) {
+              const codes = await detector.detect(video);
+              const code = codes[0]?.rawValue?.trim();
+              if (code) {
+                handledRef.current = true;
+                try { navigator.vibrate?.(120); } catch { /* vibration unavailable */ }
+                onDetectedRef.current(code);
+                return;
+              }
+            }
+          } catch { /* a failed frame is fine — keep scanning */ }
+          raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+      } catch {
+        if (!cancelled) { setStatus("error"); setErrorMsg("Kamera tidak bisa dibuka. Izinkan akses kamera di browser, atau ketik kode barcode secara manual di bawah."); }
+      }
+    };
+    start();
+    return () => { cancelled = true; stop(); };
+  }, []);
+
+  const submitManual = () => {
+    const code = manualCode.trim();
+    if (!code || handledRef.current) return;
+    handledRef.current = true;
+    onDetected(code);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[6px] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="glass-sheet text-[var(--text)] w-full max-w-md rounded-t-[28px] sm:rounded-[28px] p-5 sm:p-6 max-h-[92vh] overflow-auto shadow-[var(--elevation-3)]">
+        <div className="flex items-start gap-3">
+          <span className="w-12 h-12 shrink-0 rounded-full bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] flex items-center justify-center"><Icon name="barcode_scanner" className="text-[24px]" /></span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[18px] font-medium leading-6">{title}</p>
+            <p className="text-[13px] text-[var(--dim)] mt-0.5">{hint}</p>
+          </div>
+          <button onClick={onClose} aria-label="Tutup pemindai barcode" className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center hover:bg-[var(--md-surface-container-highest)]"><Icon name="close" className="text-[20px]" /></button>
+        </div>
+
+        {status !== "manual" && (
+          <div className="relative mt-4 rounded-[20px] overflow-hidden bg-black aspect-[4/3]">
+            <video ref={videoRef} playsInline muted aria-label="Pratinjau kamera untuk scan barcode" className="absolute inset-0 w-full h-full object-cover" />
+            <div aria-hidden="true" className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-24 border-2 border-white/90 rounded-[12px] shadow-[0_0_0_999px_rgba(0,0,0,0.25)]" />
+            {status === "starting" && <p className="absolute inset-x-0 bottom-3 text-center text-[13px] text-white">Membuka kamera…</p>}
+            {status === "scanning" && <p className="absolute inset-x-0 bottom-3 text-center text-[13px] font-medium text-white">Arahkan barcode ke dalam kotak</p>}
+          </div>
+        )}
+        {status === "manual" && <p className="mt-4 flex items-start gap-2 bg-[var(--md-surface-container)] rounded-[16px] px-4 py-3 text-[13px] leading-5"><Icon name="info" className="text-[18px] shrink-0 mt-px" />Pemindaian kamera otomatis belum didukung browser ini. Ketik kode barcode di bawah, atau gunakan scanner USB (arahkan kursor ke kolom lalu scan).</p>}
+        {status === "error" && <p role="alert" className="mt-3 flex items-start gap-2 bg-[var(--md-error-container)] text-[var(--md-on-error-container)] rounded-[16px] px-4 py-3 text-[13px] leading-5"><Icon name="error" className="text-[18px] shrink-0 mt-px" />{errorMsg}</p>}
+
+        <form onSubmit={e => { e.preventDefault(); submitManual(); }} className="mt-4 space-y-3">
+          <Field label="Kode Barcode Manual" htmlFor="scan-manual-code"><input id="scan-manual-code" inputMode="numeric" autoComplete="off" value={manualCode} onChange={e => setManualCode(e.target.value)} placeholder="cth: 8991234567890" className="m3-input" /></Field>
+          <div className="flex gap-2">
+            <button type="submit" disabled={!manualCode.trim()} className={`${filledBtn} flex-1`}><Icon name="check" className="text-[20px]" />Gunakan Kode</button>
+            <button type="button" onClick={onClose} className="inline-flex items-center justify-center h-[48px] px-6 rounded-full border border-[var(--md-outline)] text-[var(--md-primary)] text-[14px] font-medium hover:bg-[var(--md-primary)]/5">Batal</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- KASIR ---------------- */
+type CartItem = { med: Medicine; qty: number };
+function Kasir() {
+  const qc = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [payMethod, setPayMethod] = useState("Tunai");
+  const [paid, setPaid] = useState("");
+  const [receipt, setReceipt] = useState<{invoiceNo:string; total:number; changeAmount:number; items:CartItem[]; method:string; paid:number; dateLabel:string} | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanMsg, setScanMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const medsQ = useQuery({ queryKey: ["medicines", search], queryFn: () => api.listMedicines({ search }) });
+  const total = cart.reduce((s,c)=>s+c.med.sellPrice*c.qty,0);
+  const paidNum = parseInt(paid.replace(/\D/g,"")||"0",10);
+  const change = Math.max(0, paidNum-total);
+  const saleMut = useMutation({
+    mutationFn: () => api.createSale({ items: cart.map(c=>({medicineId:c.med.id, qty:c.qty})), paymentMethod: payMethod, amountPaid: payMethod==="Tunai"? paidNum : total }),
+    onSuccess: (res) => { const nowIso = new Date().toISOString(); setReceipt({ invoiceNo: res.invoiceNo, total: res.total, changeAmount: res.changeAmount, items: [...cart], method: payMethod, paid: payMethod==="Tunai"? paidNum : res.total, dateLabel: fmtDateOnly(nowIso) }); setCart([]); setPaid(""); qc.invalidateQueries(); },
+    onError: (e:any)=> console.error(e),
+  });
+  const addToCart = (med: Medicine) => { setCart(prev=>{ const ex=prev.find(p=>p.med.id===med.id); if(ex) return prev.map(p=>p.med.id===med.id?{...p,qty:Math.min(p.qty+1, med.stock)}:p); return [...prev,{med,qty:1}]; }); };
+  const handleBarcode = async (code: string) => {
+    setScannerOpen(false);
+    try {
+      const res = await api.findMedicineByBarcode({ barcode: code });
+      if (!res.medicine) { setScanMsg({ ok: false, text: `Barcode ${code} belum terdaftar. Daftarkan barcode-nya dulu di menu Stok (Edit obat), lalu scan lagi.` }); return; }
+      if (res.medicine.stock <= 0) { setScanMsg({ ok: false, text: `${res.medicine.name} terbaca dari barcode, tapi stoknya habis.` }); return; }
+      addToCart(res.medicine);
+      setScanMsg({ ok: true, text: `${res.medicine.name} ditambahkan ke keranjang.` });
+    } catch { setScanMsg({ ok: false, text: "Gagal membaca barcode. Periksa koneksi lalu coba lagi." }); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <header><h1 className="text-[28px] leading-[36px] font-normal">Kasir</h1><p className="text-[14px] text-[var(--dim)] mt-1">Ketuk obat atau scan barcode kemasannya untuk menambahkan ke keranjang, lalu selesaikan pembayaran.</p></header>
+      <div className="grid lg:grid-cols-[1fr_400px] gap-4 items-start">
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <div className="m3-search flex-1 min-w-0">
+              <Icon name="search" className="text-[22px] text-[var(--dim)]" />
+              <input aria-label="Cari obat" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Cari nama obat…" />
+              {search && <button aria-label="Hapus pencarian" onClick={()=>setSearch("")} className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-[var(--md-surface-container-highest)]"><Icon name="close" className="text-[20px]" /></button>}
+            </div>
+            <button onClick={()=>{ setScanMsg(null); setScannerOpen(true); }} aria-label="Scan barcode obat" className="shrink-0 inline-flex items-center justify-center gap-2 h-[56px] px-4 rounded-full bg-[var(--md-primary)] text-[var(--md-on-primary)] text-[14px] font-medium shadow-[var(--elevation-1)] hover:shadow-[var(--elevation-2)] active:scale-[0.99] transition-all"><Icon name="barcode_scanner" className="text-[22px]" /><span className="hidden sm:inline">Scan</span></button>
+          </div>
+          {scanMsg && (
+            <div role={scanMsg.ok ? "status" : "alert"} className={`flex items-start gap-2 rounded-[16px] px-4 py-3 text-[14px] ${scanMsg.ok ? "bg-[#E6F4EA] text-[#137333] dark:bg-[var(--md-primary-container)] dark:text-[var(--md-on-primary-container)]" : "bg-[var(--md-error-container)] text-[var(--md-on-error-container)]"}`}>
+              <Icon name={scanMsg.ok ? "check_circle" : "error"} filled={scanMsg.ok} className="text-[20px] shrink-0 mt-px" />
+              <span className="flex-1">{scanMsg.text}</span>
+              <button onClick={()=>setScanMsg(null)} aria-label="Tutup pesan scan" className="shrink-0 -mr-1"><Icon name="close" className="text-[18px]" /></button>
+            </div>
+          )}
+          {medsQ.isPending ? <p className="text-[var(--dim)] py-6 text-center">Memuat obat…</p> : (medsQ.data?.medicines.length===0 ? <div className="glass-card rounded-[28px] p-10 text-center"><span className="w-14 h-14 mx-auto rounded-full bg-[var(--md-secondary-container)] flex items-center justify-center"><Icon name="medication" className="text-[28px]" /></span><p className="font-medium text-[16px] mt-4">Belum ada obat</p><p className="text-[14px] text-[var(--dim)] mt-1">Tambahkan obat dulu di menu Stok, lalu jual di sini.</p></div> :
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {medsQ.data!.medicines.map(m=>{
+                const inCart = cart.find(c=>c.med.id===m.id)?.qty ?? 0;
+                const level = stockLevel(m.stock);
+                return (
+                <button key={m.id} onClick={()=>addToCart(m)} disabled={m.stock<=0} aria-label={`Tambah ${m.name} ke keranjang`} className="relative glass-card rounded-[16px] px-3 py-2.5 text-left disabled:opacity-40 hover:bg-[var(--md-surface-container-low)] hover:shadow-[var(--elevation-1)] active:scale-[0.98] transition-all">
+                  {inCart>0 && <span aria-hidden="true" className="absolute top-2 right-2 min-w-5 h-5 px-1 rounded-full bg-[var(--md-primary)] text-[var(--md-on-primary)] text-[11px] leading-5 font-bold text-center shadow-[var(--elevation-1)]">{inCart}</span>}
+                  <p className="font-medium leading-[18px] text-[13px] line-clamp-2 pr-5">{m.name}</p>
+                  <p className="text-[11px] leading-4 text-[var(--dim)] truncate mt-0.5">{m.category} • {m.unit}</p>
+                  <span className="flex items-center justify-between gap-2 mt-2">
+                    <span className="font-semibold text-[13px] leading-5 text-[var(--md-primary)] truncate">{fmtIDR(m.sellPrice)}</span>
+                    <span className={`shrink-0 inline-flex px-1.5 py-px rounded-[6px] text-[10px] leading-4 font-medium ${level.badge}`}>{m.stock<=0 ? "Habis" : `Stok ${m.stock} • ${level.label}`}</span>
+                  </span>
+                </button>
+                );
+              })}
+            </div>)}
+        </div>
+
+        {/* Cart — M3 filled card */}
+        <div className="glass-card rounded-[28px] p-5 space-y-4 lg:sticky lg:top-5">
+          <h2 className="flex items-center gap-2 text-[18px] font-medium"><Icon name="shopping_cart" className="text-[22px]" />Keranjang <span className="ml-auto inline-flex items-center justify-center min-w-7 h-7 px-2 rounded-full bg-[var(--md-primary)] text-[var(--md-on-primary)] text-[13px] font-bold">{cart.reduce((s,c)=>s+c.qty,0)}</span></h2>
+          {cart.length===0 ? <div className="py-8 text-center"><Icon name="shopping_basket" className="text-[36px] text-[var(--dim)]" /><p className="text-[14px] text-[var(--dim)] mt-2">Keranjang kosong.<br/>Ketuk obat untuk menambahkan.</p></div> : (
+            <div className="space-y-1">
+              {cart.map(c=>(
+                <div key={c.med.id} className="flex items-center gap-2 py-3 border-b border-[var(--md-outline-variant)] last:border-0">
+                  <div className="flex-1 min-w-0"><p className="font-medium truncate text-[14px]">{c.med.name}</p><p className="text-[12px] text-[var(--dim)]">{fmtIDR(c.med.sellPrice)} / {c.med.unit}</p></div>
+                  <div className="flex items-center gap-1 bg-[var(--md-surface-container)] rounded-full p-1">
+                    <button aria-label={`Kurangi ${c.med.name}`} onClick={()=>setCart(prev=>prev.map(p=>p.med.id===c.med.id?{...p,qty:p.qty-1}:p).filter(p=>p.qty>0))} className="w-8 h-8 rounded-full bg-[var(--md-surface-container-lowest)] shadow-[var(--elevation-1)] flex items-center justify-center"><Icon name="remove" className="text-[18px]" /></button>
+                    <span className="w-7 text-center font-medium text-[14px]">{c.qty}</span>
+                    <button aria-label={`Tambah ${c.med.name}`} onClick={()=>setCart(prev=>prev.map(p=>p.med.id===c.med.id?{...p,qty:Math.min(p.qty+1,c.med.stock)}:p))} className="w-8 h-8 rounded-full bg-[var(--md-primary)] text-[var(--md-on-primary)] flex items-center justify-center"><Icon name="add" className="text-[18px]" /></button>
+                  </div>
+                  <p className="font-medium w-[92px] text-right text-[14px]">{fmtIDR(c.med.sellPrice*c.qty)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex justify-between items-baseline pt-1"><span className="text-[14px] text-[var(--dim)]">Total bayar</span><span className="text-[22px] font-medium">{fmtIDR(total)}</span></div>
+
+          <div>
+            <p id="paymethod-label" className="text-[12px] font-medium tracking-[0.4px] uppercase text-[var(--dim)] mb-2 pl-1">Metode Bayar</p>
+            {/* M3 segmented button */}
+            <div role="group" aria-labelledby="paymethod-label" className="flex rounded-full border border-[var(--md-outline)] overflow-hidden">
+              {["Tunai","QRIS","Transfer"].map((m,i)=>(<button key={m} onClick={()=>setPayMethod(m)} aria-label={`Bayar ${m}`} aria-pressed={payMethod===m} className={`flex-1 h-[44px] inline-flex items-center justify-center gap-1.5 text-[14px] font-medium ${i>0 ? "border-l border-[var(--md-outline)]" : ""} ${payMethod===m ? "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)]" : "bg-transparent hover:bg-[var(--md-surface-container-high)]"}`}>{payMethod===m && <Icon name="check" className="text-[18px]" />}{m}</button>))}
+            </div>
+          </div>
+
+          {payMethod==="Tunai" && (
+            <div className="space-y-3">
+              <Field label="Uang Diterima" htmlFor="paid"><input id="paid" inputMode="numeric" value={paid} onChange={e=>setPaid(e.target.value)} placeholder="cth: 50000" className="m3-input" /></Field>
+              <div className="flex flex-wrap gap-2">{[20000,50000,100000].map(v=>(<button key={v} onClick={()=>setPaid(String(v))} className={`${chipBase} ${paid===String(v) ? "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] border-transparent" : "border-[var(--md-outline)] hover:bg-[var(--md-surface-container-high)]"}`}>{fmtIDR(v)}</button>))}
+                <button onClick={()=>setPaid(String(total))} className={`${chipBase} border-[var(--md-outline)] hover:bg-[var(--md-surface-container-high)]`}>Uang Pas</button></div>
+              <div className="flex justify-between items-center bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] rounded-[16px] px-4 py-3"><span className="text-[14px] font-medium">Kembalian</span><span className="text-[18px] font-medium">{fmtIDR(change)}</span></div>
+            </div>
+          )}
+          <button disabled={cart.length===0 || (payMethod==="Tunai" && paidNum<total) || saleMut.isPending} onClick={()=>saleMut.mutate()} className={`${filledBtn} w-full !h-[56px] !text-[16px]`}><Icon name="payments" className="text-[20px]" />{saleMut.isPending?"Memproses…":"Bayar & Simpan"}</button>
+          {payMethod==="Tunai" && cart.length>0 && paidNum<total && paid!=="" && <p className="text-[12px] text-[var(--md-error)] text-center flex items-center justify-center gap-1"><Icon name="error" className="text-[16px]" />Uang diterima kurang dari total belanja.</p>}
+        </div>
+      </div>
+
+      {scannerOpen && <BarcodeScanner title="Scan Barcode Obat" hint="Obat yang terbaca langsung masuk ke keranjang." onDetected={handleBarcode} onClose={()=>setScannerOpen(false)} />}
+
+      {receipt && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[6px] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-label="Struk penjualan">
+          {/* M3 Dialog — 28dp corner radius */}
+          <div className="glass-sheet text-[var(--text)] w-full max-w-md rounded-t-[28px] sm:rounded-[28px] p-5 sm:p-6 max-h-[92vh] overflow-auto shadow-[var(--elevation-3)]">
+            <div className="w-12 h-12 mx-auto rounded-full bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] flex items-center justify-center mb-3"><Icon name="check_circle" filled className="text-[26px]" /></div>
+            <p className="text-center text-[18px] font-medium">Pembayaran Berhasil</p>
+            <p className="text-center text-[13px] text-[var(--dim)] mt-1">Berikut detail invoice penjualan Anda.</p>
+            <div id="receipt-print" className="mt-4">
+              <InvoiceDetail invoiceNo={receipt.invoiceNo} dateLabel={receipt.dateLabel} paymentMethod={receipt.method} amountPaid={receipt.paid} changeAmount={receipt.changeAmount} total={receipt.total} items={receipt.items.map(c => ({ name: c.med.name, qty: c.qty, price: c.med.sellPrice, subtotal: c.med.sellPrice * c.qty, meta: `${c.med.category} • ${c.med.unit}` }))} />
+            </div>
+            <button onClick={()=>setReceipt(null)} className={`${filledBtn} w-full mt-4`}>Tutup</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- STOK ---------------- */
+function Stok() {
+  const qc = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Medicine | null>(null);
+  const [stockScannerOpen, setStockScannerOpen] = useState(false);
+  const [scanMsg, setScanMsg] = useState<{ kind: "success" | "info" | "error"; text: string } | null>(null);
+  const [form, setForm] = useState({ name:"", category:"Umum", unit:"Strip", buyPrice:"", sellPrice:"", stock:"", minStock:"10", expiryDate:"", barcode:"" });
+  const [formScannerOpen, setFormScannerOpen] = useState(false);
+  const [importRows, setImportRows] = useState<ImportRow[] | null>(null);
+  const [importFileName, setImportFileName] = useState("");
+  const [importMode, setImportMode] = useState<"upsert" | "insert_only">("upsert");
+  const [importError, setImportError] = useState("");
+  const [importResult, setImportResult] = useState<{ inserted: number; updated: number; skipped: number; total: number } | null>(null);
+  const [fileLink, setFileLink] = useState<{ url: string; name: string; kind: "template" | "export" } | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const medsQ = useQuery({ queryKey: ["medicines", search], queryFn: () => api.listMedicines({ search }) });
+  const allMedsQ = useQuery({ queryKey: ["medicines", ""], queryFn: () => api.listMedicines({ search: "" }) });
+  const saveMut = useMutation({
+    mutationFn: async (): Promise<{ id: number }> => {
+      const payload = { name: form.name, category: form.category, unit: form.unit, buyPrice: parseInt(form.buyPrice||"0",10), sellPrice: parseInt(form.sellPrice||"0",10), stock: parseInt(form.stock||"0",10), minStock: parseInt(form.minStock||"10",10), expiryDate: form.expiryDate || null, barcode: form.barcode.trim() || null };
+      if (editing) { await api.updateMedicine({ id: editing.id, ...payload }); return { id: editing.id }; }
+      return api.createMedicine(payload);
+    },
+    onSuccess: () => { setShowForm(false); setEditing(null); setForm({ name:"", category:"Umum", unit:"Strip", buyPrice:"", sellPrice:"", stock:"", minStock:"10", expiryDate:"", barcode:"" }); qc.invalidateQueries(); },
+  });
+  const delMut = useMutation({ mutationFn: (id:number)=>api.deleteMedicine({id}), onSuccess: ()=>qc.invalidateQueries() });
+  const importMut = useMutation({
+    mutationFn: () => {
+      const valid = (importRows ?? []).filter(r => !r._error);
+      return api.bulkImportMedicines({ items: valid.map(r => ({ name: r.name, category: r.category, unit: r.unit, buyPrice: r.buyPrice, sellPrice: r.sellPrice, stock: r.stock, minStock: r.minStock, expiryDate: r.expiryDate, barcode: r.barcode || null })), mode: importMode });
+    },
+    onSuccess: (res) => { setImportResult(res); setImportRows(null); qc.invalidateQueries(); },
+    onError: () => { setImportError("Gagal mengimpor data. Coba lagi atau periksa format file."); },
+  });
+  const openEdit = (m: Medicine) => { setEditing(m); setForm({ name:m.name, category:m.category, unit:m.unit, buyPrice:String(m.buyPrice), sellPrice:String(m.sellPrice), stock:String(m.stock), minStock:String(m.minStock), expiryDate:m.expiryDate||"", barcode:m.barcode||"" }); setShowForm(true); };
+  /* Scan barcode from the Stok page: a registered barcode opens that
+     medicine's edit form (check / adjust stock, prices, expiry), while an
+     unregistered barcode opens the add form with the code prefilled so the
+     new medicine can be stocked in right away. */
+  const handleStockBarcode = async (code: string) => {
+    setStockScannerOpen(false);
+    try {
+      const res = await api.findMedicineByBarcode({ barcode: code });
+      if (res.medicine) {
+        openEdit(res.medicine);
+        setScanMsg({ kind: "success", text: `Barcode terbaca: ${res.medicine.name} — stok saat ini ${res.medicine.stock} ${res.medicine.unit}. Form edit dibuka, sesuaikan stok lalu simpan.` });
+      } else {
+        setEditing(null);
+        setForm({ name:"", category:"Umum", unit:"Strip", buyPrice:"", sellPrice:"", stock:"", minStock:"10", expiryDate:"", barcode: code });
+        setShowForm(true);
+        setScanMsg({ kind: "info", text: `Barcode ${code} belum terdaftar. Form tambah obat dibuka dengan barcode terisi — lengkapi data obatnya lalu simpan.` });
+      }
+      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    } catch { setScanMsg({ kind: "error", text: "Gagal membaca barcode. Periksa koneksi lalu coba lagi." }); }
+  };
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await api.downloadExport({});
+      if (!res.ok) { setImportError(res.message || "Belum ada data obat untuk diekspor."); return; }
+      setFileLink({ url: res.url, name: res.filename, kind: "export" });
+      triggerFileDownload(res.url, res.filename);
+      setImportError("");
+    } catch { setImportError("Gagal membuat file export. Periksa koneksi lalu coba lagi."); } finally { setExporting(false); }
+  };
+  const handleDownloadTemplate = async () => {
+    setDownloadingTemplate(true);
+    try {
+      const res = await api.downloadTemplate({});
+      setFileLink({ url: res.url, name: res.filename, kind: "template" });
+      triggerFileDownload(res.url, res.filename);
+      setImportError("");
+    } catch { setImportError("Gagal membuat template. Periksa koneksi lalu coba lagi."); } finally { setDownloadingTemplate(false); }
+  };
+  const handleFileChange = async (file: File | null) => {
+    if (!file) return;
+    setImportError(""); setImportResult(null);
+    try {
+      const XLSX = await import("xlsx");
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      const firstSheetName = wb.SheetNames.find(n => n.toLowerCase().includes("stok")) ?? wb.SheetNames[0];
+      if (!firstSheetName) { setImportError("File tidak memiliki sheet data."); return; }
+      const sheet = wb.Sheets[firstSheetName];
+      if (!sheet) { setImportError("Sheet tidak ditemukan di file."); return; }
+      const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+      if (raw.length === 0) { setImportError("File kosong atau format header tidak dikenali. Gunakan template yang disediakan."); return; }
+      // Validate header contains name column
+      const firstKeys = Object.keys(raw[0] ?? {});
+      const hasName = firstKeys.some(k => HEADER_MAP[normalizeHeader(k)] === "name");
+      if (!hasName) { setImportError("Kolom 'Nama Obat' tidak ditemukan. Pastikan baris pertama adalah header sesuai template."); return; }
+      const parsed = rowsToImportRows(raw);
+      if (parsed.length === 0) { setImportError("Tidak ada baris data yang bisa dibaca dari file ini."); return; }
+      if (parsed.length > 1000) { setImportError("Maksimal 1.000 baris per import. File ini berisi " + parsed.length + " baris."); return; }
+      setImportFileName(file.name);
+      setImportRows(parsed);
+    } catch {
+      setImportError("Gagal membaca file. Pastikan file berformat .xlsx, .xls, atau .csv yang valid.");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+  const now = new Date(); const in30 = new Date(now.getTime()+30*86400000);
+
+  return (
+    <div className="space-y-5">
+      <header className="flex items-end justify-between gap-3">
+        <div><h1 className="text-[28px] leading-[36px] font-normal">Stok Obat</h1><p className="text-[14px] text-[var(--dim)] mt-1">{medsQ.data ? `${medsQ.data.medicines.length} jenis obat tercatat` : "Kelola persediaan obat apotek"}</p></div>
+        <button onClick={()=>{setEditing(null); setShowForm(!showForm);}} className={`${filledBtn} shrink-0`}><Icon name={showForm ? "close" : "add"} className="text-[20px]" />Tambah Obat</button>
+      </header>
+
+      <div className="flex gap-2">
+        <div className="m3-search flex-1 min-w-0">
+          <Icon name="search" className="text-[22px] text-[var(--dim)]" />
+          <input aria-label="Cari obat di stok" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Cari obat, kategori, atau barcode…" />
+          {search && <button aria-label="Hapus pencarian stok" onClick={()=>setSearch("")} className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-[var(--md-surface-container-highest)]"><Icon name="close" className="text-[20px]" /></button>}
+        </div>
+        <button onClick={()=>{ setScanMsg(null); setStockScannerOpen(true); }} aria-label="Scan barcode untuk mengelola stok" className="shrink-0 inline-flex items-center justify-center gap-2 h-[56px] px-4 rounded-full bg-[var(--md-primary)] text-[var(--md-on-primary)] text-[14px] font-medium shadow-[var(--elevation-1)] hover:shadow-[var(--elevation-2)] active:scale-[0.99] transition-all"><Icon name="barcode_scanner" className="text-[22px]" /><span className="hidden sm:inline">Scan</span></button>
+      </div>
+      <p className="text-[12px] leading-4 text-[var(--dim)] -mt-3 pl-1 flex items-center gap-1.5"><Icon name="barcode_scanner" className="text-[16px] shrink-0" />Scan barcode kemasan untuk langsung membuka data obatnya — cek atau ubah stok tanpa mencari manual. Barcode yang belum terdaftar akan membuka form tambah obat.</p>
+      {scanMsg && (
+        <div role={scanMsg.kind === "error" ? "alert" : "status"} className={`flex items-start gap-2 rounded-[16px] px-4 py-3 text-[14px] -mt-2 ${scanMsg.kind === "success" ? "bg-[#E6F4EA] text-[#137333] dark:bg-[var(--md-primary-container)] dark:text-[var(--md-on-primary-container)]" : scanMsg.kind === "info" ? "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)]" : "bg-[var(--md-error-container)] text-[var(--md-on-error-container)]"}`}>
+          <Icon name={scanMsg.kind === "success" ? "check_circle" : scanMsg.kind === "info" ? "info" : "error"} filled={scanMsg.kind === "success"} className="text-[20px] shrink-0 mt-px" />
+          <span className="flex-1">{scanMsg.text}</span>
+          <button onClick={()=>setScanMsg(null)} aria-label="Tutup pesan scan stok" className="shrink-0 -mr-1"><Icon name="close" className="text-[18px]" /></button>
+        </div>
+      )}
+
+      {/* Import & Export Excel */}
+      <section aria-label="Import dan export Excel" className="glass-card rounded-[24px] p-4 sm:p-5 space-y-3">
+        <div className="flex items-start gap-3">
+          <span className="w-11 h-11 shrink-0 rounded-full bg-[#E6F4EA] text-[#137333] dark:bg-[var(--md-primary-container)] dark:text-[var(--md-on-primary-container)] flex items-center justify-center"><Icon name="table_view" className="text-[22px]" /></span>
+          <div className="min-w-0">
+            <h2 className="text-[16px] leading-6 font-medium">Import &amp; Export Excel</h2>
+            <p className="text-[13px] leading-5 text-[var(--dim)] mt-0.5">Export untuk backup atau edit massal di Excel. Import untuk menambahkan banyak obat sekaligus dari file .xlsx / .xls / .csv.</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={handleExport} disabled={exporting || (allMedsQ.data?.medicines.length ?? 0) === 0} aria-label="Export stok ke Excel" className="inline-flex items-center justify-center gap-2 h-[44px] px-5 rounded-full bg-[#137333] text-white text-[14px] font-medium shadow-[var(--elevation-1)] hover:brightness-110 active:scale-[0.99] disabled:opacity-40 disabled:shadow-none transition-all"><Icon name="download" className="text-[20px]" />{exporting ? "Mengekspor…" : "Export Excel"}</button>
+          <button onClick={() => fileInputRef.current?.click()} aria-label="Import stok dari Excel" className={`${filledBtn} !h-[44px] !px-5`}><Icon name="upload" className="text-[20px]" />Import Excel</button>
+          <button onClick={handleDownloadTemplate} disabled={downloadingTemplate} aria-label="Download template Excel" className="inline-flex items-center justify-center gap-2 h-[44px] px-5 rounded-full border border-[var(--md-outline)] text-[var(--md-primary)] text-[14px] font-medium hover:bg-[var(--md-primary)]/5 active:scale-[0.99] disabled:opacity-40 transition-all"><Icon name="download" className="text-[20px]" />{downloadingTemplate ? "Membuat Template…" : "Download Template"}</button>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" aria-label="Pilih file Excel untuk import" className="hidden" onChange={e => handleFileChange(e.target.files?.[0] ?? null)} />
+        </div>
+        <p className="text-[12px] leading-4 text-[var(--dim)] flex items-center gap-1.5"><Icon name="info" className="text-[16px] shrink-0" />Kolom Excel: Nama Obat, Barcode (opsional), Kategori, Satuan, Harga Beli, Harga Jual, Stok, Stok Minimum, Tanggal Kadaluarsa (YYYY-MM-DD). Belum punya file? Klik Download Template, isi file-nya, lalu Import kembali file yang sudah diedit.</p>
+        {fileLink && (
+          <div role="status" className="bg-[#E6F4EA] text-[#137333] dark:bg-[var(--md-primary-container)] dark:text-[var(--md-on-primary-container)] rounded-[16px] px-4 py-3 text-[14px] space-y-2.5">
+            <div className="flex items-start gap-2">
+              <Icon name="check_circle" filled className="text-[20px] shrink-0 mt-px" />
+              <span className="flex-1">{fileLink.kind === "template" ? <>Template <strong>{fileLink.name}</strong> sudah dibuat dan unduhannya dimulai. Jika file belum tersimpan, ketuk tombol unduh di bawah ini. Setelah diisi, gunakan tombol Import Excel untuk memasukkannya kembali.</> : <>File export <strong>{fileLink.name}</strong> sudah dibuat dan unduhannya dimulai. Jika file belum tersimpan, ketuk tombol unduh di bawah ini.</>}</span>
+              <button onClick={() => setFileLink(null)} aria-label="Tutup pesan unduhan" className="shrink-0 -mr-1"><Icon name="close" className="text-[18px]" /></button>
+            </div>
+            <a href={fileLink.url} download={fileLink.name} target="_blank" rel="noopener" aria-label={`Unduh file ${fileLink.name}`} className="inline-flex items-center justify-center gap-2 h-[44px] px-5 rounded-full bg-[#137333] text-white text-[14px] font-medium shadow-[var(--elevation-1)] hover:brightness-110 active:scale-[0.99] transition-all"><Icon name="download" className="text-[20px]" />Unduh {fileLink.name}</a>
+          </div>
+        )}
+        {importError && <div role="alert" className="flex items-start gap-2 bg-[var(--md-error-container)] text-[var(--md-on-error-container)] rounded-[16px] px-4 py-3 text-[14px]"><Icon name="error" className="text-[20px] shrink-0 mt-px" /><span className="flex-1">{importError}</span><button onClick={() => setImportError("")} aria-label="Tutup pesan error" className="shrink-0 -mr-1"><Icon name="close" className="text-[18px]" /></button></div>}
+        {importResult && <div role="status" className="flex items-start gap-2 bg-[#E6F4EA] text-[#137333] dark:bg-[var(--md-primary-container)] dark:text-[var(--md-on-primary-container)] rounded-[16px] px-4 py-3 text-[14px]"><Icon name="check_circle" filled className="text-[20px] shrink-0 mt-px" /><span className="flex-1">Import selesai: <strong>{importResult.inserted} obat baru</strong> ditambahkan, <strong>{importResult.updated} diperbarui</strong>{importResult.skipped > 0 ? <>, <strong>{importResult.skipped} dilewati</strong></> : null} dari {importResult.total} baris.</span><button onClick={() => setImportResult(null)} aria-label="Tutup pesan hasil import" className="shrink-0 -mr-1"><Icon name="close" className="text-[18px]" /></button></div>}
+      </section>
+
+      {showForm && (
+        <form onSubmit={e=>{e.preventDefault(); saveMut.mutate();}} className="glass-card rounded-[28px] p-5 sm:p-6 grid sm:grid-cols-2 gap-4">
+          <p className="sm:col-span-2 flex items-center gap-2 text-[18px] font-medium"><Icon name={editing ? "edit" : "add_circle"} className="text-[var(--md-primary)]" />{editing ? "Edit Obat" : "Tambah Obat Baru"}</p>
+          <div className="sm:col-span-2"><Field label="Nama Obat *" htmlFor="m-name"><input id="m-name" required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} className="m3-input" placeholder="cth: Paracetamol 500mg" /></Field></div>
+          <div className="sm:col-span-2">
+            <Field label="Barcode (opsional)" htmlFor="m-barcode">
+              <div className="flex gap-2">
+                <input id="m-barcode" inputMode="numeric" autoComplete="off" value={form.barcode} onChange={e=>setForm({...form,barcode:e.target.value})} className="m3-input flex-1 min-w-0" placeholder="Scan atau ketik kode barcode kemasan" />
+                <button type="button" onClick={()=>setFormScannerOpen(true)} aria-label="Scan barcode untuk obat ini" className="shrink-0 inline-flex items-center justify-center gap-1.5 h-[48px] px-4 rounded-full bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] text-[14px] font-medium active:scale-[0.99] transition-all"><Icon name="barcode_scanner" className="text-[20px]" />Scan</button>
+              </div>
+            </Field>
+            <p className="text-[12px] leading-4 text-[var(--dim)] mt-1.5 pl-1">Barcode terdaftar bisa discan di Kasir agar obat langsung masuk keranjang, dan discan di Stok untuk membuka data obat ini. Satu barcode hanya untuk satu obat.</p>
+          </div>
+          <Field label="Kategori" htmlFor="m-cat"><select id="m-cat" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} className="m3-input">{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></Field>
+          <Field label="Satuan" htmlFor="m-unit"><select id="m-unit" value={form.unit} onChange={e=>setForm({...form,unit:e.target.value})} className="m3-input">{UNITS.map(c=><option key={c}>{c}</option>)}</select></Field>
+          <Field label="Harga Beli (Rp)" htmlFor="m-buy"><input id="m-buy" type="number" min="0" value={form.buyPrice} onChange={e=>setForm({...form,buyPrice:e.target.value})} className="m3-input" /></Field>
+          <Field label="Harga Jual (Rp)" htmlFor="m-sell"><input id="m-sell" type="number" min="0" value={form.sellPrice} onChange={e=>setForm({...form,sellPrice:e.target.value})} className="m3-input" /></Field>
+          <Field label="Stok Saat Ini" htmlFor="m-stock"><input id="m-stock" type="number" min="0" value={form.stock} onChange={e=>setForm({...form,stock:e.target.value})} className="m3-input" /></Field>
+          <Field label="Batas Stok Menipis" htmlFor="m-min"><input id="m-min" type="number" min="0" value={form.minStock} onChange={e=>setForm({...form,minStock:e.target.value})} className="m3-input" /></Field>
+          <div className="sm:col-span-2"><Field label="Tanggal Kadaluarsa" htmlFor="m-exp"><input id="m-exp" type="date" value={form.expiryDate} onChange={e=>setForm({...form,expiryDate:e.target.value})} className="m3-input" /></Field></div>
+          {saveMut.isError && <p role="alert" className="sm:col-span-2 flex items-start gap-2 bg-[var(--md-error-container)] text-[var(--md-on-error-container)] rounded-[16px] px-4 py-3 text-[14px]"><Icon name="error" className="text-[20px] shrink-0 mt-px" />{(saveMut.error as Error)?.message || "Gagal menyimpan obat. Coba lagi."}</p>}
+          <div className="sm:col-span-2 flex flex-wrap gap-2 pt-1">
+            <button type="submit" disabled={saveMut.isPending} className={`${filledBtn} flex-1 min-w-[180px]`}>{editing?"Simpan Perubahan":"Tambah Obat"}</button>
+            <button type="button" onClick={()=>setShowForm(false)} className="inline-flex items-center justify-center h-[48px] px-6 rounded-full border border-[var(--md-outline)] text-[var(--md-primary)] text-[14px] font-medium hover:bg-[var(--md-primary)]/5">Batal</button>
+          </div>
+        </form>
+      )}
+
+      {formScannerOpen && <BarcodeScanner title="Scan Barcode Obat" hint="Kode yang terbaca akan mengisi kolom barcode obat ini." onDetected={(code)=>{ setForm(f=>({...f, barcode: code})); setFormScannerOpen(false); }} onClose={()=>setFormScannerOpen(false)} />}
+
+      {stockScannerOpen && <BarcodeScanner title="Scan Barcode — Kelola Stok" hint="Obat yang terbaca langsung dibuka untuk dicek atau diubah stoknya." onDetected={handleStockBarcode} onClose={()=>setStockScannerOpen(false)} />}
+
+      {/* Stock level legend — fixed rule based on quantity 20 */}
+      <div className="flex flex-wrap items-center gap-1.5 px-1" aria-label="Keterangan status stok">
+        <span className="text-[12px] leading-4 text-[var(--dim)] mr-0.5">Status stok:</span>
+        <span className={`inline-flex px-1.5 py-px rounded-[6px] text-[10px] leading-4 font-medium ${stockLevel(21).badge}`}>Aman — di atas 20</span>
+        <span className={`inline-flex px-1.5 py-px rounded-[6px] text-[10px] leading-4 font-medium ${stockLevel(20).badge}`}>Sedang — pas 20</span>
+        <span className={`inline-flex px-1.5 py-px rounded-[6px] text-[10px] leading-4 font-medium ${stockLevel(19).badge}`}>Rendah — di bawah 20</span>
+        <span className={`inline-flex px-1.5 py-px rounded-[6px] text-[10px] leading-4 font-medium ${stockLevel(0).badge}`}>Habis — 0</span>
+      </div>
+
+      <div className="space-y-2">
+        {medsQ.isPending ? <p className="text-[var(--dim)] py-6 text-center">Memuat…</p> : medsQ.data?.medicines.length===0 ? <div className="glass-card rounded-[28px] p-10 text-center"><span className="w-14 h-14 mx-auto rounded-full bg-[var(--md-secondary-container)] flex items-center justify-center"><Icon name="inventory_2" className="text-[28px]" /></span><p className="font-medium text-[16px] mt-4">Stok masih kosong</p><p className="text-[14px] text-[var(--dim)] mt-1">Tekan “Tambah Obat” untuk memasukkan obat pertama Anda.</p></div> : medsQ.data!.medicines.map(m=>{
+          const expired = m.expiryDate && new Date(m.expiryDate) < now;
+          const soon = m.expiryDate && !expired && new Date(m.expiryDate) <= in30;
+          const level = stockLevel(m.stock);
+          return (
+            <article key={m.id} className="glass-card rounded-[16px] px-3 py-2.5 flex gap-2.5 items-center hover:shadow-[var(--elevation-1)] transition-shadow">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <p className="font-medium truncate text-[13px] leading-[18px]">{m.name}</p>
+                  <span className={`shrink-0 inline-flex px-1.5 py-px rounded-[6px] text-[10px] leading-4 font-medium ${level.badge}`}>{level.label}</span>
+                  {expired ? <span className="shrink-0 inline-flex px-1.5 py-px rounded-[6px] text-[10px] leading-4 font-medium bg-[var(--md-error)] text-[var(--md-on-error)]">Kadaluarsa</span> : soon ? <span className="shrink-0 inline-flex px-1.5 py-px rounded-[6px] text-[10px] leading-4 font-medium bg-[#FFECB3] text-[#7A5901] dark:bg-[var(--md-tertiary-container)] dark:text-[var(--md-on-tertiary-container)]">Segera Exp</span> : null}
+                </div>
+                <p className="text-[11px] leading-4 text-[var(--dim)] truncate mt-0.5">{m.category} • {m.unit} • Jual {fmtIDR(m.sellPrice)} • Beli {fmtIDR(m.buyPrice)}{m.expiryDate?` • Exp ${fmtDate(m.expiryDate)}`:""}{m.barcode?` • Barcode ${m.barcode}`:""}</p>
+              </div>
+              <div className="text-right shrink-0 leading-none"><span className={`text-[18px] leading-6 font-semibold ${level.text}`}>{m.stock}</span><span className="block text-[10px] leading-3 text-[var(--dim)] mt-0.5">{m.unit}</span></div>
+              <div className="flex gap-0.5 shrink-0">
+                <button onClick={()=>openEdit(m)} aria-label={`Edit ${m.name}`} className="w-8 h-8 rounded-full bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] flex items-center justify-center hover:brightness-95"><Icon name="edit" className="text-[17px]" /></button>
+                <button onClick={()=>{ delMut.mutate(m.id); }} aria-label={`Hapus ${m.name}`} className="w-8 h-8 rounded-full text-[var(--md-error)] flex items-center justify-center hover:bg-[var(--md-error-container)]"><Icon name="delete" className="text-[17px]" /></button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {importRows && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[6px] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label="Pratinjau import Excel">
+          <div className="glass-sheet text-[var(--text)] w-full max-w-2xl rounded-t-[28px] sm:rounded-[28px] p-5 sm:p-6 max-h-[92vh] flex flex-col shadow-[var(--elevation-3)]">
+            <div className="flex items-start gap-3">
+              <span className="w-12 h-12 shrink-0 rounded-full bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] flex items-center justify-center"><Icon name="upload_file" className="text-[24px]" /></span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[18px] font-medium leading-6">Pratinjau Import</p>
+                <p className="text-[13px] text-[var(--dim)] truncate mt-0.5">{importFileName} • {importRows.length} baris • {importRows.filter(r => !r._error).length} siap diimport{importRows.filter(r => r._error).length > 0 ? ` • ${importRows.filter(r => r._error).length} bermasalah (akan dilewati)` : ""}</p>
+              </div>
+              <button onClick={() => setImportRows(null)} aria-label="Tutup pratinjau import" className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center hover:bg-[var(--md-surface-container-highest)]"><Icon name="close" className="text-[20px]" /></button>
+            </div>
+
+            <div className="mt-4">
+              <p id="import-mode-label" className="text-[12px] font-medium tracking-[0.4px] uppercase text-[var(--dim)] mb-2 pl-1">Jika nama obat sudah ada</p>
+              <div role="group" aria-labelledby="import-mode-label" className="flex rounded-full border border-[var(--md-outline)] overflow-hidden">
+                <button onClick={() => setImportMode("upsert")} aria-pressed={importMode === "upsert"} aria-label="Perbarui data yang sudah ada" className={`flex-1 h-[44px] inline-flex items-center justify-center gap-1.5 text-[14px] font-medium px-2 ${importMode === "upsert" ? "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)]" : "hover:bg-[var(--md-surface-container-high)]"}`}>{importMode === "upsert" && <Icon name="check" className="text-[18px]" />}Perbarui</button>
+                <button onClick={() => setImportMode("insert_only")} aria-pressed={importMode === "insert_only"} aria-label="Lewati data yang sudah ada" className={`flex-1 h-[44px] inline-flex items-center justify-center gap-1.5 text-[14px] font-medium px-2 border-l border-[var(--md-outline)] ${importMode === "insert_only" ? "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)]" : "hover:bg-[var(--md-surface-container-high)]"}`}>{importMode === "insert_only" && <Icon name="check" className="text-[18px]" />}Lewati</button>
+              </div>
+              <p className="text-[12px] text-[var(--dim)] mt-2 pl-1">{importMode === "upsert" ? "Obat dengan nama sama akan diperbarui harga, stok, dan kadaluarsanya sesuai file." : "Obat dengan nama sama tidak akan diubah, hanya obat baru yang ditambahkan."}</p>
+            </div>
+
+            <div className="mt-4 flex-1 min-h-0 overflow-auto rounded-[16px] border border-[var(--md-outline-variant)] bg-[var(--md-surface-container-lowest)]">
+              <table className="w-full text-[13px]">
+                <thead className="sticky top-0 bg-[var(--md-surface-container)] text-left">
+                  <tr>
+                    <th className="px-3 py-2.5 font-medium whitespace-nowrap">Nama Obat</th>
+                    <th className="px-3 py-2.5 font-medium whitespace-nowrap hidden md:table-cell">Barcode</th>
+                    <th className="px-3 py-2.5 font-medium whitespace-nowrap hidden sm:table-cell">Kategori</th>
+                    <th className="px-3 py-2.5 font-medium whitespace-nowrap text-right">Harga Jual</th>
+                    <th className="px-3 py-2.5 font-medium whitespace-nowrap text-right">Stok</th>
+                    <th className="px-3 py-2.5 font-medium whitespace-nowrap hidden md:table-cell">Kadaluarsa</th>
+                    <th className="px-3 py-2.5 font-medium whitespace-nowrap">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importRows.slice(0, 100).map((r, i) => (
+                    <tr key={i} className={`border-t border-[var(--md-outline-variant)] ${r._error ? "opacity-60" : ""}`}>
+                      <td className="px-3 py-2 font-medium max-w-[180px] truncate">{r.name || <span className="text-[var(--md-error)]">(kosong)</span>}<span className="block sm:hidden text-[11px] font-normal text-[var(--dim)]">{r.category}</span></td>
+                      <td className="px-3 py-2 hidden md:table-cell whitespace-nowrap font-mono text-[12px]">{r.barcode || "-"}</td>
+                      <td className="px-3 py-2 hidden sm:table-cell whitespace-nowrap">{r.category}</td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap">{fmtIDR(r.sellPrice)}</td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap">{r.stock} {r.unit}</td>
+                      <td className="px-3 py-2 hidden md:table-cell whitespace-nowrap">{r.expiryDate ? fmtDate(r.expiryDate) : "-"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{r._error ? <span className="inline-flex px-2 py-0.5 rounded-[6px] text-[11px] font-medium bg-[var(--md-error-container)] text-[var(--md-on-error-container)]">{r._error}</span> : <span className="inline-flex px-2 py-0.5 rounded-[6px] text-[11px] font-medium bg-[#E6F4EA] text-[#137333] dark:bg-[var(--md-primary-container)] dark:text-[var(--md-on-primary-container)]">Siap</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {importRows.length > 100 && <p className="text-[12px] text-[var(--dim)] text-center py-3">Menampilkan 100 baris pertama dari {importRows.length} baris. Semua baris valid tetap akan diimport.</p>}
+            </div>
+
+            {importMut.isError && <p className="text-[13px] text-[var(--md-error)] mt-3 flex items-center gap-1.5"><Icon name="error" className="text-[18px]" />Import gagal. Silakan coba lagi.</p>}
+
+            <div className="flex flex-wrap gap-2 mt-5">
+              <button onClick={() => importMut.mutate()} disabled={importMut.isPending || importRows.filter(r => !r._error).length === 0} className={`${filledBtn} flex-1 min-w-[180px]`}><Icon name="upload" className="text-[20px]" />{importMut.isPending ? "Mengimpor…" : `Import ${importRows.filter(r => !r._error).length} Obat`}</button>
+              <button onClick={() => setImportRows(null)} disabled={importMut.isPending} className="inline-flex items-center justify-center h-[48px] px-6 rounded-full border border-[var(--md-outline)] text-[var(--md-primary)] text-[14px] font-medium hover:bg-[var(--md-primary)]/5 disabled:opacity-40">Batal</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- KEUANGAN ---------------- */
+function Keuangan() {
+  const qc = useQueryClient();
+  const [filter, setFilter] = useState<"all"|"in"|"out">("all");
+  const [showForm, setShowForm] = useState(false);
+  const [period, setPeriod] = useState<"today"|"month"|"all">("all");
+  const [form, setForm] = useState({ type:"out" as "in"|"out", category:"Beli Stok", description:"", amount:"" });
+  const q = useQuery({ queryKey: ["cash"], queryFn: () => api.listCashEntries({ limit: 500 }) });
+  const addMut = useMutation({ mutationFn: () => api.createCashEntry({ type: form.type, category: form.category, description: form.description, amount: parseInt(form.amount||"0",10) }), onSuccess: ()=>{ setShowForm(false); setForm({type:"out",category:"Beli Stok",description:"",amount:""}); qc.invalidateQueries(); } });
+  const delMut = useMutation({ mutationFn: (id:number)=>api.deleteCashEntry({id}), onSuccess: ()=>qc.invalidateQueries() });
+  const entries = q.data?.entries ?? [];
+  const todayKey = useJakartaTodayKey();
+  const filteredByPeriod = useMemo(()=>{
+    const now=new Date(); const startToday=jakartaDayStartMs(now); const endToday=startToday+24*60*60*1000; const startMonth=jakartaMonthStartMs(now);
+    return entries.filter(e=>{ const t=new Date(e.createdAt).getTime(); if(period==="today") return t>=startToday && t<endToday; if(period==="month") return t>=startMonth && t<endToday; return true; });
+    // todayKey is a dependency so the period window re-computes when the
+    // Jakarta date rolls over while this page stays open.
+  },[entries,period,todayKey]);
+  const shown = filteredByPeriod.filter(e=> filter==="all" || e.type===filter);
+  const totalIn = filteredByPeriod.filter(e=>e.type==="in").reduce((s,e)=>s+e.amount,0);
+  const totalOut = filteredByPeriod.filter(e=>e.type==="out").reduce((s,e)=>s+e.amount,0);
+
+  return (
+    <div className="space-y-3">
+      <header><h1 className="text-[28px] leading-[36px] font-normal">Keuangan</h1><p className="text-[13px] leading-5 text-[var(--dim)] mt-1">Kas masuk &amp; keluar tercatat rinci, termasuk penjualan otomatis dari Kasir.</p></header>
+
+      {/* M3 filter chips — period (compact) */}
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Periode">{([["today","Hari Ini"],["month","Bulan Ini"],["all","Semua"]] as const).map(([k,l])=>(<button key={k} onClick={()=>setPeriod(k)} aria-pressed={period===k} className={`${chipBase} !h-[32px] !px-3 !text-[13px] !gap-1 ${period===k ? "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] border-transparent" : "border-[var(--md-outline)] hover:bg-[var(--md-surface-container-high)]"}`}>{period===k && <Icon name="check" className="text-[16px]" />}{l}</button>))}</div>
+
+      {/* Compact summary strip — Masuk / Keluar / Saldo in one card */}
+      <div className="glass-card rounded-[20px] px-3.5 py-3 grid grid-cols-3 divide-x divide-[var(--md-outline-variant)]">
+        <div className="min-w-0 pr-2.5">
+          <p className="flex items-center gap-1 text-[10px] leading-4 font-medium tracking-[0.5px] uppercase text-[var(--dim)]"><Icon name="south_west" className="text-[13px] text-[var(--md-primary)]" />Masuk</p>
+          <p className="font-semibold text-[13px] leading-5 sm:text-[15px] mt-0.5 break-words text-[var(--md-primary)]">{fmtIDR(totalIn)}</p>
+        </div>
+        <div className="min-w-0 px-2.5">
+          <p className="flex items-center gap-1 text-[10px] leading-4 font-medium tracking-[0.5px] uppercase text-[var(--dim)]"><Icon name="north_east" className="text-[13px] text-[var(--md-error)]" />Keluar</p>
+          <p className="font-semibold text-[13px] leading-5 sm:text-[15px] mt-0.5 break-words text-[var(--md-error)]">{fmtIDR(totalOut)}</p>
+        </div>
+        <div className="min-w-0 pl-2.5">
+          <p className="flex items-center gap-1 text-[10px] leading-4 font-medium tracking-[0.5px] uppercase text-[var(--dim)]"><Icon name="account_balance_wallet" className="text-[13px]" />Saldo Kas</p>
+          <p className={`font-semibold text-[13px] leading-5 sm:text-[15px] mt-0.5 break-words ${totalIn-totalOut>=0 ? "text-[var(--text)]" : "text-[var(--md-error)]"}`}>{fmtIDR(totalIn-totalOut)}</p>
+        </div>
+      </div>
+
+      <button onClick={()=>setShowForm(!showForm)} className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-[44px] px-5 rounded-full bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] text-[14px] font-medium shadow-[var(--elevation-1)] hover:shadow-[var(--elevation-2)] active:scale-[0.99] transition-all"><Icon name={showForm ? "close" : "add"} filled className="text-[20px]" />{showForm ? "Tutup Form" : "Catat Kas Masuk / Keluar"}</button>
+
+      {showForm && (
+        <form onSubmit={e=>{e.preventDefault(); addMut.mutate();}} className="glass-card rounded-[20px] p-4 space-y-3">
+          <p className="flex items-center gap-2 text-[16px] font-medium"><Icon name="edit_note" className="text-[var(--md-primary)] text-[20px]" />Catatan Kas Manual</p>
+          {/* M3 segmented button for in/out */}
+          <div className="flex rounded-full border border-[var(--md-outline)] overflow-hidden">
+            <button type="button" onClick={()=>setForm({...form,type:"in",category:"Modal"})} aria-pressed={form.type==="in"} className={`flex-1 h-[40px] inline-flex items-center justify-center gap-1.5 text-[13px] font-medium ${form.type==="in" ? "bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)]" : "hover:bg-[var(--md-surface-container-high)]"}`}><Icon name="south_west" className="text-[17px]" />Kas Masuk</button>
+            <button type="button" onClick={()=>setForm({...form,type:"out",category:"Beli Stok"})} aria-pressed={form.type==="out"} className={`flex-1 h-[40px] inline-flex items-center justify-center gap-1.5 text-[13px] font-medium border-l border-[var(--md-outline)] ${form.type==="out" ? "bg-[var(--md-error-container)] text-[var(--md-on-error-container)]" : "hover:bg-[var(--md-surface-container-high)]"}`}><Icon name="north_east" className="text-[17px]" />Kas Keluar</button>
+          </div>
+          <Field label="Kategori" htmlFor="c-cat"><select id="c-cat" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} className="m3-input">{(form.type==="in"?INCOME_CATS:EXPENSE_CATS).map(c=><option key={c}>{c}</option>)}</select></Field>
+          <Field label="Keterangan *" htmlFor="c-desc"><input id="c-desc" required value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="cth: Beli stok Paracetamol 10 box" className="m3-input" /></Field>
+          <Field label="Jumlah (Rp) *" htmlFor="c-amt"><input id="c-amt" required type="number" min="1" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} className="m3-input" /></Field>
+          <button disabled={addMut.isPending} className={`${filledBtn} w-full`}>Simpan Catatan</button>
+        </form>
+      )}
+
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter jenis kas">{([["all","Semua"],["in","Masuk"],["out","Keluar"]] as const).map(([k,l])=>(<button key={k} onClick={()=>setFilter(k)} aria-pressed={filter===k} className={`${chipBase} !h-[32px] !px-3 !text-[13px] !gap-1 ${filter===k ? "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] border-transparent" : "border-[var(--md-outline)] hover:bg-[var(--md-surface-container-high)]"}`}>{filter===k && <Icon name="check" className="text-[16px]" />}{l}</button>))}</div>
+
+      <div className="space-y-2">
+        {q.isPending ? <p className="text-[var(--dim)] py-6 text-center">Memuat…</p> : shown.length===0 ? <div className="glass-card rounded-[20px] p-6 text-center"><span className="w-10 h-10 mx-auto rounded-full bg-[var(--md-secondary-container)] flex items-center justify-center"><Icon name="receipt_long" className="text-[20px]" /></span><p className="text-[13px] text-[var(--dim)] mt-2">Belum ada catatan kas pada periode ini.</p></div> : shown.map((e:CashEntry)=>(
+          <div key={e.id} className="glass-card rounded-[16px] px-3 py-2.5 flex items-center gap-2.5">
+            <span className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center ${e.type==="in" ? "bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)]" : "bg-[var(--md-error-container)] text-[var(--md-on-error-container)]"}`}><Icon name={e.type==="in" ? "south_west" : "north_east"} className="text-[17px]" /></span>
+            <div className="flex-1 min-w-0"><p className="font-medium truncate text-[13px] leading-[18px]">{e.description}</p><p className="text-[11px] leading-4 text-[var(--dim)] truncate">{e.category} • {fmtDateTime(e.createdAt)}{e.source==="sale" ? " • Otomatis" : ""}</p></div>
+            <p className={`font-semibold text-[13px] leading-5 whitespace-nowrap ${e.type==="in" ? "text-[var(--md-primary)]" : "text-[var(--md-error)]"}`}>{e.type==="in" ? "+" : "−"} {fmtIDR(e.amount)}</p>
+            {e.source==="manual" && <button onClick={()=>{delMut.mutate(e.id);}} aria-label={`Hapus ${e.description}`} className="w-7 h-7 shrink-0 rounded-full text-[var(--md-error)] flex items-center justify-center hover:bg-[var(--md-error-container)]"><Icon name="close" className="text-[17px]" /></button>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- LAPORAN LABA ---------------- */
+type ProfitPeriod = "today" | "month" | "last30" | "all";
+function LaporanLaba() {
+  const [period, setPeriod] = useState<ProfitPeriod>("month");
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+  const [fileLink, setFileLink] = useState<{ url: string; name: string } | null>(null);
+  // todayKey in the query key: period windows (esp. "Hari Ini") are
+  // Jakarta calendar windows on the server, so a date rollover refetches.
+  const todayKey = useJakartaTodayKey();
+  const q = useQuery({ queryKey: ["profit", period, todayKey], queryFn: () => api.getProfitReport({ period }) });
+  const r = q.data;
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await api.downloadProfitReport({ period });
+      if (!res.ok) { setExportError(res.message || "Belum ada data untuk diekspor."); return; }
+      setFileLink({ url: res.url, name: res.filename });
+      triggerFileDownload(res.url, res.filename);
+      setExportError("");
+    } catch { setExportError("Gagal membuat file laporan. Periksa koneksi lalu coba lagi."); } finally { setExporting(false); }
+  };
+  const marginChip = (pct: number) => <span className={`shrink-0 inline-flex px-1.5 py-px rounded-[6px] text-[10px] leading-4 font-medium ${pct >= 0 ? "bg-[#E6F4EA] text-[#137333] dark:bg-[var(--md-primary-container)] dark:text-[var(--md-on-primary-container)]" : "bg-[var(--md-error-container)] text-[var(--md-on-error-container)]"}`}>{pct.toLocaleString("id-ID")}%</span>;
+
+  return (
+    <div className="space-y-3">
+      <header><h1 className="text-[28px] leading-[36px] font-normal">Laporan Laba</h1><p className="text-[13px] leading-5 text-[var(--dim)] mt-1">Laba dihitung dari penjualan dikurangi harga beli (modal) obat yang terjual.</p></header>
+
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Periode laporan laba">{([["today","Hari Ini"],["month","Bulan Ini"],["last30","30 Hari"],["all","Semua"]] as const).map(([k,l])=>(<button key={k} onClick={()=>setPeriod(k)} aria-pressed={period===k} className={`${chipBase} !h-[32px] !px-3 !text-[13px] !gap-1 ${period===k ? "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] border-transparent" : "border-[var(--md-outline)] hover:bg-[var(--md-surface-container-high)]"}`}>{period===k && <Icon name="check" className="text-[16px]" />}{l}</button>))}</div>
+
+      {q.isPending ? <p className="text-[var(--dim)] py-6 text-center">Memuat laporan…</p> : q.error ? <p className="py-6 text-center text-[var(--md-error)]">Gagal memuat laporan laba.</p> : !r || r.transactionCount === 0 ? (
+        <div className="glass-card rounded-[20px] p-6 text-center"><span className="w-10 h-10 mx-auto rounded-full bg-[var(--md-secondary-container)] flex items-center justify-center"><Icon name="trending_up" className="text-[20px]" /></span><p className="text-[13px] text-[var(--dim)] mt-2">Belum ada penjualan pada periode ini, jadi laba belum bisa dihitung. Penjualan dari Kasir akan otomatis masuk ke laporan ini.</p></div>
+      ) : (
+        <>
+          {/* Laba kotor — hero card */}
+          <div className="bg-[var(--md-primary)] text-[var(--md-on-primary)] rounded-[20px] px-4 py-3.5 shadow-[var(--elevation-1)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] leading-4 font-medium tracking-[0.6px] uppercase opacity-90">Laba Kotor</p>
+                <p className="text-[26px] leading-8 font-medium mt-0.5 break-words">{fmtIDR(r.grossProfit)}</p>
+              </div>
+              <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/20 text-[12px] font-semibold">Margin {r.marginPct.toLocaleString("id-ID")}%</span>
+            </div>
+            <p className="text-[12px] leading-4 opacity-90 mt-1.5">{r.transactionCount} transaksi • {r.itemsSold} item terjual</p>
+          </div>
+
+          {/* Penjualan / HPP / Operasional / Laba bersih strip */}
+          <div className="glass-card rounded-[20px] px-3.5 py-3 grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-4">
+            <div className="min-w-0">
+              <p className="flex items-center gap-1 text-[10px] leading-4 font-medium tracking-[0.5px] uppercase text-[var(--dim)]"><Icon name="receipt" className="text-[13px] text-[var(--md-primary)]" />Penjualan</p>
+              <p className="font-semibold text-[13px] leading-5 sm:text-[15px] mt-0.5 break-words">{fmtIDR(r.revenue)}</p>
+            </div>
+            <div className="min-w-0">
+              <p className="flex items-center gap-1 text-[10px] leading-4 font-medium tracking-[0.5px] uppercase text-[var(--dim)]"><Icon name="inventory_2" className="text-[13px]" />Modal (HPP)</p>
+              <p className="font-semibold text-[13px] leading-5 sm:text-[15px] mt-0.5 break-words">{fmtIDR(r.hpp)}</p>
+            </div>
+            <div className="min-w-0">
+              <p className="flex items-center gap-1 text-[10px] leading-4 font-medium tracking-[0.5px] uppercase text-[var(--dim)]"><Icon name="north_east" className="text-[13px] text-[var(--md-error)]" />Biaya Operasional</p>
+              <p className="font-semibold text-[13px] leading-5 sm:text-[15px] mt-0.5 break-words text-[var(--md-error)]">{fmtIDR(r.operationalExpense)}</p>
+            </div>
+            <div className="min-w-0">
+              <p className="flex items-center gap-1 text-[10px] leading-4 font-medium tracking-[0.5px] uppercase text-[var(--dim)]"><Icon name="savings" className="text-[13px] text-[var(--md-primary)]" />Estimasi Laba Bersih</p>
+              <p className={`font-semibold text-[13px] leading-5 sm:text-[15px] mt-0.5 break-words ${r.netProfit >= 0 ? "text-[var(--md-primary)]" : "text-[var(--md-error)]"}`}>{fmtIDR(r.netProfit)}</p>
+            </div>
+          </div>
+
+          <p className="text-[12px] leading-4 text-[var(--dim)] flex items-start gap-1.5 px-1"><Icon name="info" className="text-[16px] shrink-0" /><span>Laba kotor = penjualan − modal obat terjual (harga beli saat transaksi). Estimasi laba bersih = laba kotor − biaya operasional dari Keuangan. Kas keluar “Beli Stok” ({fmtIDR(r.stockPurchaseExpense)}) tidak dikurangkan lagi karena modalnya sudah dihitung lewat HPP.</span></p>
+
+          {r.costMissingQty > 0 && <div role="alert" className="flex items-start gap-2 bg-[#FFF8E1] dark:bg-[var(--md-surface-container-high)] rounded-[16px] px-3.5 py-2.5 text-[12px] leading-4 text-[#7A5901] dark:text-[var(--text)]"><Icon name="warning" className="text-[18px] shrink-0" /><span>Ada {r.costMissingQty} item terjual yang harga belinya tidak diketahui (obat sudah dihapus dari stok), jadi laba untuk item tersebut terhitung lebih besar dari seharusnya.</span></div>}
+
+          <button onClick={handleExport} disabled={exporting} aria-label="Export laporan laba ke Excel" className="inline-flex items-center justify-center gap-2 h-[44px] px-5 rounded-full bg-[#137333] text-white text-[14px] font-medium shadow-[var(--elevation-1)] hover:brightness-110 active:scale-[0.99] disabled:opacity-40 disabled:shadow-none transition-all"><Icon name="download" className="text-[20px]" />{exporting ? "Mengekspor…" : "Export Laporan ke Excel"}</button>
+          {fileLink && (
+            <div role="status" className="bg-[#E6F4EA] text-[#137333] dark:bg-[var(--md-primary-container)] dark:text-[var(--md-on-primary-container)] rounded-[16px] px-4 py-3 text-[14px] space-y-2.5">
+              <div className="flex items-start gap-2">
+                <Icon name="check_circle" filled className="text-[20px] shrink-0 mt-px" />
+                <span className="flex-1">File laporan <strong>{fileLink.name}</strong> sudah dibuat dan unduhannya dimulai. Jika file belum tersimpan, ketuk tombol unduh di bawah ini.</span>
+                <button onClick={() => setFileLink(null)} aria-label="Tutup pesan unduhan" className="shrink-0 -mr-1"><Icon name="close" className="text-[18px]" /></button>
+              </div>
+              <a href={fileLink.url} download={fileLink.name} target="_blank" rel="noopener" aria-label={`Unduh file ${fileLink.name}`} className="inline-flex items-center justify-center gap-2 h-[44px] px-5 rounded-full bg-[#137333] text-white text-[14px] font-medium shadow-[var(--elevation-1)] hover:brightness-110 active:scale-[0.99] transition-all"><Icon name="download" className="text-[20px]" />Unduh {fileLink.name}</a>
+            </div>
+          )}
+          {exportError && <div role="alert" className="flex items-start gap-2 bg-[var(--md-error-container)] text-[var(--md-on-error-container)] rounded-[16px] px-4 py-3 text-[14px]"><Icon name="error" className="text-[20px] shrink-0 mt-px" /><span className="flex-1">{exportError}</span><button onClick={() => setExportError("")} aria-label="Tutup pesan error" className="shrink-0 -mr-1"><Icon name="close" className="text-[18px]" /></button></div>}
+
+          {/* Daily gross profit chart */}
+          <section className="glass-card rounded-[20px] p-4">
+            <h2 className="text-[14px] leading-5 font-medium mb-3">Laba Kotor 7 Hari Terakhir</h2>
+            {r.daily.every(x => x.profit === 0 && x.revenue === 0) ? <p className="text-[13px] text-[var(--dim)] py-4 text-center">Belum ada penjualan dalam 7 hari terakhir.</p> : (
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={r.daily} barGap={3}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--md-outline-variant)"/><XAxis dataKey="label" tick={{fontSize:12, fill:"var(--md-on-surface-variant)"}} axisLine={false} tickLine={false}/><YAxis tickFormatter={(v:number)=> v>=1000000? `${v/1000000}jt` : v>=1000? `${v/1000}rb` : `${v}`} tick={{fontSize:12, fill:"var(--md-on-surface-variant)"}} axisLine={false} tickLine={false}/><Tooltip formatter={(v:any)=>fmtIDR(Number(v))} contentStyle={{borderRadius:12, border:"1px solid var(--md-outline-variant)", background:"var(--md-surface-container-lowest)"}}/><Bar dataKey="profit" name="Laba Kotor" fill="#00696D" radius={[6,6,0,0]}/></BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </section>
+
+          {/* Per category */}
+          <section className="space-y-2">
+            <h2 className="flex items-center gap-2 text-[15px] font-medium px-1"><Icon name="category" className="text-[19px] text-[var(--md-primary)]" />Laba per Kategori</h2>
+            {r.byCategory.map(c => (
+              <div key={c.category} className="glass-card rounded-[16px] px-3 py-2.5 flex items-center gap-2.5">
+                <div className="flex-1 min-w-0"><p className="font-medium truncate text-[13px] leading-[18px]">{c.category}</p><p className="text-[11px] leading-4 text-[var(--dim)] truncate">{c.qty} item • Penjualan {fmtIDR(c.revenue)} • Modal {fmtIDR(c.hpp)}</p></div>
+                {marginChip(c.marginPct)}
+                <p className={`font-semibold text-[13px] leading-5 whitespace-nowrap ${c.profit >= 0 ? "text-[var(--md-primary)]" : "text-[var(--md-error)]"}`}>{fmtIDR(c.profit)}</p>
+              </div>
+            ))}
+          </section>
+
+          {/* Per medicine */}
+          <section className="space-y-2">
+            <h2 className="flex items-center gap-2 text-[15px] font-medium px-1"><Icon name="medication" className="text-[19px] text-[var(--md-primary)]" />Laba per Obat</h2>
+            {r.byMedicine.map((m, i) => (
+              <div key={m.name} className="glass-card rounded-[16px] px-3 py-2.5 flex items-center gap-2.5">
+                <span className="w-7 h-7 shrink-0 rounded-full bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] flex items-center justify-center text-[11px] font-bold">{i + 1}</span>
+                <div className="flex-1 min-w-0"><p className="font-medium truncate text-[13px] leading-[18px]">{m.name}</p><p className="text-[11px] leading-4 text-[var(--dim)] truncate">{m.category} • {m.qty} terjual • Penjualan {fmtIDR(m.revenue)} • Modal {fmtIDR(m.hpp)}</p></div>
+                {marginChip(m.marginPct)}
+                <p className={`font-semibold text-[13px] leading-5 whitespace-nowrap ${m.profit >= 0 ? "text-[var(--md-primary)]" : "text-[var(--md-error)]"}`}>{fmtIDR(m.profit)}</p>
+              </div>
+            ))}
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- PENGINGAT KADALUARSA & RESTOCK ----------------
+   One combined priority list, computed live from the real stock data
+   (listMedicines): medicines already expired, medicines expiring within
+   the selected 30/60/90-day window, and medicines whose stock is at or
+   below their minimum (or empty). Sorted most urgent first. */
+type ReminderWindow = 30 | 60 | 90;
+type ReminderFilter = "all" | "expiry" | "stock" | "critical";
+type ReminderItem = {
+  med: Medicine;
+  days: number | null; // days until expiry (negative = already expired), null = no expiry date
+  expired: boolean;
+  expiring: boolean; // expires within the selected window
+  low: boolean;
+  out: boolean;
+  level: 0 | 1 | 2; // 0 = Kritis, 1 = Tinggi, 2 = Pantau
+  levelLabel: string;
+  action: string;
+  restockQty: number;
+};
+function Pengingat({ onGoStok }: { onGoStok: () => void }) {
+  const [win, setWin] = useState<ReminderWindow>(90);
+  const [filter, setFilter] = useState<ReminderFilter>("all");
+  const [search, setSearch] = useState("");
+  const medsQ = useQuery({ queryKey: ["medicines", ""], queryFn: () => api.listMedicines({ search: "" }) });
+  const meds = medsQ.data?.medicines ?? [];
+  const todayKey = useJakartaTodayKey();
+
+  const computed = useMemo(() => {
+    // "Today" for expiry countdowns is the Jakarta calendar day.
+    const startTodayMs = jakartaDayStartMs(new Date());
+    const items: ReminderItem[] = [];
+    for (const med of meds) {
+      let days: number | null = null;
+      if (med.expiryDate) {
+        const exp = new Date(`${med.expiryDate}T00:00:00+07:00`);
+        if (!isNaN(exp.getTime())) days = Math.round((exp.getTime() - startTodayMs) / 86400000);
+      }
+      const expired = days !== null && days < 0;
+      const expiring = days !== null && days >= 0 && days <= win;
+      const out = med.stock <= 0;
+      const low = !out && med.stock <= med.minStock;
+      if (!expired && !expiring && !low && !out) continue;
+      // Priority: expired & out-of-stock are critical; expiring ≤30d or
+      // low-stock-and-expiring are high; the rest just need watching.
+      let level: 0 | 1 | 2 = 2;
+      if (expired || out) level = 0;
+      else if ((days !== null && days <= 30) || (low && expiring)) level = 1;
+      const levelLabel = level === 0 ? "Kritis" : level === 1 ? "Tinggi" : "Pantau";
+      const restockQty = (low || out) ? Math.max(0, med.minStock * 2 - med.stock) : 0;
+      let action: string;
+      if (expired) action = "Sudah kadaluarsa — tarik dari rak, jangan dijual, dan periksa kemungkinan retur ke supplier.";
+      else if (out && expiring) action = "Stok habis dan batch tercatat mendekati kadaluarsa — periksa tanggal di Stok sebelum restock.";
+      else if (out) action = `Stok habis — restock segera, disarankan ${restockQty} ${med.unit} (target 2× stok minimum).`;
+      else if (low && expiring) action = `Stok menipis tapi masa berlaku tinggal sebentar — jual yang ada lebih dulu (FIFO), restock secukupnya saja${restockQty > 0 ? `, maks. ${restockQty} ${med.unit}` : ""}.`;
+      else if (expiring && days !== null && days <= 30) action = "Prioritaskan penjualan obat ini lebih dulu (FIFO) supaya habis sebelum kadaluarsa.";
+      else if (expiring) action = "Pantau penjualannya dan hindari restock dalam jumlah besar sampai stok ini berkurang.";
+      else action = `Stok menipis — disarankan restock ${restockQty} ${med.unit} (target 2× stok minimum ${med.minStock}).`;
+      items.push({ med, days, expired, expiring, low, out, level, levelLabel, action, restockQty });
+    }
+    items.sort((a, b) =>
+      a.level - b.level ||
+      (a.days ?? Number.POSITIVE_INFINITY) - (b.days ?? Number.POSITIVE_INFINITY) ||
+      (a.med.stock / Math.max(1, a.med.minStock)) - (b.med.stock / Math.max(1, b.med.minStock)) ||
+      a.med.name.localeCompare(b.med.name)
+    );
+    const expiredCount = items.filter(i => i.expired).length;
+    const expiringCount = items.filter(i => i.expiring).length;
+    const lowCount = items.filter(i => i.low || i.out).length;
+    const criticalCount = items.filter(i => i.level === 0).length;
+    // Modal (buy price × stock) sitting on shelves that expire within the window or already expired
+    const capitalAtRisk = items.filter(i => i.expired || i.expiring).reduce((s, i) => s + i.med.buyPrice * i.med.stock, 0);
+    return { items, expiredCount, expiringCount, lowCount, criticalCount, capitalAtRisk };
+    // todayKey: expiry countdowns re-compute when the Jakarta date changes.
+  }, [meds, win, todayKey]);
+
+  const searchQuery = search.trim().toLowerCase();
+  const shown = computed.items.filter(i => {
+    const matchesFilter =
+      filter === "all" ? true :
+      filter === "expiry" ? (i.expired || i.expiring) :
+      filter === "stock" ? (i.low || i.out) :
+      i.level === 0;
+    if (!matchesFilter) return false;
+    if (!searchQuery) return true;
+    return i.med.name.toLowerCase().includes(searchQuery) || i.med.category.toLowerCase().includes(searchQuery);
+  });
+
+  const levelBadge = (it: ReminderItem) => (
+    <span className={`shrink-0 inline-flex px-1.5 py-px rounded-[6px] text-[10px] leading-4 font-bold uppercase tracking-[0.3px] ${it.level === 0 ? "bg-[var(--md-error)] text-[var(--md-on-error)]" : it.level === 1 ? "bg-[#FFECB3] text-[#7A5901] dark:bg-[var(--md-error-container)] dark:text-[var(--md-on-error-container)]" : "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)]"}`}>{it.levelLabel}</span>
+  );
+  const daysLabel = (it: ReminderItem) => {
+    if (it.days === null) return null;
+    if (it.expired) return `Lewat ${Math.abs(it.days)} hari`;
+    if (it.days === 0) return "Kadaluarsa hari ini";
+    return `Sisa ${it.days} hari`;
+  };
+
+  return (
+    <div className="space-y-3">
+      <header><h1 className="text-[28px] leading-[36px] font-normal">Pengingat</h1><p className="text-[13px] leading-5 text-[var(--dim)] mt-1">Kadaluarsa &amp; stok menipis digabung jadi satu daftar prioritas, diurutkan dari yang paling mendesak. Daftar ini otomatis mengikuti data di Stok.</p></header>
+
+      {/* Search — find a specific medicine among the expiry / low-stock reminders */}
+      <div className="m3-search">
+        <Icon name="search" className="text-[22px] text-[var(--dim)]" />
+        <input aria-label="Cari obat di pengingat" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Cari nama obat yang kadaluarsa / stok menipis…" />
+        {search && <button aria-label="Hapus pencarian pengingat" onClick={()=>setSearch("")} className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-[var(--md-surface-container-highest)]"><Icon name="close" className="text-[20px]" /></button>}
+      </div>
+
+      {/* Masa kadaluarsa window selector */}
+      <div>
+        <p id="rem-window-label" className="text-[12px] font-medium tracking-[0.4px] uppercase text-[var(--dim)] mb-1.5 pl-1">Masa Kadaluarsa</p>
+        <div role="group" aria-labelledby="rem-window-label" className="flex flex-wrap gap-1.5">
+          {([30, 60, 90] as ReminderWindow[]).map(w => (
+            <button key={w} onClick={() => setWin(w)} aria-pressed={win === w} className={`${chipBase} !h-[32px] !px-3 !text-[13px] !gap-1 ${win === w ? "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] border-transparent" : "border-[var(--md-outline)] hover:bg-[var(--md-surface-container-high)]"}`}>{win === w && <Icon name="check" className="text-[16px]" />}{w} Hari</button>
+          ))}
+        </div>
+      </div>
+
+      {medsQ.isPending ? <p className="text-[var(--dim)] py-6 text-center">Memuat pengingat…</p> : medsQ.error ? <p className="py-6 text-center text-[var(--md-error)]">Gagal memuat data stok.</p> : meds.length === 0 ? (
+        <div className="glass-card rounded-[20px] p-6 text-center"><span className="w-10 h-10 mx-auto rounded-full bg-[var(--md-secondary-container)] flex items-center justify-center"><Icon name="notifications_active" className="text-[20px]" /></span><p className="text-[13px] text-[var(--dim)] mt-2">Belum ada obat di Stok, jadi belum ada pengingat. Tambahkan obat beserta tanggal kadaluarsanya di menu Stok.</p></div>
+      ) : computed.items.length === 0 ? (
+        <div className="bg-[#E6F4EA] text-[#137333] dark:bg-[var(--md-primary-container)] dark:text-[var(--md-on-primary-container)] rounded-[20px] p-6 text-center"><span className="w-12 h-12 mx-auto rounded-full bg-white/60 dark:bg-black/20 flex items-center justify-center"><Icon name="check_circle" filled className="text-[26px]" /></span><p className="font-medium text-[15px] mt-3">Semua aman</p><p className="text-[13px] mt-1 opacity-90">Tidak ada obat yang kadaluarsa, mendekati kadaluarsa dalam {win} hari, atau stoknya menipis.</p></div>
+      ) : (
+        <>
+          {/* Summary strip */}
+          <div className="glass-card rounded-[20px] px-3.5 py-3 grid grid-cols-4 divide-x divide-[var(--md-outline-variant)]">
+            <div className="min-w-0 pr-2">
+              <p className="flex items-center gap-1 text-[10px] leading-4 font-medium tracking-[0.5px] uppercase text-[var(--dim)]"><Icon name="event_busy" className="text-[13px] text-[var(--md-error)]" />Expired</p>
+              <p className="font-semibold text-[15px] leading-6 mt-0.5 text-[var(--md-error)]">{computed.expiredCount}</p>
+            </div>
+            <div className="min-w-0 px-2">
+              <p className="flex items-center gap-1 text-[10px] leading-4 font-medium tracking-[0.5px] uppercase text-[var(--dim)]"><Icon name="schedule" className="text-[13px]" />≤ {win} Hari</p>
+              <p className="font-semibold text-[15px] leading-6 mt-0.5">{computed.expiringCount}</p>
+            </div>
+            <div className="min-w-0 px-2">
+              <p className="flex items-center gap-1 text-[10px] leading-4 font-medium tracking-[0.5px] uppercase text-[var(--dim)]"><Icon name="inventory_2" className="text-[13px]" />Stok Nipis</p>
+              <p className="font-semibold text-[15px] leading-6 mt-0.5">{computed.lowCount}</p>
+            </div>
+            <div className="min-w-0 pl-2">
+              <p className="flex items-center gap-1 text-[10px] leading-4 font-medium tracking-[0.5px] uppercase text-[var(--dim)]"><Icon name="priority_high" className="text-[13px] text-[var(--md-error)]" />Kritis</p>
+              <p className="font-semibold text-[15px] leading-6 mt-0.5">{computed.criticalCount}</p>
+            </div>
+          </div>
+
+          {computed.capitalAtRisk > 0 && (
+            <p className="text-[12px] leading-4 text-[var(--dim)] flex items-start gap-1.5 px-1"><Icon name="info" className="text-[16px] shrink-0" /><span>Modal yang berisiko hangus dari obat kadaluarsa / mendekati kadaluarsa dalam {win} hari: <strong className="text-[var(--text)]">{fmtIDR(computed.capitalAtRisk)}</strong> (harga beli × stok tersisa). Habiskan atau retur sebelum tanggalnya lewat.</span></p>
+          )}
+
+          {/* Type filter chips */}
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter jenis pengingat">
+            {([["all", "Semua Prioritas"], ["expiry", "Kadaluarsa"], ["stock", "Stok Menipis"], ["critical", "Kritis Saja"]] as [ReminderFilter, string][]).map(([k, l]) => (
+              <button key={k} onClick={() => setFilter(k)} aria-pressed={filter === k} className={`${chipBase} !h-[32px] !px-3 !text-[13px] !gap-1 ${filter === k ? "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] border-transparent" : "border-[var(--md-outline)] hover:bg-[var(--md-surface-container-high)]"}`}>{filter === k && <Icon name="check" className="text-[16px]" />}{l}</button>
+            ))}
+          </div>
+
+          {shown.length === 0 ? (
+            searchQuery ? (
+              <div className="glass-card rounded-[20px] p-6 text-center">
+                <span className="w-10 h-10 mx-auto rounded-full bg-[var(--md-secondary-container)] flex items-center justify-center"><Icon name="search_off" className="text-[20px]" /></span>
+                <p className="text-[13px] text-[var(--dim)] mt-2">Tidak ditemukan obat bernama &ldquo;{search.trim()}&rdquo; di daftar pengingat ini. Obat tersebut mungkin tidak termasuk yang kadaluarsa / stoknya menipis, atau coba kata kunci lain.</p>
+                <button onClick={()=>setSearch("")} aria-label="Hapus pencarian dan tampilkan semua pengingat" className="inline-flex items-center gap-1.5 h-[36px] px-4 mt-3 rounded-full bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] text-[13px] font-medium active:scale-[0.98] transition-all"><Icon name="close" className="text-[16px]" />Hapus Pencarian</button>
+              </div>
+            ) : (
+              <div className="glass-card rounded-[20px] p-6 text-center"><p className="text-[13px] text-[var(--dim)]">Tidak ada obat pada filter ini untuk masa {win} hari.</p></div>
+            )
+          ) : (
+            <>
+            {searchQuery && <p role="status" className="text-[12px] leading-4 text-[var(--dim)] px-1">Ditemukan {shown.length} obat untuk pencarian &ldquo;{search.trim()}&rdquo; dari {computed.items.length} pengingat.</p>}
+            <div className="space-y-2">
+              {shown.map(it => {
+                const dl = daysLabel(it);
+                return (
+                  <article key={it.med.id} className="glass-card rounded-[16px] px-3 py-2.5">
+                    <div className="flex items-start gap-2.5">
+                      <span className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center ${it.level === 0 ? "bg-[var(--md-error-container)] text-[var(--md-on-error-container)]" : it.expired || it.expiring ? "bg-[#FFECB3] text-[#7A5901] dark:bg-[var(--md-tertiary-container)] dark:text-[var(--md-on-tertiary-container)]" : "bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)]"}`}><Icon name={it.expired ? "event_busy" : it.expiring ? "schedule" : it.out ? "production_quantity_limits" : "inventory_2"} className="text-[17px]" /></span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <p className="font-medium truncate text-[13px] leading-[18px]">{it.med.name}</p>
+                          {levelBadge(it)}
+                        </div>
+                        <p className="text-[11px] leading-4 text-[var(--dim)] truncate mt-0.5">
+                          {it.med.category} • Stok {it.med.stock} {it.med.unit} (min. {it.med.minStock})
+                          {it.med.expiryDate ? <> • Exp {fmtDate(it.med.expiryDate)}{dl ? <> • <span className={it.expired || (it.days !== null && it.days <= 30) ? "font-semibold text-[var(--md-error)]" : "font-medium"}>{dl}</span></> : null}</> : " • Tanpa tanggal kadaluarsa"}
+                        </p>
+                        <p className="text-[11px] leading-4 mt-1 flex items-start gap-1"><Icon name="tips_and_updates" className="text-[14px] shrink-0 text-[var(--md-primary)]" /><span>{it.action}</span></p>
+                      </div>
+                      <button onClick={onGoStok} aria-label={`Buka ${it.med.name} di Stok`} className="shrink-0 inline-flex items-center gap-1 h-[28px] px-2.5 rounded-full bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)] text-[11px] font-medium active:scale-[0.98] transition-all"><Icon name="inventory_2" className="text-[14px]" />Stok</button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+            </>
+          )}
+          <p className="text-[12px] leading-4 text-[var(--dim)] px-1">Jumlah restock adalah saran otomatis (target stok 2× stok minimum). Untuk mengubah stok, tanggal kadaluarsa, atau stok minimum, buka obatnya di menu Stok.</p>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- RIWAYAT ---------------- */
+function Riwayat() {
+  const q = useQuery({ queryKey: ["sales"], queryFn: () => api.listSales({ limit: 100 }) });
+  const [openId, setOpenId] = useState<number | null>(() => readStoredId(RIWAYAT_OPEN_KEY));
+  const [detailId, setDetailId] = useState<number | null>(() => readStoredId(RIWAYAT_DETAIL_KEY));
+  // Restore the invoice that was open before a refresh, once sales data loads.
+  const detailSale: Sale | null = detailId != null ? (q.data?.sales.find(s => s.id === detailId) ?? null) : null;
+  useEffect(() => { storeValue(RIWAYAT_OPEN_KEY, openId != null ? String(openId) : null); }, [openId]);
+  useEffect(() => { storeValue(RIWAYAT_DETAIL_KEY, detailId != null ? String(detailId) : null); }, [detailId]);
+  return (
+    <div className="space-y-4">
+      <header><h1 className="text-[28px] leading-[36px] font-normal">Riwayat Penjualan</h1><p className="text-[13px] leading-5 text-[var(--dim)] mt-1">Ketuk invoice untuk melihat detail lengkapnya.</p></header>
+      {q.isPending ? <p className="text-[var(--dim)] py-6 text-center">Memuat…</p> : (q.data?.sales.length===0 ? <div className="glass-card rounded-[28px] p-10 text-center"><span className="w-14 h-14 mx-auto rounded-full bg-[var(--md-secondary-container)] flex items-center justify-center"><Icon name="receipt_long" className="text-[28px]" /></span><p className="font-medium text-[16px] mt-4">Belum ada penjualan</p><p className="text-[14px] text-[var(--dim)] mt-1">Semua transaksi dari Kasir akan tercatat rinci di sini.</p></div> : (
+        <div className="space-y-2">
+          {q.data!.sales.map((s:Sale)=>{
+            const open = openId===s.id;
+            return (
+            <div key={s.id} className="glass-card rounded-[16px] overflow-hidden">
+              <button onClick={()=>setOpenId(open?null:s.id)} aria-label={`Detail ${s.invoiceNo}`} aria-expanded={open} className="w-full px-3 py-2.5 flex items-center gap-2.5 text-left hover:bg-[var(--md-surface-container-low)]">
+                <span className="w-8 h-8 shrink-0 rounded-full bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] flex items-center justify-center"><Icon name="receipt" className="text-[17px]" /></span>
+                <span className="flex-1 min-w-0"><span className="font-medium block truncate text-[13px] leading-[18px]">{s.invoiceNo}</span><span className="text-[11px] leading-4 text-[var(--dim)] block truncate">{fmtDateTime(s.createdAt)} • {s.paymentMethod} • {s.items.reduce((a,i)=>a+i.qty,0)} item</span></span>
+                <span className="font-semibold text-[13px] leading-5 whitespace-nowrap">{fmtIDR(s.total)}</span>
+                <span className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center ${open ? "bg-[var(--md-secondary-container)]" : ""}`}><Icon name={open ? "expand_less" : "expand_more"} className="text-[18px] text-[var(--dim)]" /></span>
+              </button>
+              {open && (
+                <div className="mx-2.5 mb-2.5 space-y-2">
+                  <InvoiceDetail invoiceNo={s.invoiceNo} dateLabel={fmtDateOnly(s.createdAt)} paymentMethod={s.paymentMethod} amountPaid={s.amountPaid} changeAmount={s.changeAmount} total={s.total} items={s.items.map(it => ({ name: it.medicineName, qty: it.qty, price: it.price, subtotal: it.subtotal }))} />
+                  <button onClick={()=>setDetailId(s.id)} aria-label={`Lihat invoice lengkap ${s.invoiceNo}`} className={`${tonalBtn} w-full !h-[36px] !text-[13px]`}><Icon name="visibility" className="text-[18px]" />Lihat Invoice Lengkap</button>
+                </div>
+              )}
+            </div>
+          );})}
+        </div>
+      ))}
+
+      {detailSale && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[6px] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label={`Detail invoice ${detailSale.invoiceNo}`}>
+          <div className="glass-sheet text-[var(--text)] w-full max-w-md rounded-t-[28px] sm:rounded-[28px] p-5 sm:p-6 max-h-[92vh] overflow-auto shadow-[var(--elevation-3)]">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="w-11 h-11 shrink-0 rounded-full bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)] flex items-center justify-center"><Icon name="receipt_long" className="text-[22px]" /></span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[18px] font-medium leading-6">Detail Invoice</p>
+                <p className="text-[13px] text-[var(--dim)] truncate mt-0.5">{detailSale.invoiceNo} • {fmtDateTime(detailSale.createdAt)}</p>
+              </div>
+              <button onClick={()=>setDetailId(null)} aria-label="Tutup detail invoice" className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center hover:bg-[var(--md-surface-container-highest)]"><Icon name="close" className="text-[20px]" /></button>
+            </div>
+            <InvoiceDetail invoiceNo={detailSale.invoiceNo} dateLabel={fmtDateOnly(detailSale.createdAt)} paymentMethod={detailSale.paymentMethod} amountPaid={detailSale.amountPaid} changeAmount={detailSale.changeAmount} total={detailSale.total} items={detailSale.items.map(it => ({ name: it.medicineName, qty: it.qty, price: it.price, subtotal: it.subtotal }))} />
+            <button onClick={()=>setDetailId(null)} className={`${filledBtn} w-full mt-4`}>Tutup</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

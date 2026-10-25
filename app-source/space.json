@@ -1,0 +1,8 @@
+{
+  "entry": "client/dist/index.html",
+  "managedCronJobs": [],
+  "name": "Aplikasi Apotik Lestari",
+  "platformVersion": 25,
+  "runtime": "typescript",
+  "slug": "aplikasi-penjualan-apotik"
+}
