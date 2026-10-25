@@ -1,0 +1,8 @@
+node_modules/
+client/dist/
+.gradle/
+build/
+*.apk
+*.aab
+local.properties
+app.db
