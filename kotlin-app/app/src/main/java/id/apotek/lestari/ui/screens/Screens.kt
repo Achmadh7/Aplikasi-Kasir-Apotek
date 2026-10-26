@@ -2,6 +2,7 @@
 
 package id.apotek.lestari.ui.screens
 
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -1775,7 +1776,15 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, m
     val scope = rememberCoroutineScope()
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier.fillMaxWidth()) {
         OutlinedButton(
-            onClick = { scope.launch { shareReceiptBitmap(context, graphicsLayer.toImageBitmap().asAndroidBitmap(), invoiceNo) } },
+            onClick = {
+                scope.launch {
+                    try {
+                        shareReceiptBitmap(context, graphicsLayer.toImageBitmap().asAndroidBitmap(), invoiceNo)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Gagal menyiapkan struk", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
             shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)
         ) {
             Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
@@ -1783,7 +1792,15 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, m
             Text("Bagikan")
         }
         OutlinedButton(
-            onClick = { scope.launch { printReceiptBitmap(context, graphicsLayer.toImageBitmap().asAndroidBitmap(), invoiceNo) } },
+            onClick = {
+                scope.launch {
+                    try {
+                        printReceiptBitmap(context, graphicsLayer.toImageBitmap().asAndroidBitmap(), invoiceNo)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Gagal mencetak struk", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
             shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)
         ) {
             Icon(Icons.Default.Print, null, modifier = Modifier.size(18.dp))
