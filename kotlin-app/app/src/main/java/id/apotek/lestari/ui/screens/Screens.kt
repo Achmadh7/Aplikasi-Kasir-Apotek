@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import kotlin.math.roundToInt
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -768,6 +769,7 @@ fun StokScreen() {
     var showScanner by remember { mutableStateOf(false) }
     var showForm by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Medicine?>(null) }
+    var prefillBarcode by remember { mutableStateOf("") }
     var msg by remember { mutableStateOf("") }
     var listEntered by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -837,7 +839,7 @@ fun StokScreen() {
         scope.launch {
             val med = (repo.findByBarcode(code) as? ApiResult.Success)?.data?.medicine
             msg = if (med != null) "Ditemukan: ${med.name} — stok ${med.stock}" else "Barcode $code belum terdaftar — gunakan Tambah Obat"
-            if (med == null) { editing = null; showForm = true }
+            if (med == null) { prefillBarcode = code; editing = null; showForm = true }
         }
     }, onClose = { showScanner = false })
     Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -847,7 +849,7 @@ fun StokScreen() {
                 Text("${medicines.size} jenis obat tercatat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Button(
-                onClick = { editing = null; showForm = true },
+                onClick = { prefillBarcode = ""; editing = null; showForm = true },
                 colors = ButtonDefaults.buttonColors(containerColor = LightBlueCard, contentColor = OnLightBlue),
                 shape = RoundedCornerShape(32.dp)
             ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("Tambah Obat") }
@@ -960,7 +962,7 @@ fun StokScreen() {
                             Text("${m.stock}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = if (m.stock <= 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
                             Text(m.unit, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        IconButton(onClick = { editing = m; showForm = true }) { Icon(Icons.Default.Edit, "Edit obat") }
+                        IconButton(onClick = { prefillBarcode = ""; editing = m; showForm = true }) { Icon(Icons.Default.Edit, "Edit obat") }
                         IconButton(onClick = { scope.launch { repo.deleteMedicine(m.id); msg = "Obat ${m.name} dihapus."; reload() } }) {
                             Icon(Icons.Default.Delete, "Hapus obat", tint = MaterialTheme.colorScheme.error)
                         }
@@ -970,7 +972,7 @@ fun StokScreen() {
             }
         }
     }
-    if (showForm) MedicineFormDialog(editing = editing, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
+    if (showForm) MedicineFormDialog(editing = editing, initialBarcode = prefillBarcode, onDismiss = { showForm = false; prefillBarcode = "" }, onSaved = { showForm = false; prefillBarcode = ""; reload() })
     if (showImportDialog && importSummary != null) {
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
@@ -1020,23 +1022,28 @@ private fun OptionPickerSheet(
 }
 
 @Composable
-private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () -> Unit) {
+private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", onDismiss: () -> Unit, onSaved: () -> Unit) {
     var name by remember(editing) { mutableStateOf(editing?.name ?: "") }
-    var barcode by remember(editing) { mutableStateOf(editing?.barcode ?: "") }
+    var barcode by remember(editing, initialBarcode) { mutableStateOf(editing?.barcode ?: initialBarcode) }
     var category by remember(editing) { mutableStateOf(editing?.category ?: "Umum") }
     var unit by remember(editing) { mutableStateOf(editing?.unit ?: "Strip") }
     var showCategorySheet by remember { mutableStateOf(false) }
     var showUnitSheet by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
     // Ketukan pada field read-only ditangkap lewat interactionSource:
     // Modifier.clickable di OutlinedTextField tidak jalan karena field
     // menelan ketukan untuk fokus. Pola ini sama seperti dropdown bawaan.
     val categoryInteraction = remember { MutableInteractionSource() }
     val unitInteraction = remember { MutableInteractionSource() }
+    val expiryInteraction = remember { MutableInteractionSource() }
     LaunchedEffect(categoryInteraction) {
         categoryInteraction.interactions.collect { if (it is PressInteraction.Press) showCategorySheet = true }
     }
     LaunchedEffect(unitInteraction) {
         unitInteraction.interactions.collect { if (it is PressInteraction.Press) showUnitSheet = true }
+    }
+    LaunchedEffect(expiryInteraction) {
+        expiryInteraction.interactions.collect { if (it is PressInteraction.Press) showDatePicker = true }
     }
     var buy by remember(editing) { mutableStateOf(formatDecimal(editing?.buyPrice?.toString() ?: "")) }
     var sell by remember(editing) { mutableStateOf(formatDecimal(editing?.sellPrice?.toString() ?: "")) }
@@ -1044,59 +1051,108 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
     var minStock by remember(editing) { mutableStateOf(editing?.minStock?.toString() ?: "10") }
     var expiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
     val scope = rememberCoroutineScope()
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(if (editing == null) "Tambah Obat" else "Edit Obat") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("Nama Obat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(barcode, { barcode = it }, label = { Text("Barcode (boleh kosong)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(
-                    value = category, onValueChange = {}, label = { Text("Kategori") },
-                    readOnly = true, singleLine = true,
-                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih kategori") },
-                    interactionSource = categoryInteraction,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = unit, onValueChange = {}, label = { Text("Satuan") },
-                    readOnly = true, singleLine = true,
-                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih satuan") },
-                    interactionSource = unitInteraction,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(buy, { buy = formatDecimal(it) }, label = { Text("Harga Beli") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(sell, { sell = formatDecimal(it) }, label = { Text("Harga Jual") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() } }, label = { Text("Stok") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(minStock, { minStock = it.filter { c -> c.isDigit() } }, label = { Text("Stok Minimum") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(expiry, { expiry = it }, label = { Text("Tanggal Kadaluarsa (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    ) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(if (editing == null) "Tambah Obat" else "Edit Obat", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    scope.launch {
-                        val cat = category.ifBlank { "Umum" }
-                        val unt = unit.ifBlank { "Strip" }
-                        val b = parseDecimal(buy)
-                        val s = parseDecimal(sell)
-                        val st = stock.toIntOrNull() ?: 0
-                        val ms = minStock.toIntOrNull() ?: 10
-                        val exp = expiry.ifBlank { null }
-                        val bc = barcode.ifBlank { null }
-                        if (editing == null) {
-                            repo.createMedicine(MedicineArgs(name, cat, unt, b, s, st, ms, exp, bc))
-                        } else {
-                            repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, b, s, st, ms, exp, bc))
-                        }
-                        onSaved()
+            OutlinedTextField(name, { name = it }, label = { Text("Nama Obat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(barcode, { barcode = it }, label = { Text("Barcode (boleh kosong)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = category, onValueChange = {}, label = { Text("Kategori") },
+                readOnly = true, singleLine = true,
+                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih kategori") },
+                interactionSource = categoryInteraction,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = unit, onValueChange = {}, label = { Text("Satuan") },
+                readOnly = true, singleLine = true,
+                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih satuan") },
+                interactionSource = unitInteraction,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                buy,
+                {
+                    val formatted = formatDecimal(it)
+                    buy = formatted
+                    // Saran Harga Jual otomatis (Harga Beli +20%) selama kolomnya masih kosong.
+                    if (sell.isBlank()) {
+                        val b = parseDecimal(formatted)
+                        if (b > 0) sell = formatDecimal((b * 1.2).roundToInt().toString())
                     }
                 },
-                enabled = name.isNotBlank()
-            ) { Text("Simpan") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } }
-    )
+                label = { Text("Harga Beli") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true, modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(sell, { sell = formatDecimal(it) }, label = { Text("Harga Jual") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() } }, label = { Text("Stok") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(minStock, { minStock = it.filter { c -> c.isDigit() } }, label = { Text("Stok Minimum") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = if (expiry.isBlank()) "" else formatDateID(expiry),
+                onValueChange = {},
+                label = { Text("Tanggal Kadaluarsa (boleh kosong)") },
+                readOnly = true, singleLine = true,
+                trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = "Pilih tanggal") },
+                interactionSource = expiryInteraction,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onDismiss, shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f).height(52.dp)) { Text("Batal") }
+                Button(
+                    onClick = {
+                        scope.launch {
+                            val cat = category.ifBlank { "Umum" }
+                            val unt = unit.ifBlank { "Strip" }
+                            val b = parseDecimal(buy)
+                            val s = parseDecimal(sell)
+                            val st = stock.toIntOrNull() ?: 0
+                            val ms = minStock.toIntOrNull() ?: 10
+                            val exp = expiry.ifBlank { null }
+                            val bc = barcode.ifBlank { null }
+                            if (editing == null) {
+                                repo.createMedicine(MedicineArgs(name, cat, unt, b, s, st, ms, exp, bc))
+                            } else {
+                                repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, b, s, st, ms, exp, bc))
+                            }
+                            onSaved()
+                        }
+                    },
+                    enabled = name.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.weight(1f).height(52.dp)
+                ) { Text("Simpan") }
+            }
+        }
+    }
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = parseISODate(expiry)?.time)
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { expiry = dayKeyID(Date(it)) }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { expiry = ""; showDatePicker = false }) { Text("Hapus") }
+                TextButton(onClick = { showDatePicker = false }) { Text("Batal") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
     if (showCategorySheet) {
         // Nilai lama yang tidak ada di daftar tetap ditampilkan di atas agar tidak hilang.
         val options = if (category in CATEGORIES) CATEGORIES else listOf(category) + CATEGORIES
