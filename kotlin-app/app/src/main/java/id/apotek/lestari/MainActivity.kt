@@ -18,14 +18,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.work.Constraints
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
 import id.apotek.lestari.data.local.DatabaseProvider
-import id.apotek.lestari.work.StockCheckWorker
-import java.util.concurrent.TimeUnit
 import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
 
@@ -33,29 +26,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         DatabaseProvider.init(applicationContext)
-        scheduleStockCheck()
         setContent { ApotikLestariTheme { ApotekApp() } }
-    }
-
-    /**
-     * Jadwalkan pengecekan stok menipis berkala di latar belakang
-     * (tiap 6 jam, tanpa butuh internet). WorkManager menyimpan jadwal
-     * ini sehingga tetap jalan walau aplikasi ditutup/dibuka lagi;
-     * KEEP berarti penjadwalan ulang tidak membuat jadwal ganda.
-     * Waktu persisnya diatur sistem (Doze/baterai bisa menunda).
-     */
-    private fun scheduleStockCheck() {
-        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
-            "stock-check",
-            ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<StockCheckWorker>(6, TimeUnit.HOURS)
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
-                        .build()
-                )
-                .build()
-        )
     }
 }
 

@@ -77,9 +77,6 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
-    // Pengecekan stok menipis berkala di latar belakang (WorkManager)
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
-
     // Images
     implementation("io.coil-kt:coil-compose:2.7.0")
 
