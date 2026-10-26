@@ -304,7 +304,7 @@ private fun LegendChip(text: String, bg: Color, fg: Color) {
 // ---------- Beranda ----------
 
 @Composable
-fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit) {
+fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit) {
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
     var lowStock by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var showLowStockPopup by remember { mutableStateOf(false) }
@@ -365,6 +365,14 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit) {
                             Text("${d.totalSalesToday} transaksi penjualan", color = OnLightTeal, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
+                }
+            }
+            item {
+                // Shortcut ke menu yang tidak lagi ada di bar bawah (Laba, Pengingat, Riwayat).
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    ShortcutCard(label = "Laba", icon = Icons.Default.TrendingUp, modifier = Modifier.weight(1f), onClick = onGoLaba)
+                    ShortcutCard(label = "Pengingat", icon = Icons.Default.NotificationsActive, modifier = Modifier.weight(1f), onClick = onGoPengingat)
+                    ShortcutCard(label = "Riwayat", icon = Icons.Default.ReceiptLong, modifier = Modifier.weight(1f), onClick = onGoRiwayat)
                 }
             }
             item {
@@ -464,6 +472,17 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit) {
             }
         } ?: item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        }
+    }
+}
+
+@Composable
+fun ShortcutCard(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    GlassCard(shape = RoundedCornerShape(28.dp), modifier = modifier.clickable { onClick() }) {
+        Column(Modifier.padding(vertical = 14.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.height(6.dp))
+            Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.Center)
         }
     }
 }
