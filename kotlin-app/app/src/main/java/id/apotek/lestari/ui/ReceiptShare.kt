@@ -22,6 +22,13 @@ import java.io.IOException
 // Struk ditangkap dari kartu invoice (GraphicsLayer) menjadi bitmap, lalu:
 // - dibagikan sebagai gambar PNG lewat share sheet (WhatsApp, dll), atau
 // - dicetak lewat PrintManager (printer, atau "Simpan sebagai PDF").
+//
+// Perbaikan FC saat Cetak (2026-10-27): adapter cetak sebelumnya memakai
+// pdf.startPage(1) padahal nomor halaman dimulai dari 0 dan dokumen ini
+// hanya 1 halaman (page 0), dan semua pengecualian di callback cetak tidak
+// ditangkap sehingga aplikasi langsung force close. Sekarang halaman dimulai
+// dari 0, bitmap kosong ditolak dengan onWriteFailed, dan semua pengecualian
+// di onLayout/onWrite dilaporkan ke sistem lewat callback (bukan crash).
 
 /** Simpan bitmap struk sebagai PNG di cache lalu bagikan lewat share sheet. */
 fun shareReceiptBitmap(context: Context, bitmap: Bitmap, invoiceNo: String) {
@@ -58,16 +65,20 @@ private class ReceiptPrintAdapter(
         callback: LayoutResultCallback?,
         extras: Bundle?
     ) {
-        attributes = newAttributes
-        if (cancellationSignal?.isCanceled == true) {
-            callback?.onLayoutCancelled()
-            return
+        try {
+            attributes = newAttributes
+            if (cancellationSignal?.isCanceled == true) {
+                callback?.onLayoutCancelled()
+                return
+            }
+            val info = PrintDocumentInfo.Builder(jobName)
+                .setContentType(PrintDocumentInfo.CONTENT_TYPE_PHOTO)
+                .setPageCount(1)
+                .build()
+            callback?.onLayoutFinished(info, newAttributes != oldAttributes)
+        } catch (e: Exception) {
+            callback?.onLayoutFailed(e.message)
         }
-        val info = PrintDocumentInfo.Builder(jobName)
-            .setContentType(PrintDocumentInfo.CONTENT_TYPE_PHOTO)
-            .setPageCount(1)
-            .build()
-        callback?.onLayoutFinished(info, newAttributes != oldAttributes)
     }
 
     override fun onWrite(
@@ -76,27 +87,40 @@ private class ReceiptPrintAdapter(
         cancellationSignal: CancellationSignal?,
         callback: WriteResultCallback?
     ) {
-        val attrs = attributes
-        if (attrs == null) {
-            callback?.onWriteFailed("Atribut cetak belum tersedia")
-            return
-        }
-        val pdf = PrintedPdfDocument(context, attrs)
-        val page = pdf.startPage(1)
-        val pageWidth = page.canvas.width.toFloat()
-        val pageHeight = page.canvas.height.toFloat()
-        val scale = minOf(pageWidth / bitmap.width, pageHeight / bitmap.height)
-        val width = bitmap.width * scale
-        val height = bitmap.height * scale
-        page.canvas.drawBitmap(bitmap, null, RectF((pageWidth - width) / 2f, 0f, (pageWidth + width) / 2f, height), null)
-        pdf.finishPage(page)
         try {
-            pdf.writeTo(FileOutputStream(destination.fileDescriptor))
-            callback?.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
-        } catch (e: IOException) {
+            val attrs = attributes
+            if (attrs == null) {
+                callback?.onWriteFailed("Atribut cetak belum tersedia")
+                return
+            }
+            // Struk kosong (layer belum sempat direkam) tidak bisa dicetak:
+            // laporkan gagal daripada menghitung skala dari ukuran 0.
+            if (bitmap.isRecycled || bitmap.width <= 0 || bitmap.height <= 0) {
+                callback?.onWriteFailed("Struk belum siap dicetak")
+                return
+            }
+            val pdf = PrintedPdfDocument(context, attrs)
+            try {
+                // Nomor halaman dimulai dari 0; dokumen ini hanya 1 halaman.
+                val page = pdf.startPage(0)
+                val pageWidth = page.canvas.width.toFloat()
+                val pageHeight = page.canvas.height.toFloat()
+                val scale = minOf(pageWidth / bitmap.width, pageHeight / bitmap.height)
+                val width = bitmap.width * scale
+                val height = bitmap.height * scale
+                page.canvas.drawBitmap(bitmap, null, RectF((pageWidth - width) / 2f, 0f, (pageWidth + width) / 2f, height), null)
+                pdf.finishPage(page)
+                try {
+                    pdf.writeTo(FileOutputStream(destination.fileDescriptor))
+                    callback?.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
+                } catch (e: IOException) {
+                    callback?.onWriteFailed(e.message)
+                }
+            } finally {
+                pdf.close()
+            }
+        } catch (e: Exception) {
             callback?.onWriteFailed(e.message)
-        } finally {
-            pdf.close()
         }
     }
 }
