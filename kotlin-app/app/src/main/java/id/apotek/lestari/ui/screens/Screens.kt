@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalFoundationApi::class)
+@file:OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 
 package id.apotek.lestari.ui.screens
 
@@ -31,6 +31,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -510,6 +511,8 @@ fun KasirScreen() {
     var payMsg by remember { mutableStateOf("") }
     var payCount by remember { mutableIntStateOf(0) }
     var lastSale by remember { mutableStateOf<Sale?>(null) }
+    var showSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val receiptLayer = rememberGraphicsLayer()
     val cart = remember { mutableStateListOf<CartItem>() }
     val scope = rememberCoroutineScope()
@@ -523,6 +526,7 @@ fun KasirScreen() {
             val med = (r as? ApiResult.Success)?.data?.medicine
             if (med != null) {
                 lastSale = null
+                payMsg = ""
                 val ex = cart.firstOrNull { it.medicine.id == med.id }
                 if (ex != null) ex.qty++ else cart.add(CartItem(med, 1))
                 scanMsg = "${med.name} ditambahkan"
@@ -537,9 +541,10 @@ fun KasirScreen() {
     val canPay = cart.isNotEmpty() && (method != "Tunai" || paid >= total)
     // Grid obat adaptif: HP portrait 2 kolom, tablet/landscape 3 kolom, tablet lebar 4 kolom.
     val gridCols = adaptiveColumns(compact = 2, medium = 3, expanded = 4)
-    // Seluruh layar bisa digulir + imePadding: saat keyboard terbuka, field
-    // Uang Diterima dan tombol Bayar tetap bisa digulir ke atas keyboard.
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(16.dp)) {
+    Box(Modifier.fillMaxSize()) {
+        // Daftar obat memenuhi layar; keranjang & pembayaran pindah ke bottom sheet.
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(16.dp)) {
+
         Text("Kasir", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
         Text("Ketuk obat untuk menambahkan ke keranjang, lalu selesaikan pembayaran.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(16.dp))
@@ -577,6 +582,7 @@ fun KasirScreen() {
                             shape = RoundedCornerShape(28.dp),
                             modifier = Modifier.weight(1f).clickable(enabled = !out) {
                                 lastSale = null
+                                payMsg = ""
                                 val ex = cart.firstOrNull { it.medicine.id == m.id }
                                 if (ex != null) ex.qty++ else cart.add(CartItem(m, 1))
                             }
@@ -600,31 +606,65 @@ fun KasirScreen() {
                 }
             }
         }
-        Spacer(Modifier.height(16.dp))
-        // Keranjang
-        GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
-            Column(Modifier.padding(20.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ShoppingCart, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Keranjang", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.weight(1f))
+            // Ruang untuk bar keranjang yang nempel di bawah, supaya obat terakhir tetap bisa digulir ke atasnya.
+            if (cart.isNotEmpty()) Spacer(Modifier.height(96.dp))
+        }
+
+        // Bar keranjang nempel di bawah: total + tombol Bayar (membuka bottom sheet).
+        AnimatedVisibility(
+            visible = cart.isNotEmpty(),
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            GlassCard(
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).clickable { showSheet = true }
+            ) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     key(cartQty) {
                         val cartPop = remember { Animatable(1.4f) }
                         LaunchedEffect(cartQty) { cartPop.animateTo(1f, expressiveSpring()) }
                         Surface(color = LightTealCard, shape = CircleShape, modifier = Modifier.graphicsLayer(scaleX = cartPop.value, scaleY = cartPop.value)) {
-                            Text("$cartQty", color = OnLightTeal, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                            Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.ShoppingCart, null, tint = OnLightTeal, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("$cartQty", color = OnLightTeal, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("$cartQty item", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text(formatIDR(total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
+                    Button(
+                        onClick = { showSheet = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
+                        shape = RoundedCornerShape(28.dp),
+                        modifier = Modifier.height(48.dp)
+                    ) { Text("Bayar", style = MaterialTheme.typography.titleMedium) }
                 }
-                if (cart.isEmpty()) {
-                    Spacer(Modifier.height(20.dp))
-                    Icon(Icons.Default.ShoppingCart, null, modifier = Modifier.align(Alignment.CenterHorizontally).size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Keranjang kosong.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                    Text("Ketuk obat untuk menambahkan.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                } else {
-                    Spacer(Modifier.height(8.dp))
+            }
+        }
+    }
+
+    // Bottom sheet: keranjang + pembayaran (dan struk setelah bayar berhasil).
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            sheetState = sheetState,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            containerColor = glassPanelStrongColor()
+        ) {
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.ShoppingCart, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Keranjang", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { showSheet = false }) { Icon(Icons.Default.Close, "Tutup") }
+                }
+                if (cart.isNotEmpty()) {
                     cart.forEach { ci ->
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                             Column(Modifier.weight(1f)) {
@@ -744,6 +784,7 @@ fun KasirScreen() {
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.fillMaxWidth().height(56.dp).graphicsLayer(scaleX = bayarScale, scaleY = bayarScale)
                 ) { Text("Bayar (${formatIDR(total)})", style = MaterialTheme.typography.titleMedium) }
+                }
                 AnimatedVisibility(visible = payMsg.isNotEmpty()) {
                     Column {
                         Spacer(Modifier.height(8.dp))
@@ -761,6 +802,12 @@ fun KasirScreen() {
                             InvoiceDetailCard(sale = it, graphicsLayer = receiptLayer)
                             Spacer(Modifier.height(12.dp))
                             ReceiptActionsRow(graphicsLayer = receiptLayer, invoiceNo = it.invoiceNo)
+                            Spacer(Modifier.height(12.dp))
+                            OutlinedButton(
+                                onClick = { showSheet = false },
+                                shape = RoundedCornerShape(28.dp),
+                                modifier = Modifier.fillMaxWidth().height(52.dp)
+                            ) { Text("Tutup") }
                         }
                     }
                 }
