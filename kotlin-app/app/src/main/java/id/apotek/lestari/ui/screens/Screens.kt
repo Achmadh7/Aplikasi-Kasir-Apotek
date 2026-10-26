@@ -675,7 +675,6 @@ fun KasirScreen() {
                             Text(formatIDR(ci.medicine.sellPrice * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.width(92.dp), textAlign = TextAlign.End)
                         }
                     }
-                }
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Total bayar", style = MaterialTheme.typography.bodyLarge)
@@ -1856,3 +1855,4 @@ fun RiwayatScreen() {
         }
     }
 }
+
