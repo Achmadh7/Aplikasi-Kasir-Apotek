@@ -266,8 +266,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 Text(todayLabelID(), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             }
             Spacer(Modifier.height(8.dp))
-            Text("Penjualan", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-            Text("Hari Ini", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+            Text("Penjualan Hari Ini", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 1)
             Spacer(Modifier.height(4.dp))
             DemoBanner()
         }
