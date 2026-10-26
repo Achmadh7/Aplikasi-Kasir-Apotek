@@ -55,6 +55,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -825,6 +827,7 @@ fun StokScreen() {
     val context = LocalContext.current
     var importSummary by remember { mutableStateOf<String?>(null) }
     var showImportDialog by remember { mutableStateOf(false) }
+    fun reload() { scope.launch { (repo.listMedicines(search) as? ApiResult.Success)?.let { medicines = it.data.medicines } } }
     // File Excel dibuka/disimpan lewat Storage Access Framework — tanpa izin penyimpanan.
     val templateLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(ExcelHelper.MIME_XLSX)) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -879,7 +882,6 @@ fun StokScreen() {
             }
         }
     }
-    fun reload() { scope.launch { (repo.listMedicines(search) as? ApiResult.Success)?.let { medicines = it.data.medicines } } }
     LaunchedEffect(Unit) { reload() }
     // Daftar muncul bertahap begitu data pertama kali tiba; tidak berulang saat scroll.
     LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
@@ -1674,7 +1676,12 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
         colors = CardDefaults.cardColors(containerColor = InvoicePaper),
         shape = RoundedCornerShape(28.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = modifier.fillMaxWidth().let { if (graphicsLayer != null) it.graphicsLayer(graphicsLayer) else it }
+        modifier = modifier.fillMaxWidth().let {
+            if (graphicsLayer != null) it.drawWithContent {
+                graphicsLayer.record { this@drawWithContent.drawContent() }
+                drawLayer(graphicsLayer)
+            } else it
+        }
     ) {
         Column(Modifier.padding(20.dp)) {
             Text(
@@ -1856,5 +1863,6 @@ fun RiwayatScreen() {
         }
     }
 }
+
 
 
