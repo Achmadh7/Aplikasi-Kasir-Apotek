@@ -1,4 +1,4 @@
-# Aplikasi Kasir Apotek
+# Aplikasi Kasir Apotek Lestari
 
 Source code lengkap Aplikasi Apotik Lestari: kasir, stok obat, keuangan, laporan laba, dan pengingat kedaluwarsa/restock untuk apotek.
 
