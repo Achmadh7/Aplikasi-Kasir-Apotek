@@ -2,14 +2,17 @@
 
 package id.apotek.lestari.ui.screens
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -18,9 +21,20 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -29,8 +43,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +84,110 @@ private fun adaptiveColumns(compact: Int, medium: Int, expanded: Int): Int = whe
     WindowWidthSizeClass.Medium -> medium
     WindowWidthSizeClass.Expanded -> expanded
     else -> compact
+}
+
+// ---------- Animasi Material 3 Expressive ----------
+
+/** Jeda kemunculan bertahap per item daftar (maks. 400ms). */
+private fun entranceDelay(index: Int) = (index * 40).coerceAtMost(400)
+
+/** Angka berhitung naik dari 0 (dipakai Pemasukan Hari Ini & Laba Kotor). */
+@Composable
+private fun AnimatedAmount(value: Int, style: TextStyle, color: Color) {
+    var shown by remember { mutableStateOf(0) }
+    val animated by animateIntAsState(
+        targetValue = shown,
+        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+        label = "amount"
+    )
+    LaunchedEffect(value) { shown = value }
+    Text(formatIDR(animated), color = color, style = style, fontWeight = FontWeight.Bold)
+}
+
+/** Skala pegas saat ditekan (tombol utama & stepper Kasir). */
+@Composable
+private fun pressBounceScale(interactionSource: MutableInteractionSource): Float {
+    val pressed by interactionSource.collectIsPressedAsState()
+    return animateFloatAsState(
+        targetValue = if (pressed) 0.95f else 1f,
+        animationSpec = expressiveSpring(),
+        label = "pressBounce"
+    ).value
+}
+
+/** Tombol stepper +/- Kasir dengan pantulan saat ditekan. */
+@Composable
+private fun StepperButton(icon: ImageVector, description: String, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val scale = pressBounceScale(interactionSource)
+    IconButton(onClick = onClick, interactionSource = interactionSource, modifier = Modifier.graphicsLayer(scaleX = scale, scaleY = scale)) {
+        Icon(icon, description)
+    }
+}
+
+/** Centang sukses pembayaran: lingkaran membesar dengan pegas, centang tergambar. */
+@Composable
+private fun AnimatedCheckmark() {
+    var started by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { started = true }
+    val circleScale by animateFloatAsState(
+        targetValue = if (started) 1f else 0f,
+        animationSpec = expressiveSpring(),
+        label = "checkCircle"
+    )
+    val trim by animateFloatAsState(
+        targetValue = if (started) 1f else 0f,
+        animationSpec = tween(durationMillis = 350, delayMillis = 120, easing = FastOutSlowInEasing),
+        label = "checkTrim"
+    )
+    val checkColor = MaterialTheme.colorScheme.primary
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = CircleShape,
+        modifier = Modifier.size(56.dp).graphicsLayer(scaleX = circleScale, scaleY = circleScale)
+    ) {
+        Canvas(Modifier.fillMaxSize().padding(14.dp)) {
+            val w = size.width
+            val h = size.height
+            val stroke = 7.dp.toPx()
+            val t1 = (trim * 2f).coerceIn(0f, 1f)
+            val t2 = (trim * 2f - 1f).coerceIn(0f, 1f)
+            if (t1 > 0f) {
+                drawLine(
+                    checkColor,
+                    Offset(0.22f * w, 0.52f * h),
+                    Offset(lerp(0.22f, 0.45f, t1) * w, lerp(0.52f, 0.72f, t1) * h),
+                    strokeWidth = stroke,
+                    cap = StrokeCap.Round
+                )
+            }
+            if (t2 > 0f) {
+                drawLine(
+                    checkColor,
+                    Offset(0.45f * w, 0.72f * h),
+                    Offset(lerp(0.45f, 0.80f, t2) * w, lerp(0.72f, 0.30f, t2) * h),
+                    strokeWidth = stroke,
+                    cap = StrokeCap.Round
+                )
+            }
+        }
+    }
+}
+
+/** Denyut halus untuk lencana KRITIS (stok 0). */
+@Composable
+private fun Modifier.pulseKritis(): Modifier {
+    val infinite = rememberInfiniteTransition(label = "kritisPulse")
+    val alpha by infinite.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.65f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 700, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "kritisAlpha"
+    )
+    return this.graphicsLayer(alpha = alpha)
 }
 
 // Warna aksen mengikuti tampilan web app (mode gelap)
@@ -113,7 +236,7 @@ private fun LowStockPopup(medicines: List<Medicine>, onGoStok: () -> Unit, onDis
                                 Text(m.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 if (m.stock <= 0) {
                                     Spacer(Modifier.width(6.dp))
-                                    Surface(color = BurukBg, shape = RoundedCornerShape(16.dp)) {
+                                    Surface(color = BurukBg, shape = RoundedCornerShape(16.dp), modifier = Modifier.pulseKritis()) {
                                         Text("KRITIS", color = BurukFg, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                                     }
                                 }
@@ -149,7 +272,7 @@ private fun StockBadge(stock: Int, showCount: Boolean = true) {
         "Sedang" -> SedangFg
         else -> BurukFg
     }
-    Surface(color = bg, shape = RoundedCornerShape(16.dp)) {
+    Surface(color = bg, shape = RoundedCornerShape(16.dp), modifier = if (stock <= 0) Modifier.pulseKritis() else Modifier) {
         Text(
             if (showCount) "Stok $stock • $label" else label,
             color = fg, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
@@ -222,7 +345,7 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                             }
                         }
                         Spacer(Modifier.height(20.dp))
-                        Text(formatIDR(d.todayIn), color = OnLightTeal, style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
+                        AnimatedAmount(d.todayIn, MaterialTheme.typography.displayMedium, OnLightTeal)
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Receipt, null, tint = OnLightTeal, modifier = Modifier.size(18.dp))
@@ -288,11 +411,14 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                 }
             }
             item {
+                val kasirInteraction = remember { MutableInteractionSource() }
+                val kasirScale = pressBounceScale(kasirInteraction)
                 Button(
                     onClick = onGoKasir,
+                    interactionSource = kasirInteraction,
                     colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
                     shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.fillMaxWidth().height(60.dp)
+                    modifier = Modifier.fillMaxWidth().height(60.dp).graphicsLayer(scaleX = kasirScale, scaleY = kasirScale)
                 ) {
                     Icon(Icons.Default.PointOfSale, null)
                     Spacer(Modifier.width(8.dp))
@@ -354,6 +480,7 @@ fun KasirScreen() {
     var method by remember { mutableStateOf("Tunai") }
     var uangDiterima by remember { mutableIntStateOf(0) }
     var payMsg by remember { mutableStateOf("") }
+    var payCount by remember { mutableIntStateOf(0) }
     val cart = remember { mutableStateListOf<CartItem>() }
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines } }
@@ -371,6 +498,7 @@ fun KasirScreen() {
     }, onClose = { showScanner = false })
     val filtered = medicines.filter { search.isBlank() || it.name.contains(search, true) || it.category.contains(search, true) || (it.barcode?.contains(search) == true) }
     val total = cart.sumOf { it.medicine.sellPrice * it.qty }
+    val cartQty = cart.sumOf { it.qty }
     val paid = uangDiterima
     val change = if (method == "Tunai") (paid - total).coerceAtLeast(0) else 0
     val canPay = cart.isNotEmpty() && (method != "Tunai" || paid >= total)
@@ -434,8 +562,11 @@ fun KasirScreen() {
                     Spacer(Modifier.width(8.dp))
                     Text("Keranjang", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.weight(1f))
-                    Surface(color = LightTealCard, shape = CircleShape) {
-                        Text("${cart.sumOf { it.qty }}", color = OnLightTeal, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                    key(cartQty) {
+                        val cartPop by animateFloatAsState(initialValue = 1.4f, targetValue = 1f, animationSpec = expressiveSpring(), label = "cartPop")
+                        Surface(color = LightTealCard, shape = CircleShape, modifier = Modifier.graphicsLayer(scaleX = cartPop, scaleY = cartPop)) {
+                            Text("$cartQty", color = OnLightTeal, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                        }
                     }
                 }
                 if (cart.isEmpty()) {
@@ -452,9 +583,12 @@ fun KasirScreen() {
                                 Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                                 Text(formatIDR(ci.medicine.sellPrice), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            IconButton(onClick = { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }) { Icon(Icons.Default.Remove, "Kurangi") }
-                            Text("${ci.qty}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(24.dp), textAlign = TextAlign.Center)
-                            IconButton(onClick = { if (ci.qty < ci.medicine.stock) ci.qty++ }) { Icon(Icons.Default.Add, "Tambah") }
+                            StepperButton(Icons.Default.Remove, "Kurangi") { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
+                            key(ci.qty) {
+                                val qtyPop by animateFloatAsState(initialValue = 1.35f, targetValue = 1f, animationSpec = expressiveSpring(), label = "qtyPop")
+                                Text("${ci.qty}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(24.dp).graphicsLayer(scaleX = qtyPop, scaleY = qtyPop), textAlign = TextAlign.Center)
+                            }
+                            StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
                             Text(formatIDR(ci.medicine.sellPrice * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.width(92.dp), textAlign = TextAlign.End)
                         }
                     }
@@ -515,6 +649,8 @@ fun KasirScreen() {
                     Text("Dibayar penuh via $method sebesar ${formatIDR(total)}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(16.dp))
+                val bayarInteraction = remember { MutableInteractionSource() }
+                val bayarScale = pressBounceScale(bayarInteraction)
                 Button(
                     onClick = {
                         scope.launch {
@@ -525,6 +661,7 @@ fun KasirScreen() {
                                 .associate { it.id to it.stock }
                             val result = repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty) }, method, amt))
                             payMsg = "Pembayaran $method berhasil. Total ${formatIDR(total)}" + if (method == "Tunai") " • Kembalian ${formatIDR(change)}" else ""
+                            payCount++
                             cart.clear()
                             uangDiterima = 0
                             val after = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
@@ -542,14 +679,19 @@ fun KasirScreen() {
                         }
                     },
                     enabled = canPay,
+                    interactionSource = bayarInteraction,
                     colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
                     shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                    modifier = Modifier.fillMaxWidth().height(56.dp).graphicsLayer(scaleX = bayarScale, scaleY = bayarScale)
                 ) { Text("Bayar (${formatIDR(total)})", style = MaterialTheme.typography.titleMedium) }
                 AnimatedVisibility(visible = payMsg.isNotEmpty()) {
                     Column {
                         Spacer(Modifier.height(8.dp))
-                        Text(payMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            key(payCount) { AnimatedCheckmark() }
+                            Spacer(Modifier.width(10.dp))
+                            Text(payMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -567,9 +709,12 @@ fun StokScreen() {
     var showForm by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Medicine?>(null) }
     var msg by remember { mutableStateOf("") }
+    var listEntered by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     fun reload() { scope.launch { (repo.listMedicines(search) as? ApiResult.Success)?.let { medicines = it.data.medicines } } }
     LaunchedEffect(Unit) { reload() }
+    // Daftar muncul bertahap begitu data pertama kali tiba; tidak berulang saat scroll.
+    LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
     if (showScanner) BarcodeScanner(onDetected = { code ->
         showScanner = false
         scope.launch {
@@ -613,7 +758,14 @@ fun StokScreen() {
         }
         Spacer(Modifier.height(16.dp))
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(medicines) { m ->
+            itemsIndexed(medicines) { index, m ->
+                AnimatedVisibility(
+                    visible = listEntered,
+                    enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
+                        slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
+                        expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                    exit = fadeOut()
+                ) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
@@ -638,6 +790,7 @@ fun StokScreen() {
                             Icon(Icons.Default.Delete, "Hapus obat", tint = MaterialTheme.colorScheme.error)
                         }
                     }
+                }
                 }
             }
         }
@@ -848,11 +1001,14 @@ fun KeuanganScreen() {
             }
         }
         Spacer(Modifier.height(16.dp))
+        val catatInteraction = remember { MutableInteractionSource() }
+        val catatScale = pressBounceScale(catatInteraction)
         Button(
             onClick = { showForm = true },
+            interactionSource = catatInteraction,
             colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
             shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.fillMaxWidth().height(56.dp)
+            modifier = Modifier.fillMaxWidth().height(56.dp).graphicsLayer(scaleX = catatScale, scaleY = catatScale)
         ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Catat Kas Masuk / Keluar", style = MaterialTheme.typography.titleMedium) }
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -977,7 +1133,7 @@ fun LabaScreen() {
                             }
                         }
                         Spacer(Modifier.height(16.dp))
-                        Text(formatIDR(r.grossProfit), color = OnLightTeal, style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
+                        AnimatedAmount(r.grossProfit, MaterialTheme.typography.displayMedium, OnLightTeal)
                         Spacer(Modifier.height(6.dp))
                         Text("${r.transactionCount} transaksi • ${r.itemsSold} item terjual", color = OnLightTeal, style = MaterialTheme.typography.bodyMedium)
                     }
@@ -1033,11 +1189,14 @@ fun LabaScreen() {
                 }
             }
             item {
+                val exportInteraction = remember { MutableInteractionSource() }
+                val exportScale = pressBounceScale(exportInteraction)
                 Button(
                     onClick = { exportMsg = "Export laporan Excel tersedia penuh di versi web (mode server)." },
+                    interactionSource = exportInteraction,
                     colors = ButtonDefaults.buttonColors(containerColor = GreenButton, contentColor = Color.White),
                     shape = RoundedCornerShape(32.dp),
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                    modifier = Modifier.fillMaxWidth().height(56.dp).graphicsLayer(scaleX = exportScale, scaleY = exportScale)
                 ) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(8.dp)); Text("Export Laporan ke Excel", style = MaterialTheme.typography.titleMedium) }
                 if (exportMsg.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
@@ -1055,12 +1214,20 @@ fun LabaScreen() {
                         } else {
                             val maxProfit = daily.maxOf { it.profit }.coerceAtLeast(1)
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
-                                daily.forEach { day ->
+                                daily.forEachIndexed { barIndex, day ->
                                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Box(
-                                            Modifier.width(28.dp).height((110f * day.profit / maxProfit).dp)
-                                                .background(TealButton, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                        )
+                                        key(period) {
+                                            val grow by animateFloatAsState(
+                                                initialValue = 0f,
+                                                targetValue = 1f,
+                                                animationSpec = tween(durationMillis = 600, delayMillis = barIndex * 70, easing = FastOutSlowInEasing),
+                                                label = "barGrow"
+                                            )
+                                            Box(
+                                                Modifier.width(28.dp).height((110f * day.profit / maxProfit * grow).coerceAtLeast(0f).dp)
+                                                    .background(TealButton, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                            )
+                                        }
                                         Spacer(Modifier.height(6.dp))
                                         Text(day.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                                     }
@@ -1100,7 +1267,9 @@ fun PengingatScreen(onGoStok: () -> Unit) {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var window by remember { mutableStateOf(90) }
     var filter by remember { mutableStateOf("all") } // all | expiry | low | critical
+    var listEntered by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines } }
+    LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
     val expired = medicines.filter { (daysUntilExpiry(it.expiryDate) ?: Int.MAX_VALUE) < 0 }
     val withinWindow = medicines.filter { val d = daysUntilExpiry(it.expiryDate); d != null && d >= 0 && d <= window }
     val low = medicines.filter { it.stock <= it.minStock }
@@ -1157,10 +1326,17 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                 }
             }
         }
-        items(shown) { m ->
+        itemsIndexed(shown) { index, m ->
             val d = daysUntilExpiry(m.expiryDate)
             val isCritical = m.stock == 0
             val suggest = (2 * m.minStock - m.stock).coerceAtLeast(0)
+            AnimatedVisibility(
+                visible = listEntered,
+                enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
+                    slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
+                    expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                exit = fadeOut()
+            ) {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1176,7 +1352,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.width(8.dp))
-                                Surface(color = if (isCritical) RedBadgeBg else MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(16.dp)) {
+                                Surface(color = if (isCritical) RedBadgeBg else MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(16.dp), modifier = if (isCritical) Modifier.pulseKritis() else Modifier) {
                                     Text(
                                         if (isCritical) "KRITIS" else "PANTAU",
                                         color = if (isCritical) Color.White else MaterialTheme.colorScheme.primary,
@@ -1215,6 +1391,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                     }
                 }
             }
+            }
         }
         if (shown.isEmpty()) {
             item { Text("Tidak ada pengingat — semua stok dan kadaluarsa aman.", style = MaterialTheme.typography.bodyMedium) }
@@ -1247,7 +1424,9 @@ private fun ReminderCount(icon: ImageVector, label: String, count: String, count
 fun RiwayatScreen() {
     var sales by remember { mutableStateOf<List<Sale>>(emptyList()) }
     var expanded by remember { mutableStateOf<Int?>(null) }
+    var listEntered by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { (repo.listSales() as? ApiResult.Success)?.let { sales = it.data.sales } }
+    LaunchedEffect(sales) { if (sales.isNotEmpty() && !listEntered) listEntered = true }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Riwayat Penjualan", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
         Text("Ketuk invoice untuk melihat detail lengkapnya.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1255,8 +1434,15 @@ fun RiwayatScreen() {
         DemoBanner()
         if (sales.isEmpty()) Text("Belum ada penjualan tercatat.")
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(sales) { s ->
+            itemsIndexed(sales) { index, s ->
                 val isOpen = expanded == s.id
+                AnimatedVisibility(
+                    visible = listEntered,
+                    enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
+                        slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
+                        expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                    exit = fadeOut()
+                ) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
                     shape = RoundedCornerShape(28.dp),
@@ -1306,6 +1492,7 @@ fun RiwayatScreen() {
                             )
                         }
                     }
+                }
                 }
             }
         }

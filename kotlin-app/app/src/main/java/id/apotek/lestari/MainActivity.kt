@@ -10,6 +10,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -94,7 +99,16 @@ fun ApotekApp() {
         // Lebar konten dibatasi ~840.dp dan dipusatkan di layar lebar (tablet/landscape),
         // supaya daftar tidak merentang dari ujung ke ujung. Navigasi bawah tetap selebar layar.
         Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            NavHost(navController = nav, startDestination = "beranda", modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()) {
+            NavHost(
+                navController = nav,
+                startDestination = "beranda",
+                // Transisi antar tab: pudar + geser halus, bukan ganti mendadak.
+                enterTransition = { fadeIn(animationSpec = tween(250)) + slideInHorizontally(animationSpec = tween(250), initialOffsetX = { it / 4 }) },
+                exitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(animationSpec = tween(250), targetOffsetX = { -it / 4 }) },
+                popEnterTransition = { fadeIn(animationSpec = tween(250)) + slideInHorizontally(animationSpec = tween(250), initialOffsetX = { -it / 4 }) },
+                popExitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(animationSpec = tween(250), targetOffsetX = { it / 4 }) },
+                modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
+            ) {
                 composable("beranda") { BerandaScreen(onGoKasir = { nav.navigate("kasir") }, onGoStok = { nav.navigate("stok") }, onGoPengingat = { nav.navigate("pengingat") }) }
                 composable("kasir") { KasirScreen() }
                 composable("stok") { StokScreen() }
