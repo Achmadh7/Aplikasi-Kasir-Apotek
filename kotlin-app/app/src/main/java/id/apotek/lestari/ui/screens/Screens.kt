@@ -254,8 +254,11 @@ private fun LegendChip(text: String, bg: Color, fg: Color) {
 fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit) {
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
     var salesTab by remember { mutableIntStateOf(0) }
+    var outOfStockNames by remember { mutableStateOf<List<String>>(emptyList()) }
     LaunchedEffect(Unit) {
         (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data }
+        val meds = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
+        outOfStockNames = meds.filter { it.stock <= 0 }.map { it.name }.sorted()
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -323,10 +326,15 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
                             }
                             Spacer(Modifier.width(10.dp))
-                            Text("Perlu Perhatian", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Pengingat", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(6.dp))
                         if (d.lowStockCount > 0) Text("• ${d.lowStockCount} obat stok menipis", style = MaterialTheme.typography.bodyMedium)
+                        if (outOfStockNames.isNotEmpty()) {
+                            val shown = outOfStockNames.take(5).joinToString(", ")
+                            val extra = if (outOfStockNames.size > 5) " +${outOfStockNames.size - 5} lainnya" else ""
+                            Text("Habis: $shown$extra", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.error)
+                        }
                         if (d.expiringCount > 0) Text("• ${d.expiringCount} obat dekat kadaluarsa", style = MaterialTheme.typography.bodyMedium)
                         if (d.lowStockCount == 0 && d.expiringCount == 0) Text("Semua stok dan kadaluarsa aman.", style = MaterialTheme.typography.bodyMedium)
                         if (d.lowStockCount > 0 || d.expiringCount > 0) {
