@@ -8,6 +8,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -39,6 +40,7 @@ import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
 import id.apotek.lestari.ui.theme.glassBackgroundBrush
 import id.apotek.lestari.ui.theme.glassBorderColor
+import id.apotek.lestari.ui.theme.glassPanelStrongColor
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 class MainActivity : ComponentActivity() {
@@ -70,11 +72,10 @@ val TABS = listOf(
     TabDef("kasir", "Kasir", Icons.Default.PointOfSale),
     TabDef("stok", "Stok", Icons.Default.Medication),
     TabDef("keuangan", "Keuangan", Icons.Default.AccountBalanceWallet),
-    TabDef("laba", "Laba", Icons.Default.TrendingUp),
-    TabDef("pengingat", "Pengingat", Icons.Default.NotificationsActive),
-    TabDef("riwayat", "Riwayat", Icons.Default.ReceiptLong)
+    TabDef("lainnya", "Lainnya", Icons.Default.MoreHoriz)
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ApotekApp() {
     // Minta izin notifikasi sekali saat aplikasi pertama dibuka (Android 13+).
@@ -92,6 +93,9 @@ fun ApotekApp() {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route ?: "beranda"
+    // Sheet "Lainnya": Laba, Pengingat, Riwayat — menu yang tidak lagi ada di bar bawah.
+    var showMoreSheet by remember { mutableStateOf(false) }
+    val moreSheetState = rememberModalBottomSheetState()
     Scaffold(
         modifier = Modifier.background(glassBackgroundBrush()),
         containerColor = Color.Transparent,
@@ -104,10 +108,10 @@ fun ApotekApp() {
                 ) {
                 TABS.forEach { tab ->
                     NavigationBarItem(
-                        selected = current == tab.route,
-                        onClick = { nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
+                        selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat") else current == tab.route,
+                        onClick = { if (tab.route == "lainnya") showMoreSheet = true else nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
                         icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
-                        label = { Text(tab.label, fontSize = 10.sp, maxLines = 1, softWrap = false) },
+                        label = { Text(tab.label) },
                         colors = NavigationBarItemDefaults.colors(
                             indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                             selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -132,13 +136,46 @@ fun ApotekApp() {
                 popExitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(animationSpec = tween(250), targetOffsetX = { it / 4 }) },
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
-                composable("beranda") { BerandaScreen(onGoStok = { nav.navigate("stok") }, onGoPengingat = { nav.navigate("pengingat") }) }
+                composable("beranda") { BerandaScreen(onGoStok = { nav.navigate("stok") }, onGoPengingat = { nav.navigate("pengingat") }, onGoLaba = { nav.navigate("laba") }, onGoRiwayat = { nav.navigate("riwayat") }) }
                 composable("kasir") { KasirScreen() }
                 composable("stok") { StokScreen() }
                 composable("keuangan") { KeuanganScreen() }
                 composable("laba") { LabaScreen() }
                 composable("pengingat") { PengingatScreen(onGoStok = { nav.navigate("stok") }) }
                 composable("riwayat") { RiwayatScreen() }
+            }
+        }
+    }
+    // Sheet "Lainnya": Laba, Pengingat, Riwayat.
+    if (showMoreSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showMoreSheet = false },
+            sheetState = moreSheetState,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            containerColor = glassPanelStrongColor()
+        ) {
+            Column(Modifier.padding(horizontal = 8.dp).padding(top = 8.dp, bottom = 24.dp)) {
+                Text("Menu Lainnya", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
+                listOf(
+                    Triple("laba", "Laba", Icons.Default.TrendingUp),
+                    Triple("pengingat", "Pengingat", Icons.Default.NotificationsActive),
+                    Triple("riwayat", "Riwayat", Icons.Default.ReceiptLong)
+                ).forEach { (route, label, icon) ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            showMoreSheet = false
+                            nav.navigate(route) { popUpTo("beranda"); launchSingleTop = true }
+                        }.padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
         }
     }
