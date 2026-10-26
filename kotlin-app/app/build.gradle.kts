@@ -1,9 +1,22 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
+
+// Signing — pola Auriya: file signing.properties (gitignored) di root
+// project (kotlin-app/) dibaca di sini. Tanpa file itu, build release
+// memakai debug signing supaya tetap bisa di-build untuk testing.
+val signingPropertiesFile = rootProject.file("signing.properties")
+val signingProperties =
+    Properties().apply {
+        if (signingPropertiesFile.exists()) {
+            signingPropertiesFile.inputStream().use { load(it) }
+        }
+    }
 
 android {
     namespace = "id.apotek.lestari"
@@ -23,9 +36,26 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    signingConfigs {
+        if (signingProperties.isNotEmpty()) {
+            create("release") {
+                storeFile = signingProperties.getProperty("KEYSTORE_PATH")?.let { rootProject.file(it) }
+                storePassword = signingProperties.getProperty("KEYSTORE_PASSWORD")
+                keyAlias = signingProperties.getProperty("KEY_ALIAS")
+                keyPassword = signingProperties.getProperty("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig =
+                if (signingProperties.isNotEmpty()) {
+                    signingConfigs.getByName("release")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

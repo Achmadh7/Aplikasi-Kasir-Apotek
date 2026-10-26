@@ -1,0 +1,12 @@
+## Apotek Lestari keystore configuration
+##
+## Copy this file to `signing.properties` (gitignored) and fill in
+## with your own keystore. The release build picks it up
+## automatically; without it the debug signing config is used so
+## the build still produces a runnable APK for local testing.
+## KEYSTORE_PATH is relative to kotlin-app/ (or absolute).
+
+KEYSTORE_PATH=apotek.jks
+KEYSTORE_PASSWORD=
+KEY_ALIAS=
+KEY_PASSWORD=
