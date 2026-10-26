@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -79,7 +80,7 @@ fun ApotekApp() {
                         selected = current == tab.route,
                         onClick = { nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
                         icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
-                        label = { Text(tab.label) },
+                        label = { Text(tab.label, fontSize = 10.sp, maxLines = 1, softWrap = false) },
                         colors = NavigationBarItemDefaults.colors(
                             indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                             selectedIconColor = MaterialTheme.colorScheme.primary,
