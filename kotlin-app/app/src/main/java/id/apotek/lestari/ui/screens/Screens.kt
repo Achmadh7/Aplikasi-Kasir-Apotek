@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -20,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -29,12 +31,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import id.apotek.lestari.data.*
 import id.apotek.lestari.ui.components.BarcodeScanner
+import id.apotek.lestari.ui.components.postLowStockNotification
 import id.apotek.lestari.ui.theme.*
 import kotlinx.coroutines.launch
 import java.util.Date
 
 private val repo = Repository()
 val CATEGORIES = listOf("Umum","Antibiotik","Vitamin","Pereda Nyeri","Obat Batuk & Flu","Pencernaan","Kulit","Mata","Lainnya")
+
+// Pop-up stok menipis hanya tampil sekali per peluncuran aplikasi.
+private var lowStockPopupShown = false
 
 // Warna aksen mengikuti tampilan web app (mode gelap)
 private val LightTealCard = Color(0xFF8FE3E8)
@@ -52,6 +58,57 @@ private val BurukFg = Color(0xFFFFB4AB)
 @Composable
 fun DemoBanner() {
     // Mode offline: semua data tersimpan di HP (Room), tidak ada banner demo.
+}
+
+// Pop-up peringatan stok menipis (Material 3 Expressive: sudut 32dp, tombol besar).
+@Composable
+private fun LowStockPopup(medicines: List<Medicine>, onGoStok: () -> Unit, onDismiss: () -> Unit) {
+    val critical = medicines.count { it.stock <= 0 }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(32.dp),
+        icon = {
+            Surface(color = BurukBg, shape = CircleShape) {
+                Icon(Icons.Default.Warning, null, tint = BurukFg, modifier = Modifier.padding(12.dp).size(28.dp))
+            }
+        },
+        title = { Text("Stok Menipis", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    if (critical > 0) "${medicines.size} obat stoknya menipis, $critical di antaranya kritis (habis). Segera restock agar kasir tidak kehabisan."
+                    else "${medicines.size} obat stoknya menipis. Segera restock agar kasir tidak kehabisan.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(12.dp))
+                medicines.forEach { m ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(m.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                if (m.stock <= 0) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Surface(color = BurukBg, shape = RoundedCornerShape(16.dp)) {
+                                        Text("KRITIS", color = BurukFg, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                                    }
+                                }
+                            }
+                            Text("Sisa ${m.stock} ${m.unit} • minimum ${m.minStock}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onGoStok, shape = RoundedCornerShape(28.dp), modifier = Modifier.height(52.dp)) {
+                Text("Lihat Stok")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Nanti") }
+        }
+    )
 }
 
 @Composable
@@ -88,7 +145,27 @@ private fun LegendChip(text: String, bg: Color, fg: Color) {
 @Composable
 fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: () -> Unit) {
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
-    LaunchedEffect(Unit) { (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data } }
+    var lowStock by remember { mutableStateOf<List<Medicine>>(emptyList()) }
+    var showLowStockPopup by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data }
+        val meds = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
+        val low = meds.filter { it.stock <= it.minStock }.sortedBy { it.stock }
+        lowStock = low
+        if (low.isNotEmpty() && !lowStockPopupShown) {
+            lowStockPopupShown = true
+            showLowStockPopup = true
+            postLowStockNotification(context, low)
+        }
+    }
+    if (showLowStockPopup && lowStock.isNotEmpty()) {
+        LowStockPopup(
+            medicines = lowStock,
+            onGoStok = { showLowStockPopup = false; onGoStok() },
+            onDismiss = { showLowStockPopup = false }
+        )
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 20.dp),
