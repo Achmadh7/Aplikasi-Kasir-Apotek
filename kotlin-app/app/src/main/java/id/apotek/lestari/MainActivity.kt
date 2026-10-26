@@ -118,7 +118,7 @@ fun ApotekApp() {
                 popExitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(animationSpec = tween(250), targetOffsetX = { it / 4 }) },
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
-                composable("beranda") { BerandaScreen(onGoKasir = { nav.navigate("kasir") }, onGoStok = { nav.navigate("stok") }, onGoPengingat = { nav.navigate("pengingat") }) }
+                composable("beranda") { BerandaScreen(onGoStok = { nav.navigate("stok") }, onGoPengingat = { nav.navigate("pengingat") }) }
                 composable("kasir") { KasirScreen() }
                 composable("stok") { StokScreen() }
                 composable("keuangan") { KeuanganScreen() }

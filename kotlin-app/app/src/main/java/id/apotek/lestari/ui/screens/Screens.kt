@@ -297,7 +297,7 @@ private fun LegendChip(text: String, bg: Color, fg: Color) {
 // ---------- Beranda ----------
 
 @Composable
-fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: () -> Unit) {
+fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit) {
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
     var lowStock by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var showLowStockPopup by remember { mutableStateOf(false) }
@@ -322,8 +322,8 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -335,24 +335,22 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
             Text("Ringkasan Apotek", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
             Text("Hari Ini", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
-            Text("Pemasukan, pengeluaran, dan stok — semuanya dalam satu pandangan.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(4.dp))
             DemoBanner()
         }
         dashboard?.let { d ->
             item {
                 // Kartu besar Pemasukan Hari Ini
                 Card(colors = CardDefaults.cardColors(containerColor = LightTealCard), shape = RoundedCornerShape(32.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
-                    Column(Modifier.padding(24.dp)) {
+                    Column(Modifier.padding(16.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("PEMASUKAN HARI INI", color = OnLightTeal.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Surface(color = Color.White.copy(alpha = 0.25f), shape = CircleShape) {
                                 Icon(Icons.Default.TrendingUp, null, tint = OnLightTeal, modifier = Modifier.padding(8.dp).size(20.dp))
                             }
                         }
-                        Spacer(Modifier.height(20.dp))
+                        Spacer(Modifier.height(12.dp))
                         AnimatedAmount(d.todayIn, MaterialTheme.typography.displayMedium, OnLightTeal)
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(6.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Receipt, null, tint = OnLightTeal, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
@@ -369,11 +367,11 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                 val summaryCards = listOf<@Composable () -> Unit>(
                     {
                         GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(20.dp)) {
+                            Column(Modifier.padding(16.dp)) {
                                 Surface(color = RedBadgeBg, shape = CircleShape) {
                                     Icon(Icons.Default.ArrowUpward, null, tint = Color.White, modifier = Modifier.padding(8.dp).size(20.dp))
                                 }
-                                Spacer(Modifier.height(16.dp))
+                                Spacer(Modifier.height(10.dp))
                                 Text("PENGELUARAN", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.height(4.dp))
                                 Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
@@ -382,11 +380,11 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                     },
                     {
                         GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(20.dp)) {
+                            Column(Modifier.padding(16.dp)) {
                                 Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape) {
                                     Icon(Icons.Default.AccountBalance, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(8.dp).size(20.dp))
                                 }
-                                Spacer(Modifier.height(16.dp))
+                                Spacer(Modifier.height(10.dp))
                                 Text("SELISIH KAS HARI INI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.height(4.dp))
                                 Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -395,14 +393,14 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                     },
                     {
                         GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(20.dp)) {
+                            Column(Modifier.padding(16.dp)) {
                                 Text("SELISIH KAS BULAN INI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.height(4.dp))
                                 Text(formatIDR(d.monthProfit), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(6.dp))
                                 Text("Masuk ${formatIDR(d.monthIn)}", style = MaterialTheme.typography.bodyMedium)
                                 Text("Keluar ${formatIDR(d.monthOut)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(6.dp))
                                 Text("${d.totalMedicines} jenis obat   •   ${d.lowStockCount} stok menipis   •   ${d.expiringCount} dekat kadaluarsa", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
@@ -417,23 +415,8 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                 }
             }
             item {
-                val kasirInteraction = remember { MutableInteractionSource() }
-                val kasirScale = pressBounceScale(kasirInteraction)
-                Button(
-                    onClick = onGoKasir,
-                    interactionSource = kasirInteraction,
-                    colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
-                    shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.fillMaxWidth().height(60.dp).graphicsLayer(scaleX = kasirScale, scaleY = kasirScale)
-                ) {
-                    Icon(Icons.Default.PointOfSale, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Mulai Transaksi Kasir", style = MaterialTheme.typography.titleMedium)
-                }
-            }
-            item {
                 GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp)) {
+                    Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
                                 Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
@@ -441,12 +424,12 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                             Spacer(Modifier.width(10.dp))
                             Text("Perlu Perhatian", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(6.dp))
                         if (d.lowStockCount > 0) Text("• ${d.lowStockCount} obat stok menipis", style = MaterialTheme.typography.bodyMedium)
                         if (d.expiringCount > 0) Text("• ${d.expiringCount} obat dekat kadaluarsa", style = MaterialTheme.typography.bodyMedium)
                         if (d.lowStockCount == 0 && d.expiringCount == 0) Text("Semua stok dan kadaluarsa aman.", style = MaterialTheme.typography.bodyMedium)
                         if (d.lowStockCount > 0 || d.expiringCount > 0) {
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(6.dp))
                             TextButton(onClick = onGoPengingat) { Text("Lihat Pengingat") }
                         }
                     }
@@ -455,14 +438,14 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
             item {
                 // Kartu Obat yang Terjual — sama seperti kartu ringkasan lainnya.
                 GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp)) {
+                    Column(Modifier.padding(16.dp)) {
                         Text("Obat yang Terjual", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(8.dp))
                         if (d.bestSellers.isEmpty()) {
                             Text("Belum ada obat terjual hari ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             d.bestSellers.forEachIndexed { index, b ->
-                                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
+                                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 6.dp))
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                     Text(b.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                                     Spacer(Modifier.width(8.dp))
@@ -476,14 +459,14 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
             item {
                 // Kartu Penjualan Terakhir — sama seperti kartu ringkasan lainnya.
                 GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp)) {
+                    Column(Modifier.padding(16.dp)) {
                         Text("Penjualan Terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(8.dp))
                         if (d.recentSales.isEmpty()) {
                             Text("Belum ada penjualan hari ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             d.recentSales.forEachIndexed { index, s ->
-                                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
+                                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 6.dp))
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
                                         Text(s.invoiceNo, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
