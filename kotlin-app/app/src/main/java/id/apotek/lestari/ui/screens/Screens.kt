@@ -452,17 +452,50 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                     }
                 }
             }
-            item { Text("Obat yang Terjual", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-            items(d.bestSellers) { b ->
-                ListItem(headlineContent = { Text(b.name) }, trailingContent = { Text("${b.qty} • ${formatIDR(b.revenue)}") })
+            item {
+                // Kartu Obat yang Terjual — sama seperti kartu ringkasan lainnya.
+                GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp)) {
+                        Text("Obat yang Terjual", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(12.dp))
+                        if (d.bestSellers.isEmpty()) {
+                            Text("Belum ada obat terjual hari ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            d.bestSellers.forEachIndexed { index, b ->
+                                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Text(b.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("${b.qty} • ${formatIDR(b.revenue)}", style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            item { Text("Penjualan Terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-            items(d.recentSales) { s ->
-                ListItem(
-                    headlineContent = { Text(s.invoiceNo) },
-                    supportingContent = { Text(formatDateTimeID(s.createdAt)) },
-                    trailingContent = { Text(formatIDR(s.total)) }
-                )
+            item {
+                // Kartu Penjualan Terakhir — sama seperti kartu ringkasan lainnya.
+                GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp)) {
+                        Text("Penjualan Terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(12.dp))
+                        if (d.recentSales.isEmpty()) {
+                            Text("Belum ada penjualan hari ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            d.recentSales.forEachIndexed { index, s ->
+                                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(s.invoiceNo, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                        Text(formatDateTimeID(s.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(formatIDR(s.total), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         } ?: item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
