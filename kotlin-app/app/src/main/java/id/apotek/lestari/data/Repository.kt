@@ -122,7 +122,7 @@ class Repository {
         val bestSellers = items.filter { it.saleId in todaySaleIds }
             .groupBy { it.medicineName }
             .map { (name, list) -> BestSeller(name, list.sumOf { it.qty }, list.sumOf { it.subtotal }) }
-            .sortedByDescending { it.qty }.take(5)
+            .sortedByDescending { it.qty }
         val last7Days = (6 downTo 0).map { offset ->
             val dayStart = jakartaDayStartMillis(-offset)
             val next = dayStart + 24L * 60 * 60 * 1000
@@ -445,3 +445,4 @@ class Repository {
     suspend fun getWebAppManifest(): ApiResult<ManifestResponse> =
         ApiResult.Error("Manifest web tidak tersedia di mode offline")
 }
+

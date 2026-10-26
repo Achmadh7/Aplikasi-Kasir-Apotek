@@ -159,6 +159,28 @@ fun ApotikLestariTheme(darkTheme: Boolean = true, content: @Composable () -> Uni
 
 fun formatIDR(n: Int): String = "Rp " + "%,d".format(java.util.Locale("id", "ID"), n).replace(',', '.')
 
+/** "100000" -> "100.000" — pemisah ribuan (titik) untuk input nominal. */
+fun formatDecimal(digits: String): String {
+    val d = digits.filter { it.isDigit() }
+    if (d.isEmpty()) return ""
+    val clean = d.trimStart('0').ifEmpty { "0" }
+    return clean.reversed().chunked(3).joinToString(".").reversed()
+}
+
+/** "100.000" -> 100000 — buang pemisah ribuan sebelum diubah ke angka. */
+fun parseDecimal(formatted: String): Int = formatted.filter { it.isDigit() }.toIntOrNull() ?: 0
+
+/** "150rb" / "2,5jt" — nilai ringkas untuk label diagram. */
+fun formatCompactIDR(n: Int): String {
+    if (n == 0) return "0"
+    val abs = kotlin.math.abs(n)
+    val sign = if (n < 0) "-" else ""
+    if (abs < 1000) return "$sign$abs"
+    val (v, suffix) = if (abs < 1_000_000) abs / 1000.0 to "rb" else abs / 1_000_000.0 to "jt"
+    val s = String.format(java.util.Locale("id", "ID"), "%.1f", v).trimEnd('0').trimEnd(',')
+    return "$sign$s$suffix"
+}
+
 // Stock status rule (same as web): >20 Aman, ==20 Sedang, <20 Rendah, 0 Habis
 fun stockLabel(stock: Int): String = when {
     stock <= 0 -> "Habis"
@@ -241,5 +263,6 @@ fun daysUntilExpiry(expiry: String?): Int? {
 
 /** "40,9" — margin persen dengan koma desimal Indonesia. */
 fun marginTextID(pct: Double): String = String.format(ID_LOCALE, "%,.1f", pct)
+
 
 
