@@ -103,6 +103,9 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.4")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
+    // Pengecekan stok & kadaluarsa di background (WorkManager, tiap 6 jam)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
     // Database lokal (Room) — data tersimpan di HP, tanpa server
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")

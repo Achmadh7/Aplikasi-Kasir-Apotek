@@ -25,6 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import id.apotek.lestari.work.StockCheckWorker
+import java.util.concurrent.TimeUnit
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -40,6 +45,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         DatabaseProvider.init(applicationContext)
+        // Pengecekan stok & kadaluarsa di background tiap 6 jam (WorkManager):
+        // notifikasi muncul walau aplikasi tidak dibuka. KEEP = jadwal lama
+        // dipertahankan kalau sudah ada. Waktu pastinya mengikuti Doze /
+        // optimasi baterai Android, jadi bisa bergeser sedikit.
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "stock-check",
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<StockCheckWorker>(6, TimeUnit.HOURS).build()
+        )
         setContent {
             // Kelas lebar jendela (HP/tablet, portrait/landscape) untuk layout adaptif.
             val windowSizeClass = calculateWindowSizeClass(this)
