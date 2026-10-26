@@ -549,12 +549,13 @@ fun KasirScreen() {
                 value = search, onValueChange = { search = it },
                 label = { Text("Cari nama obat…") },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
-                modifier = Modifier.weight(1f), singleLine = true
+                textStyle = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f).height(48.dp), singleLine = true
             )
             OutlinedButton(
                 onClick = { showScanner = true },
                 shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.height(56.dp),
+                modifier = Modifier.height(48.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp)
             ) {
                 Icon(Icons.Default.QrCodeScanner, "Scan barcode")
@@ -868,12 +869,13 @@ fun StokScreen() {
                 value = search, onValueChange = { search = it; reload() },
                 label = { Text("Cari obat atau kategori…") },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
-                modifier = Modifier.weight(1f), singleLine = true
+                textStyle = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f).height(48.dp), singleLine = true
             )
             OutlinedButton(
                 onClick = { showScanner = true },
                 shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.height(56.dp),
+                modifier = Modifier.height(48.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp)
             ) {
                 Icon(Icons.Default.QrCodeScanner, "Scan barcode stok")
