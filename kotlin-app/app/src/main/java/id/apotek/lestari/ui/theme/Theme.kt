@@ -227,6 +227,12 @@ fun formatDateTimeID(s: String?): String {
     return SimpleDateFormat("d MMM, HH.mm", ID_LOCALE).apply { timeZone = JAKARTA_TZ }.format(d)
 }
 
+/** "14.30" — jam saja (untuk baris Transaksi: semua transaksi di kartu ini hari ini). */
+fun formatTimeID(s: String?): String {
+    val d = parseISODate(s) ?: return s ?: "-"
+    return SimpleDateFormat("HH.mm", ID_LOCALE).apply { timeZone = JAKARTA_TZ }.format(d)
+}
+
 /** "25 Okt 2030" — tanggal kadaluarsa. */
 fun formatDateID(s: String?): String {
     val d = parseISODate(s) ?: return s ?: "-"
