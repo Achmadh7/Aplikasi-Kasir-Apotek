@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -22,11 +24,18 @@ import id.apotek.lestari.data.local.DatabaseProvider
 import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
 
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         DatabaseProvider.init(applicationContext)
-        setContent { ApotikLestariTheme { ApotekApp() } }
+        setContent {
+            // Kelas lebar jendela (HP/tablet, portrait/landscape) untuk layout adaptif.
+            val windowSizeClass = calculateWindowSizeClass(this)
+            CompositionLocalProvider(LocalWindowWidthClass provides windowSizeClass.widthSizeClass) {
+                ApotikLestariTheme { ApotekApp() }
+            }
+        }
     }
 }
 
@@ -80,14 +89,18 @@ fun ApotekApp() {
             }
         }
     ) { padding ->
-        NavHost(navController = nav, startDestination = "beranda", modifier = Modifier.padding(padding)) {
-            composable("beranda") { BerandaScreen(onGoKasir = { nav.navigate("kasir") }, onGoStok = { nav.navigate("stok") }, onGoPengingat = { nav.navigate("pengingat") }) }
-            composable("kasir") { KasirScreen() }
-            composable("stok") { StokScreen() }
-            composable("keuangan") { KeuanganScreen() }
-            composable("laba") { LabaScreen() }
-            composable("pengingat") { PengingatScreen(onGoStok = { nav.navigate("stok") }) }
-            composable("riwayat") { RiwayatScreen() }
+        // Lebar konten dibatasi ~840.dp dan dipusatkan di layar lebar (tablet/landscape),
+        // supaya daftar tidak merentang dari ujung ke ujung. Navigasi bawah tetap selebar layar.
+        Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            NavHost(navController = nav, startDestination = "beranda", modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()) {
+                composable("beranda") { BerandaScreen(onGoKasir = { nav.navigate("kasir") }, onGoStok = { nav.navigate("stok") }, onGoPengingat = { nav.navigate("pengingat") }) }
+                composable("kasir") { KasirScreen() }
+                composable("stok") { StokScreen() }
+                composable("keuangan") { KeuanganScreen() }
+                composable("laba") { LabaScreen() }
+                composable("pengingat") { PengingatScreen(onGoStok = { nav.navigate("stok") }) }
+                composable("riwayat") { RiwayatScreen() }
+            }
         }
     }
 }

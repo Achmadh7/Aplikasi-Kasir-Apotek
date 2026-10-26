@@ -1,5 +1,7 @@
 package id.apotek.lestari.ui.screens
 
+@file:OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -18,6 +20,8 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.material3.*
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +50,19 @@ private var lowStockPopupShown = false
 // Ambang stok menipis: stok di bawah 20 (sama dengan status "Rendah" di Stok).
 // Dipakai pop-up Beranda, notifikasi sistem, dan hitungan "stok menipis" di Beranda.
 private const val LOW_STOCK_THRESHOLD = 10
+
+// Kelas lebar jendela (HP/tablet, portrait/landscape) untuk layout adaptif.
+// Compact < 600dp, Medium 600-840dp, Expanded > 840dp. Nilai disediakan dari
+// MainActivity lewat CompositionLocal agar tidak mengubah signature screen.
+val LocalWindowWidthClass = compositionLocalOf { WindowWidthSizeClass.Compact }
+
+/** Jumlah kolom grid adaptif menurut kelas lebar jendela. */
+@Composable
+private fun adaptiveColumns(compact: Int, medium: Int, expanded: Int): Int = when (LocalWindowWidthClass.current) {
+    WindowWidthSizeClass.Medium -> medium
+    WindowWidthSizeClass.Expanded -> expanded
+    else -> compact
+}
 
 // Warna aksen mengikuti tampilan web app (mode gelap)
 private val LightTealCard = Color(0xFF8FE3E8)
@@ -213,47 +230,57 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                 }
             }
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
-                        Column(Modifier.padding(20.dp)) {
-                            Surface(color = RedBadgeBg, shape = CircleShape) {
-                                Icon(Icons.Default.ArrowUpward, null, tint = Color.White, modifier = Modifier.padding(8.dp).size(20.dp))
+                // Grid kartu ringkasan adaptif: HP portrait 2 kolom, tablet/landscape 3 kolom,
+                // tablet lebar 4 kolom. (Hanya ada 3 kartu ringkasan, jadi di layar lebar
+                // ketiganya mengisi satu baris.)
+                val cols = adaptiveColumns(compact = 2, medium = 3, expanded = 4)
+                val summaryCards = listOf<@Composable () -> Unit>(
+                    {
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(20.dp)) {
+                                Surface(color = RedBadgeBg, shape = CircleShape) {
+                                    Icon(Icons.Default.ArrowUpward, null, tint = Color.White, modifier = Modifier.padding(8.dp).size(20.dp))
+                                }
+                                Spacer(Modifier.height(16.dp))
+                                Text("PENGELUARAN", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.height(4.dp))
+                                Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                             }
-                            Spacer(Modifier.height(16.dp))
-                            Text("PENGELUARAN", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.height(4.dp))
-                            Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                         }
-                    }
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
-                        Column(Modifier.padding(20.dp)) {
-                            Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape) {
-                                Icon(Icons.Default.AccountBalance, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(8.dp).size(20.dp))
+                    },
+                    {
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(20.dp)) {
+                                Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape) {
+                                    Icon(Icons.Default.AccountBalance, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(8.dp).size(20.dp))
+                                }
+                                Spacer(Modifier.height(16.dp))
+                                Text("SELISIH KAS HARI INI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.height(4.dp))
+                                Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             }
-                            Spacer(Modifier.height(16.dp))
-                            Text("SELISIH KAS HARI INI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.height(4.dp))
-                            Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         }
-                    }
-                }
-            }
-            item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column {
+                    },
+                    {
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(20.dp)) {
                                 Text("SELISIH KAS BULAN INI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.height(4.dp))
                                 Text(formatIDR(d.monthProfit), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
+                                Spacer(Modifier.height(8.dp))
                                 Text("Masuk ${formatIDR(d.monthIn)}", style = MaterialTheme.typography.bodyMedium)
                                 Text("Keluar ${formatIDR(d.monthOut)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.height(8.dp))
+                                Text("${d.totalMedicines} jenis obat   •   ${d.lowStockCount} stok menipis   •   ${d.expiringCount} dekat kadaluarsa", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        Spacer(Modifier.height(16.dp))
-                        Text("${d.totalMedicines} jenis obat   •   ${d.lowStockCount} stok menipis   •   ${d.expiringCount} dekat kadaluarsa", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    summaryCards.chunked(cols).forEach { rowCards ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
+                            rowCards.forEach { card -> Box(Modifier.weight(1f)) { card() } }
+                        }
                     }
                 }
             }
@@ -344,6 +371,8 @@ fun KasirScreen() {
     val paid = uangDiterima
     val change = if (method == "Tunai") (paid - total).coerceAtLeast(0) else 0
     val canPay = cart.isNotEmpty() && (method != "Tunai" || paid >= total)
+    // Grid obat adaptif: HP portrait 2 kolom, tablet/landscape 3 kolom, tablet lebar 4 kolom.
+    val gridCols = adaptiveColumns(compact = 2, medium = 3, expanded = 4)
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Kasir", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
         Text("Ketuk obat untuk menambahkan ke keranjang, lalu selesaikan pembayaran.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -362,7 +391,7 @@ fun KasirScreen() {
         }
         Spacer(Modifier.height(16.dp))
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(filtered.chunked(2)) { row ->
+            items(filtered.chunked(gridCols)) { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     row.forEach { m ->
                         val out = m.stock <= 0
@@ -389,7 +418,7 @@ fun KasirScreen() {
                             }
                         }
                     }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                    repeat(gridCols - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
@@ -670,7 +699,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
         onDismissRequest = onDismiss,
         title = { Text(if (editing == null) "Tambah Obat" else "Edit Obat") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("Nama Obat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(barcode, { barcode = it }, label = { Text("Barcode (boleh kosong)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(
@@ -860,7 +889,7 @@ private fun CashEntryFormDialog(onDismiss: () -> Unit, onSaved: () -> Unit) {
         onDismissRequest = onDismiss,
         title = { Text("Catat Kas Masuk / Keluar") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("in" to "Masuk", "out" to "Keluar").forEach { (k, l) ->
                         FilterChip(selected = type == k, onClick = { type = k }, label = { Text(l) })
@@ -941,13 +970,22 @@ fun LabaScreen() {
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Row(Modifier.fillMaxWidth()) {
-                            LabaStat(Icons.Default.Receipt, "PENJUALAN", formatIDR(r.revenue), null, Modifier.weight(1f))
-                            LabaStat(Icons.Default.Inventory, "MODAL (HPP)", formatIDR(r.hpp), null, Modifier.weight(1f))
-                        }
-                        Row(Modifier.fillMaxWidth()) {
-                            LabaStat(Icons.Default.NorthEast, "BIAYA OPERASIONAL", formatIDR(r.operationalExpense), null, Modifier.weight(1f))
-                            LabaStat(Icons.Default.Savings, "ESTIMASI LABA BERSIH", formatIDR(r.netProfit), MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+                        // Grid statistik adaptif: HP portrait 2 kolom, tablet/landscape 3 kolom,
+                        // tablet lebar 4 kolom (satu baris).
+                        val statsCols = adaptiveColumns(compact = 2, medium = 3, expanded = 4)
+                        val stats = listOf(
+                            Triple(Icons.Default.Receipt, "PENJUALAN", formatIDR(r.revenue)),
+                            Triple(Icons.Default.Inventory, "MODAL (HPP)", formatIDR(r.hpp)),
+                            Triple(Icons.Default.NorthEast, "BIAYA OPERASIONAL", formatIDR(r.operationalExpense)),
+                            Triple(Icons.Default.Savings, "ESTIMASI LABA BERSIH", formatIDR(r.netProfit))
+                        )
+                        stats.chunked(statsCols).forEach { rowStats ->
+                            Row(Modifier.fillMaxWidth()) {
+                                rowStats.forEach { (icon, label, value) ->
+                                    LabaStat(icon, label, value, if (label == "ESTIMASI LABA BERSIH") MaterialTheme.colorScheme.primary else null, Modifier.weight(1f))
+                                }
+                                repeat(statsCols - rowStats.size) { Spacer(Modifier.weight(1f)) }
+                            }
                         }
                     }
                 }
