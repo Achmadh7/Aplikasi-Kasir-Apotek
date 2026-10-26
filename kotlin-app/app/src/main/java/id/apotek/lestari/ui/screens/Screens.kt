@@ -615,13 +615,15 @@ fun KasirScreen() {
         ) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ShoppingCart, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Keranjang", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(if (cart.isNotEmpty()) "Keranjang (${cart.sumOf { it.qty }})" else "Keranjang", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     IconButton(onClick = { showSheet = false }) { Icon(Icons.Default.Close, "Tutup") }
                 }
                 if (cart.isNotEmpty()) {
-                    cart.forEach { ci ->
+                    cart.forEachIndexed { index, ci ->
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                             Column(Modifier.weight(1f)) {
                                 Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
@@ -636,11 +638,16 @@ fun KasirScreen() {
                             StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
                             Text(formatIDR(ci.medicine.sellPrice * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.width(92.dp), textAlign = TextAlign.End)
                         }
+                        if (index < cart.lastIndex) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        }
                     }
                 Spacer(Modifier.height(8.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Total bayar", style = MaterialTheme.typography.bodyLarge)
-                    Text(formatIDR(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Total bayar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(formatIDR(total), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
                 }
                 Spacer(Modifier.height(16.dp))
                 Text("METODE BAYAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -679,7 +686,7 @@ fun KasirScreen() {
                         ) { Text("Uang Pas", maxLines = 1) }
                     }
                     Spacer(Modifier.height(6.dp))
-                    Text("Ketuk nominal untuk menambah ke jumlah uang diterima — bisa ditekan berkali-kali. Ketuk Uang Pas untuk mengisi persis sebesar total belanja.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Ketuk nominal untuk menambah, atau Uang Pas untuk jumlah persis.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(6.dp))
                     OutlinedTextField(
                         value = if (uangDiterima == 0) "" else formatDecimal(uangDiterima.toString()),
