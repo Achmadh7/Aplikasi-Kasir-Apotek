@@ -2,11 +2,9 @@ package id.apotek.lestari.ui.theme
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -127,50 +125,26 @@ fun <T> expressiveSpring() = spring<T>(
     stiffness = Spring.StiffnessMediumLow
 )
 
-// ---- Frosted glass (kaca buram) + Material 3 Expressive ----
-// Panel kaca: permukaan tembus pandang + garis tepi tipis terang + bayangan lembut.
-// Warna mengikuti colorScheme (onSurface/primary) supaya benar di mode gelap/terang.
-// Bentuk besar & pegas ekspresif tetap dipertahankan; dua kartu aksen teal solid
-// dibiarkan sebagai penegas (teks gelap di atasnya harus tetap terbaca).
+// ---- Material 3 Expressive penuh (tanpa kaca) ----
+// Kartu memakai permukaan tonal solid (surfaceContainer) dari colorScheme,
+// tanpa tembus pandang dan tanpa garis tepi — sesuai Material 3 Expressive.
+// Bentuk besar (28dp) & pegas ekspresif dipertahankan; dua kartu aksen teal
+// solid dibiarkan sebagai penegas (teks gelap di atasnya harus tetap terbaca).
 @Composable
-fun glassPanelColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.09f)
-@Composable
-fun glassPanelStrongColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f)
-@Composable
-fun glassBorderColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
-@Composable
-fun glassTealColor(): Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
-@Composable
-fun glassTealBorderColor(): Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
-
-/** Kartu kaca: panel tembus pandang + garis tepi + bayangan lembut, sudut ekspresif 28dp. */
-@Composable
-fun GlassCard(
+fun ExpressiveCard(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(28.dp),
-    containerColor: Color = glassPanelColor(),
-    borderColor: Color = glassBorderColor(),
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
         modifier = modifier,
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        border = BorderStroke(1.dp, borderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         content = content
     )
 }
-
-/** Latar gradasi lembut (semburat teal di atas) supaya panel kaca punya latar untuk dipantulkan. */
-@Composable
-fun glassBackgroundBrush(): Brush = Brush.verticalGradient(
-    listOf(
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-        MaterialTheme.colorScheme.background,
-        MaterialTheme.colorScheme.background
-    )
-)
 
 // Tampilan mengikuti web app (mode gelap) apa pun pengaturan sistem HP.
 @Composable
@@ -267,4 +241,5 @@ fun daysUntilExpiry(expiry: String?): Int? {
 
 /** "40,9" — margin persen dengan koma desimal Indonesia. */
 fun marginTextID(pct: Double): String = String.format(ID_LOCALE, "%,.1f", pct)
+
 
