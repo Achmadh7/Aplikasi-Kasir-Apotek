@@ -353,20 +353,37 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 }
             }
             item {
-                // Penjualan Hari Ini: Obat Terjual dan Transaksi dalam satu kartu bertab.
+                // Penjualan Hari Ini: Obat Terjual dan Transaksi dalam satu kartu bertab (compact).
                 ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        TabRow(selectedTabIndex = salesTab, containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.primary) {
-                            Tab(selected = salesTab == 0, onClick = { salesTab = 0 }, text = { Text("Obat Terjual") })
-                            Tab(selected = salesTab == 1, onClick = { salesTab = 1 }, text = { Text("Transaksi") })
+                    Column(Modifier.padding(12.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("Obat Terjual" to 0, "Transaksi" to 1).forEach { (label, idx) ->
+                                val selected = salesTab == idx
+                                Surface(
+                                    onClick = { salesTab = idx },
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1,
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                                    )
+                                }
+                            }
                         }
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(6.dp))
                         if (salesTab == 0) {
                         if (d.bestSellers.isEmpty()) {
                             Text("Belum ada obat terjual hari ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             d.bestSellers.forEachIndexed { index, b ->
-                                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 6.dp))
+                                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 4.dp))
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                     Text(b.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                                     Spacer(Modifier.width(8.dp))
@@ -379,12 +396,11 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             Text("Belum ada penjualan hari ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             d.recentSales.forEachIndexed { index, s ->
-                                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 6.dp))
+                                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 4.dp))
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text(s.invoiceNo, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                                        Text(formatDateTimeID(s.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
+                                    Text(s.invoiceNo, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(formatTimeID(s.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(Modifier.width(8.dp))
                                     Text(formatIDR(s.total), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                                 }
