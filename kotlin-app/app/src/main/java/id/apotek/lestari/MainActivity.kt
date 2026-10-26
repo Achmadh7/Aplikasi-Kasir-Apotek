@@ -41,7 +41,7 @@ fun ApotekApp() {
     val current = backStack?.destination?.route ?: "beranda"
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                 TABS.forEach { tab ->
                     NavigationBarItem(
                         selected = current == tab.route,
