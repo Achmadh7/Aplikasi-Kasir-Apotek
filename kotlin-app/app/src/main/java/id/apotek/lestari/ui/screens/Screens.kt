@@ -199,13 +199,13 @@ private fun Modifier.pulseKritis(): Modifier {
 }
 
 // Warna aksen mengikuti tampilan web app (mode gelap)
-private val LightTealCard = Color(0xFF8FE3E8)
-private val OnLightTeal = Color(0xFF002021)
-private val TealButton = Color(0xFF00696D)
+private val LightBlueCard = Color(0xFFD2E4FF)
+private val OnLightBlue = Color(0xFF001D36)
+private val BlueButton = Color(0xFF0061A4)
 private val GreenButton = Color(0xFF2E7D32)
 private val RedBadgeBg = Color(0xFFBA1A1A)
-private val AmanBg = Color(0xFF004F52)
-private val AmanFg = Color(0xFF7ED3D8)
+private val AmanBg = Color(0xFF00497C)
+private val AmanFg = Color(0xFFA1C9FF)
 private val SedangBg = Color(0xFF4A3F00)
 private val SedangFg = Color(0xFFFFD97A)
 private val BurukBg = Color(0xFF601410)
@@ -274,21 +274,21 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         dashboard?.let { d ->
             item {
                 // Kartu besar Pemasukan Hari Ini
-                Card(colors = CardDefaults.cardColors(containerColor = LightTealCard), shape = RoundedCornerShape(32.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
+                Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(32.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
                     Column(Modifier.padding(16.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("PEMASUKAN HARI INI", color = OnLightTeal.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text("PEMASUKAN HARI INI", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Surface(color = Color.White.copy(alpha = 0.25f), shape = CircleShape) {
-                                Icon(Icons.Default.TrendingUp, null, tint = OnLightTeal, modifier = Modifier.padding(8.dp).size(20.dp))
+                                Icon(Icons.Default.TrendingUp, null, tint = OnLightBlue, modifier = Modifier.padding(8.dp).size(20.dp))
                             }
                         }
                         Spacer(Modifier.height(12.dp))
-                        AnimatedAmount(d.todayIn, MaterialTheme.typography.displayMedium, OnLightTeal)
+                        AnimatedAmount(d.todayIn, MaterialTheme.typography.displayMedium, OnLightBlue)
                         Spacer(Modifier.height(6.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Receipt, null, tint = OnLightTeal, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Receipt, null, tint = OnLightBlue, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("${d.totalSalesToday} transaksi penjualan", color = OnLightTeal, style = MaterialTheme.typography.bodyMedium)
+                            Text("${d.totalSalesToday} transaksi penjualan", color = OnLightBlue, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
@@ -558,11 +558,11 @@ fun KasirScreen() {
                     key(cartQty) {
                         val cartPop = remember { Animatable(1.4f) }
                         LaunchedEffect(cartQty) { cartPop.animateTo(1f, expressiveSpring()) }
-                        Surface(color = LightTealCard, shape = CircleShape, modifier = Modifier.graphicsLayer(scaleX = cartPop.value, scaleY = cartPop.value)) {
+                        Surface(color = LightBlueCard, shape = CircleShape, modifier = Modifier.graphicsLayer(scaleX = cartPop.value, scaleY = cartPop.value)) {
                             Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.ShoppingCart, null, tint = OnLightTeal, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.ShoppingCart, null, tint = OnLightBlue, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("$cartQty", color = OnLightTeal, fontWeight = FontWeight.Bold)
+                                Text("$cartQty", color = OnLightBlue, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -573,7 +573,7 @@ fun KasirScreen() {
                     }
                     Button(
                         onClick = { showSheet = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
                         shape = RoundedCornerShape(28.dp),
                         modifier = Modifier.height(48.dp)
                     ) { Text("Bayar", style = MaterialTheme.typography.titleMedium) }
@@ -625,7 +625,7 @@ fun KasirScreen() {
                     listOf("Tunai", "QRIS", "Transfer").forEach { m ->
                         val selected = method == m
                         if (selected) {
-                            Button(onClick = { method = m }, colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White), shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)) {
+                            Button(onClick = { method = m }, colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White), shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)) {
                                 Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
                                 Text(m)
@@ -649,7 +649,7 @@ fun KasirScreen() {
                         }
                         Button(
                             onClick = { uangDiterima = total },
-                            colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
+                            colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
                             shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                         ) { Text("Uang Pas", maxLines = 1) }
@@ -699,7 +699,7 @@ fun KasirScreen() {
                     },
                     enabled = canPay,
                     interactionSource = bayarInteraction,
-                    colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
+                    colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.fillMaxWidth().height(56.dp).graphicsLayer(scaleX = bayarScale, scaleY = bayarScale)
                 ) { Text("Bayar (${formatIDR(total)})", style = MaterialTheme.typography.titleMedium) }
@@ -824,7 +824,7 @@ fun StokScreen() {
             }
             Button(
                 onClick = { editing = null; showForm = true },
-                colors = ButtonDefaults.buttonColors(containerColor = LightTealCard, contentColor = OnLightTeal),
+                colors = ButtonDefaults.buttonColors(containerColor = LightBlueCard, contentColor = OnLightBlue),
                 shape = RoundedCornerShape(32.dp)
             ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("Tambah Obat") }
         }
@@ -1155,7 +1155,7 @@ fun KeuanganScreen() {
         Button(
             onClick = { showForm = true },
             interactionSource = catatInteraction,
-            colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
+            colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
             shape = RoundedCornerShape(28.dp),
             modifier = Modifier.fillMaxWidth().height(56.dp).graphicsLayer(scaleX = catatScale, scaleY = catatScale)
         ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Catat Kas Masuk / Keluar", style = MaterialTheme.typography.titleMedium) }
@@ -1268,22 +1268,22 @@ fun LabaScreen() {
         }
         report?.let { r ->
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = LightTealCard), shape = RoundedCornerShape(32.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
+                Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(32.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
                     Column(Modifier.padding(24.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("LABA KOTOR", color = OnLightTeal.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text("LABA KOTOR", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Surface(color = Color.White.copy(alpha = 0.25f), shape = RoundedCornerShape(16.dp)) {
                                 Text(
-                                    "Margin ${marginTextID(r.marginPct)}%", color = OnLightTeal,
+                                    "Margin ${marginTextID(r.marginPct)}%", color = OnLightBlue,
                                     style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                 )
                             }
                         }
                         Spacer(Modifier.height(16.dp))
-                        AnimatedAmount(r.grossProfit, MaterialTheme.typography.displayMedium, OnLightTeal)
+                        AnimatedAmount(r.grossProfit, MaterialTheme.typography.displayMedium, OnLightBlue)
                         Spacer(Modifier.height(6.dp))
-                        Text("${r.transactionCount} transaksi • ${r.itemsSold} item terjual", color = OnLightTeal, style = MaterialTheme.typography.bodyMedium)
+                        Text("${r.transactionCount} transaksi • ${r.itemsSold} item terjual", color = OnLightBlue, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -1392,7 +1392,7 @@ fun LabaScreen() {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                 Spacer(Modifier.height(6.dp))
                                 Text(
-                                    "Batang teal pekat = laba tertinggi • Label hari ini ditebalkan",
+                                    "Batang biru pekat = laba tertinggi • Label hari ini ditebalkan",
                                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -1590,7 +1590,7 @@ private val InvoicePaper = Color.White
 private val InvoiceInk = Color(0xFF111111)
 private val InvoiceMuted = Color(0xFF6B7280)
 private val InvoiceBoxBg = Color(0xFFF4F4F5)
-private val InvoiceTeal = Color(0xFF00696D)
+private val InvoiceBlue = Color(0xFF0061A4)
 private val InvoicePaidBg = Color(0xFFE6F4EA)
 private val InvoicePaidFg = Color(0xFF137333)
 private val InvoiceDash = Color(0xFFD1D5DB)
@@ -1634,7 +1634,7 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
     ) {
         Column(Modifier.padding(20.dp)) {
             Text(
-                "APOTEK LESTARI", color = InvoiceTeal,
+                "APOTEK LESTARI", color = InvoiceBlue,
                 style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
                 letterSpacing = 4.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
             )
@@ -1671,9 +1671,9 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
             sale.items.forEachIndexed { index, it ->
                 if (index > 0) DashedDivider(modifier = Modifier.padding(vertical = 10.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                    Surface(color = InvoiceTeal.copy(alpha = 0.12f), shape = CircleShape) {
+                    Surface(color = InvoiceBlue.copy(alpha = 0.12f), shape = CircleShape) {
                         Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
-                            Text("${index + 1}", color = InvoiceTeal, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                            Text("${index + 1}", color = InvoiceBlue, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                         }
                     }
                     Spacer(Modifier.width(12.dp))
@@ -1714,7 +1714,7 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("Total Bayar", color = InvoiceInk, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(formatIDR(sale.total), color = InvoiceTeal, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(formatIDR(sale.total), color = InvoiceBlue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     }
                 }
             }
