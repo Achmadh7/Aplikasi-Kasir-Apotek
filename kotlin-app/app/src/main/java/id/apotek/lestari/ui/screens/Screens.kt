@@ -308,6 +308,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit) {
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
     var lowStock by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var showLowStockPopup by remember { mutableStateOf(false) }
+    var salesTab by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
     LaunchedEffect(Unit) {
         (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data }
@@ -367,61 +368,6 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit) {
                 }
             }
             item {
-                // Grid kartu ringkasan adaptif: HP portrait 2 kolom, tablet/landscape 3 kolom,
-                // tablet lebar 4 kolom. (Hanya ada 3 kartu ringkasan, jadi di layar lebar
-                // ketiganya mengisi satu baris.)
-                val cols = adaptiveColumns(compact = 2, medium = 3, expanded = 4)
-                val summaryCards = listOf<@Composable () -> Unit>(
-                    {
-                        GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(16.dp)) {
-                                Surface(color = RedBadgeBg, shape = CircleShape) {
-                                    Icon(Icons.Default.ArrowUpward, null, tint = Color.White, modifier = Modifier.padding(8.dp).size(20.dp))
-                                }
-                                Spacer(Modifier.height(10.dp))
-                                Text("PENGELUARAN", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(4.dp))
-                                Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                            }
-                        }
-                    },
-                    {
-                        GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(16.dp)) {
-                                Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape) {
-                                    Icon(Icons.Default.AccountBalance, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(8.dp).size(20.dp))
-                                }
-                                Spacer(Modifier.height(10.dp))
-                                Text("SELISIH KAS HARI INI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(4.dp))
-                                Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    },
-                    {
-                        GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(16.dp)) {
-                                Text("SELISIH KAS BULAN INI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(4.dp))
-                                Text(formatIDR(d.monthProfit), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(6.dp))
-                                Text("Masuk ${formatIDR(d.monthIn)}", style = MaterialTheme.typography.bodyMedium)
-                                Text("Keluar ${formatIDR(d.monthOut)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(6.dp))
-                                Text("${d.totalMedicines} jenis obat   •   ${d.lowStockCount} stok menipis   •   ${d.expiringCount} dekat kadaluarsa", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    summaryCards.chunked(cols).forEach { rowCards ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                            rowCards.forEach { card -> Box(Modifier.weight(1f)) { card() } }
-                        }
-                    }
-                }
-            }
-            item {
                 GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -443,11 +389,47 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit) {
                 }
             }
             item {
-                // Kartu Obat yang Terjual — sama seperti kartu ringkasan lainnya.
+                // Satu kartu uang: Pengeluaran, Selisih Hari Ini dan Selisih Bulan Ini sejajar.
                 GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("Obat yang Terjual", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Pengeluaran", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Spacer(Modifier.height(2.dp))
+                                Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text("Selisih Hari Ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Spacer(Modifier.height(2.dp))
+                                Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text("Selisih Bulan Ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Spacer(Modifier.height(2.dp))
+                                Text(formatIDR(d.monthProfit), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Spacer(Modifier.height(8.dp))
+                        Text("Bulan ini: masuk ${formatIDR(d.monthIn)} \u2022 keluar ${formatIDR(d.monthOut)}", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(4.dp))
+                        Text("${d.totalMedicines} jenis obat   \u2022   ${d.lowStockCount} stok menipis   \u2022   ${d.expiringCount} dekat kadaluarsa", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            item {
+                // Penjualan Hari Ini: Obat Terjual dan Transaksi dalam satu kartu bertab.
+                GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Penjualan Hari Ini", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        TabRow(selectedTabIndex = salesTab, containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.primary) {
+                            Tab(selected = salesTab == 0, onClick = { salesTab = 0 }, text = { Text("Obat Terjual") })
+                            Tab(selected = salesTab == 1, onClick = { salesTab = 1 }, text = { Text("Transaksi") })
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        if (salesTab == 0) {
                         if (d.bestSellers.isEmpty()) {
                             Text("Belum ada obat terjual hari ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
@@ -460,15 +442,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit) {
                                 }
                             }
                         }
-                    }
-                }
-            }
-            item {
-                // Kartu Penjualan Terakhir — sama seperti kartu ringkasan lainnya.
-                GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("Penjualan Terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
+                        } else {
                         if (d.recentSales.isEmpty()) {
                             Text("Belum ada penjualan hari ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
@@ -483,6 +457,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit) {
                                     Text(formatIDR(s.total), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                                 }
                             }
+                        }
                         }
                     }
                 }
