@@ -38,6 +38,7 @@ import java.util.Date
 
 private val repo = Repository()
 val CATEGORIES = listOf("Umum","Antibiotik","Vitamin","Pereda Nyeri","Obat Batuk & Flu","Pencernaan","Kulit","Mata","Lainnya")
+val UNITS = listOf("Strip","Botol","Box","Tablet","Kapsul","Tube","Sachet","Pcs")
 
 // Pop-up stok menipis hanya tampil sekali per peluncuran aplikasi.
 private var lowStockPopupShown = false
@@ -612,12 +613,52 @@ fun StokScreen() {
     if (showForm) MedicineFormDialog(editing = editing, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
 }
 
+// Pemilih opsi berupa bottom sheet dengan daftar radio (dipakai Kategori & Satuan di form Stok).
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OptionPickerSheet(
+    title: String,
+    options: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 8.dp)
+        )
+        LazyColumn(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+            items(options) { opt ->
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable { onSelect(opt) }.padding(horizontal = 24.dp, vertical = 14.dp)
+                    ) {
+                        Text(opt, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        RadioButton(selected = opt == selected, onClick = { onSelect(opt) })
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () -> Unit) {
     var name by remember(editing) { mutableStateOf(editing?.name ?: "") }
     var barcode by remember(editing) { mutableStateOf(editing?.barcode ?: "") }
     var category by remember(editing) { mutableStateOf(editing?.category ?: "Umum") }
     var unit by remember(editing) { mutableStateOf(editing?.unit ?: "Strip") }
+    var showCategorySheet by remember { mutableStateOf(false) }
+    var showUnitSheet by remember { mutableStateOf(false) }
     var buy by remember(editing) { mutableStateOf(editing?.buyPrice?.toString() ?: "") }
     var sell by remember(editing) { mutableStateOf(editing?.sellPrice?.toString() ?: "") }
     var stock by remember(editing) { mutableStateOf(editing?.stock?.toString() ?: "") }
@@ -632,8 +673,18 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("Nama Obat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(barcode, { barcode = it }, label = { Text("Barcode (boleh kosong)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(category, { category = it }, label = { Text("Kategori") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(unit, { unit = it }, label = { Text("Satuan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = category, onValueChange = {}, label = { Text("Kategori") },
+                    readOnly = true, singleLine = true,
+                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih kategori") },
+                    modifier = Modifier.fillMaxWidth().clickable { showCategorySheet = true }
+                )
+                OutlinedTextField(
+                    value = unit, onValueChange = {}, label = { Text("Satuan") },
+                    readOnly = true, singleLine = true,
+                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih satuan") },
+                    modifier = Modifier.fillMaxWidth().clickable { showUnitSheet = true }
+                )
                 OutlinedTextField(buy, { buy = it.filter { c -> c.isDigit() } }, label = { Text("Harga Beli") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(sell, { sell = it.filter { c -> c.isDigit() } }, label = { Text("Harga Jual") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() } }, label = { Text("Stok") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -675,6 +726,15 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } }
     )
+    if (showCategorySheet) {
+        // Nilai lama yang tidak ada di daftar tetap ditampilkan di atas agar tidak hilang.
+        val options = if (category in CATEGORIES) CATEGORIES else listOf(category) + CATEGORIES
+        OptionPickerSheet(title = "Kategori", options = options, selected = category, onSelect = { category = it; showCategorySheet = false }, onDismiss = { showCategorySheet = false })
+    }
+    if (showUnitSheet) {
+        val options = if (unit in UNITS) UNITS else listOf(unit) + UNITS
+        OptionPickerSheet(title = "Satuan", options = options, selected = unit, onSelect = { unit = it; showUnitSheet = false }, onDismiss = { showUnitSheet = false })
+    }
 }
 
 // ---------- Keuangan ----------
