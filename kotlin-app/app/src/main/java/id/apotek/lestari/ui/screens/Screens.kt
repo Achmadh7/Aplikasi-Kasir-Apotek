@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -69,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import id.apotek.lestari.data.*
 import id.apotek.lestari.ui.printReceiptBitmap
+import id.apotek.lestari.ui.rememberLogoBitmap
 import id.apotek.lestari.ui.shareReceiptBitmap
 import id.apotek.lestari.ui.components.BarcodeScanner
 import id.apotek.lestari.ui.theme.*
@@ -261,9 +264,21 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(todayLabelID(), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                val logo = rememberLogoBitmap()
+                if (logo != null) {
+                    Surface(color = Color.White, shape = CircleShape, modifier = Modifier.size(44.dp)) {
+                        Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(4.dp).fillMaxSize())
+                    }
+                    Spacer(Modifier.width(10.dp))
+                }
+                Column {
+                    Text("Apotek Lestari", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(todayLabelID(), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                    }
+                }
             }
             Spacer(Modifier.height(8.dp))
             Text("Penjualan Hari Ini", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -1634,6 +1649,16 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
         }
     ) {
         Column(Modifier.padding(20.dp)) {
+            val logo = rememberLogoBitmap()
+            if (logo != null) {
+                Image(
+                    bitmap = logo,
+                    contentDescription = "Logo Apotek Lestari",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(72.dp).align(Alignment.CenterHorizontally)
+                )
+                Spacer(Modifier.height(8.dp))
+            }
             Text(
                 "APOTEK LESTARI", color = InvoiceBlue,
                 style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
