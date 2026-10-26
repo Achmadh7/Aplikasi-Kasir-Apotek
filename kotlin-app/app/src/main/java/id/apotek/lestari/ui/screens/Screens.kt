@@ -53,7 +53,8 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
-import androidx.compose.ui.graphics.layer.rememberGraphicsLayer
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -1773,7 +1774,7 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, m
     val scope = rememberCoroutineScope()
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier.fillMaxWidth()) {
         OutlinedButton(
-            onClick = { scope.launch { shareReceiptBitmap(context, graphicsLayer.drawToBitmap(), invoiceNo) } },
+            onClick = { scope.launch { shareReceiptBitmap(context, graphicsLayer.toImageBitmap().asAndroidBitmap(), invoiceNo) } },
             shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)
         ) {
             Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
@@ -1781,7 +1782,7 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, m
             Text("Bagikan")
         }
         OutlinedButton(
-            onClick = { scope.launch { printReceiptBitmap(context, graphicsLayer.drawToBitmap(), invoiceNo) } },
+            onClick = { scope.launch { printReceiptBitmap(context, graphicsLayer.toImageBitmap().asAndroidBitmap(), invoiceNo) } },
             shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)
         ) {
             Icon(Icons.Default.Print, null, modifier = Modifier.size(18.dp))
@@ -1855,4 +1856,5 @@ fun RiwayatScreen() {
         }
     }
 }
+
 

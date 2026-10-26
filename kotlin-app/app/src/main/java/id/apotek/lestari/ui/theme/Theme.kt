@@ -15,6 +15,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -266,3 +267,4 @@ fun daysUntilExpiry(expiry: String?): Int? {
 
 /** "40,9" — margin persen dengan koma desimal Indonesia. */
 fun marginTextID(pct: Double): String = String.format(ID_LOCALE, "%,.1f", pct)
+
