@@ -108,6 +108,9 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
+    // Excel (.xlsx) untuk Import / Export / Template Stok — Apache POI
+    implementation("org.apache.poi:poi-ooxml:5.2.5")
+
     // Images
     implementation("io.coil-kt:coil-compose:2.7.0")
 

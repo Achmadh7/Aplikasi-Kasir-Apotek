@@ -2,6 +2,8 @@
 
 package id.apotek.lestari.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -60,9 +62,13 @@ import id.apotek.lestari.data.*
 import id.apotek.lestari.ui.components.BarcodeScanner
 import id.apotek.lestari.ui.components.postLowStockNotification
 import id.apotek.lestari.ui.theme.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 private val repo = Repository()
 val CATEGORIES = listOf("Umum","Antibiotik","Vitamin","Pereda Nyeri","Obat Batuk & Flu","Pencernaan","Kulit","Mata","Lainnya")
@@ -719,6 +725,63 @@ fun StokScreen() {
     var msg by remember { mutableStateOf("") }
     var listEntered by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var importSummary by remember { mutableStateOf<String?>(null) }
+    var showImportDialog by remember { mutableStateOf(false) }
+    // File Excel dibuka/disimpan lewat Storage Access Framework — tanpa izin penyimpanan.
+    val templateLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(ExcelHelper.MIME_XLSX)) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(ExcelHelper.templateBytes()) }
+                        ?: throw IllegalStateException("Tidak bisa membuka file tujuan")
+                }.isSuccess
+            }
+            msg = if (ok) "Template Excel berhasil disimpan." else "Gagal menyimpan template Excel."
+        }
+    }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(ExcelHelper.MIME_XLSX)) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val current = medicines
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(ExcelHelper.exportBytes(current)) }
+                        ?: throw IllegalStateException("Tidak bisa membuka file tujuan")
+                }.isSuccess
+            }
+            msg = if (ok) "Export Excel berhasil: ${current.size} obat." else "Gagal menyimpan export Excel."
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            try {
+                val parsed = withContext(Dispatchers.IO) {
+                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        ?: throw IllegalStateException("Tidak bisa membaca file")
+                    ExcelHelper.parseImport(bytes)
+                }
+                val response = repo.bulkImport(BulkImportArgs(parsed.items))
+                if (response is ApiResult.Success) {
+                    val r = response.data
+                    importSummary = buildString {
+                        append("${r.inserted} obat baru ditambahkan, ${r.updated} diperbarui")
+                        if (r.skipped > 0) append(", ${r.skipped} baris dilewati (nama kosong)")
+                        if (parsed.skippedRows.isNotEmpty()) append("\nBaris dilewati: ${parsed.skippedRows.joinToString(", ")}")
+                        append("\nTotal baris diproses: ${r.total}")
+                    }
+                    showImportDialog = true
+                    reload()
+                } else {
+                    msg = "Import gagal: ${(response as? ApiResult.Error)?.message ?: "tidak diketahui"}"
+                }
+            } catch (e: Exception) {
+                msg = "Import gagal: ${e.message}"
+            }
+        }
+    }
     fun reload() { scope.launch { (repo.listMedicines(search) as? ApiResult.Success)?.let { medicines = it.data.medicines } } }
     LaunchedEffect(Unit) { reload() }
     // Daftar muncul bertahap begitu data pertama kali tiba; tidak berulang saat scroll.
@@ -755,6 +818,52 @@ fun StokScreen() {
         if (msg.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
             Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+        }
+        Spacer(Modifier.height(16.dp))
+        // Kartu Import / Export / Template Excel — isi banyak obat sekaligus.
+        GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Icon(Icons.Default.TableChart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(20.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Import / Export Excel", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Isi banyak obat sekaligus lewat file .xlsx", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { templateLauncher.launch("Template-Import-Stok-Obat.xlsx") },
+                        modifier = Modifier.weight(1f), shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Icon(Icons.Default.Description, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Template", maxLines = 1)
+                    }
+                    Button(
+                        onClick = { importLauncher.launch(arrayOf(ExcelHelper.MIME_XLSX)) },
+                        modifier = Modifier.weight(1f), shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Icon(Icons.Default.Upload, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Import", maxLines = 1)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            val stamp = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).format(Date())
+                            exportLauncher.launch("Stok-Obat-$stamp.xlsx")
+                        },
+                        modifier = Modifier.weight(1f), shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Export", maxLines = 1)
+                    }
+                }
+            }
         }
         Spacer(Modifier.height(16.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -804,6 +913,15 @@ fun StokScreen() {
         }
     }
     if (showForm) MedicineFormDialog(editing = editing, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
+    if (showImportDialog && importSummary != null) {
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            containerColor = glassPanelStrongColor(),
+            title = { Text("Import Excel Selesai") },
+            text = { Text(importSummary!!) },
+            confirmButton = { TextButton(onClick = { showImportDialog = false }) { Text("OK") } }
+        )
+    }
 }
 
 // Pemilih opsi berupa bottom sheet dengan daftar radio (dipakai Kategori & Satuan di form Stok).
