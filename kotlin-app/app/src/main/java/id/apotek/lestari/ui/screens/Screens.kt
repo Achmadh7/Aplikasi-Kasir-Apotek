@@ -1078,21 +1078,7 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
                 interactionSource = unitInteraction,
                 modifier = Modifier.fillMaxWidth()
             )
-            OutlinedTextField(
-                buy,
-                {
-                    val formatted = formatDecimal(it)
-                    buy = formatted
-                    // Saran Harga Jual otomatis (Harga Beli +20%) selama kolomnya masih kosong.
-                    if (sell.isBlank()) {
-                        val b = parseDecimal(formatted)
-                        if (b > 0) sell = formatDecimal((b * 1.2).roundToInt().toString())
-                    }
-                },
-                label = { Text("Harga Beli") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true, modifier = Modifier.fillMaxWidth()
-            )
+            OutlinedTextField(buy, { buy = formatDecimal(it) }, label = { Text("Harga Beli") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(sell, { sell = formatDecimal(it) }, label = { Text("Harga Jual") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() } }, label = { Text("Stok") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(minStock, { minStock = it.filter { c -> c.isDigit() } }, label = { Text("Stok Minimum") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
