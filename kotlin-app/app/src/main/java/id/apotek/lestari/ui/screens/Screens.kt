@@ -47,11 +47,7 @@ private val BurukFg = Color(0xFFFFB4AB)
 
 @Composable
 fun DemoBanner() {
-    if (ApiClient.isDemoMode) {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-            Text("MODE DEMO LOKAL — data contoh di HP saja, belum tersambung ke server. Ganti BASE_URL di app/build.gradle.kts dengan alamat server aslimu.", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
-        }
-    }
+    // Mode offline: semua data tersimpan di HP (Room), tidak ada banner demo.
 }
 
 @Composable

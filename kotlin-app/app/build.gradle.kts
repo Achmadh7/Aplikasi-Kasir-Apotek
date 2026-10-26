@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -15,13 +16,9 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        // BASE_URL: alamat server aplikasi web Apotik Lestari kamu.
-        // Data aplikasi ini tersimpan di server (server actions), bukan di HP,
-        // jadi APK Kotlin ini tetap butuh internet ke server tersebut.
-        // Ganti https://example.invalid/ di bawah dengan alamat aslimu,
-        // contoh: "https://alamat-aplikasi-kamu/"
-        // Selama masih example.invalid, aplikasi berjalan dalam MODE DEMO LOKAL
-        // (data contoh di dalam HP saja, tidak tersambung ke server).
+        // BASE_URL: tidak lagi dipakai — aplikasi berjalan OFFLINE dan semua
+        // data tersimpan di HP dalam database lokal Room (apotek-lestari.db).
+        // Nilai ini dibiarkan apa adanya agar tidak merusak apa pun.
         buildConfigField("String", "BASE_URL", "\"https://example.invalid/\"")
         vectorDrawables { useSupportLibrary = true }
     }
@@ -74,6 +71,11 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.3.4")
     implementation("androidx.camera:camera-view:1.3.4")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
+    // Database lokal (Room) — data tersimpan di HP, tanpa server
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
 
     // Images
     implementation("io.coil-kt:coil-compose:2.7.0")

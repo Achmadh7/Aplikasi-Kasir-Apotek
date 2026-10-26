@@ -13,12 +13,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import id.apotek.lestari.data.local.DatabaseProvider
 import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        DatabaseProvider.init(applicationContext)
         setContent { ApotikLestariTheme { ApotekApp() } }
     }
 }
