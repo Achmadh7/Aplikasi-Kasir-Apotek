@@ -659,9 +659,15 @@ fun KasirScreen() {
                                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                             ) { Text(label, maxLines = 1) }
                         }
+                        Button(
+                            onClick = { uangDiterima = total },
+                            colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
+                            shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                        ) { Text("Uang Pas", maxLines = 1) }
                     }
                     Spacer(Modifier.height(6.dp))
-                    Text("Ketuk nominal untuk menambah ke jumlah uang diterima — bisa ditekan berkali-kali.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Ketuk nominal untuk menambah ke jumlah uang diterima — bisa ditekan berkali-kali. Ketuk Uang Pas untuk mengisi persis sebesar total belanja.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(6.dp))
                     OutlinedTextField(
                         value = if (uangDiterima == 0) "" else uangDiterima.toString(),
