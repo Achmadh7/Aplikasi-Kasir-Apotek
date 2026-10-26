@@ -111,7 +111,7 @@ class Repository {
             }
         }
         // Stok menipis: di bawah 20 (sama dengan status "Rendah" di Stok).
-        val lowStockCount = meds.count { it.stock < 20 }
+        val lowStockCount = meds.count { it.stock < 10 }
         // Kadaluarsa: tanggal kalender hari ini s.d. 30 hari ke depan (WIB).
         val expiringCount = meds.count {
             it.expiryDate != null && it.expiryDate >= todayKey && it.expiryDate <= in30Key

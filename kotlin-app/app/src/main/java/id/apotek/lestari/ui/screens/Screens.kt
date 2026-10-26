@@ -44,7 +44,7 @@ private var lowStockPopupShown = false
 
 // Ambang stok menipis: stok di bawah 20 (sama dengan status "Rendah" di Stok).
 // Dipakai pop-up Beranda, notifikasi sistem, dan hitungan "stok menipis" di Beranda.
-private const val LOW_STOCK_THRESHOLD = 20
+private const val LOW_STOCK_THRESHOLD = 10
 
 // Warna aksen mengikuti tampilan web app (mode gelap)
 private val LightTealCard = Color(0xFF8FE3E8)
@@ -97,7 +97,7 @@ private fun LowStockPopup(medicines: List<Medicine>, onGoStok: () -> Unit, onDis
                                     }
                                 }
                             }
-                            Text("Sisa ${m.stock} ${m.unit} • di bawah ambang 20", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Sisa ${m.stock} ${m.unit} • di bawah ambang 10", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -487,7 +487,7 @@ fun KasirScreen() {
                         scope.launch {
                             val amt = if (method == "Tunai") paid else total
                             // Stok sebelum penjualan, untuk mendeteksi obat yang
-                            // BARU turun di bawah ambang 20 akibat penjualan ini.
+                            // BARU turun di bawah ambang 10 akibat penjualan ini.
                             val stockBefore = ((repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty())
                                 .associate { it.id to it.stock }
                             val result = repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty) }, method, amt))
