@@ -319,36 +319,38 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             Spacer(Modifier.height(6.dp))
                             TextButton(onClick = onGoPengingat) { Text("Lihat Pengingat") }
                         }
+                        Spacer(Modifier.height(8.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Spacer(Modifier.height(6.dp))
+                        Text("${d.totalMedicines} jenis obat terdaftar di Stok", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
             item {
-                // Satu kartu uang: Pengeluaran, Selisih Hari Ini dan Selisih Bulan Ini sejajar.
+                // Kartu uang: Pengeluaran & Untung/Rugi Hari Ini sejajar, Bulan Ini di bawah.
                 ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Column(Modifier.weight(1f)) {
-                                Text("Pengeluaran", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("Pengeluaran Hari Ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Spacer(Modifier.height(2.dp))
-                                Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            Column(Modifier.weight(1f)) {
-                                Text("Selisih Hari Ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                                Text(if (d.todayProfit >= 0) "Untung Hari Ini" else "Rugi Hari Ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Spacer(Modifier.height(2.dp))
-                                Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                            Column(Modifier.weight(1f)) {
-                                Text("Selisih Bulan Ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Spacer(Modifier.height(2.dp))
-                                Text(formatIDR(d.monthProfit), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (d.todayProfit >= 0) ExpressiveGreen else MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                         Spacer(Modifier.height(12.dp))
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Spacer(Modifier.height(8.dp))
-                        Text("Bulan ini: masuk ${formatIDR(d.monthIn)} \u2022 keluar ${formatIDR(d.monthOut)}", style = MaterialTheme.typography.bodyMedium)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (d.monthProfit >= 0) "Untung Bulan Ini" else "Rugi Bulan Ini", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Text(formatIDR(d.monthProfit), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (d.monthProfit >= 0) ExpressiveGreen else MaterialTheme.colorScheme.error)
+                        }
                         Spacer(Modifier.height(4.dp))
-                        Text("${d.totalMedicines} jenis obat   \u2022   ${d.lowStockCount} stok menipis   \u2022   ${d.expiringCount} dekat kadaluarsa", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Masuk ${formatIDR(d.monthIn)} • Keluar ${formatIDR(d.monthOut)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
