@@ -544,13 +544,24 @@ fun KasirScreen() {
         Text("Ketuk obat untuk menambahkan ke keranjang, lalu selesaikan pembayaran.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(16.dp))
         DemoBanner()
-        OutlinedTextField(
-            value = search, onValueChange = { search = it },
-            label = { Text("Cari nama obat…") },
-            leadingIcon = { Icon(Icons.Default.Search, null) },
-            trailingIcon = { IconButton(onClick = { showScanner = true }) { Icon(Icons.Default.QrCodeScanner, "Scan barcode") } },
-            modifier = Modifier.fillMaxWidth(), singleLine = true
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = search, onValueChange = { search = it },
+                label = { Text("Cari nama obat…") },
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                modifier = Modifier.weight(1f), singleLine = true
+            )
+            OutlinedButton(
+                onClick = { showScanner = true },
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.height(56.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp)
+            ) {
+                Icon(Icons.Default.QrCodeScanner, "Scan barcode")
+                Spacer(Modifier.width(8.dp))
+                Text("Scan")
+            }
+        }
         if (scanMsg.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
             Text(scanMsg, style = MaterialTheme.typography.bodySmall)
@@ -852,13 +863,24 @@ fun StokScreen() {
         }
         Spacer(Modifier.height(16.dp))
         DemoBanner()
-        OutlinedTextField(
-            value = search, onValueChange = { search = it; reload() },
-            label = { Text("Cari obat atau kategori…") },
-            leadingIcon = { Icon(Icons.Default.Search, null) },
-            trailingIcon = { IconButton(onClick = { showScanner = true }) { Icon(Icons.Default.QrCodeScanner, "Scan barcode stok") } },
-            modifier = Modifier.fillMaxWidth(), singleLine = true
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = search, onValueChange = { search = it; reload() },
+                label = { Text("Cari obat atau kategori…") },
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                modifier = Modifier.weight(1f), singleLine = true
+            )
+            OutlinedButton(
+                onClick = { showScanner = true },
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.height(56.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp)
+            ) {
+                Icon(Icons.Default.QrCodeScanner, "Scan barcode stok")
+                Spacer(Modifier.width(8.dp))
+                Text("Scan")
+            }
+        }
         if (msg.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
             Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
