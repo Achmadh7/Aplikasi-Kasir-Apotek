@@ -1430,10 +1430,6 @@ fun LabaScreen() {
                     }
                 }
             }
-            item { Text("Per Obat", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-            items(r.byMedicine) { m -> ListItem(headlineContent = { Text(m.name) }, trailingContent = { Text(formatIDR(m.profit)) }) }
-            item { Text("Per Kategori", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-            items(r.byCategory) { c -> ListItem(headlineContent = { Text(c.category) }, trailingContent = { Text(formatIDR(c.profit)) }) }
         } ?: item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         }
