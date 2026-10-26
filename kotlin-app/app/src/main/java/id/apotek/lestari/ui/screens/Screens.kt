@@ -239,7 +239,7 @@ fun KasirScreen() {
     var showScanner by remember { mutableStateOf(false) }
     var scanMsg by remember { mutableStateOf("") }
     var method by remember { mutableStateOf("Tunai") }
-    var amountPaid by remember { mutableStateOf("") }
+    var uangDiterima by remember { mutableIntStateOf(0) }
     var payMsg by remember { mutableStateOf("") }
     val cart = remember { mutableStateListOf<CartItem>() }
     val scope = rememberCoroutineScope()
@@ -258,7 +258,7 @@ fun KasirScreen() {
     }, onClose = { showScanner = false })
     val filtered = medicines.filter { search.isBlank() || it.name.contains(search, true) || it.category.contains(search, true) || (it.barcode?.contains(search) == true) }
     val total = cart.sumOf { it.medicine.sellPrice * it.qty }
-    val paid = amountPaid.toIntOrNull() ?: 0
+    val paid = uangDiterima
     val change = if (method == "Tunai") (paid - total).coerceAtLeast(0) else 0
     val canPay = cart.isNotEmpty() && (method != "Tunai" || paid >= total)
     Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -370,8 +370,21 @@ fun KasirScreen() {
                     Spacer(Modifier.height(12.dp))
                     Text("UANG DITERIMA", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        listOf(20000 to "Rp20.000", 50000 to "Rp50.000", 100000 to "Rp100.000").forEach { (nominal, label) ->
+                            OutlinedButton(
+                                onClick = { uangDiterima += nominal },
+                                shape = RoundedCornerShape(24.dp), modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                            ) { Text(label, maxLines = 1) }
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text("Ketuk nominal untuk menambah ke jumlah uang diterima — bisa ditekan berkali-kali.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(6.dp))
                     OutlinedTextField(
-                        value = amountPaid, onValueChange = { amountPaid = it.filter { c -> c.isDigit() } },
+                        value = if (uangDiterima == 0) "" else uangDiterima.toString(),
+                        onValueChange = { uangDiterima = it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 },
                         label = { Text("cth: 50000") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true, modifier = Modifier.fillMaxWidth()
@@ -392,7 +405,8 @@ fun KasirScreen() {
                             repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty) }, method, amt))
                             payMsg = "Pembayaran $method berhasil. Total ${formatIDR(total)}" + if (method == "Tunai") " • Kembalian ${formatIDR(change)}" else ""
                             cart.clear()
-                            amountPaid = ""
+                            uangDiterima = 0
+                            (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines }
                         }
                     },
                     enabled = canPay,
@@ -454,45 +468,6 @@ fun StokScreen() {
         if (msg.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
             Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-        }
-        Spacer(Modifier.height(12.dp))
-        // Kartu Import & Export Excel
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
-                        Icon(Icons.Default.Description, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Text("Import & Export Excel", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(8.dp))
-                Text("Export untuk backup atau edit massal di Excel. Import untuk menambahkan banyak obat sekaligus dari file .xlsx / .xls / .csv.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = { msg = "Export Excel tersedia penuh di versi web (mode server). Di aplikasi ini, tambah/edit obat lewat form." },
-                        colors = ButtonDefaults.buttonColors(containerColor = GreenButton, contentColor = Color.White),
-                        shape = RoundedCornerShape(24.dp)
-                    ) { Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Export Excel") }
-                    Button(
-                        onClick = { msg = "Import Excel tersedia penuh di versi web (mode server). Di aplikasi ini, tambah/edit obat lewat form." },
-                        colors = ButtonDefaults.buttonColors(containerColor = LightTealCard, contentColor = OnLightTeal),
-                        shape = RoundedCornerShape(24.dp)
-                    ) { Icon(Icons.Default.Upload, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Import Excel") }
-                }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { msg = "Download Template tersedia penuh di versi web (mode server). Di aplikasi ini, tambah/edit obat lewat form." },
-                    shape = RoundedCornerShape(24.dp)
-                ) { Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Download Template") }
-                Spacer(Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Kolom Excel: Nama Obat, Kategori, Satuan, Harga Beli, Harga Jual, Stok, Stok Minimum, Tanggal Kadaluarsa (YYYY-MM-DD). Belum punya file? Klik Download Template, isi file-nya, lalu Import kembali file yang sudah diedit.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
         }
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
