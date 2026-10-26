@@ -343,7 +343,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 Text(todayLabelID(), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             }
             Spacer(Modifier.height(8.dp))
-            Text("Ringkasan Apotek", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+            Text("Penjualan", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
             Text("Hari Ini", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
             DemoBanner()
@@ -433,8 +433,6 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 // Penjualan Hari Ini: Obat Terjual dan Transaksi dalam satu kartu bertab.
                 ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("Penjualan Hari Ini", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
                         TabRow(selectedTabIndex = salesTab, containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.primary) {
                             Tab(selected = salesTab == 0, onClick = { salesTab = 0 }, text = { Text("Obat Terjual") })
                             Tab(selected = salesTab == 1, onClick = { salesTab = 1 }, text = { Text("Transaksi") })
@@ -482,7 +480,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
 @Composable
 fun ShortcutCard(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
     ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = modifier.clickable { onClick() }) {
-        Column(Modifier.padding(vertical = 14.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
             Spacer(Modifier.height(6.dp))
             Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.Center)
@@ -722,9 +720,9 @@ fun KasirScreen() {
                     Text("Ketuk nominal untuk menambah ke jumlah uang diterima — bisa ditekan berkali-kali. Ketuk Uang Pas untuk mengisi persis sebesar total belanja.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(6.dp))
                     OutlinedTextField(
-                        value = if (uangDiterima == 0) "" else uangDiterima.toString(),
+                        value = if (uangDiterima == 0) "" else formatDecimal(uangDiterima.toString()),
                         onValueChange = { uangDiterima = it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 },
-                        label = { Text("cth: 50000") },
+                        label = { Text("cth: 50.000") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -1090,8 +1088,8 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
     LaunchedEffect(unitInteraction) {
         unitInteraction.interactions.collect { if (it is PressInteraction.Press) showUnitSheet = true }
     }
-    var buy by remember(editing) { mutableStateOf(editing?.buyPrice?.toString() ?: "") }
-    var sell by remember(editing) { mutableStateOf(editing?.sellPrice?.toString() ?: "") }
+    var buy by remember(editing) { mutableStateOf(formatDecimal(editing?.buyPrice?.toString() ?: "")) }
+    var sell by remember(editing) { mutableStateOf(formatDecimal(editing?.sellPrice?.toString() ?: "")) }
     var stock by remember(editing) { mutableStateOf(editing?.stock?.toString() ?: "") }
     var minStock by remember(editing) { mutableStateOf(editing?.minStock?.toString() ?: "10") }
     var expiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
@@ -1118,8 +1116,8 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                     interactionSource = unitInteraction,
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(buy, { buy = it.filter { c -> c.isDigit() } }, label = { Text("Harga Beli") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(sell, { sell = it.filter { c -> c.isDigit() } }, label = { Text("Harga Jual") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(buy, { buy = formatDecimal(it) }, label = { Text("Harga Beli") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(sell, { sell = formatDecimal(it) }, label = { Text("Harga Jual") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() } }, label = { Text("Stok") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(minStock, { minStock = it.filter { c -> c.isDigit() } }, label = { Text("Stok Minimum") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(expiry, { expiry = it }, label = { Text("Tanggal Kadaluarsa (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -1131,8 +1129,8 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                     scope.launch {
                         val cat = category.ifBlank { "Umum" }
                         val unt = unit.ifBlank { "Strip" }
-                        val b = buy.toIntOrNull() ?: 0
-                        val s = sell.toIntOrNull() ?: 0
+                        val b = parseDecimal(buy)
+                        val s = parseDecimal(sell)
                         val st = stock.toIntOrNull() ?: 0
                         val ms = minStock.toIntOrNull() ?: 10
                         val exp = expiry.ifBlank { null }
@@ -1304,7 +1302,7 @@ private fun CashEntryFormDialog(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 }
                 OutlinedTextField(category, { category = it }, label = { Text("Kategori") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(description, { description = it }, label = { Text("Keterangan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(amount, { amount = it.filter { c -> c.isDigit() } }, label = { Text("Jumlah (Rp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(amount, { amount = formatDecimal(it) }, label = { Text("Jumlah (Rp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             }
         },
         confirmButton = {
@@ -1316,13 +1314,13 @@ private fun CashEntryFormDialog(onDismiss: () -> Unit, onSaved: () -> Unit) {
                                 type,
                                 category.ifBlank { "Lainnya" },
                                 description.ifBlank { if (type == "in") "Kas masuk" else "Kas keluar" },
-                                amount.toIntOrNull() ?: 0
+                                parseDecimal(amount)
                             )
                         )
                         onSaved()
                     }
                 },
-                enabled = (amount.toIntOrNull() ?: 0) > 0
+                enabled = parseDecimal(amount) > 0
             ) { Text("Simpan") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } }
@@ -1432,21 +1430,55 @@ fun LabaScreen() {
                             Text("Belum ada data laba harian.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             val maxProfit = daily.maxOf { it.profit }.coerceAtLeast(1)
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
-                                daily.forEachIndexed { barIndex, day ->
-                                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        key(period) {
-                                            val grow = remember { Animatable(0f) }
-                                            LaunchedEffect(period) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = barIndex * 70, easing = FastOutSlowInEasing)) }
-                                            Box(
-                                                Modifier.width(28.dp).height((110f * day.profit / maxProfit * grow.value).coerceAtLeast(0f).dp)
-                                                    .background(TealButton, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                            val todayIndex = daily.lastIndex
+                            Column {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+                                    daily.forEachIndexed { barIndex, day ->
+                                        val isMax = day.profit == maxProfit && day.profit > 0
+                                        val isToday = barIndex == todayIndex
+                                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(
+                                                formatCompactIDR(day.profit),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = if (isMax) FontWeight.Bold else FontWeight.Medium,
+                                                color = when {
+                                                    day.profit < 0 -> MaterialTheme.colorScheme.error
+                                                    isMax -> MaterialTheme.colorScheme.primary
+                                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                },
+                                                maxLines = 1
+                                            )
+                                            Spacer(Modifier.height(4.dp))
+                                            key(period) {
+                                                val grow = remember { Animatable(0f) }
+                                                LaunchedEffect(period) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = barIndex * 70, easing = FastOutSlowInEasing)) }
+                                                val barH = ((110f * day.profit / maxProfit * grow.value).coerceIn(0f, 110f)).let { if (day.profit > 0) it.coerceAtLeast(4f) else 0f }
+                                                Box(
+                                                    Modifier.width(28.dp).height(barH.dp)
+                                                        .background(
+                                                            if (isMax) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                                                            RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                                                        )
+                                                )
+                                            }
+                                            Spacer(Modifier.height(6.dp))
+                                            Text(
+                                                day.label,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1
                                             )
                                         }
-                                        Spacer(Modifier.height(6.dp))
-                                        Text(day.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                                     }
                                 }
+                                Spacer(Modifier.height(8.dp))
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    "Batang teal pekat = laba tertinggi • Label hari ini ditebalkan",
+                                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
@@ -1548,6 +1580,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                     expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
                 exit = fadeOut()
             ) {
+            Column {
             ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1601,6 +1634,11 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                         )
                     }
                 }
+            }
+            if (index < shown.size - 1) {
+                Spacer(Modifier.height(10.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
             }
             }
         }
@@ -1874,6 +1912,7 @@ fun RiwayatScreen() {
         }
     }
 }
+
 
 
 
