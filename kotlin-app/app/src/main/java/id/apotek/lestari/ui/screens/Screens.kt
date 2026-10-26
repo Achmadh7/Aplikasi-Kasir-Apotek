@@ -1297,7 +1297,6 @@ private fun CashEntryFormDialog(onDismiss: () -> Unit, onSaved: () -> Unit) {
 fun LabaScreen() {
     var report by remember { mutableStateOf<ProfitReport?>(null) }
     var period by remember { mutableStateOf("month") }
-    var exportMsg by remember { mutableStateOf("") }
     LaunchedEffect(period) { (repo.getProfitReport(period) as? ApiResult.Success)?.let { report = it.data } }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -1383,21 +1382,6 @@ fun LabaScreen() {
                             )
                         }
                     }
-                }
-            }
-            item {
-                val exportInteraction = remember { MutableInteractionSource() }
-                val exportScale = pressBounceScale(exportInteraction)
-                Button(
-                    onClick = { exportMsg = "Export laporan Excel tersedia penuh di versi web (mode server)." },
-                    interactionSource = exportInteraction,
-                    colors = ButtonDefaults.buttonColors(containerColor = GreenButton, contentColor = Color.White),
-                    shape = RoundedCornerShape(32.dp),
-                    modifier = Modifier.fillMaxWidth().height(56.dp).graphicsLayer(scaleX = exportScale, scaleY = exportScale)
-                ) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(8.dp)); Text("Export Laporan ke Excel", style = MaterialTheme.typography.titleMedium) }
-                if (exportMsg.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(exportMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             item {
