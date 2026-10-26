@@ -51,6 +51,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.layer.rememberGraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -61,6 +63,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import id.apotek.lestari.data.*
+import id.apotek.lestari.ui.printReceiptBitmap
+import id.apotek.lestari.ui.shareReceiptBitmap
 import id.apotek.lestari.ui.components.BarcodeScanner
 import id.apotek.lestari.ui.components.postLowStockNotification
 import id.apotek.lestari.ui.theme.*
@@ -506,6 +510,7 @@ fun KasirScreen() {
     var payMsg by remember { mutableStateOf("") }
     var payCount by remember { mutableIntStateOf(0) }
     var lastSale by remember { mutableStateOf<Sale?>(null) }
+    val receiptLayer = rememberGraphicsLayer()
     val cart = remember { mutableStateListOf<CartItem>() }
     val scope = rememberCoroutineScope()
     // Supaya field Uang Diterima otomatis tergulir ke atas keyboard saat diketuk.
@@ -740,7 +745,11 @@ fun KasirScreen() {
                 AnimatedVisibility(visible = lastSale != null) {
                     Column {
                         Spacer(Modifier.height(16.dp))
-                        lastSale?.let { InvoiceDetailCard(sale = it) }
+                        lastSale?.let {
+                            InvoiceDetailCard(sale = it, graphicsLayer = receiptLayer)
+                            Spacer(Modifier.height(12.dp))
+                            ReceiptActionsRow(graphicsLayer = receiptLayer, invoiceNo = it.invoiceNo)
+                        }
                     }
                 }
             }
@@ -1615,12 +1624,12 @@ private fun InvoiceInfoBox(label: String, value: String, modifier: Modifier = Mo
 }
 
 @Composable
-private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier) {
+private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphicsLayer: GraphicsLayer? = null) {
     Card(
         colors = CardDefaults.cardColors(containerColor = InvoicePaper),
         shape = RoundedCornerShape(28.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth().let { if (graphicsLayer != null) it.graphicsLayer(graphicsLayer) else it }
     ) {
         Column(Modifier.padding(20.dp)) {
             Text(
@@ -1712,7 +1721,34 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier) {
     }
 }
 
+// Tombol di bawah struk: tangkap kartu invoice jadi gambar, lalu bagikan atau cetak.
+// Tombolnya sengaja di luar kartu struk supaya tidak ikut masuk ke gambar struk.
+@Composable
+private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = { scope.launch { shareReceiptBitmap(context, graphicsLayer.drawToBitmap(), invoiceNo) } },
+            shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)
+        ) {
+            Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Bagikan")
+        }
+        OutlinedButton(
+            onClick = { scope.launch { printReceiptBitmap(context, graphicsLayer.drawToBitmap(), invoiceNo) } },
+            shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)
+        ) {
+            Icon(Icons.Default.Print, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Cetak")
+        }
+    }
+}
+
 // ---------- Riwayat Penjualan ----------
+
 
 
 @Composable
@@ -1720,6 +1756,7 @@ fun RiwayatScreen() {
     var sales by remember { mutableStateOf<List<Sale>>(emptyList()) }
     var expanded by remember { mutableStateOf<Int?>(null) }
     var listEntered by remember { mutableStateOf(false) }
+    val receiptLayer = rememberGraphicsLayer()
     LaunchedEffect(Unit) { (repo.listSales() as? ApiResult.Success)?.let { sales = it.data.sales } }
     LaunchedEffect(sales) { if (sales.isNotEmpty() && !listEntered) listEntered = true }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -1763,7 +1800,9 @@ fun RiwayatScreen() {
                         }
                         if (isOpen) {
                             Spacer(Modifier.height(16.dp))
-                            InvoiceDetailCard(sale = s)
+                            InvoiceDetailCard(sale = s, graphicsLayer = receiptLayer)
+                            Spacer(Modifier.height(12.dp))
+                            ReceiptActionsRow(graphicsLayer = receiptLayer, invoiceNo = s.invoiceNo)
                         }
                     }
                 }
