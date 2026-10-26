@@ -213,6 +213,7 @@ private fun LowStockPopup(medicines: List<Medicine>, onGoStok: () -> Unit, onDis
     val critical = medicines.count { it.stock <= 0 }
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = glassPanelStrongColor(),
         shape = RoundedCornerShape(32.dp),
         icon = {
             Surface(color = BurukBg, shape = CircleShape) {
@@ -361,7 +362,7 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                 val cols = adaptiveColumns(compact = 2, medium = 3, expanded = 4)
                 val summaryCards = listOf<@Composable () -> Unit>(
                     {
-                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                        GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(20.dp)) {
                                 Surface(color = RedBadgeBg, shape = CircleShape) {
                                     Icon(Icons.Default.ArrowUpward, null, tint = Color.White, modifier = Modifier.padding(8.dp).size(20.dp))
@@ -374,7 +375,7 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                         }
                     },
                     {
-                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                        GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(20.dp)) {
                                 Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape) {
                                     Icon(Icons.Default.AccountBalance, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(8.dp).size(20.dp))
@@ -387,7 +388,7 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                         }
                     },
                     {
-                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                        GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(20.dp)) {
                                 Text("SELISIH KAS BULAN INI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.height(4.dp))
@@ -425,7 +426,7 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                 }
             }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -529,8 +530,7 @@ fun KasirScreen() {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     row.forEach { m ->
                         val out = m.stock <= 0
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                        GlassCard(
                             shape = RoundedCornerShape(28.dp),
                             modifier = Modifier.weight(1f).clickable(enabled = !out) {
                                 val ex = cart.firstOrNull { it.medicine.id == m.id }
@@ -558,7 +558,7 @@ fun KasirScreen() {
         }
         Spacer(Modifier.height(16.dp))
         // Keranjang
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
+        GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
             Column(Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.ShoppingCart, null)
@@ -774,7 +774,7 @@ fun StokScreen() {
                         expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
                     exit = fadeOut()
                 ) {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -819,7 +819,8 @@ private fun OptionPickerSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = glassPanelStrongColor()
     ) {
         Text(
             title,
@@ -872,6 +873,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
     val scope = rememberCoroutineScope()
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = glassPanelStrongColor(),
         title = { Text(if (editing == null) "Tambah Obat" else "Edit Obat") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -978,7 +980,7 @@ fun KeuanganScreen() {
             }
         }
         Spacer(Modifier.height(16.dp))
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+        GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
             Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1028,7 +1030,7 @@ fun KeuanganScreen() {
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(shown) { e ->
                 val isIn = e.type == "in"
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Surface(color = if (isIn) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = CircleShape) {
                             Icon(
@@ -1067,6 +1069,7 @@ private fun CashEntryFormDialog(onDismiss: () -> Unit, onSaved: () -> Unit) {
     val scope = rememberCoroutineScope()
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = glassPanelStrongColor(),
         title = { Text("Catat Kas Masuk / Keluar") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1148,7 +1151,7 @@ fun LabaScreen() {
                 }
             }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         // Grid statistik adaptif: HP portrait 2 kolom, tablet/landscape 3 kolom,
                         // tablet lebar 4 kolom (satu baris).
@@ -1171,7 +1174,7 @@ fun LabaScreen() {
                 }
             }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(20.dp), verticalAlignment = Alignment.Top) {
                         Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(10.dp))
@@ -1184,7 +1187,7 @@ fun LabaScreen() {
             }
             if (r.costMissingQty > 0) {
                 item {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.padding(20.dp), verticalAlignment = Alignment.Top) {
                             Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
@@ -1212,7 +1215,7 @@ fun LabaScreen() {
                 }
             }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp)) {
                         Text("Laba Kotor 7 Hari Terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(20.dp))
@@ -1314,7 +1317,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
             }
         }
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(20.dp)) {
                     ReminderCount(Icons.Default.EventBusy, "EXPIRED", "${expired.size}", if (expired.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
                     ReminderCount(Icons.Default.Schedule, "≤ $window HARI", "${withinWindow.size}", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
@@ -1341,7 +1344,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                     expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
                 exit = fadeOut()
             ) {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            GlassCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(color = if (isCritical) RedBadgeBg else MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -1447,8 +1450,7 @@ fun RiwayatScreen() {
                         expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
                     exit = fadeOut()
                 ) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                GlassCard(
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow)).clickable { expanded = if (isOpen) null else s.id }
                 ) {

@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -21,6 +22,7 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
@@ -30,6 +32,8 @@ import androidx.navigation.compose.rememberNavController
 import id.apotek.lestari.data.local.DatabaseProvider
 import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
+import id.apotek.lestari.ui.theme.glassBackgroundBrush
+import id.apotek.lestari.ui.theme.glassBorderColor
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 class MainActivity : ComponentActivity() {
@@ -75,11 +79,15 @@ fun ApotekApp() {
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route ?: "beranda"
     Scaffold(
+        modifier = Modifier.background(glassBackgroundBrush()),
+        containerColor = Color.Transparent,
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = 8.dp
-            ) {
+            Column {
+                HorizontalDivider(thickness = 1.dp, color = glassBorderColor())
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                    tonalElevation = 0.dp
+                ) {
                 TABS.forEach { tab ->
                     NavigationBarItem(
                         selected = current == tab.route,
@@ -92,6 +100,7 @@ fun ApotekApp() {
                             selectedTextColor = MaterialTheme.colorScheme.primary
                         )
                     )
+                }
                 }
             }
         }
