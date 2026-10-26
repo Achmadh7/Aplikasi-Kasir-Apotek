@@ -305,9 +305,11 @@ class Repository {
 
     suspend fun listSales(limit: Int = 50): ApiResult<ListSalesResponse> = call {
         val db = DatabaseProvider.db
+        val medById = db.medicineDao().getAll().associateBy { it.id }
         val sales = db.saleDao().getAll().take(limit).map { s ->
             val items = db.saleDao().getItemsForSale(s.id).map {
-                SaleItem(it.medicineName, it.qty, it.price, it.subtotal)
+                val med = medById[it.medicineId]
+                SaleItem(it.medicineName, it.qty, it.price, it.subtotal, med?.category ?: "", med?.unit ?: "")
             }
             Sale(s.id, s.invoiceNo, s.total, s.paymentMethod, s.amountPaid, s.changeAmount, s.createdAt, items)
         }

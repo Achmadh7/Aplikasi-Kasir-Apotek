@@ -23,7 +23,10 @@ data class SaleItem(
     @SerializedName("medicineName") val medicineName: String = "",
     val qty: Int = 0,
     val price: Int = 0,
-    val subtotal: Int = 0
+    val subtotal: Int = 0,
+    // Kategori & satuan obat saat penjualan terjadi (kosong kalau obatnya sudah dihapus dari Stok).
+    val category: String = "",
+    val unit: String = ""
 )
 
 data class Sale(

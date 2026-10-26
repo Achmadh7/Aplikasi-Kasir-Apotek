@@ -236,6 +236,12 @@ fun formatDateID(s: String?): String {
     return SimpleDateFormat("d MMM yyyy", ID_LOCALE).apply { timeZone = JAKARTA_TZ }.format(d)
 }
 
+/** "Minggu, 25 Oktober 2026" — tanggal lengkap untuk invoice. */
+fun formatFullDateID(s: String?): String {
+    val d = parseISODate(s) ?: return s ?: "-"
+    return SimpleDateFormat("EEEE, d MMMM yyyy", ID_LOCALE).apply { timeZone = JAKARTA_TZ }.format(d)
+}
+
 /** Kunci "yyyy-MM-dd" sebuah tanggal di zona Asia/Jakarta. */
 fun dayKeyID(d: Date): String =
     SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = JAKARTA_TZ }.format(d)
