@@ -1,6 +1,6 @@
-package id.apotek.lestari.ui.screens
-
 @file:OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+
+package id.apotek.lestari.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
