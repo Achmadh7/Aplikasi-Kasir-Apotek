@@ -29,10 +29,6 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        // BASE_URL: tidak lagi dipakai — aplikasi berjalan OFFLINE dan semua
-        // data tersimpan di HP dalam database lokal Room (apotek-lestari.db).
-        // Nilai ini dibiarkan apa adanya agar tidak merusak apa pun.
-        buildConfigField("String", "BASE_URL", "\"https://example.invalid/\"")
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -66,7 +62,6 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures {
         compose = true
-        buildConfig = true
     }
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
@@ -88,13 +83,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.5")
 
-    // Networking — Retrofit + OkHttp + Gson (server actions envelope)
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-    implementation("com.google.code.gson:gson:2.11.0")
 
     // CameraX + ML Kit Barcode Scanning (scan barcode asli, bukan WebView)
     implementation("androidx.camera:camera-core:1.3.4")
@@ -113,9 +102,6 @@ dependencies {
 
     // Excel (.xlsx) untuk Import / Export / Template Stok — Apache POI
     implementation("org.apache.poi:poi-ooxml:5.2.5")
-
-    // Images
-    implementation("io.coil-kt:coil-compose:2.7.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
