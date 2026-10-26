@@ -14,7 +14,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -478,6 +481,8 @@ fun KasirScreen() {
     var payCount by remember { mutableIntStateOf(0) }
     val cart = remember { mutableStateListOf<CartItem>() }
     val scope = rememberCoroutineScope()
+    // Supaya field Uang Diterima otomatis tergulir ke atas keyboard saat diketuk.
+    val amountBringIntoView = remember { BringIntoViewRequester() }
     LaunchedEffect(Unit) { (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines } }
     if (showScanner) BarcodeScanner(onDetected = { code ->
         showScanner = false
@@ -499,7 +504,9 @@ fun KasirScreen() {
     val canPay = cart.isNotEmpty() && (method != "Tunai" || paid >= total)
     // Grid obat adaptif: HP portrait 2 kolom, tablet/landscape 3 kolom, tablet lebar 4 kolom.
     val gridCols = adaptiveColumns(compact = 2, medium = 3, expanded = 4)
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
+    // Seluruh layar bisa digulir + imePadding: saat keyboard terbuka, field
+    // Uang Diterima dan tombol Bayar tetap bisa digulir ke atas keyboard.
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(16.dp)) {
         Text("Kasir", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
         Text("Ketuk obat untuk menambahkan ke keranjang, lalu selesaikan pembayaran.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(16.dp))
@@ -516,8 +523,8 @@ fun KasirScreen() {
             Text(scanMsg, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.height(16.dp))
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(filtered.chunked(gridCols)) { row ->
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            filtered.chunked(gridCols).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     row.forEach { m ->
                         val out = m.stock <= 0
@@ -633,7 +640,10 @@ fun KasirScreen() {
                         onValueChange = { uangDiterima = it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 },
                         label = { Text("cth: 50000") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true, modifier = Modifier.fillMaxWidth()
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                            .bringIntoViewRequester(amountBringIntoView)
+                            .onFocusEvent { if (it.isFocused) scope.launch { amountBringIntoView.bringIntoView() } }
                     )
                     AnimatedVisibility(visible = paid > 0) {
                         Column {
