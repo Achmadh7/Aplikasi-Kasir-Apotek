@@ -26,13 +26,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
@@ -177,17 +175,14 @@ private fun AnimatedCheckmark() {
 /** Denyut halus untuk lencana KRITIS (stok 0). */
 @Composable
 private fun Modifier.pulseKritis(): Modifier {
-    val infinite = rememberInfiniteTransition(label = "kritisPulse")
-    val alpha by infinite.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.65f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 700, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "kritisAlpha"
-    )
-    return this.graphicsLayer(alpha = alpha)
+    val alpha = remember { Animatable(1f) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            alpha.animateTo(0.65f, tween(durationMillis = 700, easing = FastOutSlowInEasing))
+            alpha.animateTo(1f, tween(durationMillis = 700, easing = FastOutSlowInEasing))
+        }
+    }
+    return this.graphicsLayer(alpha = alpha.value)
 }
 
 // Warna aksen mengikuti tampilan web app (mode gelap)
@@ -563,8 +558,9 @@ fun KasirScreen() {
                     Text("Keranjang", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.weight(1f))
                     key(cartQty) {
-                        val cartPop by animateFloatAsState(initialValue = 1.4f, targetValue = 1f, animationSpec = expressiveSpring(), label = "cartPop")
-                        Surface(color = LightTealCard, shape = CircleShape, modifier = Modifier.graphicsLayer(scaleX = cartPop, scaleY = cartPop)) {
+                        val cartPop = remember { Animatable(1.4f) }
+                        LaunchedEffect(cartQty) { cartPop.animateTo(1f, expressiveSpring()) }
+                        Surface(color = LightTealCard, shape = CircleShape, modifier = Modifier.graphicsLayer(scaleX = cartPop.value, scaleY = cartPop.value)) {
                             Text("$cartQty", color = OnLightTeal, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
                         }
                     }
@@ -585,8 +581,9 @@ fun KasirScreen() {
                             }
                             StepperButton(Icons.Default.Remove, "Kurangi") { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
                             key(ci.qty) {
-                                val qtyPop by animateFloatAsState(initialValue = 1.35f, targetValue = 1f, animationSpec = expressiveSpring(), label = "qtyPop")
-                                Text("${ci.qty}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(24.dp).graphicsLayer(scaleX = qtyPop, scaleY = qtyPop), textAlign = TextAlign.Center)
+                                val qtyPop = remember { Animatable(1.35f) }
+                                LaunchedEffect(ci.qty) { qtyPop.animateTo(1f, expressiveSpring()) }
+                                Text("${ci.qty}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(24.dp).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value), textAlign = TextAlign.Center)
                             }
                             StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
                             Text(formatIDR(ci.medicine.sellPrice * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.width(92.dp), textAlign = TextAlign.End)
@@ -1217,14 +1214,10 @@ fun LabaScreen() {
                                 daily.forEachIndexed { barIndex, day ->
                                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                                         key(period) {
-                                            val grow by animateFloatAsState(
-                                                initialValue = 0f,
-                                                targetValue = 1f,
-                                                animationSpec = tween(durationMillis = 600, delayMillis = barIndex * 70, easing = FastOutSlowInEasing),
-                                                label = "barGrow"
-                                            )
+                                            val grow = remember { Animatable(0f) }
+                                            LaunchedEffect(period) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = barIndex * 70, easing = FastOutSlowInEasing)) }
                                             Box(
-                                                Modifier.width(28.dp).height((110f * day.profit / maxProfit * grow).coerceAtLeast(0f).dp)
+                                                Modifier.width(28.dp).height((110f * day.profit / maxProfit * grow.value).coerceAtLeast(0f).dp)
                                                     .background(TealButton, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                                             )
                                         }
