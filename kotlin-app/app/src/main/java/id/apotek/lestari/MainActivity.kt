@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -43,13 +44,21 @@ fun ApotekApp() {
     val current = backStack?.destination?.route ?: "beranda"
     Scaffold(
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 8.dp
+            ) {
                 TABS.forEach { tab ->
                     NavigationBarItem(
                         selected = current == tab.route,
                         onClick = { nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
-                        icon = { Icon(tab.icon, contentDescription = tab.label) },
-                        label = { Text(tab.label) }
+                        icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
+                        label = { Text(tab.label) },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary
+                        )
                     )
                 }
             }

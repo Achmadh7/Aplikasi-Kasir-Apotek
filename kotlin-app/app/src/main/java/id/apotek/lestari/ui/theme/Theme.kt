@@ -1,32 +1,63 @@
 package id.apotek.lestari.ui.theme
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
+// ---------------------------------------------------------------------------
+// Material 3 Expressive — Apotek Lestari (identitas teal #00696D dipertahankan)
+// - Palet lebih hidup/jenuh: primer lebih terang dan kontras dengan latar gelap.
+// - Bentuk jauh lebih besar (kartu 28dp, tombol pill, chip pill).
+// - Tipografi lebih besar dan tebal untuk judul & angka.
+// - Gerakan pegas (spring) yang lentur untuk perubahan ukuran konten.
+// ---------------------------------------------------------------------------
+
 // Material 3 color system — seed pharmacy teal #00696D, same as web app theme.css
 val TealPrimary = Color(0xFF00696D)
-val TealPrimaryDark = Color(0xFF7ED3D8)
+val TealPrimaryDark = Color(0xFF5BD6DB)
+
+// Aksen ekspresif tambahan
+val ExpressiveAmber = Color(0xFFFFD97A)
+val ExpressiveAmberContainer = Color(0xFF4A3F00)
+val ExpressiveGreen = Color(0xFF7EDC9A)
 
 private val LightColors = lightColorScheme(
     primary = TealPrimary,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFF9DF1F5),
+    primaryContainer = Color(0xFF8FE3E8),
     onPrimaryContainer = Color(0xFF002021),
-    secondary = Color(0xFF4A6363),
-    secondaryContainer = Color(0xFFCCE8E7),
+    secondary = Color(0xFF3E6B6A),
+    secondaryContainer = Color(0xFFB8E6E4),
     onSecondaryContainer = Color(0xFF06201F),
+    tertiary = Color(0xFF8A6D00),
+    tertiaryContainer = Color(0xFFFFE9A8),
+    onTertiaryContainer = Color(0xFF2E2300),
     error = Color(0xFFBA1A1A),
     errorContainer = Color(0xFFFFDAD6),
-    surface = Color(0xFFF5FAF9),
-    onSurface = Color(0xFF171D1C),
+    surface = Color(0xFFEFF7F5),
+    surfaceVariant = Color(0xFFDCE8E6),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFE4F0EE),
+    surfaceContainer = Color(0xFFD8E8E6),
+    surfaceContainerHigh = Color(0xFFC9DDDA),
+    surfaceContainerHighest = Color(0xFFB8D2CE),
+    onSurface = Color(0xFF101817),
     onSurfaceVariant = Color(0xFF3F4948),
     outlineVariant = Color(0xFFBEC9C7)
 )
@@ -36,32 +67,68 @@ private val DarkColors = darkColorScheme(
     onPrimary = Color(0xFF003739),
     primaryContainer = Color(0xFF004F52),
     onPrimaryContainer = Color(0xFF9DF1F5),
-    secondary = Color(0xFFB0CCCB),
-    secondaryContainer = Color(0xFF334B4B),
+    secondary = Color(0xFF9BD3D2),
+    secondaryContainer = Color(0xFF2B4A48),
     onSecondaryContainer = Color(0xFFCCE8E7),
-    tertiary = Color(0xFFFFD97A),
-    tertiaryContainer = Color(0xFF4A3F00),
+    tertiary = ExpressiveAmber,
+    tertiaryContainer = ExpressiveAmberContainer,
     onTertiaryContainer = Color(0xFFFFECB3),
     error = Color(0xFFFFB4AB),
     errorContainer = Color(0xFF601410),
     onErrorContainer = Color(0xFFFFDAD6),
-    background = Color(0xFF0E1514),
-    surface = Color(0xFF0E1514),
+    background = Color(0xFF0A0F0E),
+    surface = Color(0xFF0A0F0E),
     surfaceVariant = Color(0xFF1D2725),
-    surfaceContainerLowest = Color(0xFF0B1210),
-    surfaceContainerLow = Color(0xFF141D1B),
-    surfaceContainer = Color(0xFF1D2725),
-    surfaceContainerHigh = Color(0xFF232F2C),
-    surfaceContainerHighest = Color(0xFF2E3A37),
-    onSurface = Color(0xFFDEE4E2),
+    surfaceContainerLowest = Color(0xFF070C0B),
+    surfaceContainerLow = Color(0xFF121C1A),
+    surfaceContainer = Color(0xFF1B2623),
+    surfaceContainerHigh = Color(0xFF253431),
+    surfaceContainerHighest = Color(0xFF31413D),
+    onSurface = Color(0xFFE4EAE8),
     onSurfaceVariant = Color(0xFFBEC9C7),
     outlineVariant = Color(0xFF3F4948)
+)
+
+// Bentuk ekspresif: sudut jauh lebih besar di semua ukuran.
+val ExpressiveShapes = Shapes(
+    extraSmall = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(16.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(32.dp)
+)
+
+// Tipografi ekspresif: judul & angka lebih besar dan lebih tebal.
+val ExpressiveTypography = Typography(
+    displayLarge = TextStyle(fontSize = 57.sp, lineHeight = 64.sp, fontWeight = FontWeight.Bold),
+    displayMedium = TextStyle(fontSize = 45.sp, lineHeight = 52.sp, fontWeight = FontWeight.Bold),
+    displaySmall = TextStyle(fontSize = 36.sp, lineHeight = 44.sp, fontWeight = FontWeight.Bold),
+    headlineLarge = TextStyle(fontSize = 32.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold),
+    headlineMedium = TextStyle(fontSize = 28.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold),
+    headlineSmall = TextStyle(fontSize = 24.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold),
+    titleLarge = TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold),
+    titleMedium = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
+    titleSmall = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    bodyLarge = TextStyle(fontSize = 17.sp, lineHeight = 26.sp, fontWeight = FontWeight.Normal),
+    bodyMedium = TextStyle(fontSize = 15.sp, lineHeight = 22.sp, fontWeight = FontWeight.Normal),
+    labelLarge = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold)
+)
+
+/** Pegas ekspresif: lentur (dampingRatio ~0.7) untuk animateContentSize & transisi. */
+fun <T> expressiveSpring() = spring<T>(
+    dampingRatio = 0.7f,
+    stiffness = Spring.StiffnessMediumLow
 )
 
 // Tampilan mengikuti web app (mode gelap) apa pun pengaturan sistem HP.
 @Composable
 fun ApotikLestariTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (darkTheme) DarkColors else LightColors, content = content)
+    MaterialTheme(
+        colorScheme = if (darkTheme) DarkColors else LightColors,
+        shapes = ExpressiveShapes,
+        typography = ExpressiveTypography,
+        content = content
+    )
 }
 
 fun formatIDR(n: Int): String = "Rp " + "%,d".format(java.util.Locale("id", "ID"), n).replace(',', '.')

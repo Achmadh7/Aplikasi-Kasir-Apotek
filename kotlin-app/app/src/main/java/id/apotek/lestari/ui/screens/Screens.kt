@@ -12,6 +12,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -63,7 +67,7 @@ private fun StockBadge(stock: Int, showCount: Boolean = true) {
         "Sedang" -> SedangFg
         else -> BurukFg
     }
-    Surface(color = bg, shape = RoundedCornerShape(8.dp)) {
+    Surface(color = bg, shape = RoundedCornerShape(16.dp)) {
         Text(
             if (showCount) "Stok $stock • $label" else label,
             color = fg, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
@@ -74,7 +78,7 @@ private fun StockBadge(stock: Int, showCount: Boolean = true) {
 
 @Composable
 private fun LegendChip(text: String, bg: Color, fg: Color) {
-    Surface(color = bg, shape = RoundedCornerShape(8.dp)) {
+    Surface(color = bg, shape = RoundedCornerShape(16.dp)) {
         Text(text, color = fg, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
     }
 }
@@ -87,8 +91,8 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
     LaunchedEffect(Unit) { (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data } }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -97,8 +101,8 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                 Text(todayLabelID(), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             }
             Spacer(Modifier.height(8.dp))
-            Text("Ringkasan Apotek", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-            Text("Hari Ini", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+            Text("Ringkasan Apotek", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+            Text("Hari Ini", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
             Text("Pemasukan, pengeluaran, dan stok — semuanya dalam satu pandangan.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(4.dp))
@@ -107,16 +111,16 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
         dashboard?.let { d ->
             item {
                 // Kartu besar Pemasukan Hari Ini
-                Card(colors = CardDefaults.cardColors(containerColor = LightTealCard), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp)) {
+                Card(colors = CardDefaults.cardColors(containerColor = LightTealCard), shape = RoundedCornerShape(32.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
+                    Column(Modifier.padding(24.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("PEMASUKAN HARI INI", color = OnLightTeal.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Surface(color = Color.White.copy(alpha = 0.25f), shape = CircleShape) {
                                 Icon(Icons.Default.TrendingUp, null, tint = OnLightTeal, modifier = Modifier.padding(8.dp).size(20.dp))
                             }
                         }
-                        Spacer(Modifier.height(16.dp))
-                        Text(formatIDR(d.todayIn), color = OnLightTeal, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(20.dp))
+                        Text(formatIDR(d.todayIn), color = OnLightTeal, style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Receipt, null, tint = OnLightTeal, modifier = Modifier.size(18.dp))
@@ -127,24 +131,24 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                 }
             }
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f)) {
-                        Column(Modifier.padding(16.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
+                        Column(Modifier.padding(20.dp)) {
                             Surface(color = RedBadgeBg, shape = CircleShape) {
                                 Icon(Icons.Default.ArrowUpward, null, tint = Color.White, modifier = Modifier.padding(8.dp).size(20.dp))
                             }
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(16.dp))
                             Text("PENGELUARAN", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(4.dp))
                             Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                         }
                     }
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f)) {
-                        Column(Modifier.padding(16.dp)) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
+                        Column(Modifier.padding(20.dp)) {
                             Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape) {
                                 Icon(Icons.Default.AccountBalance, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(8.dp).size(20.dp))
                             }
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(16.dp))
                             Text("SELISIH KAS HARI INI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(4.dp))
                             Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -153,8 +157,8 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                 }
             }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Column {
                                 Text("SELISIH KAS BULAN INI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -166,7 +170,7 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                                 Text("Keluar ${formatIDR(d.monthOut)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(16.dp))
                         Text("${d.totalMedicines} jenis obat   •   ${d.lowStockCount} stok menipis   •   ${d.expiringCount} dekat kadaluarsa", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -175,8 +179,8 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                 Button(
                     onClick = onGoKasir,
                     colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.fillMaxWidth().height(60.dp)
                 ) {
                     Icon(Icons.Default.PointOfSale, null)
                     Spacer(Modifier.width(8.dp))
@@ -184,8 +188,8 @@ fun BerandaScreen(onGoKasir: () -> Unit, onGoStok: () -> Unit, onGoPengingat: ()
                 }
             }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
                                 Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
@@ -258,9 +262,9 @@ fun KasirScreen() {
     val change = if (method == "Tunai") (paid - total).coerceAtLeast(0) else 0
     val canPay = cart.isNotEmpty() && (method != "Tunai" || paid >= total)
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Kasir", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Text("Kasir", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
         Text("Ketuk obat untuk menambahkan ke keranjang, lalu selesaikan pembayaran.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         DemoBanner()
         OutlinedTextField(
             value = search, onValueChange = { search = it },
@@ -273,15 +277,15 @@ fun KasirScreen() {
             Spacer(Modifier.height(6.dp))
             Text(scanMsg, style = MaterialTheme.typography.bodySmall)
         }
-        Spacer(Modifier.height(12.dp))
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Spacer(Modifier.height(16.dp))
+        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(filtered.chunked(2)) { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     row.forEach { m ->
                         val out = m.stock <= 0
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(28.dp),
                             modifier = Modifier.weight(1f).clickable(enabled = !out) {
                                 val ex = cart.firstOrNull { it.medicine.id == m.id }
                                 if (ex != null) ex.qty++ else cart.add(CartItem(m, 1))
@@ -306,10 +310,10 @@ fun KasirScreen() {
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         // Keranjang
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
+            Column(Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.ShoppingCart, null)
                     Spacer(Modifier.width(8.dp))
@@ -320,7 +324,7 @@ fun KasirScreen() {
                     }
                 }
                 if (cart.isEmpty()) {
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(20.dp))
                     Icon(Icons.Default.ShoppingCart, null, modifier = Modifier.align(Alignment.CenterHorizontally).size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(8.dp))
                     Text("Keranjang kosong.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
@@ -345,32 +349,32 @@ fun KasirScreen() {
                     Text("Total bayar", style = MaterialTheme.typography.bodyLarge)
                     Text(formatIDR(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
                 Text("METODE BAYAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     listOf("Tunai", "QRIS", "Transfer").forEach { m ->
                         val selected = method == m
                         if (selected) {
-                            Button(onClick = { method = m }, colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White), shape = RoundedCornerShape(24.dp), modifier = Modifier.weight(1f)) {
+                            Button(onClick = { method = m }, colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White), shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)) {
                                 Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
                                 Text(m)
                             }
                         } else {
-                            OutlinedButton(onClick = { method = m }, shape = RoundedCornerShape(24.dp), modifier = Modifier.weight(1f)) { Text(m) }
+                            OutlinedButton(onClick = { method = m }, shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)) { Text(m) }
                         }
                     }
                 }
                 if (method == "Tunai") {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(16.dp))
                     Text("UANG DITERIMA", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         listOf(20000 to "Rp20.000", 50000 to "Rp50.000", 100000 to "Rp100.000").forEach { (nominal, label) ->
                             OutlinedButton(
                                 onClick = { uangDiterima += nominal },
-                                shape = RoundedCornerShape(24.dp), modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                             ) { Text(label, maxLines = 1) }
                         }
@@ -385,15 +389,17 @@ fun KasirScreen() {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true, modifier = Modifier.fillMaxWidth()
                     )
-                    if (paid > 0) {
-                        Spacer(Modifier.height(6.dp))
-                        Text("Kembalian: ${formatIDR(change)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    AnimatedVisibility(visible = paid > 0) {
+                        Column {
+                            Spacer(Modifier.height(6.dp))
+                            Text("Kembalian: ${formatIDR(change)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 } else {
                     Spacer(Modifier.height(8.dp))
                     Text("Dibayar penuh via $method sebesar ${formatIDR(total)}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = {
                         scope.launch {
@@ -407,12 +413,14 @@ fun KasirScreen() {
                     },
                     enabled = canPay,
                     colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
                 ) { Text("Bayar (${formatIDR(total)})", style = MaterialTheme.typography.titleMedium) }
-                if (payMsg.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(payMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                AnimatedVisibility(visible = payMsg.isNotEmpty()) {
+                    Column {
+                        Spacer(Modifier.height(8.dp))
+                        Text(payMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    }
                 }
             }
         }
@@ -443,16 +451,16 @@ fun StokScreen() {
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Stok Obat", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                Text("Stok Obat", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
                 Text("${medicines.size} jenis obat tercatat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Button(
                 onClick = { editing = null; showForm = true },
                 colors = ButtonDefaults.buttonColors(containerColor = LightTealCard, contentColor = OnLightTeal),
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(32.dp)
             ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("Tambah Obat") }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         DemoBanner()
         OutlinedTextField(
             value = search, onValueChange = { search = it; reload() },
@@ -465,7 +473,7 @@ fun StokScreen() {
             Spacer(Modifier.height(6.dp))
             Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
             Text("Status stok:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             LegendChip("Aman — di atas 20", AmanBg, AmanFg)
@@ -473,11 +481,11 @@ fun StokScreen() {
             LegendChip("Rendah — di bawah 20", BurukBg, BurukFg)
             LegendChip("Habis — 0", BurukBg, BurukFg)
         }
-        Spacer(Modifier.height(12.dp))
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Spacer(Modifier.height(16.dp))
+        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(medicines) { m ->
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -584,18 +592,18 @@ fun KeuanganScreen() {
     val keluar = periodEntries.filter { it.type == "out" }.sumOf { it.amount }
     val shown = periodEntries.filter { typeFilter == "all" || it.type == typeFilter }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Keuangan", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Text("Keuangan", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
         Text("Kas masuk & keluar tercatat rinci, termasuk penjualan otomatis dari Kasir.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         DemoBanner()
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("today" to "Hari Ini", "month" to "Bulan Ini", "all" to "Semua").forEach { (k, l) ->
                 FilterChip(selected = period == k, onClick = { period = k }, label = { Text(l) })
             }
         }
-        Spacer(Modifier.height(12.dp))
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Spacer(Modifier.height(16.dp))
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.SouthWest, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
@@ -624,25 +632,25 @@ fun KeuanganScreen() {
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         Button(
             onClick = { showForm = true },
             colors = ButtonDefaults.buttonColors(containerColor = TealButton, contentColor = Color.White),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth().height(52.dp)
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.fillMaxWidth().height(56.dp)
         ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Catat Kas Masuk / Keluar", style = MaterialTheme.typography.titleMedium) }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("all" to "Semua", "in" to "Masuk", "out" to "Keluar").forEach { (k, l) ->
                 FilterChip(selected = typeFilter == k, onClick = { typeFilter = k }, label = { Text(l) })
             }
         }
         Spacer(Modifier.height(8.dp))
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(shown) { e ->
                 val isIn = e.type == "in"
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Surface(color = if (isIn) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = CircleShape) {
                             Icon(
                                 if (isIn) Icons.Default.SouthWest else Icons.Default.NorthEast, null,
@@ -725,13 +733,13 @@ fun LabaScreen() {
     LaunchedEffect(period) { (repo.getProfitReport(period) as? ApiResult.Success)?.let { report = it.data } }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Text("Laporan Laba", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+            Text("Laporan Laba", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
             Text("Laba dihitung dari penjualan dikurangi harga beli (modal) obat yang terjual.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 listOf("today" to "Hari Ini", "month" to "Bulan Ini", "last30" to "30 Hari", "all" to "Semua").forEach { (k, l) ->
@@ -741,11 +749,11 @@ fun LabaScreen() {
         }
         report?.let { r ->
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = LightTealCard), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp)) {
+                Card(colors = CardDefaults.cardColors(containerColor = LightTealCard), shape = RoundedCornerShape(32.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
+                    Column(Modifier.padding(24.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("LABA KOTOR", color = OnLightTeal.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                            Surface(color = Color.White.copy(alpha = 0.25f), shape = RoundedCornerShape(12.dp)) {
+                            Surface(color = Color.White.copy(alpha = 0.25f), shape = RoundedCornerShape(16.dp)) {
                                 Text(
                                     "Margin ${marginTextID(r.marginPct)}%", color = OnLightTeal,
                                     style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
@@ -753,16 +761,16 @@ fun LabaScreen() {
                                 )
                             }
                         }
-                        Spacer(Modifier.height(12.dp))
-                        Text(formatIDR(r.grossProfit), color = OnLightTeal, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(16.dp))
+                        Text(formatIDR(r.grossProfit), color = OnLightTeal, style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(6.dp))
                         Text("${r.transactionCount} transaksi • ${r.itemsSold} item terjual", color = OnLightTeal, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Row(Modifier.fillMaxWidth()) {
                             LabaStat(Icons.Default.Receipt, "PENJUALAN", formatIDR(r.revenue), null, Modifier.weight(1f))
                             LabaStat(Icons.Default.Inventory, "MODAL (HPP)", formatIDR(r.hpp), null, Modifier.weight(1f))
@@ -775,8 +783,8 @@ fun LabaScreen() {
                 }
             }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(20.dp), verticalAlignment = Alignment.Top) {
                         Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(10.dp))
                         Text(
@@ -788,8 +796,8 @@ fun LabaScreen() {
             }
             if (r.costMissingQty > 0) {
                 item {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.Top) {
                             Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
                             Text(
@@ -804,8 +812,8 @@ fun LabaScreen() {
                 Button(
                     onClick = { exportMsg = "Export laporan Excel tersedia penuh di versi web (mode server)." },
                     colors = ButtonDefaults.buttonColors(containerColor = GreenButton, contentColor = Color.White),
-                    shape = RoundedCornerShape(24.dp),
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                    shape = RoundedCornerShape(32.dp),
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
                 ) { Icon(Icons.Default.Download, null); Spacer(Modifier.width(8.dp)); Text("Export Laporan ke Excel", style = MaterialTheme.typography.titleMedium) }
                 if (exportMsg.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
@@ -813,10 +821,10 @@ fun LabaScreen() {
                 }
             }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp)) {
                         Text("Laba Kotor 7 Hari Terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(20.dp))
                         val daily = r.daily.takeLast(7)
                         if (daily.isEmpty()) {
                             Text("Belum ada data laba harian.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -857,7 +865,7 @@ private fun LabaStat(icon: ImageVector, label: String, value: String, valueColor
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(4.dp))
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = valueColor ?: MaterialTheme.colorScheme.onSurface)
+        Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = valueColor ?: MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -892,13 +900,13 @@ fun PengingatScreen(onGoStok: () -> Unit) {
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Text("Pengingat", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+            Text("Pengingat", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
             Text("Kadaluwarsa & stok menipis digabung jadi satu daftar prioritas, diurutkan dari yang paling mendesak. Daftar ini otomatis mengikuti data di Stok.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
             DemoBanner()
             Text("MASA KADALUARSA", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(6.dp))
@@ -909,8 +917,8 @@ fun PengingatScreen(onGoStok: () -> Unit) {
             }
         }
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(16.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(20.dp)) {
                     ReminderCount(Icons.Default.EventBusy, "EXPIRED", "${expired.size}", if (expired.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
                     ReminderCount(Icons.Default.Schedule, "≤ $window HARI", "${withinWindow.size}", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
                     ReminderCount(Icons.Default.Inventory, "STOK NIPIS", "${low.size}", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
@@ -929,8 +937,8 @@ fun PengingatScreen(onGoStok: () -> Unit) {
             val d = daysUntilExpiry(m.expiryDate)
             val isCritical = m.stock == 0
             val suggest = (2 * m.minStock - m.stock).coerceAtLeast(0)
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(14.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(color = if (isCritical) RedBadgeBg else MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
                             Icon(
@@ -944,7 +952,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.width(8.dp))
-                                Surface(color = if (isCritical) RedBadgeBg else MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(8.dp)) {
+                                Surface(color = if (isCritical) RedBadgeBg else MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(16.dp)) {
                                     Text(
                                         if (isCritical) "KRITIS" else "PANTAU",
                                         color = if (isCritical) Color.White else MaterialTheme.colorScheme.primary,
@@ -963,7 +971,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        OutlinedButton(onClick = onGoStok, shape = RoundedCornerShape(24.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)) {
+                        OutlinedButton(onClick = onGoStok, shape = RoundedCornerShape(32.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)) {
                             Icon(Icons.Default.Inventory, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(4.dp))
                             Text("Stok")
@@ -1017,20 +1025,20 @@ fun RiwayatScreen() {
     var expanded by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(Unit) { (repo.listSales() as? ApiResult.Success)?.let { sales = it.data.sales } }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Riwayat Penjualan", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Text("Riwayat Penjualan", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
         Text("Ketuk invoice untuk melihat detail lengkapnya.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         DemoBanner()
         if (sales.isEmpty()) Text("Belum ada penjualan tercatat.")
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(sales) { s ->
                 val isOpen = expanded == s.id
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().clickable { expanded = if (isOpen) null else s.id }
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow)).clickable { expanded = if (isOpen) null else s.id }
                 ) {
-                    Column(Modifier.padding(14.dp)) {
+                    Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
                                 Icon(Icons.Default.Receipt, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(20.dp))
@@ -1050,12 +1058,12 @@ fun RiwayatScreen() {
                             )
                         }
                         if (isOpen) {
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(16.dp))
                             HorizontalDivider()
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(16.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("APOTEK LESTARI — Invoice Penjualan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(8.dp)) {
+                                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(16.dp)) {
                                     Row(Modifier.padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                                         Spacer(Modifier.width(4.dp))
