@@ -26,16 +26,16 @@ import java.util.Locale
 import java.util.TimeZone
 
 // ---------------------------------------------------------------------------
-// Material 3 Expressive — Apotek Lestari (identitas teal #00696D dipertahankan)
+// Material 3 Expressive — Apotek Lestari (identitas biru medis #0061A4)
 // - Palet lebih hidup/jenuh: primer lebih terang dan kontras dengan latar gelap.
 // - Bentuk jauh lebih besar (kartu 28dp, tombol pill, chip pill).
 // - Tipografi lebih besar dan tebal untuk judul & angka.
 // - Gerakan pegas (spring) yang lentur untuk perubahan ukuran konten.
 // ---------------------------------------------------------------------------
 
-// Material 3 color system — seed pharmacy teal #00696D, same as web app theme.css
-val TealPrimary = Color(0xFF00696D)
-val TealPrimaryDark = Color(0xFF5BD6DB)
+// Material 3 color system — seed biru medis #0061A4 (web app tetap teal)
+val BluePrimary = Color(0xFF0061A4)
+val BluePrimaryDark = Color(0xFFA1C9FF)
 
 // Aksen ekspresif tambahan
 val ExpressiveAmber = Color(0xFFFFD97A)
@@ -43,55 +43,55 @@ val ExpressiveAmberContainer = Color(0xFF4A3F00)
 val ExpressiveGreen = Color(0xFF7EDC9A)
 
 private val LightColors = lightColorScheme(
-    primary = TealPrimary,
+    primary = BluePrimary,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFF8FE3E8),
-    onPrimaryContainer = Color(0xFF002021),
-    secondary = Color(0xFF3E6B6A),
-    secondaryContainer = Color(0xFFB8E6E4),
-    onSecondaryContainer = Color(0xFF06201F),
+    primaryContainer = Color(0xFFD2E4FF),
+    onPrimaryContainer = Color(0xFF001D36),
+    secondary = Color(0xFF535F70),
+    secondaryContainer = Color(0xFFD7E3F7),
+    onSecondaryContainer = Color(0xFF101C2B),
     tertiary = Color(0xFF8A6D00),
     tertiaryContainer = Color(0xFFFFE9A8),
     onTertiaryContainer = Color(0xFF2E2300),
     error = Color(0xFFBA1A1A),
     errorContainer = Color(0xFFFFDAD6),
-    surface = Color(0xFFEFF7F5),
-    surfaceVariant = Color(0xFFDCE8E6),
+    surface = Color(0xFFF7F9FF),
+    surfaceVariant = Color(0xFFDEE3EB),
     surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFE4F0EE),
-    surfaceContainer = Color(0xFFD8E8E6),
-    surfaceContainerHigh = Color(0xFFC9DDDA),
-    surfaceContainerHighest = Color(0xFFB8D2CE),
-    onSurface = Color(0xFF101817),
-    onSurfaceVariant = Color(0xFF3F4948),
-    outlineVariant = Color(0xFFBEC9C7)
+    surfaceContainerLow = Color(0xFFEDF1F8),
+    surfaceContainer = Color(0xFFE2E8F0),
+    surfaceContainerHigh = Color(0xFFD6DEE8),
+    surfaceContainerHighest = Color(0xFFCBD5E1),
+    onSurface = Color(0xFF111418),
+    onSurfaceVariant = Color(0xFF43474E),
+    outlineVariant = Color(0xFFC3C7CF)
 )
 
 private val DarkColors = darkColorScheme(
-    primary = TealPrimaryDark,
-    onPrimary = Color(0xFF003739),
-    primaryContainer = Color(0xFF004F52),
-    onPrimaryContainer = Color(0xFF9DF1F5),
-    secondary = Color(0xFF9BD3D2),
-    secondaryContainer = Color(0xFF2B4A48),
-    onSecondaryContainer = Color(0xFFCCE8E7),
+    primary = BluePrimaryDark,
+    onPrimary = Color(0xFF00325B),
+    primaryContainer = Color(0xFF00497C),
+    onPrimaryContainer = Color(0xFFD2E4FF),
+    secondary = Color(0xFFBBC7DB),
+    secondaryContainer = Color(0xFF3B4858),
+    onSecondaryContainer = Color(0xFFD7E3F7),
     tertiary = ExpressiveAmber,
     tertiaryContainer = ExpressiveAmberContainer,
     onTertiaryContainer = Color(0xFFFFECB3),
     error = Color(0xFFFFB4AB),
     errorContainer = Color(0xFF601410),
     onErrorContainer = Color(0xFFFFDAD6),
-    background = Color(0xFF0A0F0E),
-    surface = Color(0xFF0A0F0E),
-    surfaceVariant = Color(0xFF1D2725),
-    surfaceContainerLowest = Color(0xFF070C0B),
-    surfaceContainerLow = Color(0xFF121C1A),
-    surfaceContainer = Color(0xFF1B2623),
-    surfaceContainerHigh = Color(0xFF253431),
-    surfaceContainerHighest = Color(0xFF31413D),
-    onSurface = Color(0xFFE4EAE8),
-    onSurfaceVariant = Color(0xFFBEC9C7),
-    outlineVariant = Color(0xFF3F4948)
+    background = Color(0xFF0A0E14),
+    surface = Color(0xFF0A0E14),
+    surfaceVariant = Color(0xFF1D242E),
+    surfaceContainerLowest = Color(0xFF070A0F),
+    surfaceContainerLow = Color(0xFF12161D),
+    surfaceContainer = Color(0xFF1B2027),
+    surfaceContainerHigh = Color(0xFF262D36),
+    surfaceContainerHighest = Color(0xFF313A45),
+    onSurface = Color(0xFFE3E8EF),
+    onSurfaceVariant = Color(0xFFBCC3CF),
+    outlineVariant = Color(0xFF43474E)
 )
 
 // Bentuk ekspresif: sudut jauh lebih besar di semua ukuran.
@@ -128,7 +128,7 @@ fun <T> expressiveSpring() = spring<T>(
 // ---- Material 3 Expressive penuh (tanpa kaca) ----
 // Kartu memakai permukaan tonal solid (surfaceContainer) dari colorScheme,
 // tanpa tembus pandang dan tanpa garis tepi — sesuai Material 3 Expressive.
-// Bentuk besar (28dp) & pegas ekspresif dipertahankan; dua kartu aksen teal
+// Bentuk besar (28dp) & pegas ekspresif dipertahankan; dua kartu aksen biru
 // solid dibiarkan sebagai penegas (teks gelap di atasnya harus tetap terbaca).
 @Composable
 fun ExpressiveCard(
