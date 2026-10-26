@@ -4,6 +4,8 @@ package id.apotek.lestari.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,6 +39,7 @@ import id.apotek.lestari.data.*
 import id.apotek.lestari.ui.components.BarcodeScanner
 import id.apotek.lestari.ui.components.postLowStockNotification
 import id.apotek.lestari.ui.theme.*
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.Date
 
@@ -688,6 +691,17 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
     var unit by remember(editing) { mutableStateOf(editing?.unit ?: "Strip") }
     var showCategorySheet by remember { mutableStateOf(false) }
     var showUnitSheet by remember { mutableStateOf(false) }
+    // Ketukan pada field read-only ditangkap lewat interactionSource:
+    // Modifier.clickable di OutlinedTextField tidak jalan karena field
+    // menelan ketukan untuk fokus. Pola ini sama seperti dropdown bawaan.
+    val categoryInteraction = remember { MutableInteractionSource() }
+    val unitInteraction = remember { MutableInteractionSource() }
+    LaunchedEffect(categoryInteraction) {
+        categoryInteraction.interactions.collect { if (it is PressInteraction.Press) showCategorySheet = true }
+    }
+    LaunchedEffect(unitInteraction) {
+        unitInteraction.interactions.collect { if (it is PressInteraction.Press) showUnitSheet = true }
+    }
     var buy by remember(editing) { mutableStateOf(editing?.buyPrice?.toString() ?: "") }
     var sell by remember(editing) { mutableStateOf(editing?.sellPrice?.toString() ?: "") }
     var stock by remember(editing) { mutableStateOf(editing?.stock?.toString() ?: "") }
@@ -706,13 +720,15 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                     value = category, onValueChange = {}, label = { Text("Kategori") },
                     readOnly = true, singleLine = true,
                     trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih kategori") },
-                    modifier = Modifier.fillMaxWidth().clickable { showCategorySheet = true }
+                    interactionSource = categoryInteraction,
+                    modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = unit, onValueChange = {}, label = { Text("Satuan") },
                     readOnly = true, singleLine = true,
                     trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih satuan") },
-                    modifier = Modifier.fillMaxWidth().clickable { showUnitSheet = true }
+                    interactionSource = unitInteraction,
+                    modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(buy, { buy = it.filter { c -> c.isDigit() } }, label = { Text("Harga Beli") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(sell, { sell = it.filter { c -> c.isDigit() } }, label = { Text("Harga Jual") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -739,7 +755,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                             val oldStock = editing.stock
                             val result = repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, b, s, st, ms, exp, bc))
                             // Notifikasi hanya kalau edit ini MENYEBERANGKAN stok
-                            // dari >= 20 ke di bawah 20.
+                            // dari >= ambang ke di bawah ambang (10).
                             if (result is ApiResult.Success && oldStock >= LOW_STOCK_THRESHOLD && st < LOW_STOCK_THRESHOLD) {
                                 postLowStockNotification(
                                     context,
