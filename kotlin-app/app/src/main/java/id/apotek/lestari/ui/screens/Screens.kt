@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -58,6 +59,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import id.apotek.lestari.data.*
 import id.apotek.lestari.ui.components.BarcodeScanner
 import id.apotek.lestari.ui.components.postLowStockNotification
@@ -503,6 +505,7 @@ fun KasirScreen() {
     var uangDiterima by remember { mutableIntStateOf(0) }
     var payMsg by remember { mutableStateOf("") }
     var payCount by remember { mutableIntStateOf(0) }
+    var lastSale by remember { mutableStateOf<Sale?>(null) }
     val cart = remember { mutableStateListOf<CartItem>() }
     val scope = rememberCoroutineScope()
     // Supaya field Uang Diterima otomatis tergulir ke atas keyboard saat diketuk.
@@ -514,6 +517,7 @@ fun KasirScreen() {
             val r = repo.findByBarcode(code)
             val med = (r as? ApiResult.Success)?.data?.medicine
             if (med != null) {
+                lastSale = null
                 val ex = cart.firstOrNull { it.medicine.id == med.id }
                 if (ex != null) ex.qty++ else cart.add(CartItem(med, 1))
                 scanMsg = "${med.name} ditambahkan"
@@ -555,6 +559,7 @@ fun KasirScreen() {
                         GlassCard(
                             shape = RoundedCornerShape(28.dp),
                             modifier = Modifier.weight(1f).clickable(enabled = !out) {
+                                lastSale = null
                                 val ex = cart.firstOrNull { it.medicine.id == m.id }
                                 if (ex != null) ex.qty++ else cart.add(CartItem(m, 1))
                             }
@@ -700,6 +705,8 @@ fun KasirScreen() {
                             // (>= 20 -> < 20) karena penjualan ini; obat yang
                             // sudah di bawah 20 sebelumnya tidak diberitahukan lagi.
                             if (result is ApiResult.Success) {
+                                val fresh = (repo.listSales() as? ApiResult.Success)?.data?.sales.orEmpty()
+                                lastSale = fresh.firstOrNull { it.id == result.data.id }
                                 val newlyLow = after.filter { m ->
                                     val before = stockBefore[m.id]
                                     before != null && before >= LOW_STOCK_THRESHOLD && m.stock < LOW_STOCK_THRESHOLD
@@ -722,6 +729,12 @@ fun KasirScreen() {
                             Spacer(Modifier.width(10.dp))
                             Text(payMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
                         }
+                    }
+                }
+                AnimatedVisibility(visible = lastSale != null) {
+                    Column {
+                        Spacer(Modifier.height(16.dp))
+                        lastSale?.let { InvoiceDetailCard(sale = it) }
                     }
                 }
             }
@@ -1559,7 +1572,142 @@ private fun ReminderCount(icon: ImageVector, label: String, count: String, count
     }
 }
 
+// ---------- Invoice detail (struk) ----------
+// Struk putih solid seperti di web app, supaya tetap terbaca di atas latar gelap
+// dan enak kalau dicetak/di-screenshot.
+private val InvoicePaper = Color.White
+private val InvoiceInk = Color(0xFF111111)
+private val InvoiceMuted = Color(0xFF6B7280)
+private val InvoiceBoxBg = Color(0xFFF4F4F5)
+private val InvoiceTeal = Color(0xFF00696D)
+private val InvoicePaidBg = Color(0xFFE6F4EA)
+private val InvoicePaidFg = Color(0xFF137333)
+private val InvoiceDash = Color(0xFFD1D5DB)
+
+@Composable
+private fun DashedDivider(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.fillMaxWidth().height(1.dp)) {
+        drawLine(
+            color = InvoiceDash,
+            start = Offset(0f, size.height / 2),
+            end = Offset(size.width, size.height / 2),
+            strokeWidth = 1.dp.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f), 0f)
+        )
+    }
+}
+
+@Composable
+private fun InvoiceInfoBox(label: String, value: String, modifier: Modifier = Modifier) {
+    Surface(color = InvoiceBoxBg, shape = RoundedCornerShape(16.dp), modifier = modifier) {
+        Column(Modifier.padding(12.dp)) {
+            Text(label, color = InvoiceMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Spacer(Modifier.height(4.dp))
+            Text(value, color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = InvoicePaper),
+        shape = RoundedCornerShape(28.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                "APOTEK LESTARI", color = InvoiceTeal,
+                style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                letterSpacing = 4.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Invoice Penjualan", color = InvoiceMuted,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                Surface(color = InvoicePaidBg, shape = RoundedCornerShape(16.dp)) {
+                    Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, null, tint = InvoicePaidFg, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("LUNAS", color = InvoicePaidFg, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            DashedDivider()
+            Spacer(Modifier.height(16.dp))
+            InvoiceInfoBox("NO. INVOICE", sale.invoiceNo, Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+            InvoiceInfoBox("TANGGAL", formatFullDateID(sale.createdAt), Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                InvoiceInfoBox("METODE BAYAR", sale.paymentMethod, Modifier.weight(1f))
+                InvoiceInfoBox("ISI INVOICE", "${sale.items.size} item", Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(16.dp))
+            Text("RINCIAN OBAT", color = InvoiceMuted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Spacer(Modifier.height(8.dp))
+            sale.items.forEachIndexed { index, it ->
+                if (index > 0) DashedDivider(modifier = Modifier.padding(vertical = 10.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                    Surface(color = InvoiceTeal.copy(alpha = 0.12f), shape = CircleShape) {
+                        Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                            Text("${index + 1}", color = InvoiceTeal, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(it.medicineName, color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        if (it.category.isNotBlank() || it.unit.isNotBlank()) {
+                            Text("${it.category} • ${it.unit}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text("${it.qty} × ${formatIDR(it.price)}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(formatIDR(it.subtotal), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Surface(color = InvoiceBoxBg, shape = RoundedCornerShape(16.dp)) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Subtotal (${sale.items.size} item)", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                        Text(formatIDR(sale.total), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    }
+                    if (sale.paymentMethod == "Tunai") {
+                        Spacer(Modifier.height(8.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Dibayar", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                            Text(formatIDR(sale.amountPaid), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        if (sale.changeAmount > 0) {
+                            Spacer(Modifier.height(8.dp))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Kembalian", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                                Text(formatIDR(sale.changeAmount), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    HorizontalDivider(color = InvoiceDash)
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Total Bayar", color = InvoiceInk, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(formatIDR(sale.total), color = InvoiceTeal, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ---------- Riwayat Penjualan ----------
+
 
 @Composable
 fun RiwayatScreen() {
@@ -1609,27 +1757,7 @@ fun RiwayatScreen() {
                         }
                         if (isOpen) {
                             Spacer(Modifier.height(16.dp))
-                            HorizontalDivider()
-                            Spacer(Modifier.height(16.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("APOTEK LESTARI — Invoice Penjualan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(16.dp)) {
-                                    Row(Modifier.padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text("Lunas", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            s.items.forEach { Text("${it.medicineName} × ${it.qty} = ${formatIDR(it.subtotal)}", style = MaterialTheme.typography.bodyMedium) }
-                            Spacer(Modifier.height(8.dp))
-                            HorizontalDivider()
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "Total: ${formatIDR(s.total)} • Dibayar: ${formatIDR(s.amountPaid)} • Kembalian: ${formatIDR(s.changeAmount)}",
-                                style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium
-                            )
+                            InvoiceDetailCard(sale = s)
                         }
                     }
                 }
