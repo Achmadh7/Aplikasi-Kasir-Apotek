@@ -71,7 +71,6 @@ import id.apotek.lestari.data.*
 import id.apotek.lestari.ui.printReceiptBitmap
 import id.apotek.lestari.ui.shareReceiptBitmap
 import id.apotek.lestari.ui.components.BarcodeScanner
-import id.apotek.lestari.ui.components.postLowStockNotification
 import id.apotek.lestari.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
@@ -84,13 +83,6 @@ import java.util.Locale
 private val repo = Repository()
 val CATEGORIES = listOf("Umum","Antibiotik","Vitamin","Pereda Nyeri","Obat Batuk & Flu","Pencernaan","Kulit","Mata","Lainnya")
 val UNITS = listOf("Strip","Botol","Box","Tablet","Kapsul","Tube","Sachet","Pcs")
-
-// Pop-up stok menipis hanya tampil sekali per peluncuran aplikasi.
-private var lowStockPopupShown = false
-
-// Ambang stok menipis: stok di bawah 20 (sama dengan status "Rendah" di Stok).
-// Dipakai pop-up Beranda, notifikasi sistem, dan hitungan "stok menipis" di Beranda.
-private const val LOW_STOCK_THRESHOLD = 10
 
 // Kelas lebar jendela (HP/tablet, portrait/landscape) untuk layout adaptif.
 // Compact < 600dp, Medium 600-840dp, Expanded > 840dp. Nilai disediakan dari
@@ -224,57 +216,6 @@ fun DemoBanner() {
     // Mode offline: semua data tersimpan di HP (Room), tidak ada banner demo.
 }
 
-// Pop-up peringatan stok menipis (Material 3 Expressive: sudut 32dp, tombol besar).
-@Composable
-private fun LowStockPopup(medicines: List<Medicine>, onGoStok: () -> Unit, onDismiss: () -> Unit) {
-    val critical = medicines.count { it.stock <= 0 }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(32.dp),
-        icon = {
-            Surface(color = BurukBg, shape = CircleShape) {
-                Icon(Icons.Default.Warning, null, tint = BurukFg, modifier = Modifier.padding(12.dp).size(28.dp))
-            }
-        },
-        title = { Text("Stok Menipis", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text(
-                    if (critical > 0) "${medicines.size} obat stoknya menipis, $critical di antaranya kritis (habis). Segera restock agar kasir tidak kehabisan."
-                    else "${medicines.size} obat stoknya menipis. Segera restock agar kasir tidak kehabisan.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(Modifier.height(12.dp))
-                medicines.forEach { m ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(m.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                if (m.stock <= 0) {
-                                    Spacer(Modifier.width(6.dp))
-                                    Surface(color = BurukBg, shape = RoundedCornerShape(16.dp), modifier = Modifier.pulseKritis()) {
-                                        Text("KRITIS", color = BurukFg, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                                    }
-                                }
-                            }
-                            Text("Sisa ${m.stock} ${m.unit} • di bawah ambang 10", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = onGoStok, shape = RoundedCornerShape(28.dp), modifier = Modifier.height(52.dp)) {
-                Text("Lihat Stok")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Nanti") }
-        }
-    )
-}
-
 @Composable
 private fun StockBadge(stock: Int, showCount: Boolean = true) {
     val label = stockLabel(stock)
@@ -309,27 +250,9 @@ private fun LegendChip(text: String, bg: Color, fg: Color) {
 @Composable
 fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit) {
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
-    var lowStock by remember { mutableStateOf<List<Medicine>>(emptyList()) }
-    var showLowStockPopup by remember { mutableStateOf(false) }
     var salesTab by remember { mutableIntStateOf(0) }
-    val context = LocalContext.current
     LaunchedEffect(Unit) {
         (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data }
-        val meds = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
-        val low = meds.filter { it.stock < LOW_STOCK_THRESHOLD }.sortedBy { it.stock }
-        lowStock = low
-        if (low.isNotEmpty() && !lowStockPopupShown) {
-            lowStockPopupShown = true
-            showLowStockPopup = true
-            postLowStockNotification(context, low)
-        }
-    }
-    if (showLowStockPopup && lowStock.isNotEmpty()) {
-        LowStockPopup(
-            medicines = lowStock,
-            onGoStok = { showLowStockPopup = false; onGoStok() },
-            onDismiss = { showLowStockPopup = false }
-        )
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -496,7 +419,6 @@ class CartItem(val medicine: Medicine, qty: Int) {
 
 @Composable
 fun KasirScreen() {
-    val context = LocalContext.current
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var search by remember { mutableStateOf("") }
     var showScanner by remember { mutableStateOf(false) }
@@ -746,10 +668,6 @@ fun KasirScreen() {
                     onClick = {
                         scope.launch {
                             val amt = if (method == "Tunai") paid else total
-                            // Stok sebelum penjualan, untuk mendeteksi obat yang
-                            // BARU turun di bawah ambang 10 akibat penjualan ini.
-                            val stockBefore = ((repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty())
-                                .associate { it.id to it.stock }
                             val result = repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty) }, method, amt))
                             payMsg = "Pembayaran $method berhasil. Total ${formatIDR(total)}" + if (method == "Tunai") " • Kembalian ${formatIDR(change)}" else ""
                             payCount++
@@ -757,17 +675,9 @@ fun KasirScreen() {
                             uangDiterima = 0
                             val after = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
                             medicines = after
-                            // Notifikasi hanya untuk obat yang MENYEBERANG ambang
-                            // (>= 20 -> < 20) karena penjualan ini; obat yang
-                            // sudah di bawah 20 sebelumnya tidak diberitahukan lagi.
                             if (result is ApiResult.Success) {
                                 val fresh = (repo.listSales() as? ApiResult.Success)?.data?.sales.orEmpty()
                                 lastSale = fresh.firstOrNull { it.id == result.data.id }
-                                val newlyLow = after.filter { m ->
-                                    val before = stockBefore[m.id]
-                                    before != null && before >= LOW_STOCK_THRESHOLD && m.stock < LOW_STOCK_THRESHOLD
-                                }
-                                if (newlyLow.isNotEmpty()) postLowStockNotification(context, newlyLow)
                             }
                         }
                     },
@@ -1093,7 +1003,6 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
     var stock by remember(editing) { mutableStateOf(editing?.stock?.toString() ?: "") }
     var minStock by remember(editing) { mutableStateOf(editing?.minStock?.toString() ?: "10") }
     var expiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1138,16 +1047,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                         if (editing == null) {
                             repo.createMedicine(MedicineArgs(name, cat, unt, b, s, st, ms, exp, bc))
                         } else {
-                            val oldStock = editing.stock
-                            val result = repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, b, s, st, ms, exp, bc))
-                            // Notifikasi hanya kalau edit ini MENYEBERANGKAN stok
-                            // dari >= ambang ke di bawah ambang (10).
-                            if (result is ApiResult.Success && oldStock >= LOW_STOCK_THRESHOLD && st < LOW_STOCK_THRESHOLD) {
-                                postLowStockNotification(
-                                    context,
-                                    listOf(editing.copy(name = name, category = cat, unit = unt, buyPrice = b, sellPrice = s, stock = st, minStock = ms, expiryDate = exp, barcode = bc))
-                                )
-                            }
+                            repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, b, s, st, ms, exp, bc))
                         }
                         onSaved()
                     }
