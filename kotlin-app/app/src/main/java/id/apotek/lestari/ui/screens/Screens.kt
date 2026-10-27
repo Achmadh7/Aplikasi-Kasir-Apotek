@@ -526,7 +526,7 @@ fun KasirScreen() {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = search, onValueChange = { search = it },
-                label = { Text("Cari nama obat…") },
+                placeholder = { Text("Cari nama obat…") },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 textStyle = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f).height(48.dp), singleLine = true
@@ -899,7 +899,7 @@ fun StokScreen() {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = search, onValueChange = { search = it; reload() },
-                label = { Text("Cari obat atau kategori…") },
+                placeholder = { Text("Cari obat atau kategori…") },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 textStyle = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f).height(48.dp), singleLine = true
