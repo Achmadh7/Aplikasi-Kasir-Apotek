@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -25,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -466,6 +468,63 @@ class CartItem(val medicine: Medicine, qty: Int) {
     var qty by mutableStateOf(qty)
 }
 
+// Kolom cari ramping berbentuk pil (BasicTextField + decorationBox), dipakai Kasir & Stok.
+// OutlinedTextField tidak dipakai di sini karena tinggi paksa yang kecil (44dp)
+// membuat teksnya terpotong — OutlinedTextField Material 3 mencadangkan ruang
+// untuk label dan tinggi minimalnya ~56dp. Dengan BasicTextField, padding dan
+// posisi teks diatur sendiri sehingga tidak ada yang terpotong.
+@Composable
+private fun SearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var focused by remember { mutableStateOf(false) }
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+        modifier = modifier
+            .height(44.dp)
+            .onFocusEvent { focused = it.isFocused },
+        decorationBox = { innerTextField ->
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(22.dp),
+                border = BorderStroke(
+                    1.dp,
+                    if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                ),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Search, null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                        if (value.isEmpty()) {
+                            Text(
+                                "Cari obat…",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        innerTextField()
+                    }
+                }
+            }
+        }
+    )
+}
+
 // ---------- Kasir ----------
 
 @Composable
@@ -524,13 +583,9 @@ fun KasirScreen() {
         Spacer(Modifier.height(16.dp))
         DemoBanner()
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
+            SearchField(
                 value = search, onValueChange = { search = it },
-                placeholder = { Text("Cari obat…") },
-                leadingIcon = { Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp)) },
-                textStyle = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f).height(44.dp), singleLine = true,
-                shape = RoundedCornerShape(22.dp)
+                modifier = Modifier.weight(1f)
             )
             OutlinedButton(
                 onClick = { showScanner = true },
@@ -898,13 +953,9 @@ fun StokScreen() {
         Spacer(Modifier.height(16.dp))
         DemoBanner()
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
+            SearchField(
                 value = search, onValueChange = { search = it; reload() },
-                placeholder = { Text("Cari obat…") },
-                leadingIcon = { Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp)) },
-                textStyle = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f).height(44.dp), singleLine = true,
-                shape = RoundedCornerShape(22.dp)
+                modifier = Modifier.weight(1f)
             )
             OutlinedButton(
                 onClick = { showScanner = true },
