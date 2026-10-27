@@ -104,11 +104,16 @@ class Repository {
         var monthOut = 0
         for (e in entries) {
             val t = instantOf(e.createdAt) ?: continue
+            // Pemasukan hanya dari penjualan (source "sale") — kas masuk manual
+            // (mis. tambah modal) tidak ikut, supaya tidak nyampur dengan hasil
+            // penjualan. Kas masuk manual tetap tercatat di Saldo Kas (Keuangan).
             if (t in startToday until endToday) {
-                if (e.type == "in") todayIn += e.amount else todayOut += e.amount
+                if (e.type == "in" && e.source == "sale") todayIn += e.amount
+                else if (e.type == "out") todayOut += e.amount
             }
             if (t in startMonth until endToday) {
-                if (e.type == "in") monthIn += e.amount else monthOut += e.amount
+                if (e.type == "in" && e.source == "sale") monthIn += e.amount
+                else if (e.type == "out") monthOut += e.amount
             }
         }
         // Stok menipis: di bawah 20 (sama dengan status "Rendah" di Stok).
@@ -132,7 +137,8 @@ class Repository {
             for (e in entries) {
                 val t = instantOf(e.createdAt) ?: continue
                 if (t in dayStart until next) {
-                    if (e.type == "in") income += e.amount else expense += e.amount
+                    if (e.type == "in" && e.source == "sale") income += e.amount
+                    else if (e.type == "out") expense += e.amount
                 }
             }
             val date = Date(dayStart)
