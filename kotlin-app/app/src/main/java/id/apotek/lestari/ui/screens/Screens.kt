@@ -610,8 +610,6 @@ fun KasirScreen() {
     val paid = uangDiterima
     val change = if (method == "Tunai") (paid - total).coerceAtLeast(0) else 0
     val canPay = cart.isNotEmpty() && (method != "Tunai" || paid >= total)
-    // Grid obat adaptif: HP portrait 2 kolom, tablet/landscape 3 kolom, tablet lebar 4 kolom.
-    val gridCols = adaptiveColumns(compact = 2, medium = 3, expanded = 4)
     Box(Modifier.fillMaxSize()) {
         // Daftar obat memenuhi layar; keranjang & pembayaran pindah ke bottom sheet.
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(16.dp)) {
@@ -647,39 +645,35 @@ fun KasirScreen() {
         }
         Spacer(Modifier.height(8.dp))
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            sorted.chunked(gridCols).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    row.forEach { m ->
-                        val out = m.stock <= 0
-                        ExpressiveCard(
-                            shape = RoundedCornerShape(28.dp),
-                            modifier = Modifier.weight(1f).clickable(enabled = !out) {
-                                val ex = cart.firstOrNull { it.medicine.id == m.id }
-                                if (ex != null && ex.qty >= m.stock) {
-                                    scanMsg = "Stok ${m.name} hanya ${m.stock} — tidak bisa ditambah lagi"
-                                } else {
-                                    lastSale = null
-                                    payMsg = ""
-                                    if (ex != null) ex.qty++ else cart.add(CartItem(m, 1))
-                                }
-                            }
-                        ) {
-                            Column(Modifier.padding(12.dp)) {
-                                Text(
-                                    m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
-                                    maxLines = 2, overflow = TextOverflow.Ellipsis,
-                                    color = if (out) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface
-                                )
-                                Text("${m.category} • ${m.unit}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(8.dp))
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text(formatIDR(m.sellPrice), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                                    StockBadge(m.stock)
-                                }
-                            }
+            sorted.forEach { m ->
+                val out = m.stock <= 0
+                ExpressiveCard(
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.fillMaxWidth().clickable(enabled = !out) {
+                        val ex = cart.firstOrNull { it.medicine.id == m.id }
+                        if (ex != null && ex.qty >= m.stock) {
+                            scanMsg = "Stok ${m.name} hanya ${m.stock} — tidak bisa ditambah lagi"
+                        } else {
+                            lastSale = null
+                            payMsg = ""
+                            if (ex != null) ex.qty++ else cart.add(CartItem(m, 1))
                         }
                     }
-                    repeat(gridCols - row.size) { Spacer(Modifier.weight(1f)) }
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                color = if (out) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text("${m.category} • ${m.unit}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(4.dp))
+                            Text(formatIDR(m.sellPrice), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        }
+                        StockBadge(m.stock)
+                    }
                 }
             }
         }
