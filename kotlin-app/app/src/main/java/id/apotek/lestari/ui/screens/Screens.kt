@@ -296,22 +296,22 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         }
         dashboard?.let { d ->
             item {
-                // Kartu besar Pemasukan Hari Ini
-                Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(32.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
-                    Column(Modifier.padding(16.dp)) {
+                // Kartu Pemasukan Hari Ini — compact & elegan
+                Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("PEMASUKAN HARI INI", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Surface(color = Color.White.copy(alpha = 0.25f), shape = CircleShape) {
-                                Icon(Icons.Default.TrendingUp, null, tint = OnLightBlue, modifier = Modifier.padding(8.dp).size(20.dp))
+                                Icon(Icons.Default.TrendingUp, null, tint = OnLightBlue, modifier = Modifier.padding(6.dp).size(18.dp))
                             }
                         }
-                        Spacer(Modifier.height(12.dp))
-                        AnimatedAmount(d.todayIn, MaterialTheme.typography.displayMedium, OnLightBlue)
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
+                        AnimatedAmount(d.todayIn, MaterialTheme.typography.headlineLarge, OnLightBlue)
+                        Spacer(Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Receipt, null, tint = OnLightBlue, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Receipt, null, tint = OnLightBlue, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("${d.totalSalesToday} transaksi penjualan", color = OnLightBlue, style = MaterialTheme.typography.bodyMedium)
+                            Text("${d.totalSalesToday} transaksi penjualan", color = OnLightBlue, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
