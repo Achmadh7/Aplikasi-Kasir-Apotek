@@ -1454,7 +1454,12 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
                 TextButton(onClick = { showDatePicker = false }) { Text("Batal") }
             }
         ) {
-            DatePicker(state = datePickerState)
+            // DatePicker bertumpuk kalau tinggi layar terbatas (lanskap):
+            // bungkus dengan scroll vertikal supaya DatePicker mengukur tinggi
+            // alaminya dan dialog bisa digulir, bukan memampatkan isinya.
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                DatePicker(state = datePickerState)
+            }
         }
     }
     if (showCategorySheet) {
