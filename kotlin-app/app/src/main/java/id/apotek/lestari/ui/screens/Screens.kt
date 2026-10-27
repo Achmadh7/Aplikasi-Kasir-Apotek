@@ -77,6 +77,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -1377,8 +1378,8 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
     LaunchedEffect(expiryInteraction) {
         expiryInteraction.interactions.collect { if (it is PressInteraction.Press) showDatePicker = true }
     }
-    var buy by remember(editing) { mutableStateOf(formatDecimal(editing?.buyPrice?.toString() ?: "")) }
-    var sell by remember(editing) { mutableStateOf(formatDecimal(editing?.sellPrice?.toString() ?: "")) }
+    var buy by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.buyPrice?.toString() ?: ""))) }
+    var sell by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.sellPrice?.toString() ?: ""))) }
     var stock by remember(editing) { mutableStateOf(editing?.stock?.toString() ?: "") }
     var minStock by remember(editing) { mutableStateOf(editing?.minStock?.toString() ?: "10") }
     var expiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
@@ -1412,8 +1413,8 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
                 interactionSource = unitInteraction,
                 modifier = Modifier.fillMaxWidth()
             )
-            OutlinedTextField(buy, { buy = formatDecimal(it) }, label = { Text("Harga Beli") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(sell, { sell = formatDecimal(it) }, label = { Text("Harga Jual") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(buy, { buy = formatDecimalFieldValue(it) }, label = { Text("Harga Beli") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(sell, { sell = formatDecimalFieldValue(it) }, label = { Text("Harga Jual") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() } }, label = { Text("Stok") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(minStock, { minStock = it.filter { c -> c.isDigit() } }, label = { Text("Stok Minimum") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
@@ -1433,8 +1434,8 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
                         scope.launch {
                             val cat = category.ifBlank { "Umum" }
                             val unt = unit.ifBlank { "Strip" }
-                            val b = parseDecimal(buy)
-                            val s = parseDecimal(sell)
+                            val b = parseDecimal(buy.text)
+                            val s = parseDecimal(sell.text)
                             val st = stock.toIntOrNull() ?: 0
                             val ms = minStock.toIntOrNull() ?: 10
                             val exp = expiry.ifBlank { null }
@@ -1717,7 +1718,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
     val isIn = type == "in"
     var category by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
+    var amount by remember { mutableStateOf(TextFieldValue("")) }
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
@@ -1738,7 +1739,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
             }
             OutlinedTextField(category, { category = it }, label = { Text("Kategori") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(description, { description = it }, label = { Text("Keterangan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(amount, { amount = formatDecimal(it) }, label = { Text("Jumlah (Rp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(amount, { amount = formatDecimalFieldValue(it) }, label = { Text("Jumlah (Rp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(
                     onClick = onDismiss,
@@ -1753,13 +1754,13 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                                     type,
                                     category.ifBlank { "Lainnya" },
                                     description.ifBlank { if (isIn) "Kas masuk" else "Kas keluar" },
-                                    parseDecimal(amount)
+                                    parseDecimal(amount.text)
                                 )
                             )
                             onSaved()
                         }
                     },
-                    enabled = parseDecimal(amount) > 0,
+                    enabled = parseDecimal(amount.text) > 0,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isIn) BlueButton else ChiliRed,
                         contentColor = Color.White

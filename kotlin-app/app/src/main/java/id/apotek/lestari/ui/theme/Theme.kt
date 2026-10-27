@@ -15,8 +15,10 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.text.SimpleDateFormat
@@ -165,6 +167,27 @@ fun formatDecimal(digits: String): String {
     if (d.isEmpty()) return ""
     val clean = d.trimStart('0').ifEmpty { "0" }
     return clean.reversed().chunked(3).joinToString(".").reversed()
+}
+
+/**
+ * Format nominal uang (pemisah ribuan) sambil menjaga posisi kursor tetap benar.
+ * Dipakai di onValueChange input uang (Harga Beli/Jual, Jumlah kas).
+ * Kalau hanya pakai formatDecimal() pada String biasa, kursor meloncat
+ * (ke akhir / ke tengah angka) setiap kali "." ditambah atau dihapus,
+ * sehingga sulit mengedit angka di tengah.
+ */
+fun formatDecimalFieldValue(value: TextFieldValue): TextFieldValue {
+    val digits = value.text.filter { it.isDigit() }
+    if (digits.isEmpty()) return TextFieldValue("", TextRange(0))
+    val formatted = formatDecimal(digits)
+    val digitsBeforeCursor = value.text.take(value.selection.start).count { it.isDigit() }
+    var cursor = formatted.length
+    var seen = 0
+    for (i in formatted.indices) {
+        if (seen >= digitsBeforeCursor) { cursor = i; break }
+        if (formatted[i].isDigit()) seen++
+    }
+    return TextFieldValue(formatted, TextRange(cursor.coerceIn(0, formatted.length)))
 }
 
 /** "100.000" -> 100000 — buang pemisah ribuan sebelum diubah ke angka. */
