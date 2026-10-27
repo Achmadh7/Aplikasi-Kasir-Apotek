@@ -11,10 +11,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -64,8 +73,26 @@ fun ApotekApp() {
     // Sheet "Lainnya": Laba, Pengingat, Riwayat, Backup & Restore — menu yang tidak lagi ada di bar bawah.
     var showMoreSheet by remember { mutableStateOf(false) }
     val moreSheetState = rememberModalBottomSheetState()
+    // Bar bawah sembunyi saat gulir ke bawah, muncul lagi saat gulir ke atas.
+    // onPostScroll hanya bereaksi kalau konten benar-benar bergerak (bukan overscroll).
+    var barVisible by remember { mutableStateOf(true) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (consumed.y < 0) barVisible = false
+                else if (consumed.y > 0) barVisible = true
+                return Offset.Zero
+            }
+        }
+    }
     Scaffold(
+        modifier = Modifier.nestedScroll(nestedScrollConnection),
         bottomBar = {
+            AnimatedVisibility(
+                visible = barVisible,
+                enter = slideInVertically(initialOffsetY = { it }) + expandVertically(expandFrom = Alignment.Bottom) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut()
+            ) {
             // Bar bawah mengambang berbentuk pil: Surface 72dp dengan margin 16dp di
             // kiri/kanan dan 12dp di bawah (lepas dari tepi layar), sudut membulat penuh,
             // bayangan lembut, dan lebar maksimal 840dp di tablet. FAB Kasir 64dp di tengah
@@ -120,6 +147,7 @@ fun ApotekApp() {
                         color = if (current == "kasir") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
             }
         }
     ) { padding ->
