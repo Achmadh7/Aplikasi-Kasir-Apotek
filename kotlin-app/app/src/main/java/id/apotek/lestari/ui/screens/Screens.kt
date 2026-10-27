@@ -1572,7 +1572,7 @@ fun KeuanganScreen() {
             val isIn = e.type == "in"
             ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = if (isIn) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = CircleShape) {
+                    Surface(color = Color.White, shape = CircleShape) {
                         Icon(
                             if (isIn) Icons.Default.SouthWest else Icons.Default.NorthEast, null,
                             tint = if (isIn) MaterialTheme.colorScheme.primary else KasKeluarRed,
