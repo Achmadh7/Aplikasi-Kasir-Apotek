@@ -1554,43 +1554,41 @@ fun KeuanganScreen() {
                 }
             }
             Spacer(Modifier.height(16.dp))
-            // Kartu Saldo Kas — hero premium compact: gradasi biru (seperti Beranda) + bar proporsi Masuk/Keluar.
-            Box(
-                modifier = Modifier.fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(HeroGradientTop, LightBlueCard)), RoundedCornerShape(24.dp))
-            ) {
+            // Kartu Saldo Kas — warna gradasi biru di-revert ke kartu datar seperti semula;
+            // bar proporsi + compact dipertahankan.
+            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(color = Color.White.copy(alpha = 0.25f), shape = CircleShape) {
-                            Icon(Icons.Default.AccountBalanceWallet, null, tint = OnLightBlue, modifier = Modifier.padding(8.dp).size(20.dp))
+                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                            Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
                         }
                         Spacer(Modifier.width(10.dp))
-                        Text("SALDO KAS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = OnLightBlue.copy(alpha = 0.75f))
+                        Text("SALDO KAS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(Modifier.height(6.dp))
                     Text(
                         formatIDR(masuk - keluar),
                         style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
-                        color = if (masuk - keluar < 0) KasKeluarRed else OnLightBlue
+                        color = if (masuk - keluar < 0) KasKeluarRed else MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(8.dp))
-                    HorizontalDivider(color = OnLightBlue.copy(alpha = 0.15f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.SouthWest, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("MASUK", style = MaterialTheme.typography.labelMedium, color = OnLightBlue.copy(alpha = 0.75f))
+                                Text("MASUK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Text(formatIDR(masuk), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
-                        Box(Modifier.width(1.dp).height(40.dp).background(OnLightBlue.copy(alpha = 0.15f)))
+                        Box(Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outlineVariant))
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.NorthEast, null, tint = KasKeluarRed, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("KELUAR", style = MaterialTheme.typography.labelMedium, color = OnLightBlue.copy(alpha = 0.75f))
+                                Text("KELUAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Text(formatIDR(keluar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KasKeluarRed)
                         }
@@ -1598,7 +1596,7 @@ fun KeuanganScreen() {
                     // Bar proporsi Masuk (biru) vs Keluar (burgundy) pada periode terpilih — tipis (compact).
                     Spacer(Modifier.height(8.dp))
                     val totalFlow = masuk + keluar
-                    Row(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(OnLightBlue.copy(alpha = 0.12f))) {
+                    Row(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.outlineVariant)) {
                         if (totalFlow > 0) {
                             if (masuk > 0) Box(Modifier.weight(masuk.toFloat()).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
                             if (keluar > 0) Box(Modifier.weight(keluar.toFloat()).fillMaxHeight().background(KasKeluarRed))
