@@ -24,3 +24,15 @@
 # redam peringatan yang tidak relevan supaya build tidak berisik.
 -dontwarn com.google.mlkit.**
 -dontwarn androidx.camera.**
+
+# R8 gagal (minifyReleaseWithR8 FAILED) karena POI/Log4j mereferensikan
+# class yang tidak ada di Android dan tidak pernah dipakai di HP:
+# - java.awt.* (dipakai com.graphbuilder, pustaka gambar POI — desktop only)
+# - org.osgi.framework.* (dipakai Log4j OsgiServiceLocator — OSGi, bukan Android)
+# Ini hanya peringatan yang R8 anggap fatal; redam supaya build lanjut.
+# (Jalur desktop/OSGi itu tidak pernah dijalankan — aplikasi hanya baca/tulis
+# sel .xlsx biasa, bukan gambar/chart Excel.)
+-dontwarn java.awt.**
+-dontwarn org.osgi.**
+-dontwarn com.graphbuilder.**
+-dontwarn org.apache.logging.log4j.**
