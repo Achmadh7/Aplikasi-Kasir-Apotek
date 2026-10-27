@@ -526,15 +526,17 @@ fun KasirScreen() {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = search, onValueChange = { search = it },
-                placeholder = { Text("Cari nama obat…") },
-                leadingIcon = { Icon(Icons.Default.Search, null) },
+                placeholder = { Text("Cari obat…") },
+                leadingIcon = { Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp)) },
                 textStyle = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f).height(48.dp), singleLine = true
+                modifier = Modifier.weight(1f).height(44.dp), singleLine = true,
+                shape = RoundedCornerShape(22.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp)
             )
             OutlinedButton(
                 onClick = { showScanner = true },
                 shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.height(48.dp),
+                modifier = Modifier.height(44.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp)
             ) {
                 Icon(Icons.Default.QrCodeScanner, "Scan barcode")
@@ -899,15 +901,17 @@ fun StokScreen() {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = search, onValueChange = { search = it; reload() },
-                placeholder = { Text("Cari obat atau kategori…") },
-                leadingIcon = { Icon(Icons.Default.Search, null) },
+                placeholder = { Text("Cari obat…") },
+                leadingIcon = { Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp)) },
                 textStyle = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f).height(48.dp), singleLine = true
+                modifier = Modifier.weight(1f).height(44.dp), singleLine = true,
+                shape = RoundedCornerShape(22.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp)
             )
             OutlinedButton(
                 onClick = { showScanner = true },
                 shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.height(48.dp),
+                modifier = Modifier.height(44.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp)
             ) {
                 Icon(Icons.Default.QrCodeScanner, "Scan barcode stok")
