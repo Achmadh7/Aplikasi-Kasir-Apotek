@@ -725,6 +725,9 @@ fun KasirScreen() {
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
             sheetState = sheetState,
+            // Lebar sheet dibatasi 560dp (default M3 640dp) supaya di lanskap/tablet
+            // tidak terlalu lebar; di potret tidak berpengaruh (lebar HP < 560dp).
+            sheetMaxWidth = 560.dp,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         ) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding()) {
