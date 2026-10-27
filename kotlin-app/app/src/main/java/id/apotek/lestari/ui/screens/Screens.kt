@@ -627,9 +627,8 @@ fun KasirScreen() {
         // Daftar obat memenuhi layar; keranjang & pembayaran pindah ke bottom sheet.
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(16.dp)) {
 
-        Text("Kasir", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-        Text("Ketuk obat untuk menambahkan ke keranjang, lalu selesaikan pembayaran.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(16.dp))
+        Text("Kasir", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(24.dp))
         DemoBanner()
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             SearchField(
@@ -1027,7 +1026,7 @@ fun StokScreen() {
             Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Stok Obat", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+                    Text("Stok Obat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     Text("${medicines.size} jenis obat tercatat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Button(
@@ -1036,7 +1035,7 @@ fun StokScreen() {
                     shape = RoundedCornerShape(32.dp)
                 ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("Tambah Obat") }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 SearchField(
@@ -1441,9 +1440,8 @@ fun KeuanganScreen() {
     ) {
         item {
             Column {
-            Text("Keuangan", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-            Text("Kas masuk & keluar tercatat rinci, termasuk penjualan otomatis dari Kasir.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(16.dp))
+            Text("Keuangan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(24.dp))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("today" to "Hari Ini", "month" to "Bulan Ini", "all" to "Semua").forEach { (k, l) ->
@@ -1619,9 +1617,8 @@ fun LabaScreen() {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Text("Laporan Laba", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-            Text("Laba dihitung dari penjualan dikurangi harga beli (modal) obat yang terjual.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(16.dp))
+            Text("Laporan Laba", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(24.dp))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 listOf("today" to "Hari Ini", "month" to "Bulan Ini", "last30" to "30 Hari", "all" to "Semua").forEach { (k, l) ->
@@ -1834,9 +1831,8 @@ fun PengingatScreen(onGoStok: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Text("Pengingat", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-            Text("Kadaluwarsa & stok menipis digabung jadi satu daftar prioritas, diurutkan dari yang paling mendesak. Daftar ini otomatis mengikuti data di Stok.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(16.dp))
+            Text("Pengingat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(24.dp))
             DemoBanner()
             Text("MASA KADALUARSA", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(6.dp))
@@ -2165,9 +2161,8 @@ fun RiwayatScreen() {
     LaunchedEffect(Unit) { (repo.listSales() as? ApiResult.Success)?.let { sales = it.data.sales } }
     LaunchedEffect(sales) { if (sales.isNotEmpty() && !listEntered) listEntered = true }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Riwayat Penjualan", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-        Text("Ketuk invoice untuk melihat detail lengkapnya.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(16.dp))
+        Text("Riwayat Penjualan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(24.dp))
         DemoBanner()
         if (sales.isEmpty()) Text("Belum ada penjualan tercatat.")
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2267,9 +2262,9 @@ fun BackupScreen() {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("Backup & Restore", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+        Text("Backup & Restore", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Simpan dan pulihkan semua data apotek.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
         ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
