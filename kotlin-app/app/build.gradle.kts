@@ -45,7 +45,10 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8: perkecil + obfuscate kode rilis (dan buang resource yang tidak
+            // terpakai) supaya APK lebih kecil. Aturan keep ada di proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig =
                 if (signingProperties.isNotEmpty()) {
                     signingConfigs.getByName("release")
