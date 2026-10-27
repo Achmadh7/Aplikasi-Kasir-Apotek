@@ -244,13 +244,6 @@ private fun StockBadge(stock: Int, showCount: Boolean = true) {
     }
 }
 
-@Composable
-private fun LegendChip(text: String, bg: Color, fg: Color) {
-    Surface(color = bg, shape = RoundedCornerShape(16.dp)) {
-        Text(text, color = fg, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-    }
-}
-
 // ---------- Beranda ----------
 
 @Composable
@@ -532,6 +525,7 @@ private fun SearchField(
 fun KasirScreen() {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var search by remember { mutableStateOf("") }
+    var statusFilter by remember { mutableStateOf("all") }
     var showScanner by remember { mutableStateOf(false) }
     var scanMsg by remember { mutableStateOf("") }
     var method by remember { mutableStateOf("Tunai") }
@@ -931,6 +925,18 @@ fun StokScreen() {
     LaunchedEffect(Unit) { reload() }
     // Daftar muncul bertahap begitu data pertama kali tiba; tidak berulang saat scroll.
     LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
+    // Ringkasan + filter status stok (Aman >20, Sedang ==20, Rendah <20, Habis 0).
+    val countAman = medicines.count { stockLabel(it.stock) == "Aman" }
+    val countSedang = medicines.count { stockLabel(it.stock) == "Sedang" }
+    val countRendah = medicines.count { stockLabel(it.stock) == "Rendah" }
+    val countHabis = medicines.count { stockLabel(it.stock) == "Habis" }
+    val shown = when (statusFilter) {
+        "aman" -> medicines.filter { stockLabel(it.stock) == "Aman" }
+        "sedang" -> medicines.filter { stockLabel(it.stock) == "Sedang" }
+        "rendah" -> medicines.filter { stockLabel(it.stock) == "Rendah" }
+        "habis" -> medicines.filter { stockLabel(it.stock) == "Habis" }
+        else -> medicines
+    }
     if (showScanner) BarcodeScanner(onDetected = { code ->
         showScanner = false
         scope.launch {
@@ -1020,16 +1026,51 @@ fun StokScreen() {
             }
         }
         Spacer(Modifier.height(16.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-            Text("Status stok:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            LegendChip("Aman — di atas 20", AmanBg, AmanFg)
-            LegendChip("Sedang — pas 20", SedangBg, SedangFg)
-            LegendChip("Rendah — di bawah 20", BurukBg, BurukFg)
-            LegendChip("Habis — 0", BurukBg, BurukFg)
+        // Ringkasan stok: total jenis, menipis (Rendah), habis.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("${medicines.size}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+            Text(" jenis obat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("  •  ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("$countRendah", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
+            Text(" menipis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("  •  ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("$countHabis", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+            Text(" habis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.height(8.dp))
+        // Filter status stok (menggantikan legenda; jumlah per status terlihat di chip).
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+            listOf(
+                "all" to "Semua (${medicines.size})",
+                "aman" to "Aman ($countAman)",
+                "sedang" to "Sedang ($countSedang)",
+                "rendah" to "Rendah ($countRendah)",
+                "habis" to "Habis ($countHabis)"
+            ).forEach { (k, l) ->
+                FilterChip(selected = statusFilter == k, onClick = { statusFilter = k }, label = { Text(l) })
+            }
         }
         Spacer(Modifier.height(16.dp))
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            itemsIndexed(medicines) { index, m ->
+            if (shown.isEmpty()) {
+                item {
+                    Text(
+                        when {
+                            medicines.isEmpty() -> "Belum ada obat. Ketuk \"Tambah Obat\" atau Import Excel untuk mengisi stok."
+                            statusFilter == "habis" -> "Tidak ada obat yang habis."
+                            statusFilter == "rendah" -> "Tidak ada obat yang stoknya rendah."
+                            statusFilter == "sedang" -> "Tidak ada obat yang stoknya sedang."
+                            statusFilter == "aman" -> "Tidak ada obat yang stoknya aman."
+                            else -> "Tidak ada obat yang cocok."
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp)
+                    )
+                }
+            }
+            itemsIndexed(shown) { index, m ->
                 AnimatedVisibility(
                     visible = listEntered,
                     enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
