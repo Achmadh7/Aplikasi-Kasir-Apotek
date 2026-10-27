@@ -5,6 +5,7 @@ import id.apotek.lestari.data.local.DatabaseProvider
 import id.apotek.lestari.data.local.MedicineEntity
 import id.apotek.lestari.data.local.SaleEntity
 import id.apotek.lestari.data.local.SaleItemEntity
+import androidx.room.withTransaction
 import id.apotek.lestari.ui.theme.dayKeyID
 import id.apotek.lestari.ui.theme.parseISODate
 import java.text.SimpleDateFormat
@@ -444,5 +445,41 @@ class Repository {
 
     suspend fun getWebAppManifest(): ApiResult<ManifestResponse> =
         ApiResult.Error("Manifest web tidak tersedia di mode offline")
+
+    // ---- Backup & Restore (semua data lokal dalam satu file JSON) ----
+
+    /** Seluruh isi database (obat, penjualan, item, kas) sebagai string JSON. */
+    suspend fun exportBackup(): ApiResult<String> = call {
+        val db = DatabaseProvider.db
+        val data = BackupData(
+            medicines = db.medicineDao().getAll(),
+            sales = db.saleDao().getAll(),
+            saleItems = db.saleDao().getAllItems(),
+            cashEntries = db.cashDao().getAll()
+        )
+        BackupHelper.buildJson(data)
+    }
+
+    /**
+     * Pulihkan data dari file backup JSON. MENGGANTI seluruh data saat ini
+     * dengan isi backup (ID dipertahankan supaya relasi penjualan-item utuh).
+     * Dijalankan dalam satu transaksi — kalau ada yang gagal, tidak ada
+     * data yang berubah.
+     */
+    suspend fun importBackup(json: String): ApiResult<String> = call {
+        val data = BackupHelper.parseJson(json) // melempar kalau format bukan backup
+        val db = DatabaseProvider.db
+        db.withTransaction {
+            db.medicineDao().deleteAll()
+            db.saleDao().deleteAll()
+            db.saleDao().deleteAllItems()
+            db.cashDao().deleteAll()
+            data.medicines.forEach { db.medicineDao().insert(it) }
+            data.sales.forEach { db.saleDao().insert(it) }
+            if (data.saleItems.isNotEmpty()) db.saleDao().insertItems(data.saleItems)
+            data.cashEntries.forEach { db.cashDao().insert(it) }
+        }
+        "Dipulihkan: ${data.medicines.size} obat, ${data.sales.size} penjualan, ${data.saleItems.size} item, ${data.cashEntries.size} kas."
+    }
 }
 

@@ -83,6 +83,9 @@ interface MedicineDao {
 
     @Query("DELETE FROM medicines WHERE id = :id")
     suspend fun deleteById(id: Int)
+
+    @Query("DELETE FROM medicines")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -101,6 +104,12 @@ interface SaleDao {
 
     @Insert
     suspend fun insertItems(items: List<SaleItemEntity>)
+
+    @Query("DELETE FROM sales")
+    suspend fun deleteAll()
+
+    @Query("DELETE FROM sale_items")
+    suspend fun deleteAllItems()
 }
 
 @Dao
@@ -113,6 +122,9 @@ interface CashDao {
 
     @Query("DELETE FROM cash_entries WHERE id = :id")
     suspend fun deleteById(id: Int)
+
+    @Query("DELETE FROM cash_entries")
+    suspend fun deleteAll()
 }
 
 // ---- Database ----

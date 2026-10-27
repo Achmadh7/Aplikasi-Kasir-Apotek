@@ -59,7 +59,7 @@ fun ApotekApp() {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route ?: "beranda"
-    // Sheet "Lainnya": Laba, Pengingat, Riwayat — menu yang tidak lagi ada di bar bawah.
+    // Sheet "Lainnya": Laba, Pengingat, Riwayat, Backup & Restore — menu yang tidak lagi ada di bar bawah.
     var showMoreSheet by remember { mutableStateOf(false) }
     val moreSheetState = rememberModalBottomSheetState()
     Scaffold(
@@ -69,7 +69,7 @@ fun ApotekApp() {
             ) {
                 TABS.forEach { tab ->
                     NavigationBarItem(
-                        selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat") else current == tab.route,
+                        selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup") else current == tab.route,
                         onClick = { if (tab.route == "lainnya") showMoreSheet = true else nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
                         icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
                         label = { Text(tab.label) },
@@ -103,10 +103,11 @@ fun ApotekApp() {
                 composable("laba") { LabaScreen() }
                 composable("pengingat") { PengingatScreen(onGoStok = { nav.navigate("stok") }) }
                 composable("riwayat") { RiwayatScreen() }
+                composable("backup") { BackupScreen() }
             }
         }
     }
-    // Sheet "Lainnya": Laba, Pengingat, Riwayat.
+    // Sheet "Lainnya": Laba, Pengingat, Riwayat, Backup & Restore.
     if (showMoreSheet) {
         ModalBottomSheet(
             onDismissRequest = { showMoreSheet = false },
@@ -118,7 +119,8 @@ fun ApotekApp() {
                 listOf(
                     Triple("laba", "Laba", Icons.Default.TrendingUp),
                     Triple("pengingat", "Pengingat", Icons.Default.NotificationsActive),
-                    Triple("riwayat", "Riwayat", Icons.Default.ReceiptLong)
+                    Triple("riwayat", "Riwayat", Icons.Default.ReceiptLong),
+                    Triple("backup", "Backup & Restore", Icons.Default.Backup)
                 ).forEach { (route, label, icon) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
