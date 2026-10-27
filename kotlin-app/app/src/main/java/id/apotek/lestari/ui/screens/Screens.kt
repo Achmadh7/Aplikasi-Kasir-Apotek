@@ -2,6 +2,7 @@
 
 package id.apotek.lestari.ui.screens
 
+import android.content.res.Configuration
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -50,6 +51,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -103,10 +105,16 @@ private fun adaptiveColumns(compact: Int, medium: Int, expanded: Int): Int = whe
     else -> compact
 }
 
-/** Lebar maksimal bottom sheet: 560dp di HP, 640dp di tablet (lebar layar Expanded). */
+/** Lebar maksimal bottom sheet: 360dp di HP, 640dp di tablet. */
 @Composable
-private fun adaptiveSheetMaxWidth() =
-    if (LocalWindowWidthClass.current == WindowWidthSizeClass.Expanded) 640.dp else 560.dp
+private fun adaptiveSheetMaxWidth() = when {
+    // Tablet: layar lebar (Expanded) atau tablet potret (Medium + potret).
+    LocalWindowWidthClass.current == WindowWidthSizeClass.Expanded -> 640.dp
+    LocalWindowWidthClass.current == WindowWidthSizeClass.Medium &&
+        LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE -> 640.dp
+    // HP (potret maupun lanskap).
+    else -> 360.dp
+}
 
 // ---------- Animasi Material 3 Expressive ----------
 
@@ -730,8 +738,8 @@ fun KasirScreen() {
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
             sheetState = sheetState,
-            // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): 560dp di HP,
-            // 640dp di tablet; di potret tidak berpengaruh (lebar HP < 560dp).
+            // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): 360dp di HP,
+            // 640dp di tablet; di potret tidak berpengaruh (lebar HP ~360dp).
             sheetMaxWidth = adaptiveSheetMaxWidth(),
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         ) {
@@ -1295,7 +1303,7 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): 560dp di HP, 640dp di tablet.
+        // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): 360dp di HP, 640dp di tablet.
         sheetMaxWidth = adaptiveSheetMaxWidth(),
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     ) {
@@ -1542,7 +1550,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): 560dp di HP, 640dp di tablet.
+        // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): 360dp di HP, 640dp di tablet.
         sheetMaxWidth = adaptiveSheetMaxWidth(),
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     ) {
