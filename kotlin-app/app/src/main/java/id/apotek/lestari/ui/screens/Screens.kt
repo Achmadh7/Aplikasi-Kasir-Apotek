@@ -1848,7 +1848,7 @@ fun LabaScreen() {
                         stats.chunked(statsCols).forEach { rowStats ->
                             Row(Modifier.fillMaxWidth()) {
                                 rowStats.forEach { (icon, label, value) ->
-                                    LabaStat(icon, label, value, if (label == "ESTIMASI LABA BERSIH") MaterialTheme.colorScheme.primary else null, Modifier.weight(1f))
+                                    LabaStat(icon, label, value, if (label == "ESTIMASI LABA BERSIH") (if (r.netProfit < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary) else null, Modifier.weight(1f))
                                 }
                                 repeat(statsCols - rowStats.size) { Spacer(Modifier.weight(1f)) }
                             }
