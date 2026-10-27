@@ -1371,51 +1371,65 @@ fun KeuanganScreen() {
             }
         }
     }
-    if (showForm) CashEntryFormDialog(initialType = formType, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
+    if (showForm) CashEntryFormSheet(type = formType, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
 }
 
 @Composable
-private fun CashEntryFormDialog(initialType: String = "in", onDismiss: () -> Unit, onSaved: () -> Unit) {
-    var type by remember { mutableStateOf(initialType) }
+private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () -> Unit) {
+    val isIn = type == "in"
     var category by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("Catat Kas Masuk / Keluar") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("in" to "Masuk", "out" to "Keluar").forEach { (k, l) ->
-                        FilterChip(selected = type == k, onClick = { type = k }, label = { Text(l) })
-                    }
-                }
-                OutlinedTextField(category, { category = it }, label = { Text("Kategori") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(description, { description = it }, label = { Text("Keterangan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(amount, { amount = formatDecimal(it) }, label = { Text("Jumlah (Rp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    ) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (isIn) "Catat Kas Masuk" else "Catat Kas Keluar",
+                    style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    scope.launch {
-                        repo.createCashEntry(
-                            CreateCashEntryArgs(
-                                type,
-                                category.ifBlank { "Lainnya" },
-                                description.ifBlank { if (type == "in") "Kas masuk" else "Kas keluar" },
-                                parseDecimal(amount)
+            OutlinedTextField(category, { category = it }, label = { Text("Kategori") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(description, { description = it }, label = { Text("Keterangan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(amount, { amount = formatDecimal(it) }, label = { Text("Jumlah (Rp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.weight(1f).height(52.dp)
+                ) { Text("Batal") }
+                Button(
+                    onClick = {
+                        scope.launch {
+                            repo.createCashEntry(
+                                CreateCashEntryArgs(
+                                    type,
+                                    category.ifBlank { "Lainnya" },
+                                    description.ifBlank { if (isIn) "Kas masuk" else "Kas keluar" },
+                                    parseDecimal(amount)
+                                )
                             )
-                        )
-                        onSaved()
-                    }
-                },
-                enabled = parseDecimal(amount) > 0
-            ) { Text("Simpan") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } }
-    )
+                            onSaved()
+                        }
+                    },
+                    enabled = parseDecimal(amount) > 0,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isIn) BlueButton else MaterialTheme.colorScheme.error,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.weight(1f).height(52.dp)
+                ) { Text("Simpan") }
+            }
+        }
+    }
 }
 
 // ---------- Laporan Laba ----------
