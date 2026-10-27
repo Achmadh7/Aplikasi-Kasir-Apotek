@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -99,8 +100,10 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 private val repo = Repository()
 val CATEGORIES = listOf("Umum","Antibiotik","Vitamin","Pereda Nyeri","Obat Batuk & Flu","Pencernaan","Kulit","Mata","Lainnya")
@@ -1510,6 +1513,22 @@ fun KeuanganScreen() {
     val masuk = periodEntries.filter { it.type == "in" }.sumOf { it.amount }
     val keluar = periodEntries.filter { it.type == "out" }.sumOf { it.amount }
     val shown = periodEntries.filter { typeFilter == "all" || it.type == typeFilter }
+    // Arus kas 7 hari terakhir (grafik) — selalu 7 hari, tidak mengikuti filter periode.
+    val jakartaTz = TimeZone.getTimeZone("Asia/Jakarta")
+    val cal = Calendar.getInstance(jakartaTz).apply {
+        time = Date()
+        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+    }
+    val last7 = (6 downTo 0).map { back ->
+        val c = (cal.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -back) }
+        val key = dayKeyID(c.time)
+        val label = SimpleDateFormat("EEE", Locale("id", "ID")).apply { timeZone = jakartaTz }.format(c.time)
+        val dayEntries = entries.filter { e -> parseISODate(e.createdAt)?.let { dayKeyID(it) == key } == true }
+        Triple(label, dayEntries.filter { it.type == "in" }.sumOf { it.amount }, dayEntries.filter { it.type == "out" }.sumOf { it.amount })
+    }
+    val weekIn = last7.sumOf { it.second }
+    val weekOut = last7.sumOf { it.third }
+    val maxFlow = last7.maxOfOrNull { maxOf(it.second, it.third) }?.coerceAtLeast(1) ?: 1
     // Satu LazyColumn untuk seluruh layar (header + daftar) supaya layar bisa
     // digulir penuh saat lanskap — header tetap + LazyColumn weight(1f) membuat
     // daftar 0dp dan layar tidak bisa digulir kalau header lebih tinggi dari layar.
@@ -1535,42 +1554,107 @@ fun KeuanganScreen() {
                 }
             }
             Spacer(Modifier.height(16.dp))
-            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            // Kartu Saldo Kas — hero premium: gradasi biru (seperti Beranda) + bar proporsi Masuk/Keluar.
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(HeroGradientTop, LightBlueCard)), RoundedCornerShape(24.dp))
+            ) {
                 Column(Modifier.padding(16.dp)) {
-                    // Saldo Kas — angka besar (hero); merah kalau saldonya negatif.
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
-                            Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
+                        Surface(color = Color.White.copy(alpha = 0.25f), shape = CircleShape) {
+                            Icon(Icons.Default.AccountBalanceWallet, null, tint = OnLightBlue, modifier = Modifier.padding(8.dp).size(20.dp))
                         }
                         Spacer(Modifier.width(10.dp))
-                        Text("SALDO KAS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("SALDO KAS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = OnLightBlue.copy(alpha = 0.75f))
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         formatIDR(masuk - keluar),
                         style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
-                        color = if (masuk - keluar < 0) KasKeluarRed else MaterialTheme.colorScheme.onSurface
+                        color = if (masuk - keluar < 0) KasKeluarRed else OnLightBlue
                     )
                     Spacer(Modifier.height(12.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    HorizontalDivider(color = OnLightBlue.copy(alpha = 0.15f))
                     Spacer(Modifier.height(12.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.SouthWest, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("MASUK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("MASUK", style = MaterialTheme.typography.labelMedium, color = OnLightBlue.copy(alpha = 0.75f))
                             }
                             Text(formatIDR(masuk), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
-                        Box(Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                        Box(Modifier.width(1.dp).height(40.dp).background(OnLightBlue.copy(alpha = 0.15f)))
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.NorthEast, null, tint = KasKeluarRed, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("KELUAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("KELUAR", style = MaterialTheme.typography.labelMedium, color = OnLightBlue.copy(alpha = 0.75f))
                             }
                             Text(formatIDR(keluar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KasKeluarRed)
+                        }
+                    }
+                    // Bar proporsi Masuk (biru) vs Keluar (burgundy) pada periode terpilih.
+                    Spacer(Modifier.height(12.dp))
+                    val totalFlow = masuk + keluar
+                    Row(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(OnLightBlue.copy(alpha = 0.12f))) {
+                        if (totalFlow > 0) {
+                            if (masuk > 0) Box(Modifier.weight(masuk.toFloat()).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+                            if (keluar > 0) Box(Modifier.weight(keluar.toFloat()).fillMaxHeight().background(KasKeluarRed))
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            // Grafik arus kas 7 hari terakhir — batang Masuk (biru) & Keluar (burgundy) per hari.
+            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(20.dp)) {
+                    Text("Arus Kas 7 Hari Terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(8.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Masuk", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(12.dp))
+                        Box(Modifier.size(8.dp).background(KasKeluarRed, CircleShape))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Keluar", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            "Masuk Rp ${formatCompactIDR(weekIn)} • Keluar Rp ${formatCompactIDR(weekOut)}",
+                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    if (weekIn + weekOut == 0) {
+                        Text("Belum ada arus kas 7 hari terakhir.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+                            last7.forEachIndexed { barIndex, (label, dayIn, dayOut) ->
+                                val isToday = barIndex == last7.lastIndex
+                                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
+                                        key(weekIn, weekOut) {
+                                            val grow = remember { Animatable(0f) }
+                                            LaunchedEffect(weekIn, weekOut) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = barIndex * 70, easing = FastOutSlowInEasing)) }
+                                            val inH = ((110f * dayIn / maxFlow * grow.value).coerceIn(0f, 110f)).let { if (dayIn > 0) it.coerceAtLeast(4f) else 0f }
+                                            val outH = ((110f * dayOut / maxFlow * grow.value).coerceIn(0f, 110f)).let { if (dayOut > 0) it.coerceAtLeast(4f) else 0f }
+                                            Box(Modifier.width(10.dp).height(inH.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
+                                            Box(Modifier.width(10.dp).height(outH.dp).background(KasKeluarRed, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
+                                        }
+                                    }
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
                         }
                     }
                 }
