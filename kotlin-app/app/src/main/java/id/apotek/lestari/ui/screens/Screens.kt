@@ -53,6 +53,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -1610,7 +1613,20 @@ fun LabaScreen() {
     var report by remember { mutableStateOf<ProfitReport?>(null) }
     var period by remember { mutableStateOf("month") }
     var infoExpanded by remember { mutableStateOf(false) }
-    LaunchedEffect(period) { (repo.getProfitReport(period) as? ApiResult.Success)?.let { report = it.data } }
+    // Muat ulang laporan setiap kali layar Laba kembali tampil (ON_RESUME),
+    // supaya penjualan terbaru dari Kasir ikut terhitung — bukan hanya saat
+    // periode berubah. Sebelumnya laporan hanya dimuat saat periode berubah,
+    // jadi penjualan yang dibuat setelah layar Laba dibuka tidak masuk.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeKey by remember { mutableStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(period, resumeKey) { (repo.getProfitReport(period) as? ApiResult.Success)?.let { report = it.data } }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 20.dp),
