@@ -68,7 +68,7 @@ fun ApotekApp() {
     Scaffold(
         bottomBar = {
             // Bar bawah seperti awal: bar datar selebar layar (80dp) menempel di tepi bawah,
-            // tanpa pil mengambang dan tanpa sembunyi saat gulir. FAB Kasir 72dp di tengah
+            // tanpa pil mengambang dan tanpa sembunyi saat gulir. FAB Kasir 60dp di tengah
             // naik di atas bar (tetap di dalam area bottomBar 104dp, tidak menutupi konten).
             Box(modifier = Modifier.fillMaxWidth().height(104.dp)) {
                 Surface(
@@ -106,9 +106,9 @@ fun ApotekApp() {
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = CircleShape,
-                        modifier = Modifier.size(72.dp)
+                        modifier = Modifier.size(60.dp)
                     ) {
-                        Icon(Icons.Default.PointOfSale, contentDescription = "Kasir", modifier = Modifier.size(34.dp))
+                        Icon(Icons.Default.PointOfSale, contentDescription = "Kasir", modifier = Modifier.size(28.dp))
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(
