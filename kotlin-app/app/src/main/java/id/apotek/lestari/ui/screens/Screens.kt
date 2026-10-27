@@ -1949,3 +1949,139 @@ fun RiwayatScreen() {
 
 
 
+
+// ---------- Backup & Restore ----------
+
+@Composable
+fun BackupScreen() {
+    var msg by remember { mutableStateOf("") }
+    var showRestoreConfirm by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // Backup: pilih lokasi simpan, lalu tulis JSON hasil export.
+    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val result = repo.exportBackup()
+            if (result is ApiResult.Success) {
+                val ok = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(result.data.toByteArray(Charsets.UTF_8)) }
+                            ?: throw IllegalStateException("Tidak bisa membuka file tujuan")
+                    }.isSuccess
+                }
+                msg = if (ok) "Backup berhasil disimpan." else "Gagal menyimpan backup."
+            } else {
+                msg = "Backup gagal: ${(result as? ApiResult.Error)?.message ?: "tidak diketahui"}"
+            }
+        }
+    }
+    // Restore: pilih file backup JSON, lalu ganti seluruh data dengan isinya.
+    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            try {
+                val json = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                        ?: throw IllegalStateException("Tidak bisa membaca file")
+                }
+                val result = repo.importBackup(json)
+                msg = if (result is ApiResult.Success) "Restore berhasil. ${result.data}" else "Restore gagal: ${(result as? ApiResult.Error)?.message ?: "tidak diketahui"}"
+            } catch (e: Exception) {
+                msg = "Restore gagal: ${e.message}"
+            }
+        }
+    }
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text("Backup & Restore", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+        Text("Simpan dan pulihkan semua data apotek.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(16.dp))
+        ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text("Kenapa backup itu penting?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Semua data (obat, penjualan, kas) hanya tersimpan di HP ini. Kalau HP hilang, rusak, atau aplikasi terhapus, data tidak bisa dikembalikan. Simpan file backup di tempat aman (mis. Google Drive atau laptop) secara berkala.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Icon(Icons.Default.Backup, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Backup Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Simpan salinan semua data ke file .json", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        val stamp = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).format(Date())
+                        backupLauncher.launch("backup-apotek-lestari-$stamp.json")
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                ) { Text("Backup Data") }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Icon(Icons.Default.Restore, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Restore Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Pulihkan data dari file backup .json", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Perhatian: restore akan MENGGANTI semua data saat ini dengan isi file backup.",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = { showRestoreConfirm = true },
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                ) { Text("Restore Data") }
+            }
+        }
+        if (msg.isNotEmpty()) {
+            Spacer(Modifier.height(16.dp))
+            Text(msg, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+    if (showRestoreConfirm) {
+        AlertDialog(
+            onDismissRequest = { showRestoreConfirm = false },
+            title = { Text("Pulihkan data dari backup?") },
+            text = { Text("Semua data saat ini (obat, penjualan, kas) akan diganti dengan isi file backup. Pastikan kamu memilih file backup yang benar.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRestoreConfirm = false
+                    restoreLauncher.launch(arrayOf("application/json"))
+                }) { Text("Pilih File") }
+            },
+            dismissButton = { TextButton(onClick = { showRestoreConfirm = false }) { Text("Batal") } }
+        )
+    }
+}
