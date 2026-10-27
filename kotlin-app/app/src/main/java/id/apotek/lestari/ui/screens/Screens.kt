@@ -2122,12 +2122,24 @@ fun PengingatScreen(onGoStok: () -> Unit) {
             }
         }
         item {
-            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(20.dp)) {
-                    ReminderCount(Icons.Default.EventBusy, "EXPIRED", "${expired.size}", if (expired.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
-                    ReminderCount(Icons.Default.Schedule, "≤ $window HARI", "${withinWindow.size}", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                    ReminderCount(Icons.Default.Inventory, "STOK NIPIS", "${low.size}", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                    ReminderCount(Icons.Default.PriorityHigh, "KRITIS", "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
+            // Ringkasan 2x2: empat kartu kecil (ikon + angka besar + label),
+            // supaya tiap angka lebih menonjol dan layarnya tidak monoton.
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
+                        ReminderCount(Icons.Default.EventBusy, "EXPIRED", "${expired.size}", if (expired.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.fillMaxWidth().padding(16.dp))
+                    }
+                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
+                        ReminderCount(Icons.Default.Schedule, "≤ $window HARI", "${withinWindow.size}", MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
+                        ReminderCount(Icons.Default.Inventory, "STOK NIPIS", "${low.size}", MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
+                    }
+                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
+                        ReminderCount(Icons.Default.PriorityHigh, "KRITIS", "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.fillMaxWidth().padding(16.dp))
+                    }
                 }
             }
         }
