@@ -1554,12 +1554,12 @@ fun KeuanganScreen() {
                 }
             }
             Spacer(Modifier.height(16.dp))
-            // Kartu Saldo Kas — hero premium: gradasi biru (seperti Beranda) + bar proporsi Masuk/Keluar.
+            // Kartu Saldo Kas — hero premium compact: gradasi biru (seperti Beranda) + bar proporsi Masuk/Keluar.
             Box(
                 modifier = Modifier.fillMaxWidth()
                     .background(Brush.verticalGradient(listOf(HeroGradientTop, LightBlueCard)), RoundedCornerShape(24.dp))
             ) {
-                Column(Modifier.padding(16.dp)) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(color = Color.White.copy(alpha = 0.25f), shape = CircleShape) {
                             Icon(Icons.Default.AccountBalanceWallet, null, tint = OnLightBlue, modifier = Modifier.padding(8.dp).size(20.dp))
@@ -1567,15 +1567,15 @@ fun KeuanganScreen() {
                         Spacer(Modifier.width(10.dp))
                         Text("SALDO KAS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = OnLightBlue.copy(alpha = 0.75f))
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
                     Text(
                         formatIDR(masuk - keluar),
                         style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
                         color = if (masuk - keluar < 0) KasKeluarRed else OnLightBlue
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
                     HorizontalDivider(color = OnLightBlue.copy(alpha = 0.15f))
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1595,10 +1595,10 @@ fun KeuanganScreen() {
                             Text(formatIDR(keluar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KasKeluarRed)
                         }
                     }
-                    // Bar proporsi Masuk (biru) vs Keluar (burgundy) pada periode terpilih.
-                    Spacer(Modifier.height(12.dp))
+                    // Bar proporsi Masuk (biru) vs Keluar (burgundy) pada periode terpilih — tipis (compact).
+                    Spacer(Modifier.height(8.dp))
                     val totalFlow = masuk + keluar
-                    Row(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(OnLightBlue.copy(alpha = 0.12f))) {
+                    Row(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(OnLightBlue.copy(alpha = 0.12f))) {
                         if (totalFlow > 0) {
                             if (masuk > 0) Box(Modifier.weight(masuk.toFloat()).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
                             if (keluar > 0) Box(Modifier.weight(keluar.toFloat()).fillMaxHeight().background(KasKeluarRed))
