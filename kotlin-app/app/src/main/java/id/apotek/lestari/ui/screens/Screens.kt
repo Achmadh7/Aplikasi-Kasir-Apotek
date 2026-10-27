@@ -777,7 +777,7 @@ fun KasirScreen() {
                 if (cart.isNotEmpty()) {
                     cart.forEachIndexed { index, ci ->
                         // Nama obat di baris atas (lebar penuh) supaya tampil lengkap;
-                        // harga satuan + stepper di baris bawah.
+                        // stepper di baris bawah.
                         Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -785,7 +785,6 @@ fun KasirScreen() {
                             }
                             Spacer(Modifier.height(2.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(formatIDR(ci.medicine.sellPrice), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.weight(1f))
                                 StepperButton(Icons.Default.Remove, "Kurangi") { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
                                 key(ci.qty) {
