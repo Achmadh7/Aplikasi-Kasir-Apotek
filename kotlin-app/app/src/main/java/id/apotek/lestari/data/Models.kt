@@ -53,6 +53,7 @@ data class RecentSale(val id: Int = 0, val invoiceNo: String = "", val total: In
 
 data class Dashboard(
     val todayIn: Int = 0,
+    val yesterdayIn: Int = 0,
     val todayOut: Int = 0,
     val todayProfit: Int = 0,
     val monthIn: Int = 0,

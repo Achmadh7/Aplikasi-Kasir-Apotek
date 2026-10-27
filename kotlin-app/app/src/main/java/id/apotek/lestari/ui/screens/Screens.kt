@@ -51,6 +51,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.geometry.Offset
@@ -205,6 +206,7 @@ private fun Modifier.pulseKritis(): Modifier {
 
 // Warna aksen mengikuti tampilan web app (mode gelap)
 private val LightBlueCard = Color(0xFFD2E4FF)
+private val HeroGradientTop = Color(0xFFA9C9FF)
 private val OnLightBlue = Color(0xFF001D36)
 private val BlueButton = Color(0xFF0061A4)
 private val KasKeluarRed = Color(0xFFFF0000)
@@ -292,8 +294,16 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         }
         dashboard?.let { d ->
             item {
-                // Kartu Pemasukan Hari Ini — compact & elegan
-                Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
+                // Kartu Pemasukan Hari Ini — hero premium: gradasi biru + insight vs kemarin
+                val diff = d.todayIn - d.yesterdayIn
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(listOf(HeroGradientTop, LightBlueCard)),
+                            RoundedCornerShape(24.dp)
+                        )
+                        .animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))
+                ) {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("PEMASUKAN HARI INI", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
@@ -302,12 +312,30 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             }
                         }
                         Spacer(Modifier.height(8.dp))
-                        AnimatedAmount(d.todayIn, MaterialTheme.typography.headlineLarge, OnLightBlue)
+                        AnimatedAmount(d.todayIn, MaterialTheme.typography.displaySmall, OnLightBlue)
                         Spacer(Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Receipt, null, tint = OnLightBlue, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text("${d.totalSalesToday} transaksi penjualan", color = OnLightBlue, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            when {
+                                diff > 0 -> {
+                                    Icon(Icons.Default.TrendingUp, null, tint = GreenButton, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Naik ${formatIDR(diff)} dari kemarin", color = GreenButton, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                }
+                                diff < 0 -> {
+                                    Icon(Icons.Default.TrendingDown, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Turun ${formatIDR(-diff)} dari kemarin", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                }
+                                else -> {
+                                    Text("Sama seperti kemarin", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                }
+                            }
                         }
                     }
                 }

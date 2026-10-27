@@ -93,12 +93,14 @@ class Repository {
         val now = Date()
         val startToday = jakartaDayStartMillis(0)
         val endToday = jakartaDayStartMillis(1)
+        val startYesterday = jakartaDayStartMillis(-1)
         val startMonth = jakartaMonthStartMillis()
         val todayKey = dayKeyID(now)
         val in30Key = dayKeyID(Date(jakartaDayStartMillis(30)))
 
         fun instantOf(iso: String): Long? = parseISODate(iso)?.time
         var todayIn = 0
+        var yesterdayIn = 0
         var todayOut = 0
         var monthIn = 0
         var monthOut = 0
@@ -110,6 +112,10 @@ class Repository {
             if (t in startToday until endToday) {
                 if (e.type == "in" && e.source == "sale") todayIn += e.amount
                 else if (e.type == "out") todayOut += e.amount
+            }
+            // Pemasukan kemarin (untuk insight "vs kemarin" di hero Beranda).
+            if (t in startYesterday until startToday) {
+                if (e.type == "in" && e.source == "sale") yesterdayIn += e.amount
             }
             if (t in startMonth until endToday) {
                 if (e.type == "in" && e.source == "sale") monthIn += e.amount
@@ -145,7 +151,7 @@ class Repository {
             DayCash(dayKeyID(date), dayLabelID(date), income, expense)
         }
         Dashboard(
-            todayIn = todayIn, todayOut = todayOut, todayProfit = todayIn - todayOut,
+            todayIn = todayIn, yesterdayIn = yesterdayIn, todayOut = todayOut, todayProfit = todayIn - todayOut,
             monthIn = monthIn, monthOut = monthOut, monthProfit = monthIn - monthOut,
             totalMedicines = meds.size, lowStockCount = lowStockCount, expiringCount = expiringCount,
             totalSalesToday = todaySales.size, bestSellers = bestSellers, last7Days = last7Days,
