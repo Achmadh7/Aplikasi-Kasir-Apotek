@@ -2046,8 +2046,12 @@ fun PengingatScreen(onGoStok: () -> Unit) {
             }
         }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                listOf("all" to "Semua Prioritas", "expiry" to "Kadaluwarsa", "low" to "Stok Menipis", "critical" to "Kritis Saja").forEach { (k, l) ->
+            // Label dipersingkat ("Semua", "Kritis") + jarak dirapatkan supaya keempat
+            // chip filter muat satu baris tanpa terpotong ("Kritis Saja" sebelumnya
+            // terpotong jadi "Kritis S..."). Scroll horizontal dipertahankan sebagai
+            // cadangan untuk layar yang sangat sempit.
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                listOf("all" to "Semua", "expiry" to "Kadaluwarsa", "low" to "Stok Menipis", "critical" to "Kritis").forEach { (k, l) ->
                     FilterChip(selected = filter == k, onClick = { filter = k }, label = { Text(l) })
                 }
             }
