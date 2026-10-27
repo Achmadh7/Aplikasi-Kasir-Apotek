@@ -1535,6 +1535,9 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        // Lebar sheet dibatasi 560dp seperti sheet Kasir (default M3 640dp),
+        // supaya di lanskap/tablet tidak terlalu lebar.
+        sheetMaxWidth = 560.dp,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
