@@ -553,7 +553,6 @@ private fun SearchField(
 fun KasirScreen() {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var search by remember { mutableStateOf("") }
-    var statusFilter by remember { mutableStateOf("all") }
     var showScanner by remember { mutableStateOf(false) }
     var scanMsg by remember { mutableStateOf("") }
     var method by remember { mutableStateOf("Tunai") }
@@ -885,6 +884,7 @@ fun KasirScreen() {
 fun StokScreen() {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var search by remember { mutableStateOf("") }
+    var statusFilter by remember { mutableStateOf("all") }
     var showScanner by remember { mutableStateOf(false) }
     var showForm by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Medicine?>(null) }
