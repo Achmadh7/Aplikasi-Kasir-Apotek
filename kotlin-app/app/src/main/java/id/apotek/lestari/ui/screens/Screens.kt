@@ -1997,7 +1997,7 @@ fun ObatTerlarisScreen() {
             if (list.isEmpty()) {
                 item {
                     ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.Leaderboard, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
                             Spacer(Modifier.height(8.dp))
                             Text("Belum ada penjualan pada periode ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2010,7 +2010,7 @@ fun ObatTerlarisScreen() {
                 val maxQty = list.maxOf { it.qty }.coerceAtLeast(1)
                 item {
                     Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Column(Modifier.weight(1f)) {
                                 Text("ITEM TERJUAL", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(4.dp))
@@ -2026,7 +2026,7 @@ fun ObatTerlarisScreen() {
                 }
                 item {
                     ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(20.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(20.dp)) {
                             list.forEachIndexed { index, s ->
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                                     Surface(
