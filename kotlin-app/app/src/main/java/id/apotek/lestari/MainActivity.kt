@@ -102,7 +102,7 @@ fun ApotekApp() {
                     color = MaterialTheme.colorScheme.surfaceContainer,
                     shape = RoundedCornerShape(50),
                     shadowElevation = 8.dp,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, bottom = 12.dp).fillMaxWidth().widthIn(max = 840.dp).height(72.dp)
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(start = 16.dp, end = 16.dp, bottom = 12.dp).fillMaxWidth().widthIn(max = 840.dp).height(72.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxSize().selectableGroup(),
