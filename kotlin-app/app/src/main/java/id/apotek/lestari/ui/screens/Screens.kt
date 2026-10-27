@@ -1202,6 +1202,7 @@ fun KeuanganScreen() {
     var period by remember { mutableStateOf("all") } // today | month | all
     var typeFilter by remember { mutableStateOf("all") } // all | in | out
     var showForm by remember { mutableStateOf(false) }
+    var formType by remember { mutableStateOf("in") }
     val scope = rememberCoroutineScope()
     fun reload() { scope.launch { (repo.listCashEntries() as? ApiResult.Success)?.let { entries = it.data.entries } } }
     LaunchedEffect(Unit) { reload() }
@@ -1230,45 +1231,60 @@ fun KeuanganScreen() {
         }
         Spacer(Modifier.height(16.dp))
         ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.SouthWest, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("MASUK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(Modifier.padding(16.dp)) {
+                // Saldo Kas — angka besar (hero); merah kalau saldonya negatif.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
                     }
-                    Text(formatIDR(masuk), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(10.dp))
+                    Text("SALDO KAS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Box(Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outlineVariant))
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.NorthEast, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("KELUAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    formatIDR(masuk - keluar),
+                    style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
+                    color = if (masuk - keluar < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.SouthWest, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("MASUK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(formatIDR(masuk), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
-                    Text(formatIDR(keluar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                }
-                Box(Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outlineVariant))
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("SALDO KAS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Box(Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.NorthEast, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("KELUAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(formatIDR(keluar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                     }
-                    Text(formatIDR(masuk - keluar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
             }
         }
         Spacer(Modifier.height(16.dp))
-        val catatInteraction = remember { MutableInteractionSource() }
-        val catatScale = pressBounceScale(catatInteraction)
-        Button(
-            onClick = { showForm = true },
-            interactionSource = catatInteraction,
-            colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.fillMaxWidth().height(56.dp).graphicsLayer(scaleX = catatScale, scaleY = catatScale)
-        ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Catat Kas Masuk / Keluar", style = MaterialTheme.typography.titleMedium) }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = { formType = "in"; showForm = true },
+                colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.weight(1f).height(52.dp)
+            ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Kas Masuk", style = MaterialTheme.typography.titleMedium) }
+            Button(
+                onClick = { formType = "out"; showForm = true },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = Color.White),
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.weight(1f).height(52.dp)
+            ) { Icon(Icons.Default.Remove, null); Spacer(Modifier.width(8.dp)); Text("Kas Keluar", style = MaterialTheme.typography.titleMedium) }
+        }
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("all" to "Semua", "in" to "Masuk", "out" to "Keluar").forEach { (k, l) ->
@@ -1306,12 +1322,12 @@ fun KeuanganScreen() {
             }
         }
     }
-    if (showForm) CashEntryFormDialog(onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
+    if (showForm) CashEntryFormDialog(initialType = formType, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
 }
 
 @Composable
-private fun CashEntryFormDialog(onDismiss: () -> Unit, onSaved: () -> Unit) {
-    var type by remember { mutableStateOf("in") }
+private fun CashEntryFormDialog(initialType: String = "in", onDismiss: () -> Unit, onSaved: () -> Unit) {
+    var type by remember { mutableStateOf(initialType) }
     var category by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
