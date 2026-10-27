@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -41,6 +42,8 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.spring
@@ -796,74 +799,108 @@ fun KasirScreen() {
                 Spacer(Modifier.height(16.dp))
                 Text("METODE BAYAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    listOf(
-                        "Tunai" to Icons.Default.Money,
-                        "QRIS" to Icons.Default.QrCode,
-                        "Transfer" to Icons.Default.AccountBalance
-                    ).forEach { (m, icon) ->
-                        val selected = method == m
-                        if (selected) {
-                            Button(onClick = { method = m }, colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White), shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                Icon(icon, null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text(m, maxLines = 1)
-                            }
-                        } else {
-                            OutlinedButton(onClick = { method = m }, shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                Icon(icon, null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text(m, maxLines = 1)
-                            }
-                        }
-                    }
-                }
-                if (method == "Tunai") {
-                    Spacer(Modifier.height(16.dp))
-                    Text("UANG DITERIMA", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        listOf(20000 to "Rp20.000", 50000 to "Rp50.000", 100000 to "Rp100.000").forEach { (nominal, label) ->
-                            OutlinedButton(
-                                onClick = { uangDiterima += nominal },
-                                shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                            ) { Text(label, maxLines = 1) }
-                        }
-                        Button(
-                            onClick = { uangDiterima = total },
-                            colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
-                            shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                        ) { Text("Uang Pas", maxLines = 1) }
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text("Ketuk nominal untuk menambah, atau Uang Pas untuk jumlah persis.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = if (uangDiterima == 0) "" else formatDecimal(uangDiterima.toString()),
-                        onValueChange = { uangDiterima = it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 },
-                        label = { Text("cth: 50.000") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                            .bringIntoViewRequester(amountBringIntoView)
-                            .onFocusEvent { if (it.isFocused) scope.launch { amountBringIntoView.bringIntoView() } }
+                // Metode bayar tersegmentasi: pil biru meluncur halus antar metode.
+                val methods = listOf(
+                    "Tunai" to Icons.Default.Money,
+                    "QRIS" to Icons.Default.QrCode,
+                    "Transfer" to Icons.Default.AccountBalance
+                )
+                val selectedMethodIndex = methods.indexOfFirst { it.first == method }.coerceAtLeast(0)
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val tabWidth = maxWidth / 3
+                    val pillOffset by animateDpAsState(
+                        targetValue = tabWidth * selectedMethodIndex,
+                        animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+                        label = "methodPill"
                     )
-                    AnimatedVisibility(visible = change > 0) {
-                        Column {
-                            Spacer(Modifier.height(8.dp))
-                            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Kembalian", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                    Text(formatIDR(change), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Box(
+                        Modifier.fillMaxWidth().height(48.dp)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(32.dp))
+                    ) {
+                        // Pil biru yang meluncur.
+                        Surface(
+                            color = BlueButton,
+                            shape = RoundedCornerShape(32.dp),
+                            modifier = Modifier.width(tabWidth).height(48.dp).offset(x = pillOffset)
+                        ) {}
+                        // Tiga area ketuk (transparan) di atas pil.
+                        Row(Modifier.fillMaxSize()) {
+                            methods.forEach { (m, icon) ->
+                                val selected = method == m
+                                val contentColor by animateColorAsState(
+                                    targetValue = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                    animationSpec = tween(250),
+                                    label = "methodColor"
+                                )
+                                Box(
+                                    Modifier.weight(1f).fillMaxHeight().clickable { method = m },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(icon, null, tint = contentColor, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(m, maxLines = 1, color = contentColor)
+                                    }
                                 }
                             }
                         }
                     }
-                } else {
-                    Spacer(Modifier.height(8.dp))
-                    Text("Dibayar penuh via $method sebesar ${formatIDR(total)}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                AnimatedContent(
+                    targetState = method,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(250)) + slideInVertically(animationSpec = tween(250)) { it / 4 }) togetherWith
+                        (fadeOut(animationSpec = tween(200)) + slideOutVertically(animationSpec = tween(200)) { -it / 4 })
+                    },
+                    label = "methodContent"
+                ) { targetMethod ->
+                    if (targetMethod == "Tunai") {
+                        Spacer(Modifier.height(16.dp))
+                        Text("UANG DITERIMA", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            listOf(20000 to "Rp20.000", 50000 to "Rp50.000", 100000 to "Rp100.000").forEach { (nominal, label) ->
+                                OutlinedButton(
+                                    onClick = { uangDiterima += nominal },
+                                    shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                                ) { Text(label, maxLines = 1) }
+                            }
+                            Button(
+                                onClick = { uangDiterima = total },
+                                colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
+                                shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                            ) { Text("Uang Pas", maxLines = 1) }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text("Ketuk nominal untuk menambah, atau Uang Pas untuk jumlah persis.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = if (uangDiterima == 0) "" else formatDecimal(uangDiterima.toString()),
+                            onValueChange = { uangDiterima = it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 },
+                            label = { Text("cth: 50.000") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                                .bringIntoViewRequester(amountBringIntoView)
+                                .onFocusEvent { if (it.isFocused) scope.launch { amountBringIntoView.bringIntoView() } }
+                        )
+                        AnimatedVisibility(visible = change > 0) {
+                            Column {
+                                Spacer(Modifier.height(8.dp))
+                                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Kembalian", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                        Text(formatIDR(change), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Spacer(Modifier.height(8.dp))
+                        Text("Dibayar penuh via $method sebesar ${formatIDR(total)}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
                 Spacer(Modifier.height(16.dp))
                 val bayarInteraction = remember { MutableInteractionSource() }
