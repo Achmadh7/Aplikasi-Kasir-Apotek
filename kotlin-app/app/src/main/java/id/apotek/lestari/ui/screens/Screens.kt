@@ -547,12 +547,27 @@ private fun SearchField(
     )
 }
 
+@Composable
+private fun SortToggle(sortAz: Boolean, onToggle: () -> Unit) {
+    OutlinedButton(
+        onClick = onToggle,
+        shape = RoundedCornerShape(20.dp),
+        contentPadding = PaddingValues(horizontal = 10.dp),
+        modifier = Modifier.height(36.dp)
+    ) {
+        Icon(Icons.Default.Sort, null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(if (sortAz) "A-Z" else "Z-A", style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
 // ---------- Kasir ----------
 
 @Composable
 fun KasirScreen() {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var search by remember { mutableStateOf("") }
+    var sortAz by remember { mutableStateOf(true) }
     var showScanner by remember { mutableStateOf(false) }
     var scanMsg by remember { mutableStateOf("") }
     var method by remember { mutableStateOf("Tunai") }
@@ -589,6 +604,7 @@ fun KasirScreen() {
         }
     }, onClose = { showScanner = false })
     val filtered = medicines.filter { search.isBlank() || it.name.contains(search, true) || it.category.contains(search, true) || (it.barcode?.contains(search) == true) }
+    val sorted = if (sortAz) filtered.sortedBy { it.name.lowercase() } else filtered.sortedByDescending { it.name.lowercase() }
     val total = cart.sumOf { it.medicine.sellPrice * it.qty }
     val cartQty = cart.sumOf { it.qty }
     val paid = uangDiterima
@@ -625,8 +641,13 @@ fun KasirScreen() {
             Text(scanMsg, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.height(16.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("${filtered.size} obat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            SortToggle(sortAz = sortAz, onToggle = { sortAz = !sortAz })
+        }
+        Spacer(Modifier.height(8.dp))
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            filtered.chunked(gridCols).forEach { row ->
+            sorted.chunked(gridCols).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     row.forEach { m ->
                         val out = m.stock <= 0
@@ -885,6 +906,7 @@ fun StokScreen() {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var search by remember { mutableStateOf("") }
     var statusFilter by remember { mutableStateOf("all") }
+    var sortAz by remember { mutableStateOf(true) }
     var showScanner by remember { mutableStateOf(false) }
     var showForm by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Medicine?>(null) }
@@ -967,6 +989,7 @@ fun StokScreen() {
         "habis" -> medicines.filter { stockLabel(it.stock) == "Habis" }
         else -> medicines
     }
+    val sorted = if (sortAz) shown.sortedBy { it.name.lowercase() } else shown.sortedByDescending { it.name.lowercase() }
     if (showScanner) BarcodeScanner(onDetected = { code ->
         showScanner = false
         scope.launch {
@@ -1058,7 +1081,7 @@ fun StokScreen() {
         }
         Spacer(Modifier.height(16.dp))
         // Ringkasan stok: total jenis, menipis (Rendah), habis.
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text("${medicines.size}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
             Text(" jenis obat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("  •  ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1067,6 +1090,8 @@ fun StokScreen() {
             Text("  •  ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("$countHabis", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
             Text(" habis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.weight(1f))
+            SortToggle(sortAz = sortAz, onToggle = { sortAz = !sortAz })
         }
         Spacer(Modifier.height(8.dp))
         // Filter status stok (menggantikan legenda; jumlah per status terlihat di chip).
@@ -1083,7 +1108,7 @@ fun StokScreen() {
         }
         Spacer(Modifier.height(16.dp))
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (shown.isEmpty()) {
+            if (sorted.isEmpty()) {
                 item {
                     Text(
                         when {
@@ -1101,7 +1126,7 @@ fun StokScreen() {
                     )
                 }
             }
-            itemsIndexed(shown) { index, m ->
+            itemsIndexed(sorted) { index, m ->
                 AnimatedVisibility(
                     visible = listEntered,
                     enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
