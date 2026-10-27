@@ -1777,7 +1777,6 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
 fun LabaScreen() {
     var report by remember { mutableStateOf<ProfitReport?>(null) }
     var period by remember { mutableStateOf("month") }
-    var infoExpanded by remember { mutableStateOf(false) }
     // Muat ulang laporan setiap kali layar Laba kembali tampil (ON_RESUME),
     // supaya penjualan terbaru dari Kasir ikut terhitung — bukan hanya saat
     // periode berubah. Sebelumnya laporan hanya dimuat saat periode berubah,
@@ -1852,33 +1851,6 @@ fun LabaScreen() {
                                     LabaStat(icon, label, value, if (label == "ESTIMASI LABA BERSIH") MaterialTheme.colorScheme.primary else null, Modifier.weight(1f))
                                 }
                                 repeat(statsCols - rowStats.size) { Spacer(Modifier.weight(1f)) }
-                            }
-                        }
-                    }
-                }
-            }
-            item {
-                ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().clickable { infoExpanded = !infoExpanded }
-                        ) {
-                            Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(10.dp))
-                            Text("Cara hitung laba", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                            Icon(
-                                if (infoExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                null, tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        AnimatedVisibility(visible = infoExpanded) {
-                            Column {
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    "Laba kotor = penjualan − modal obat terjual (harga beli saat transaksi). Estimasi laba bersih = laba kotor − biaya operasional dari Keuangan. Kas keluar \"Beli Stok\" (${formatIDR(r.stockPurchaseExpense)}) tidak dikurangkan lagi karena modalnya sudah dihitung lewat HPP.",
-                                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
                         }
                     }
