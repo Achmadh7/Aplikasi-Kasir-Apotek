@@ -95,9 +95,9 @@ fun ApotekApp() {
             ) {
             // Bar bawah mengambang berbentuk pil: Surface 72dp dengan margin 16dp di
             // kiri/kanan dan 12dp di bawah (lepas dari tepi layar), sudut membulat penuh,
-            // bayangan lembut, dan lebar maksimal 840dp di tablet. FAB Kasir 64dp di tengah
-            // naik 12dp di atas pil (tetap di dalam area bottomBar 96dp, tidak menutupi konten).
-            Box(modifier = Modifier.fillMaxWidth().height(96.dp)) {
+            // bayangan lembut, dan lebar maksimal 840dp di tablet. FAB Kasir 72dp di tengah
+            // naik 20dp di atas pil (tetap di dalam area bottomBar 104dp, tidak menutupi konten).
+            Box(modifier = Modifier.fillMaxWidth().height(104.dp)) {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainer,
                     shape = RoundedCornerShape(50),
@@ -135,9 +135,9 @@ fun ApotekApp() {
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = CircleShape,
-                        modifier = Modifier.size(64.dp)
+                        modifier = Modifier.size(72.dp)
                     ) {
-                        Icon(Icons.Default.PointOfSale, contentDescription = "Kasir", modifier = Modifier.size(30.dp))
+                        Icon(Icons.Default.PointOfSale, contentDescription = "Kasir", modifier = Modifier.size(34.dp))
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(
