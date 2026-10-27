@@ -255,10 +255,16 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
     var salesTab by remember { mutableIntStateOf(0) }
     var outOfStockNames by remember { mutableStateOf<List<String>>(emptyList()) }
+    var expiringMeds by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     LaunchedEffect(Unit) {
         (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data }
         val meds = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
         outOfStockNames = meds.filter { it.stock <= 0 }.map { it.name }.sorted()
+        val todayKey = dayKeyID(Date())
+        val in30Key = dayKeyID(Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000))
+        expiringMeds = meds.filter { it.expiryDate != null && it.expiryDate >= todayKey && it.expiryDate <= in30Key }
+            .sortedBy { it.expiryDate }
+            .map { it.name to it.expiryDate!! }
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -336,6 +342,11 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             Text("Habis: $shown$extra", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.error)
                         }
                         if (d.expiringCount > 0) Text("• ${d.expiringCount} obat dekat kadaluarsa", style = MaterialTheme.typography.bodyMedium)
+                        if (expiringMeds.isNotEmpty()) {
+                            val shown = expiringMeds.take(5).joinToString(", ") { (name, exp) -> "$name (${formatDateID(exp)})" }
+                            val extra = if (expiringMeds.size > 5) " +${expiringMeds.size - 5} lainnya" else ""
+                            Text("Kadaluarsa: $shown$extra", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.tertiary)
+                        }
                         if (d.lowStockCount == 0 && d.expiringCount == 0) Text("Semua stok dan kadaluarsa aman.", style = MaterialTheme.typography.bodyMedium)
                         if (d.lowStockCount > 0 || d.expiringCount > 0) {
                             Spacer(Modifier.height(6.dp))
