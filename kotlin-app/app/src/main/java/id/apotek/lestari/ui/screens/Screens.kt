@@ -380,15 +380,26 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         Spacer(Modifier.height(6.dp))
                         if (d.lowStockCount > 0) Text("• ${d.lowStockCount} obat stok menipis", style = MaterialTheme.typography.bodyMedium)
                         if (outOfStockNames.isNotEmpty()) {
-                            val shown = outOfStockNames.take(5).joinToString(", ")
-                            val extra = if (outOfStockNames.size > 5) " +${outOfStockNames.size - 5} lainnya" else ""
-                            Text("Habis: $shown$extra", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.error)
+                            outOfStockNames.take(5).forEach { name ->
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+                                    Box(Modifier.size(6.dp).background(MaterialTheme.colorScheme.error, CircleShape))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                            if (outOfStockNames.size > 5) Text("+${outOfStockNames.size - 5} lainnya", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
                         }
                         if (d.expiringCount > 0) Text("• ${d.expiringCount} obat dekat kadaluarsa", style = MaterialTheme.typography.bodyMedium)
                         if (expiringMeds.isNotEmpty()) {
-                            val shown = expiringMeds.take(5).joinToString(", ") { (name, exp) -> "$name (${formatDateID(exp)})" }
-                            val extra = if (expiringMeds.size > 5) " +${expiringMeds.size - 5} lainnya" else ""
-                            Text("Kadaluarsa: $shown$extra", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.tertiary)
+                            expiringMeds.take(5).forEach { (name, exp) ->
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+                                    Box(Modifier.size(6.dp).background(MaterialTheme.colorScheme.tertiary, CircleShape))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(formatDateID(exp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            if (expiringMeds.size > 5) Text("+${expiringMeds.size - 5} lainnya", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
                         }
                         if (d.lowStockCount == 0 && d.expiringCount == 0) Text("Semua stok dan kadaluarsa aman.", style = MaterialTheme.typography.bodyMedium)
                         if (d.lowStockCount > 0 || d.expiringCount > 0) {
