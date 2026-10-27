@@ -157,12 +157,11 @@ fun ApotekApp() {
             NavHost(
                 navController = nav,
                 startDestination = "beranda",
-                // Gaya iPhone (push/pop): layar baru meluncur penuh dari kanan,
-                // layar lama bergeser sedikit ke kiri (parallax) dan meredup.
-                enterTransition = { slideInHorizontally(animationSpec = tween(300), initialOffsetX = { it }) },
-                exitTransition = { slideOutHorizontally(animationSpec = tween(300), targetOffsetX = { -it / 3 }) + fadeOut(animationSpec = tween(300), targetAlpha = 0.7f) },
-                popEnterTransition = { slideInHorizontally(animationSpec = tween(300), initialOffsetX = { -it / 3 }) + fadeIn(animationSpec = tween(300), initialAlpha = 0.7f) },
-                popExitTransition = { slideOutHorizontally(animationSpec = tween(300), targetOffsetX = { it }) + fadeOut(animationSpec = tween(300)) },
+                // Transisi antar tab: pudar + geser halus, bukan ganti mendadak.
+                enterTransition = { fadeIn(animationSpec = tween(250)) + slideInHorizontally(animationSpec = tween(250), initialOffsetX = { it / 4 }) },
+                exitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(animationSpec = tween(250), targetOffsetX = { -it / 4 }) },
+                popEnterTransition = { fadeIn(animationSpec = tween(250)) + slideInHorizontally(animationSpec = tween(250), initialOffsetX = { -it / 4 }) },
+                popExitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(animationSpec = tween(250), targetOffsetX = { it / 4 }) },
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
                 composable("beranda") { BerandaScreen(onGoStok = { nav.navigate("stok") }, onGoPengingat = { nav.navigate("pengingat") }, onGoLaba = { nav.navigate("laba") }, onGoRiwayat = { nav.navigate("riwayat") }) }
