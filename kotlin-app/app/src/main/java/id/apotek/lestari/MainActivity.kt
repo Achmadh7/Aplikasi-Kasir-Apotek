@@ -109,17 +109,38 @@ fun ApotekApp() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TABS.forEachIndexed { index, tab ->
-                            NavigationBarItem(
-                                selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup") else current == tab.route,
-                                onClick = { if (tab.route == "lainnya") showMoreSheet = true else nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
-                                icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
-                                label = { Text(tab.label) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                                    selectedTextColor = MaterialTheme.colorScheme.primary
-                                )
-                            )
+                            val tabSelected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup") else current == tab.route
+                            // Tab kustom: indikator tab aktif diperkecil jadi 48×32dp
+                            // (standar NavigationBarItem 64×32dp) supaya oval birunya
+                            // lebih ramping dan nempel ke ikon.
+                            Box(
+                                Modifier.weight(1f).fillMaxHeight()
+                                    .clickable { if (tab.route == "lainnya") showMoreSheet = true else nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        if (tabSelected) {
+                                            Surface(
+                                                color = MaterialTheme.colorScheme.primaryContainer,
+                                                shape = RoundedCornerShape(50),
+                                                modifier = Modifier.size(width = 48.dp, height = 32.dp)
+                                            ) {}
+                                        }
+                                        Icon(
+                                            tab.icon, contentDescription = tab.label,
+                                            modifier = Modifier.size(26.dp),
+                                            tint = if (tabSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        tab.label,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (tabSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                             // Celah selebar satu tab di tengah untuk tombol Kasir.
                             if (index == 1) Spacer(Modifier.weight(1f))
                         }
