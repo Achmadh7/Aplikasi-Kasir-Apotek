@@ -630,7 +630,13 @@ fun KasirScreen() {
         // Daftar obat memenuhi layar; keranjang & pembayaran pindah ke bottom sheet.
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(16.dp)) {
 
-        Text("Kasir", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                Icon(Icons.Default.PointOfSale, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Text("Kasir", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        }
         Spacer(Modifier.height(24.dp))
         DemoBanner()
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -1028,6 +1034,10 @@ fun StokScreen() {
         item {
             Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                    Icon(Icons.Default.Medication, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                }
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text("Stok Obat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     Text("${medicines.size} jenis obat tercatat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1443,7 +1453,13 @@ fun KeuanganScreen() {
     ) {
         item {
             Column {
-            Text("Keuangan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                    Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text("Keuangan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            }
             Spacer(Modifier.height(24.dp))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1633,7 +1649,13 @@ fun LabaScreen() {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Text("Laporan Laba", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                    Icon(Icons.Default.TrendingUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text("Laporan Laba", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            }
             Spacer(Modifier.height(24.dp))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -1847,7 +1869,13 @@ fun PengingatScreen(onGoStok: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Text("Pengingat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                    Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text("Pengingat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            }
             Spacer(Modifier.height(24.dp))
             DemoBanner()
             Text("MASA KADALUARSA", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2177,7 +2205,13 @@ fun RiwayatScreen() {
     LaunchedEffect(Unit) { (repo.listSales() as? ApiResult.Success)?.let { sales = it.data.sales } }
     LaunchedEffect(sales) { if (sales.isNotEmpty() && !listEntered) listEntered = true }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Riwayat Penjualan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                Icon(Icons.Default.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Text("Riwayat Penjualan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        }
         Spacer(Modifier.height(24.dp))
         DemoBanner()
         if (sales.isEmpty()) Text("Belum ada penjualan tercatat.")
@@ -2278,8 +2312,16 @@ fun BackupScreen() {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("Backup & Restore", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Simpan dan pulihkan semua data apotek.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                Icon(Icons.Default.Backup, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text("Backup & Restore", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("Simpan dan pulihkan semua data apotek.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         Spacer(Modifier.height(24.dp))
         ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
