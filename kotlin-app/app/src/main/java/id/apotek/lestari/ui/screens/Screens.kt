@@ -111,14 +111,19 @@ private fun adaptiveColumns(compact: Int, medium: Int, expanded: Int): Int = whe
     else -> compact
 }
 
-/** Lebar maksimal bottom sheet: 360dp di HP, 640dp di tablet. */
+/** Lebar maksimal bottom sheet: selebar layar di HP potret, 360dp di HP lanskap, 640dp di tablet. */
 @Composable
 private fun adaptiveSheetMaxWidth() = when {
     // Tablet: layar lebar (Expanded) atau tablet potret (Medium + potret).
     LocalWindowWidthClass.current == WindowWidthSizeClass.Expanded -> 640.dp
     LocalWindowWidthClass.current == WindowWidthSizeClass.Medium &&
         LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE -> 640.dp
-    // HP (potret maupun lanskap).
+    // HP potret: sheet selebar layar (640dp = batas default Material 3,
+    // efektif selebar layar di HP) — 360dp terlalu ramping di HP yang
+    // layarnya lebih lebar dari 360dp.
+    LocalWindowWidthClass.current == WindowWidthSizeClass.Compact &&
+        LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE -> 640.dp
+    // HP lanskap: tetap 360dp supaya tidak terlalu lebar.
     else -> 360.dp
 }
 
@@ -760,8 +765,8 @@ fun KasirScreen() {
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
             sheetState = sheetState,
-            // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): 360dp di HP,
-            // 640dp di tablet; di potret tidak berpengaruh (lebar HP ~360dp).
+            // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): selebar layar
+            // di HP potret, 360dp di HP lanskap, 640dp di tablet.
             sheetMaxWidth = adaptiveSheetMaxWidth(),
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         ) {
@@ -1370,7 +1375,7 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): 360dp di HP, 640dp di tablet.
+        // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): selebar layar di HP potret, 360dp di HP lanskap, 640dp di tablet.
         sheetMaxWidth = adaptiveSheetMaxWidth(),
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     ) {
@@ -1627,7 +1632,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): 360dp di HP, 640dp di tablet.
+        // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): selebar layar di HP potret, 360dp di HP lanskap, 640dp di tablet.
         sheetMaxWidth = adaptiveSheetMaxWidth(),
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     ) {
