@@ -207,6 +207,7 @@ private fun Modifier.pulseKritis(): Modifier {
 private val LightBlueCard = Color(0xFFD2E4FF)
 private val OnLightBlue = Color(0xFF001D36)
 private val BlueButton = Color(0xFF0061A4)
+private val KasKeluarRed = Color(0xFFFF0000)
 private val GreenButton = Color(0xFF2E7D32)
 private val RedBadgeBg = Color(0xFFBA1A1A)
 private val AmanBg = Color(0xFF00497C)
@@ -1293,7 +1294,7 @@ fun KeuanganScreen() {
                 Text(
                     formatIDR(masuk - keluar),
                     style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
-                    color = if (masuk - keluar < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                    color = if (masuk - keluar < 0) KasKeluarRed else MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(12.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -1310,11 +1311,11 @@ fun KeuanganScreen() {
                     Box(Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outlineVariant))
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.NorthEast, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.NorthEast, null, tint = KasKeluarRed, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(4.dp))
                             Text("KELUAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Text(formatIDR(keluar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        Text(formatIDR(keluar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KasKeluarRed)
                     }
                 }
             }
@@ -1329,7 +1330,7 @@ fun KeuanganScreen() {
             ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Kas Masuk", style = MaterialTheme.typography.titleMedium) }
             Button(
                 onClick = { formType = "out"; showForm = true },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = Color.White),
+                colors = ButtonDefaults.buttonColors(containerColor = KasKeluarRed, contentColor = Color.White),
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.weight(1f).height(52.dp)
             ) { Icon(Icons.Default.Remove, null); Spacer(Modifier.width(8.dp)); Text("Kas Keluar", style = MaterialTheme.typography.titleMedium) }
@@ -1349,7 +1350,7 @@ fun KeuanganScreen() {
                         Surface(color = if (isIn) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = CircleShape) {
                             Icon(
                                 if (isIn) Icons.Default.SouthWest else Icons.Default.NorthEast, null,
-                                tint = if (isIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                tint = if (isIn) MaterialTheme.colorScheme.primary else KasKeluarRed,
                                 modifier = Modifier.padding(10.dp).size(20.dp)
                             )
                         }
@@ -1364,7 +1365,7 @@ fun KeuanganScreen() {
                         Text(
                             (if (isIn) "+ " else "- ") + formatIDR(e.amount),
                             style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
-                            color = if (isIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            color = if (isIn) MaterialTheme.colorScheme.primary else KasKeluarRed
                         )
                     }
                 }
@@ -1421,7 +1422,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                     },
                     enabled = parseDecimal(amount) > 0,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isIn) BlueButton else MaterialTheme.colorScheme.error,
+                        containerColor = if (isIn) BlueButton else KasKeluarRed,
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(28.dp),
