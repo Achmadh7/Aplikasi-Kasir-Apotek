@@ -81,8 +81,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import id.apotek.lestari.data.*
+import id.apotek.lestari.ui.BtPrinter
+import id.apotek.lestari.ui.buildReceiptBytes
+import id.apotek.lestari.ui.getPairedPrinters
+import id.apotek.lestari.ui.hasBluetoothPermission
+import id.apotek.lestari.ui.isBluetoothEnabled
+import id.apotek.lestari.ui.loadSavedPrinter
 import id.apotek.lestari.ui.printReceiptBitmap
+import id.apotek.lestari.ui.printReceiptToPrinter
 import id.apotek.lestari.ui.rememberLogoBitmap
+import id.apotek.lestari.ui.savePrinter
 import id.apotek.lestari.ui.shareReceiptBitmap
 import id.apotek.lestari.ui.components.BarcodeScanner
 import id.apotek.lestari.ui.theme.*
@@ -962,7 +970,7 @@ fun KasirScreen() {
                         lastSale?.let {
                             InvoiceDetailCard(sale = it, graphicsLayer = receiptLayer)
                             Spacer(Modifier.height(12.dp))
-                            ReceiptActionsRow(graphicsLayer = receiptLayer, invoiceNo = it.invoiceNo)
+                            ReceiptActionsRow(graphicsLayer = receiptLayer, invoiceNo = it.invoiceNo, sale = it)
                             Spacer(Modifier.height(12.dp))
                             OutlinedButton(
                                 onClick = { showSheet = false },
@@ -2212,42 +2220,186 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
 // Tombol di bawah struk: tangkap kartu invoice jadi gambar, lalu bagikan atau cetak.
 // Tombolnya sengaja di luar kartu struk supaya tidak ikut masuk ke gambar struk.
 @Composable
-private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, modifier: Modifier = Modifier) {
+private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, sale: Sale, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier.fillMaxWidth()) {
-        OutlinedButton(
-            onClick = {
-                scope.launch {
-                    try {
-                        shareReceiptBitmap(context, graphicsLayer.toImageBitmap().asAndroidBitmap(), invoiceNo)
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Gagal menyiapkan struk", Toast.LENGTH_SHORT).show()
+    // Cetak struk ke printer thermal Bluetooth (ESC/POS).
+    var showPrinterPicker by remember { mutableStateOf(false) }
+    var pairedPrinters by remember { mutableStateOf<List<BtPrinter>>(emptyList()) }
+    var savedPrinter by remember { mutableStateOf(loadSavedPrinter(context)) }
+
+    fun doPrint(printer: BtPrinter) {
+        scope.launch {
+            val result = printReceiptToPrinter(context, printer.address, buildReceiptBytes(sale))
+            result.onSuccess {
+                Toast.makeText(context, "Struk terkirim ke ${printer.name}", Toast.LENGTH_SHORT).show()
+            }.onFailure { e ->
+                Toast.makeText(context, "Gagal mencetak: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val btPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            // Izin diberikan — ulangi alur cetak dari awal.
+            if (!isBluetoothEnabled(context)) {
+                Toast.makeText(context, "Nyalakan Bluetooth dulu", Toast.LENGTH_SHORT).show()
+                return@rememberLauncherForActivityResult
+            }
+            val saved = loadSavedPrinter(context)
+            if (saved != null) {
+                doPrint(saved)
+            } else {
+                val paired = getPairedPrinters(context)
+                if (paired.isEmpty()) {
+                    Toast.makeText(context, "Tidak ada printer Bluetooth yang terpasang. Pasangkan printer di Pengaturan Bluetooth HP dulu.", Toast.LENGTH_LONG).show()
+                } else {
+                    pairedPrinters = paired
+                    showPrinterPicker = true
+                }
+            }
+        } else {
+            Toast.makeText(context, "Izin Bluetooth ditolak — aktifkan di Pengaturan HP", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun startBluetoothPrint() {
+        // Android 12+ butuh izin runtime BLUETOOTH_CONNECT untuk terhubung.
+        if (!hasBluetoothPermission(context)) {
+            btPermissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
+            return
+        }
+        if (!isBluetoothEnabled(context)) {
+            Toast.makeText(context, "Nyalakan Bluetooth dulu", Toast.LENGTH_SHORT).show()
+            return
+        }
+        // Printer sudah pernah dipilih: langsung cetak ke printer itu.
+        val saved = loadSavedPrinter(context)
+        if (saved != null) {
+            doPrint(saved)
+            return
+        }
+        // Belum ada printer tersimpan: tampilkan daftar perangkat terpasang.
+        val paired = getPairedPrinters(context)
+        if (paired.isEmpty()) {
+            Toast.makeText(context, "Tidak ada printer Bluetooth yang terpasang. Pasangkan printer di Pengaturan Bluetooth HP dulu.", Toast.LENGTH_LONG).show()
+            return
+        }
+        pairedPrinters = paired
+        showPrinterPicker = true
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        try {
+                            shareReceiptBitmap(context, graphicsLayer.toImageBitmap().asAndroidBitmap(), invoiceNo)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Gagal menyiapkan struk", Toast.LENGTH_SHORT).show()
+                        }
                     }
+                },
+                shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Bagikan")
+            }
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        try {
+                            printReceiptBitmap(context, graphicsLayer.toImageBitmap().asAndroidBitmap(), invoiceNo)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Gagal mencetak struk", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.Print, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Cetak")
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = { startBluetoothPrint() },
+            shape = RoundedCornerShape(32.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp)
+        ) {
+            Icon(Icons.Default.Bluetooth, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Cetak Struk Bluetooth")
+        }
+        // Printer yang tersimpan + opsi ganti (supaya bisa pindah printer).
+        savedPrinter?.let { sp ->
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Bluetooth, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "Printer: ${sp.name}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = {
+                    val paired = getPairedPrinters(context)
+                    if (paired.isEmpty()) {
+                        Toast.makeText(context, "Tidak ada printer Bluetooth yang terpasang.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        pairedPrinters = paired
+                        showPrinterPicker = true
+                    }
+                }) { Text("Ganti") }
+            }
+        }
+    }
+
+    if (showPrinterPicker) {
+        AlertDialog(
+            onDismissRequest = { showPrinterPicker = false },
+            title = { Text("Pilih Printer Bluetooth") },
+            text = {
+                Column {
+                    pairedPrinters.forEachIndexed { index, printer ->
+                        if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                savePrinter(context, printer)
+                                savedPrinter = printer
+                                showPrinterPicker = false
+                                doPrint(printer)
+                            }.padding(vertical = 10.dp)
+                        ) {
+                            Icon(Icons.Default.Print, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(printer.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(printer.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (savedPrinter?.address == printer.address) {
+                                Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Pasangkan printer dulu di Pengaturan Bluetooth HP kalau belum muncul di daftar.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             },
-            shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)
-        ) {
-            Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Bagikan")
-        }
-        OutlinedButton(
-            onClick = {
-                scope.launch {
-                    try {
-                        printReceiptBitmap(context, graphicsLayer.toImageBitmap().asAndroidBitmap(), invoiceNo)
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Gagal mencetak struk", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            },
-            shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)
-        ) {
-            Icon(Icons.Default.Print, null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Cetak")
-        }
+            confirmButton = {
+                TextButton(onClick = { showPrinterPicker = false }) { Text("Batal") }
+            }
+        )
     }
 }
 
@@ -2311,7 +2463,7 @@ fun RiwayatScreen() {
                             Spacer(Modifier.height(16.dp))
                             InvoiceDetailCard(sale = s, graphicsLayer = receiptLayer)
                             Spacer(Modifier.height(12.dp))
-                            ReceiptActionsRow(graphicsLayer = receiptLayer, invoiceNo = s.invoiceNo)
+                            ReceiptActionsRow(graphicsLayer = receiptLayer, invoiceNo = s.invoiceNo, sale = s)
                         }
                     }
                 }
