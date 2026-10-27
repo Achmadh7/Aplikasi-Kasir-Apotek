@@ -75,7 +75,7 @@ fun BarcodeScanner(onDetected: (String) -> Unit, onClose: () -> Unit) {
         onDismissRequest = onClose,
         title = { Text("Scan Barcode") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 if (hasPermission) {
                     Box(modifier = Modifier.fillMaxWidth().height(260.dp)) {
                         AndroidView(
