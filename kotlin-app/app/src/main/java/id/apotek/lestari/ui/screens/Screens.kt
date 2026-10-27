@@ -530,8 +530,7 @@ fun KasirScreen() {
                 leadingIcon = { Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp)) },
                 textStyle = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f).height(44.dp), singleLine = true,
-                shape = RoundedCornerShape(22.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp)
+                shape = RoundedCornerShape(22.dp)
             )
             OutlinedButton(
                 onClick = { showScanner = true },
@@ -905,8 +904,7 @@ fun StokScreen() {
                 leadingIcon = { Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp)) },
                 textStyle = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f).height(44.dp), singleLine = true,
-                shape = RoundedCornerShape(22.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp)
+                shape = RoundedCornerShape(22.dp)
             )
             OutlinedButton(
                 onClick = { showScanner = true },
