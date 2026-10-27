@@ -674,16 +674,24 @@ fun KasirScreen() {
                 Text("METODE BAYAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    listOf("Tunai", "QRIS", "Transfer").forEach { m ->
+                    listOf(
+                        "Tunai" to Icons.Default.Money,
+                        "QRIS" to Icons.Default.QrCode,
+                        "Transfer" to Icons.Default.AccountBalance
+                    ).forEach { (m, icon) ->
                         val selected = method == m
                         if (selected) {
-                            Button(onClick = { method = m }, colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White), shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
+                            Button(onClick = { method = m }, colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White), shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+                                Icon(icon, null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text(m)
+                                Text(m, maxLines = 1)
                             }
                         } else {
-                            OutlinedButton(onClick = { method = m }, shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f)) { Text(m) }
+                            OutlinedButton(onClick = { method = m }, shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+                                Icon(icon, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text(m, maxLines = 1)
+                            }
                         }
                     }
                 }
@@ -719,10 +727,15 @@ fun KasirScreen() {
                             .bringIntoViewRequester(amountBringIntoView)
                             .onFocusEvent { if (it.isFocused) scope.launch { amountBringIntoView.bringIntoView() } }
                     )
-                    AnimatedVisibility(visible = paid > 0) {
+                    AnimatedVisibility(visible = change > 0) {
                         Column {
-                            Spacer(Modifier.height(6.dp))
-                            Text("Kembalian: ${formatIDR(change)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(8.dp))
+                            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Kembalian", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                    Text(formatIDR(change), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
                         }
                     }
                 } else {
