@@ -1954,6 +1954,118 @@ private fun LabaStat(icon: ImageVector, label: String, value: String, valueColor
     }
 }
 
+// ---------- Obat Terlaris ----------
+
+@Composable
+fun ObatTerlarisScreen() {
+    var sellers by remember { mutableStateOf<List<BestSeller>?>(null) }
+    var period by remember { mutableStateOf("month") }
+    // Muat ulang setiap kali layar kembali tampil (ON_RESUME), supaya
+    // penjualan terbaru dari Kasir ikut terhitung.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeKey by remember { mutableStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(period, resumeKey) { (repo.getBestSellers(period) as? ApiResult.Success)?.let { sellers = it.data } }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                    Icon(Icons.Default.Leaderboard, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text("Obat Terlaris", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(24.dp))
+            DemoBanner()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                listOf("today" to "Hari Ini", "month" to "Bulan Ini", "last30" to "30 Hari", "all" to "Semua").forEach { (k, l) ->
+                    FilterChip(selected = period == k, onClick = { period = k }, label = { Text(l) })
+                }
+            }
+        }
+        sellers?.let { list ->
+            if (list.isEmpty()) {
+                item {
+                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Leaderboard, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
+                            Spacer(Modifier.height(8.dp))
+                            Text("Belum ada penjualan pada periode ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            } else {
+                val totalQty = list.sumOf { it.qty }
+                val totalRevenue = list.sumOf { it.revenue }
+                val maxQty = list.maxOf { it.qty }.coerceAtLeast(1)
+                item {
+                    Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text("ITEM TERJUAL", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(4.dp))
+                                Text("$totalQty item", color = OnLightBlue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            }
+                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                                Text("OMZET", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(4.dp))
+                                Text(formatIDR(totalRevenue), color = OnLightBlue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+                item {
+                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(20.dp)) {
+                            list.forEachIndexed { index, s ->
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                    Surface(
+                                        color = if (index == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                                        shape = CircleShape, modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                            Text(
+                                                "${index + 1}",
+                                                style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold,
+                                                color = if (index == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(s.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                        Spacer(Modifier.height(2.dp))
+                                        Text("${s.qty} item terjual", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Spacer(Modifier.height(6.dp))
+                                        Box(Modifier.fillMaxWidth().height(6.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(3.dp))) {
+                                            Box(Modifier.fillMaxWidth(s.qty.toFloat() / maxQty).height(6.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(3.dp)))
+                                        }
+                                    }
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(formatIDR(s.revenue), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                }
+                                if (index < list.lastIndex) {
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 12.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ---------- Pengingat ----------
 
 @Composable

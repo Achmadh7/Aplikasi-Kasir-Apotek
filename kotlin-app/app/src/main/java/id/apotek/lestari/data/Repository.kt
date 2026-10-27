@@ -452,6 +452,34 @@ class Repository {
         )
     }
 
+    // ---- Obat Terlaris (diurutkan jumlah terjual, terbanyak dulu) ----
+
+    suspend fun getBestSellers(period: String = "month"): ApiResult<List<BestSeller>> = call {
+        val db = DatabaseProvider.db
+        val salesRows = db.saleDao().getAll()
+        val items = db.saleDao().getAllItems()
+        val startToday = jakartaDayStartMillis(0)
+        val endToday = jakartaDayStartMillis(1)
+        val startMonth = jakartaMonthStartMillis()
+        val startLast30 = jakartaDayStartMillis(-29)
+        val start = when (period) {
+            "today" -> startToday
+            "month" -> startMonth
+            "last30" -> startLast30
+            else -> 0L // "all"
+        }
+        val end = if (period == "all") Long.MAX_VALUE else endToday
+        fun inPeriod(iso: String): Boolean {
+            val t = parseISODate(iso)?.time ?: return false
+            return t in start until end
+        }
+        val periodSaleIds = salesRows.filter { inPeriod(it.createdAt) }.map { it.id }.toSet()
+        items.filter { it.saleId in periodSaleIds }
+            .groupBy { it.medicineName }
+            .map { (name, list) -> BestSeller(name, list.sumOf { it.qty }, list.sumOf { it.subtotal }) }
+            .sortedByDescending { it.qty }
+    }
+
     suspend fun downloadProfitReport(period: String = "month"): ApiResult<DownloadResponse> =
         ApiResult.Error("Download laporan tidak tersedia di mode offline")
 

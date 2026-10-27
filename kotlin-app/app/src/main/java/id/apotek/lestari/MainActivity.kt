@@ -81,7 +81,7 @@ fun ApotekApp() {
                     ) {
                         TABS.forEachIndexed { index, tab ->
                             NavigationBarItem(
-                                selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup") else current == tab.route,
+                                selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris") else current == tab.route,
                                 onClick = { if (tab.route == "lainnya") showMoreSheet = true else nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
                                 icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
                                 label = { Text(tab.label) },
@@ -142,6 +142,7 @@ fun ApotekApp() {
                 composable("pengingat") { PengingatScreen(onGoStok = { nav.navigate("stok") }) }
                 composable("riwayat") { RiwayatScreen() }
                 composable("backup") { BackupScreen() }
+                composable("terlaris") { ObatTerlarisScreen() }
             }
         }
     }
@@ -156,6 +157,7 @@ fun ApotekApp() {
                 Text("Menu Lainnya", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
                 listOf(
                     Triple("laba", "Laba", Icons.Default.TrendingUp),
+                    Triple("terlaris", "Obat Terlaris", Icons.Default.Leaderboard),
                     Triple("pengingat", "Pengingat", Icons.Default.NotificationsActive),
                     Triple("riwayat", "Riwayat", Icons.Default.ReceiptLong),
                     Triple("backup", "Backup & Restore", Icons.Default.Backup)
