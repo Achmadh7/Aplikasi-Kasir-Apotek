@@ -39,10 +39,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
@@ -827,11 +827,9 @@ fun KasirScreen() {
                         Row(Modifier.fillMaxSize()) {
                             methods.forEach { (m, icon) ->
                                 val selected = method == m
-                                val contentColor by animateColorAsState(
-                                    targetValue = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
-                                    animationSpec = tween(250),
-                                    label = "methodColor"
-                                )
+                                // Warna ikon/teks langsung mengikuti pilihan (tanpa animasi
+                                // warna); pil biru yang meluncur sudah memberi transisinya.
+                                val contentColor = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
                                 Box(
                                     Modifier.weight(1f).fillMaxHeight().clickable { method = m },
                                     contentAlignment = Alignment.Center
