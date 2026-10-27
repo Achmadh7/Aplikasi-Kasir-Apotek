@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
@@ -19,6 +20,7 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
@@ -45,9 +47,9 @@ class MainActivity : ComponentActivity() {
 }
 
 data class TabDef(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+// Tab bar bawah (Kasir tidak di sini — jadi tombol FAB di tengah).
 val TABS = listOf(
     TabDef("beranda", "Beranda", Icons.Default.Home),
-    TabDef("kasir", "Kasir", Icons.Default.PointOfSale),
     TabDef("stok", "Stok", Icons.Default.Medication),
     TabDef("keuangan", "Keuangan", Icons.Default.AccountBalanceWallet),
     TabDef("lainnya", "Lainnya", Icons.Default.MoreHoriz)
@@ -64,20 +66,54 @@ fun ApotekApp() {
     val moreSheetState = rememberModalBottomSheetState()
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            ) {
-                TABS.forEach { tab ->
-                    NavigationBarItem(
-                        selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup") else current == tab.route,
-                        onClick = { if (tab.route == "lainnya") showMoreSheet = true else nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
-                        icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
-                        label = { Text(tab.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary
-                        )
+            // Bar bawah 96dp: NavigationBar 80dp di bawah + FAB Kasir 64dp di tengah
+            // yang naik 16dp di atas bar (tetap di dalam area bottomBar, tidak menutupi konten).
+            Box(modifier = Modifier.fillMaxWidth().height(96.dp)) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.fillMaxWidth().height(80.dp).align(Alignment.BottomCenter)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize().selectableGroup(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TABS.forEachIndexed { index, tab ->
+                            NavigationBarItem(
+                                selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup") else current == tab.route,
+                                onClick = { if (tab.route == "lainnya") showMoreSheet = true else nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
+                                icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
+                                label = { Text(tab.label) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                            // Celah selebar satu tab di tengah untuk tombol Kasir.
+                            if (index == 1) Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+                // Tombol Kasir: FAB biru besar di tengah + label "Kasir" di bawahnya.
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                ) {
+                    FloatingActionButton(
+                        onClick = { nav.navigate("kasir") { popUpTo("beranda"); launchSingleTop = true } },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = CircleShape,
+                        modifier = Modifier.size(64.dp)
+                    ) {
+                        Icon(Icons.Default.PointOfSale, contentDescription = "Kasir", modifier = Modifier.size(30.dp))
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Kasir",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (current == "kasir") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
