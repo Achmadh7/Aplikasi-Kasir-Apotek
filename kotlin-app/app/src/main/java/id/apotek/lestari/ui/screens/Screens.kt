@@ -103,6 +103,11 @@ private fun adaptiveColumns(compact: Int, medium: Int, expanded: Int): Int = whe
     else -> compact
 }
 
+/** Lebar maksimal bottom sheet: 560dp di HP, 640dp di tablet (lebar layar Expanded). */
+@Composable
+private fun adaptiveSheetMaxWidth() =
+    if (LocalWindowWidthClass.current == WindowWidthSizeClass.Expanded) 640.dp else 560.dp
+
 // ---------- Animasi Material 3 Expressive ----------
 
 /** Jeda kemunculan bertahap per item daftar (maks. 400ms). */
@@ -725,9 +730,9 @@ fun KasirScreen() {
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
             sheetState = sheetState,
-            // Lebar sheet dibatasi 560dp (default M3 640dp) supaya di lanskap/tablet
-            // tidak terlalu lebar; di potret tidak berpengaruh (lebar HP < 560dp).
-            sheetMaxWidth = 560.dp,
+            // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): 560dp di HP,
+            // 640dp di tablet; di potret tidak berpengaruh (lebar HP < 560dp).
+            sheetMaxWidth = adaptiveSheetMaxWidth(),
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         ) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding()) {
@@ -1290,9 +1295,8 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        // Lebar sheet dibatasi 560dp seperti sheet Kasir dan Kas Masuk/Keluar
-        // (default M3 640dp), supaya di lanskap/tablet tidak terlalu lebar.
-        sheetMaxWidth = 560.dp,
+        // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): 560dp di HP, 640dp di tablet.
+        sheetMaxWidth = adaptiveSheetMaxWidth(),
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1538,9 +1542,8 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        // Lebar sheet dibatasi 560dp seperti sheet Kasir (default M3 640dp),
-        // supaya di lanskap/tablet tidak terlalu lebar.
-        sheetMaxWidth = 560.dp,
+        // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): 560dp di HP, 640dp di tablet.
+        sheetMaxWidth = adaptiveSheetMaxWidth(),
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
