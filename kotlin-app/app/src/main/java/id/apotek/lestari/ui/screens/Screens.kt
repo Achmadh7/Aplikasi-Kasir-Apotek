@@ -1375,6 +1375,7 @@ private fun CashEntryFormDialog(initialType: String = "in", onDismiss: () -> Uni
 fun LabaScreen() {
     var report by remember { mutableStateOf<ProfitReport?>(null) }
     var period by remember { mutableStateOf("month") }
+    var infoExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(period) { (repo.getProfitReport(period) as? ApiResult.Success)?.let { report = it.data } }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -1394,8 +1395,8 @@ fun LabaScreen() {
         }
         report?.let { r ->
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(32.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
-                    Column(Modifier.padding(24.dp)) {
+                Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("LABA KOTOR", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Surface(color = Color.White.copy(alpha = 0.25f), shape = RoundedCornerShape(16.dp)) {
@@ -1406,10 +1407,10 @@ fun LabaScreen() {
                                 )
                             }
                         }
-                        Spacer(Modifier.height(16.dp))
-                        AnimatedAmount(r.grossProfit, MaterialTheme.typography.displayMedium, OnLightBlue)
-                        Spacer(Modifier.height(6.dp))
-                        Text("${r.transactionCount} transaksi • ${r.itemsSold} item terjual", color = OnLightBlue, style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(8.dp))
+                        AnimatedAmount(r.grossProfit, MaterialTheme.typography.headlineLarge, OnLightBlue)
+                        Spacer(Modifier.height(4.dp))
+                        Text("${r.transactionCount} transaksi • ${r.itemsSold} item terjual", color = OnLightBlue, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -1438,13 +1439,28 @@ fun LabaScreen() {
             }
             item {
                 ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(20.dp), verticalAlignment = Alignment.Top) {
-                        Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            "Laba kotor = penjualan − modal obat terjual (harga beli saat transaksi). Estimasi laba bersih = laba kotor − biaya operasional dari Keuangan. Kas keluar \"Beli Stok\" (${formatIDR(r.stockPurchaseExpense)}) tidak dikurangkan lagi karena modalnya sudah dihitung lewat HPP.",
-                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Column(Modifier.padding(20.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clickable { infoExpanded = !infoExpanded }
+                        ) {
+                            Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text("Cara hitung laba", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            Icon(
+                                if (infoExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                null, tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        AnimatedVisibility(visible = infoExpanded) {
+                            Column {
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    "Laba kotor = penjualan − modal obat terjual (harga beli saat transaksi). Estimasi laba bersih = laba kotor − biaya operasional dari Keuangan. Kas keluar \"Beli Stok\" (${formatIDR(r.stockPurchaseExpense)}) tidak dikurangkan lagi karena modalnya sudah dihitung lewat HPP.",
+                                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }
