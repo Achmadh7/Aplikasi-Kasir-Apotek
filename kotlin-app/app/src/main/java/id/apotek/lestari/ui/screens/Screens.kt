@@ -853,51 +853,55 @@ fun KasirScreen() {
                     label = "methodContent"
                 ) { targetMethod ->
                     if (targetMethod == "Tunai") {
-                        Spacer(Modifier.height(16.dp))
-                        Text("UANG DITERIMA", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            listOf(20000 to "Rp20.000", 50000 to "Rp50.000", 100000 to "Rp100.000").forEach { (nominal, label) ->
-                                OutlinedButton(
-                                    onClick = { uangDiterima += nominal },
+                        Column {
+                            Spacer(Modifier.height(16.dp))
+                            Text("UANG DITERIMA", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(6.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                listOf(20000 to "Rp20.000", 50000 to "Rp50.000", 100000 to "Rp100.000").forEach { (nominal, label) ->
+                                    OutlinedButton(
+                                        onClick = { uangDiterima += nominal },
+                                        shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                                    ) { Text(label, maxLines = 1) }
+                                }
+                                Button(
+                                    onClick = { uangDiterima = total },
+                                    colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
                                     shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f),
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                                ) { Text(label, maxLines = 1) }
+                                ) { Text("Uang Pas", maxLines = 1) }
                             }
-                            Button(
-                                onClick = { uangDiterima = total },
-                                colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
-                                shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                            ) { Text("Uang Pas", maxLines = 1) }
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Text("Ketuk nominal untuk menambah, atau Uang Pas untuk jumlah persis.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(6.dp))
-                        OutlinedTextField(
-                            value = if (uangDiterima == 0) "" else formatDecimal(uangDiterima.toString()),
-                            onValueChange = { uangDiterima = it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 },
-                            label = { Text("cth: 50.000") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                                .bringIntoViewRequester(amountBringIntoView)
-                                .onFocusEvent { if (it.isFocused) scope.launch { amountBringIntoView.bringIntoView() } }
-                        )
-                        AnimatedVisibility(visible = change > 0) {
-                            Column {
-                                Spacer(Modifier.height(8.dp))
-                                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Kembalian", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                        Text(formatIDR(change), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(6.dp))
+                            Text("Ketuk nominal untuk menambah, atau Uang Pas untuk jumlah persis.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(6.dp))
+                            OutlinedTextField(
+                                value = if (uangDiterima == 0) "" else formatDecimal(uangDiterima.toString()),
+                                onValueChange = { uangDiterima = it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 },
+                                label = { Text("cth: 50.000") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                                    .bringIntoViewRequester(amountBringIntoView)
+                                    .onFocusEvent { if (it.isFocused) scope.launch { amountBringIntoView.bringIntoView() } }
+                            )
+                            AnimatedVisibility(visible = change > 0) {
+                                Column {
+                                    Spacer(Modifier.height(8.dp))
+                                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                            Text("Kembalian", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                            Text(formatIDR(change), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                        }
                                     }
                                 }
                             }
                         }
                     } else {
-                        Spacer(Modifier.height(8.dp))
-                        Text("Dibayar penuh via $method sebesar ${formatIDR(total)}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Column {
+                            Spacer(Modifier.height(8.dp))
+                            Text("Dibayar penuh via $targetMethod sebesar ${formatIDR(total)}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
                 Spacer(Modifier.height(16.dp))
