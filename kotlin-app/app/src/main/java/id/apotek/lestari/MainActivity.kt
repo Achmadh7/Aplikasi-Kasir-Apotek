@@ -66,12 +66,16 @@ fun ApotekApp() {
     val moreSheetState = rememberModalBottomSheetState()
     Scaffold(
         bottomBar = {
-            // Bar bawah 96dp: NavigationBar 80dp di bawah + FAB Kasir 64dp di tengah
-            // yang naik 16dp di atas bar (tetap di dalam area bottomBar, tidak menutupi konten).
+            // Bar bawah mengambang berbentuk pil: Surface 72dp dengan margin 16dp di
+            // kiri/kanan dan 12dp di bawah (lepas dari tepi layar), sudut membulat penuh,
+            // bayangan lembut, dan lebar maksimal 840dp di tablet. FAB Kasir 64dp di tengah
+            // naik 12dp di atas pil (tetap di dalam area bottomBar 96dp, tidak menutupi konten).
             Box(modifier = Modifier.fillMaxWidth().height(96.dp)) {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainer,
-                    modifier = Modifier.fillMaxWidth().height(80.dp).align(Alignment.BottomCenter)
+                    shape = RoundedCornerShape(50),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, bottom = 12.dp).fillMaxWidth().widthIn(max = 840.dp).height(72.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxSize().selectableGroup(),
