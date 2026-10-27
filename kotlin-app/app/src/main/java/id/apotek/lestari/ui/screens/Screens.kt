@@ -754,19 +754,25 @@ fun KasirScreen() {
                 }
                 if (cart.isNotEmpty()) {
                     cart.forEachIndexed { index, ci ->
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Column(Modifier.weight(1f)) {
-                                Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        // Nama obat di baris atas (lebar penuh) supaya tampil lengkap;
+                        // harga satuan + stepper di baris bawah.
+                        Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                Text(formatIDR(ci.medicine.sellPrice * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.width(92.dp), textAlign = TextAlign.End)
+                            }
+                            Spacer(Modifier.height(2.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(formatIDR(ci.medicine.sellPrice), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.weight(1f))
+                                StepperButton(Icons.Default.Remove, "Kurangi") { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
+                                key(ci.qty) {
+                                    val qtyPop = remember { Animatable(1.35f) }
+                                    LaunchedEffect(ci.qty) { qtyPop.animateTo(1f, expressiveSpring()) }
+                                    Text("${ci.qty}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(24.dp).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value), textAlign = TextAlign.Center)
+                                }
+                                StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
                             }
-                            StepperButton(Icons.Default.Remove, "Kurangi") { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
-                            key(ci.qty) {
-                                val qtyPop = remember { Animatable(1.35f) }
-                                LaunchedEffect(ci.qty) { qtyPop.animateTo(1f, expressiveSpring()) }
-                                Text("${ci.qty}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(24.dp).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value), textAlign = TextAlign.Center)
-                            }
-                            StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
-                            Text(formatIDR(ci.medicine.sellPrice * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.width(92.dp), textAlign = TextAlign.End)
                         }
                         if (index < cart.lastIndex) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
