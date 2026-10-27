@@ -890,6 +890,8 @@ fun StokScreen() {
     var editing by remember { mutableStateOf<Medicine?>(null) }
     var prefillBarcode by remember { mutableStateOf("") }
     var msg by remember { mutableStateOf("") }
+    var deleteTarget by remember { mutableStateOf<Medicine?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
     var listEntered by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -973,6 +975,7 @@ fun StokScreen() {
             if (med == null) { prefillBarcode = code; editing = null; showForm = true }
         }
     }, onClose = { showScanner = false })
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -1126,7 +1129,7 @@ fun StokScreen() {
                             Text(m.unit, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         IconButton(onClick = { prefillBarcode = ""; editing = m; showForm = true }) { Icon(Icons.Default.Edit, "Edit obat") }
-                        IconButton(onClick = { scope.launch { repo.deleteMedicine(m.id); msg = "Obat ${m.name} dihapus."; reload() } }) {
+                        IconButton(onClick = { deleteTarget = m }) {
                             Icon(Icons.Default.Delete, "Hapus obat", tint = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -1135,6 +1138,8 @@ fun StokScreen() {
             }
         }
     }
+        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
+    }
     if (showForm) MedicineFormDialog(editing = editing, initialBarcode = prefillBarcode, onDismiss = { showForm = false; prefillBarcode = "" }, onSaved = { showForm = false; prefillBarcode = ""; reload() })
     if (showImportDialog && importSummary != null) {
         AlertDialog(
@@ -1142,6 +1147,42 @@ fun StokScreen() {
             title = { Text("Import Excel Selesai") },
             text = { Text(importSummary!!) },
             confirmButton = { TextButton(onClick = { showImportDialog = false }) { Text("OK") } }
+        )
+    }
+    if (deleteTarget != null) {
+        val target = deleteTarget!!
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("Hapus Obat?") },
+            text = { Text("Hapus ${target.name} dari stok?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        deleteTarget = null
+                        scope.launch {
+                            repo.deleteMedicine(target.id)
+                            reload()
+                            val result = snackbarHostState.showSnackbar(
+                                message = "Obat ${target.name} dihapus.",
+                                actionLabel = "Urungkan",
+                                duration = SnackbarDuration.Long
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                repo.createMedicine(
+                                    MedicineArgs(
+                                        target.name, target.category, target.unit,
+                                        target.buyPrice, target.sellPrice, target.stock,
+                                        target.minStock, target.expiryDate, target.barcode
+                                    )
+                                )
+                                reload()
+                                msg = "Obat ${target.name} dikembalikan."
+                            }
+                        }
+                    }
+                ) { Text("Hapus", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Batal") } }
         )
     }
 }
