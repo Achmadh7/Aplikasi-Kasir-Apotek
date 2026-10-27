@@ -756,7 +756,7 @@ fun KasirScreen() {
                     cart.forEachIndexed { index, ci ->
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                             Column(Modifier.weight(1f)) {
-                                Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(formatIDR(ci.medicine.sellPrice), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             StepperButton(Icons.Default.Remove, "Kurangi") { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
