@@ -493,11 +493,17 @@ fun KasirScreen() {
             val r = repo.findByBarcode(code)
             val med = (r as? ApiResult.Success)?.data?.medicine
             if (med != null) {
-                lastSale = null
-                payMsg = ""
                 val ex = cart.firstOrNull { it.medicine.id == med.id }
-                if (ex != null) ex.qty++ else cart.add(CartItem(med, 1))
-                scanMsg = "${med.name} ditambahkan"
+                if (med.stock <= 0) {
+                    scanMsg = "${med.name} stok habis"
+                } else if (ex != null && ex.qty >= med.stock) {
+                    scanMsg = "Stok ${med.name} hanya ${med.stock} — tidak bisa ditambah lagi"
+                } else {
+                    lastSale = null
+                    payMsg = ""
+                    if (ex != null) ex.qty++ else cart.add(CartItem(med, 1))
+                    scanMsg = "${med.name} ditambahkan"
+                }
             } else scanMsg = "Barcode $code tidak ditemukan"
         }
     }, onClose = { showScanner = false })
@@ -549,10 +555,14 @@ fun KasirScreen() {
                         ExpressiveCard(
                             shape = RoundedCornerShape(28.dp),
                             modifier = Modifier.weight(1f).clickable(enabled = !out) {
-                                lastSale = null
-                                payMsg = ""
                                 val ex = cart.firstOrNull { it.medicine.id == m.id }
-                                if (ex != null) ex.qty++ else cart.add(CartItem(m, 1))
+                                if (ex != null && ex.qty >= m.stock) {
+                                    scanMsg = "Stok ${m.name} hanya ${m.stock} — tidak bisa ditambah lagi"
+                                } else {
+                                    lastSale = null
+                                    payMsg = ""
+                                    if (ex != null) ex.qty++ else cart.add(CartItem(m, 1))
+                                }
                             }
                         ) {
                             Column(Modifier.padding(12.dp)) {
