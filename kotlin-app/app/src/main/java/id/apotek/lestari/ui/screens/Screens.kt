@@ -993,167 +993,176 @@ fun StokScreen() {
         }
     }, onClose = { showScanner = false })
     Box(Modifier.fillMaxSize()) {
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Stok Obat", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-                Text("${medicines.size} jenis obat tercatat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Button(
-                onClick = { prefillBarcode = ""; editing = null; showForm = true },
-                colors = ButtonDefaults.buttonColors(containerColor = LightBlueCard, contentColor = OnLightBlue),
-                shape = RoundedCornerShape(32.dp)
-            ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("Tambah Obat") }
-        }
-        Spacer(Modifier.height(16.dp))
-        DemoBanner()
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            SearchField(
-                value = search, onValueChange = { search = it; reload() },
-                modifier = Modifier.weight(1f)
-            )
-            OutlinedButton(
-                onClick = { showScanner = true },
-                shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.height(44.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp)
-            ) {
-                Icon(Icons.Default.QrCodeScanner, "Scan barcode stok")
-                Spacer(Modifier.width(8.dp))
-                Text("Scan")
-            }
-        }
-        if (msg.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
-            Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-        }
-        Spacer(Modifier.height(16.dp))
-        // Kartu Import / Export / Template Excel — isi banyak obat sekaligus.
-        ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
-                        Icon(Icons.Default.TableChart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(20.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Import / Export Excel", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("Isi banyak obat sekaligus lewat file .xlsx", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+    // Satu LazyColumn untuk seluruh layar (header + daftar) supaya layar bisa
+    // digulir penuh saat lanskap — header tetap + LazyColumn weight(1f) membuat
+    // daftar 0dp dan layar tidak bisa digulir kalau header lebih tinggi dari layar.
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(vertical = 16.dp)
+    ) {
+        item {
+            Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Stok Obat", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+                    Text("${medicines.size} jenis obat tercatat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
-                        onClick = { templateLauncher.launch("Template-Import-Stok-Obat.xlsx") },
-                        modifier = Modifier.weight(1f), shape = RoundedCornerShape(20.dp)
-                    ) {
-                        Icon(Icons.Default.Description, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Template", maxLines = 1)
-                    }
-                    Button(
-                        onClick = { importLauncher.launch(arrayOf(ExcelHelper.MIME_XLSX)) },
-                        modifier = Modifier.weight(1f), shape = RoundedCornerShape(20.dp)
-                    ) {
-                        Icon(Icons.Default.Upload, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Import", maxLines = 1)
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            val stamp = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).format(Date())
-                            exportLauncher.launch("Stok-Obat-$stamp.xlsx")
-                        },
-                        modifier = Modifier.weight(1f), shape = RoundedCornerShape(20.dp)
-                    ) {
-                        Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Export", maxLines = 1)
-                    }
-                }
+                Button(
+                    onClick = { prefillBarcode = ""; editing = null; showForm = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = LightBlueCard, contentColor = OnLightBlue),
+                    shape = RoundedCornerShape(32.dp)
+                ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("Tambah Obat") }
             }
-        }
-        Spacer(Modifier.height(16.dp))
-        // Ringkasan stok: total jenis, menipis (Rendah), habis.
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text("${medicines.size}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-            Text(" jenis obat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("  •  ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("$countRendah", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
-            Text(" menipis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("  •  ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("$countHabis", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-            Text(" habis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.weight(1f))
-            SortToggle(sortAz = sortAz, onToggle = { sortAz = !sortAz })
-        }
-        Spacer(Modifier.height(8.dp))
-        // Filter status stok (menggantikan legenda; jumlah per status terlihat di chip).
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-            listOf(
-                "all" to "Semua (${medicines.size})",
-                "aman" to "Aman ($countAman)",
-                "sedang" to "Sedang ($countSedang)",
-                "rendah" to "Rendah ($countRendah)",
-                "habis" to "Habis ($countHabis)"
-            ).forEach { (k, l) ->
-                FilterChip(selected = statusFilter == k, onClick = { statusFilter = k }, label = { Text(l) })
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (sorted.isEmpty()) {
-                item {
-                    Text(
-                        when {
-                            medicines.isEmpty() -> "Belum ada obat. Ketuk \"Tambah Obat\" atau Import Excel untuk mengisi stok."
-                            statusFilter == "habis" -> "Tidak ada obat yang habis."
-                            statusFilter == "rendah" -> "Tidak ada obat yang stoknya rendah."
-                            statusFilter == "sedang" -> "Tidak ada obat yang stoknya sedang."
-                            statusFilter == "aman" -> "Tidak ada obat yang stoknya aman."
-                            else -> "Tidak ada obat yang cocok."
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp)
-                    )
-                }
-            }
-            itemsIndexed(sorted) { index, m ->
-                AnimatedVisibility(
-                    visible = listEntered,
-                    enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
-                        expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
-                    exit = fadeOut()
+            Spacer(Modifier.height(16.dp))
+            DemoBanner()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                SearchField(
+                    value = search, onValueChange = { search = it; reload() },
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedButton(
+                    onClick = { showScanner = true },
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.height(44.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp)
                 ) {
-                ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.QrCodeScanner, "Scan barcode stok")
+                    Spacer(Modifier.width(8.dp))
+                    Text("Scan")
+                }
+            }
+            if (msg.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(Modifier.height(16.dp))
+            // Kartu Import / Export / Template Excel — isi banyak obat sekaligus.
+            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                            Icon(Icons.Default.TableChart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(20.dp))
+                        }
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.width(8.dp))
-                                StockBadge(m.stock, showCount = false)
-                            }
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                "${m.category} • ${m.unit} • Jual ${formatIDR(m.sellPrice)} • Beli ${formatIDR(m.buyPrice)}" +
-                                    if (m.expiryDate != null) " • Exp ${formatDateID(m.expiryDate)}" else "",
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text("Import / Export Excel", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Isi banyak obat sekaligus lewat file .xlsx", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("${m.stock}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = if (m.stock <= 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-                            Text(m.unit, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { templateLauncher.launch("Template-Import-Stok-Obat.xlsx") },
+                            modifier = Modifier.weight(1f), shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Icon(Icons.Default.Description, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Template", maxLines = 1)
                         }
-                        IconButton(onClick = { prefillBarcode = ""; editing = m; showForm = true }) { Icon(Icons.Default.Edit, "Edit obat") }
-                        IconButton(onClick = { deleteTarget = m }) {
-                            Icon(Icons.Default.Delete, "Hapus obat", tint = MaterialTheme.colorScheme.error)
+                        Button(
+                            onClick = { importLauncher.launch(arrayOf(ExcelHelper.MIME_XLSX)) },
+                            modifier = Modifier.weight(1f), shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Icon(Icons.Default.Upload, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Import", maxLines = 1)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                val stamp = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).format(Date())
+                                exportLauncher.launch("Stok-Obat-$stamp.xlsx")
+                            },
+                            modifier = Modifier.weight(1f), shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Export", maxLines = 1)
                         }
                     }
                 }
+            }
+            Spacer(Modifier.height(16.dp))
+            // Ringkasan stok: total jenis, menipis (Rendah), habis.
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text("${medicines.size}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text(" jenis obat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("  •  ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("$countRendah", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
+                Text(" menipis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("  •  ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("$countHabis", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                Text(" habis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.weight(1f))
+                SortToggle(sortAz = sortAz, onToggle = { sortAz = !sortAz })
+            }
+            Spacer(Modifier.height(8.dp))
+            // Filter status stok (menggantikan legenda; jumlah per status terlihat di chip).
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                listOf(
+                    "all" to "Semua (${medicines.size})",
+                    "aman" to "Aman ($countAman)",
+                    "sedang" to "Sedang ($countSedang)",
+                    "rendah" to "Rendah ($countRendah)",
+                    "habis" to "Habis ($countHabis)"
+                ).forEach { (k, l) ->
+                    FilterChip(selected = statusFilter == k, onClick = { statusFilter = k }, label = { Text(l) })
                 }
+            }
+            Spacer(Modifier.height(4.dp))
+            }
+        }
+        if (sorted.isEmpty()) {
+            item {
+                Text(
+                    when {
+                        medicines.isEmpty() -> "Belum ada obat. Ketuk \"Tambah Obat\" atau Import Excel untuk mengisi stok."
+                        statusFilter == "habis" -> "Tidak ada obat yang habis."
+                        statusFilter == "rendah" -> "Tidak ada obat yang stoknya rendah."
+                        statusFilter == "sedang" -> "Tidak ada obat yang stoknya sedang."
+                        statusFilter == "aman" -> "Tidak ada obat yang stoknya aman."
+                        else -> "Tidak ada obat yang cocok."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp)
+                )
+            }
+        }
+        itemsIndexed(sorted) { index, m ->
+            AnimatedVisibility(
+                visible = listEntered,
+                enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
+                    slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
+                    expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                exit = fadeOut()
+            ) {
+            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.width(8.dp))
+                            StockBadge(m.stock, showCount = false)
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "${m.category} • ${m.unit} • Jual ${formatIDR(m.sellPrice)} • Beli ${formatIDR(m.buyPrice)}" +
+                                if (m.expiryDate != null) " • Exp ${formatDateID(m.expiryDate)}" else "",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("${m.stock}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = if (m.stock <= 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                        Text(m.unit, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    IconButton(onClick = { prefillBarcode = ""; editing = m; showForm = true }) { Icon(Icons.Default.Edit, "Edit obat") }
+                    IconButton(onClick = { deleteTarget = m }) {
+                        Icon(Icons.Default.Delete, "Hapus obat", tint = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
             }
         }
     }
@@ -1398,105 +1407,113 @@ fun KeuanganScreen() {
     val masuk = periodEntries.filter { it.type == "in" }.sumOf { it.amount }
     val keluar = periodEntries.filter { it.type == "out" }.sumOf { it.amount }
     val shown = periodEntries.filter { typeFilter == "all" || it.type == typeFilter }
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Keuangan", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-        Text("Kas masuk & keluar tercatat rinci, termasuk penjualan otomatis dari Kasir.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(16.dp))
-        DemoBanner()
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("today" to "Hari Ini", "month" to "Bulan Ini", "all" to "Semua").forEach { (k, l) ->
-                FilterChip(selected = period == k, onClick = { period = k }, label = { Text(l) })
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
-                // Saldo Kas — angka besar (hero); merah kalau saldonya negatif.
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
-                        Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Text("SALDO KAS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    formatIDR(masuk - keluar),
-                    style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
-                    color = if (masuk - keluar < 0) KasKeluarRed else MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.height(12.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Spacer(Modifier.height(12.dp))
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.SouthWest, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("MASUK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Text(formatIDR(masuk), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    }
-                    Box(Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outlineVariant))
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.NorthEast, null, tint = KasKeluarRed, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("KELUAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Text(formatIDR(keluar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KasKeluarRed)
-                    }
+    // Satu LazyColumn untuk seluruh layar (header + daftar) supaya layar bisa
+    // digulir penuh saat lanskap — header tetap + LazyColumn weight(1f) membuat
+    // daftar 0dp dan layar tidak bisa digulir kalau header lebih tinggi dari layar.
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(vertical = 16.dp)
+    ) {
+        item {
+            Column {
+            Text("Keuangan", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+            Text("Kas masuk & keluar tercatat rinci, termasuk penjualan otomatis dari Kasir.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(16.dp))
+            DemoBanner()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("today" to "Hari Ini", "month" to "Bulan Ini", "all" to "Semua").forEach { (k, l) ->
+                    FilterChip(selected = period == k, onClick = { period = k }, label = { Text(l) })
                 }
             }
-        }
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(
-                onClick = { formType = "in"; showForm = true },
-                colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
-                shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.weight(1f).height(52.dp)
-            ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Kas Masuk", style = MaterialTheme.typography.titleMedium) }
-            Button(
-                onClick = { formType = "out"; showForm = true },
-                colors = ButtonDefaults.buttonColors(containerColor = KasKeluarRed, contentColor = Color.White),
-                shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.weight(1f).height(52.dp)
-            ) { Icon(Icons.Default.Remove, null); Spacer(Modifier.width(8.dp)); Text("Kas Keluar", style = MaterialTheme.typography.titleMedium) }
-        }
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("all" to "Semua", "in" to "Masuk", "out" to "Keluar").forEach { (k, l) ->
-                FilterChip(selected = typeFilter == k, onClick = { typeFilter = k }, label = { Text(l) })
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(shown) { e ->
-                val isIn = e.type == "in"
-                ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(color = if (isIn) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = CircleShape) {
-                            Icon(
-                                if (isIn) Icons.Default.SouthWest else Icons.Default.NorthEast, null,
-                                tint = if (isIn) MaterialTheme.colorScheme.primary else KasKeluarRed,
-                                modifier = Modifier.padding(10.dp).size(20.dp)
-                            )
+            Spacer(Modifier.height(16.dp))
+            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    // Saldo Kas — angka besar (hero); merah kalau saldonya negatif.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                            Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
                         }
-                        Spacer(Modifier.width(12.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text("SALDO KAS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        formatIDR(masuk - keluar),
+                        style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
+                        color = if (masuk - keluar < 0) KasKeluarRed else MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(Modifier.height(12.dp))
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(e.description, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(
-                                "${e.category} • ${formatDateTimeID(e.createdAt)} • ${if (e.source == "sale") "Otomatis" else "Manual"}",
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.SouthWest, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("MASUK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text(formatIDR(masuk), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
-                        Text(
-                            (if (isIn) "+ " else "- ") + formatIDR(e.amount),
-                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
-                            color = if (isIn) MaterialTheme.colorScheme.primary else KasKeluarRed
+                        Box(Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.NorthEast, null, tint = KasKeluarRed, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("KELUAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text(formatIDR(keluar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KasKeluarRed)
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = { formType = "in"; showForm = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.weight(1f).height(52.dp)
+                ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Kas Masuk", style = MaterialTheme.typography.titleMedium) }
+                Button(
+                    onClick = { formType = "out"; showForm = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = KasKeluarRed, contentColor = Color.White),
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.weight(1f).height(52.dp)
+                ) { Icon(Icons.Default.Remove, null); Spacer(Modifier.width(8.dp)); Text("Kas Keluar", style = MaterialTheme.typography.titleMedium) }
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("all" to "Semua", "in" to "Masuk", "out" to "Keluar").forEach { (k, l) ->
+                    FilterChip(selected = typeFilter == k, onClick = { typeFilter = k }, label = { Text(l) })
+                }
+            }
+            }
+        }
+        items(shown) { e ->
+            val isIn = e.type == "in"
+            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = if (isIn) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = CircleShape) {
+                        Icon(
+                            if (isIn) Icons.Default.SouthWest else Icons.Default.NorthEast, null,
+                            tint = if (isIn) MaterialTheme.colorScheme.primary else KasKeluarRed,
+                            modifier = Modifier.padding(10.dp).size(20.dp)
                         )
                     }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(e.description, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            "${e.category} • ${formatDateTimeID(e.createdAt)} • ${if (e.source == "sale") "Otomatis" else "Manual"}",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        (if (isIn) "+ " else "- ") + formatIDR(e.amount),
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                        color = if (isIn) MaterialTheme.colorScheme.primary else KasKeluarRed
+                    )
                 }
             }
         }
