@@ -1972,22 +1972,44 @@ fun KeuanganScreen() {
     val saldoIn = cashBalance?.totalIn ?: masuk
     val saldoOut = cashBalance?.totalOut ?: keluar
     val saldo = cashBalance?.balance ?: (masuk - keluar)
-    // Arus kas 7 hari terakhir (grafik) — selalu 7 hari, tidak mengikuti filter periode.
+    // Arus kas mengikuti periode yang dipilih (dulu selalu 7 hari).
     val jakartaTz = TimeZone.getTimeZone("Asia/Jakarta")
     val cal = Calendar.getInstance(jakartaTz).apply {
         time = Date()
         set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
     }
-    val last7 = (6 downTo 0).map { back ->
+    val todayStartMillis = cal.timeInMillis
+    val dayCount = when (period) {
+        "today" -> 1
+        "month" -> cal.get(Calendar.DAY_OF_MONTH)
+        else -> {
+            // "all": dari hari entri pertama sampai hari ini (maks 365 hari).
+            val firstDay = entries.mapNotNull { parseISODate(it.createdAt) }.minOfOrNull { it.time }
+                ?.let { t ->
+                    Calendar.getInstance(jakartaTz).apply {
+                        time = Date(t)
+                        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+                } ?: todayStartMillis
+            (((todayStartMillis - firstDay) / (24L * 60 * 60 * 1000)).toInt() + 1).coerceIn(1, 365)
+        }
+    }
+    val dailyFlow = (dayCount - 1 downTo 0).map { back ->
         val c = (cal.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -back) }
         val key = dayKeyID(c.time)
-        val label = SimpleDateFormat("EEE", Locale("id", "ID")).apply { timeZone = jakartaTz }.format(c.time)
+        // Label: nama hari ("Sen") bila grafik pendek (<= 7 batang, tiap hari
+        // muncul sekali); tanggal ("27 Okt") bila grafik panjang supaya tidak ambigu.
+        val label = if (dayCount <= 7) {
+            SimpleDateFormat("EEE", Locale("id", "ID")).apply { timeZone = jakartaTz }.format(c.time)
+        } else {
+            SimpleDateFormat("d MMM", Locale("id", "ID")).apply { timeZone = jakartaTz }.format(c.time)
+        }
         val dayEntries = entries.filter { e -> parseISODate(e.createdAt)?.let { dayKeyID(it) == key } == true }
         Triple(label, dayEntries.filter { it.type == "in" }.sumOf { it.amount }, dayEntries.filter { it.type == "out" }.sumOf { it.amount })
     }
-    val weekIn = last7.sumOf { it.second }
-    val weekOut = last7.sumOf { it.third }
-    val maxFlow = last7.maxOfOrNull { maxOf(it.second, it.third) }?.coerceAtLeast(1) ?: 1
+    val periodIn = dailyFlow.sumOf { it.second }
+    val periodOut = dailyFlow.sumOf { it.third }
+    val maxFlow = dailyFlow.maxOfOrNull { maxOf(it.second, it.third) }?.coerceAtLeast(1) ?: 1
     // Satu LazyColumn untuk seluruh layar (header + daftar) supaya layar bisa
     // digulir penuh saat lanskap — header tetap + LazyColumn weight(1f) membuat
     // daftar 0dp dan layar tidak bisa digulir kalau header lebih tinggi dari layar.
@@ -2066,10 +2088,15 @@ fun KeuanganScreen() {
                 }
             }
             Spacer(Modifier.height(16.dp))
-            // Grafik arus kas 7 hari terakhir — batang Masuk (biru) & Keluar (burgundy) per hari.
+            // Grafik arus kas — judul + isi mengikuti periode yang dipilih.
             ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(20.dp)) {
-                    Text("Arus Kas 7 Hari Terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    val chartTitle = when (period) {
+                        "today" -> "Arus Kas Hari Ini"
+                        "month" -> "Arus Kas Bulan Ini"
+                        else -> "Arus Kas Semua"
+                    }
+                    Text(chartTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(8.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
@@ -2081,23 +2108,50 @@ fun KeuanganScreen() {
                         Text("Keluar", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.weight(1f))
                         Text(
-                            "Masuk Rp ${formatCompactIDR(weekIn)} • Keluar Rp ${formatCompactIDR(weekOut)}",
+                            "Masuk Rp ${formatCompactIDR(periodIn)} • Keluar Rp ${formatCompactIDR(periodOut)}",
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
                     }
                     Spacer(Modifier.height(16.dp))
-                    if (weekIn + weekOut == 0) {
-                        Text("Belum ada arus kas 7 hari terakhir.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (periodIn + periodOut == 0) {
+                        Text(
+                            when (period) {
+                                "today" -> "Belum ada arus kas hari ini."
+                                "month" -> "Belum ada arus kas bulan ini."
+                                else -> "Belum ada arus kas."
+                            },
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     } else {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
-                            last7.forEachIndexed { barIndex, (label, dayIn, dayOut) ->
-                                val isToday = barIndex == last7.lastIndex
-                                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                        // <= 7 batang memenuhi lebar kartu; lebih dari itu bisa
+                        // digulir horizontal (kolom tetap 44dp) dan otomatis
+                        // terbuka di ujung terbaru (kanan).
+                        val scrollable = dailyFlow.size > 7
+                        val chartScroll = rememberScrollState()
+                        if (scrollable) {
+                            LaunchedEffect(period, dailyFlow.size) {
+                                withFrameNanos { }
+                                chartScroll.scrollTo(chartScroll.maxValue)
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().then(if (scrollable) Modifier.horizontalScroll(chartScroll) else Modifier),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            dailyFlow.forEachIndexed { barIndex, (label, dayIn, dayOut) ->
+                                val isToday = barIndex == dailyFlow.lastIndex
+                                Column(
+                                    modifier = if (scrollable) Modifier.width(44.dp) else Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
-                                        key(weekIn, weekOut) {
+                                        key(period, periodIn, periodOut) {
                                             val grow = remember { Animatable(0f) }
-                                            LaunchedEffect(weekIn, weekOut) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = barIndex * 70, easing = FastOutSlowInEasing)) }
+                                            // Jepit jeda animasi supaya grafik panjang
+                                            // tidak butuh waktu lama untuk selesai tumbuh.
+                                            LaunchedEffect(period, periodIn, periodOut) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
                                             val inH = ((110f * dayIn / maxFlow * grow.value).coerceIn(0f, 110f)).let { if (dayIn > 0) it.coerceAtLeast(4f) else 0f }
                                             val outH = ((110f * dayOut / maxFlow * grow.value).coerceIn(0f, 110f)).let { if (dayOut > 0) it.coerceAtLeast(4f) else 0f }
                                             Box(Modifier.width(10.dp).height(inH.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
@@ -2114,6 +2168,13 @@ fun KeuanganScreen() {
                                     )
                                 }
                             }
+                        }
+                        if (scrollable) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Geser untuk melihat hari lain",
+                                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
