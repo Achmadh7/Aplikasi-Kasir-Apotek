@@ -370,11 +370,12 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
 
 // Animasi splash saat aplikasi dibuka (elegan): logo muncul di tengah layar dari
 // kabur menjadi tajam (blur + fade + membesar sangat halus), lalu meluncur pelan
-// mengecil ke posisi logo header Beranda (easing lembut, tanpa pantulan), kemudian
-// seluruh splash memudar sehingga logo header yang asli (di posisi & ukuran yang
-// sama) terlihat — seolah-olah logo splash berubah menjadi logo header. Total sekitar
-// 2,3 detik, hanya saat cold start (state showSplash di ApotekApp; kembali dari
-// background tidak mengulang splash).
+// mengecil ke posisi logo header Beranda (easing lembut, tanpa pantulan). Setelah
+// logo mendarat, handoff-nya 2 tahap supaya smooth: latar splash memudar dulu
+// sehingga konten aplikasi muncul di sekeliling logo yang tetap menempel di header,
+// baru logo memudar menyatu ke logo header yang asli — bukan semuanya hilang
+// sekaligus. Total sekitar 2,8 detik, hanya saat cold start (state showSplash di
+// ApotekApp; kembali dari background tidak mengulang splash).
 // Target pendaratan diukur dari logo header Beranda (koordinat window) supaya pas di
 // semua ukuran layar — bukan posisi kira-kira.
 @Composable
@@ -391,7 +392,11 @@ private fun SplashOverlay(
     var flyTarget by remember { mutableStateOf<Rect?>(null) }
     val intro = remember { Animatable(0f) }
     val fly = remember { Animatable(0f) }
-    val splashAlpha = remember { Animatable(1f) }
+    // Dua alpha terpisah untuk handoff yang smooth: latar memudar dulu (konten
+    // aplikasi muncul di sekeliling logo yang tetap menempel di header), baru
+    // logo memudar menyatu ke logo header asli — bukan semuanya hilang sekaligus.
+    val backgroundAlpha = remember { Animatable(1f) }
+    val logoAlpha = remember { Animatable(1f) }
     // Easing lembut (ease-out kubik): gerakan mengalir lalu melambat halus saat
     // mendarat, tanpa pantulan — kesan elegan, bukan "pop".
     val gentleEase = CubicBezierEasing(0.0f, 0.0f, 0.2f, 1.0f)
@@ -403,14 +408,17 @@ private fun SplashOverlay(
         delay(250)
         // Luncur pelan ke header (1000ms, easing lembut).
         fly.animateTo(1f, tween(1000, easing = gentleEase))
-        splashAlpha.animateTo(0f, tween(300))
+        // Handoff 2 tahap: latar memudar dulu (500ms) sehingga konten aplikasi
+        // muncul di sekeliling logo yang tetap menempel di header; baru logo
+        // memudar (300ms) menyatu ke logo header asli.
+        backgroundAlpha.animateTo(0f, tween(500, easing = gentleEase))
+        logoAlpha.animateTo(0f, tween(300, easing = gentleEase))
         onFinished()
     }
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .graphicsLayer { alpha = splashAlpha.value }
+            .background(MaterialTheme.colorScheme.background.copy(alpha = backgroundAlpha.value))
             .onGloballyPositioned { splashRootPos = it.positionInWindow() }
             // Blokir sentuhan selama splash (tanpa ripple) supaya tidak ada
             // ketukan "buta" ke layar Beranda di bawahnya.
@@ -445,7 +453,7 @@ private fun SplashOverlay(
                 .offset { IntOffset(left, top) }
                 .size(with(density) { dispSize.toDp() })
                 .blur(blurRadius.dp)
-                .graphicsLayer { alpha = intro.value },
+                .graphicsLayer { alpha = intro.value * logoAlpha.value },
             contentAlignment = Alignment.Center
         ) {
             if (logo != null) {
