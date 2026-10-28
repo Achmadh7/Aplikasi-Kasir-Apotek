@@ -88,9 +88,10 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     // Sheet "Lainnya": Laba, Pengingat, Riwayat, Backup & Restore — menu yang tidak lagi ada di bar bawah.
     var showMoreSheet by remember { mutableStateOf(false) }
     val moreSheetState = rememberModalBottomSheetState()
-    // Urutan tab untuk swipe & arah transisi (kiri ke kanan): Beranda, Stok,
-    // Kasir, Keuangan. "Lainnya" membuka sheet, bukan layar — tidak ikut swipe.
-    val swipeableTabs = listOf("beranda", "stok", "kasir", "keuangan")
+    // Urutan tab untuk swipe (kiri ke kanan): Beranda, Stok, Kasir, Keuangan,
+    // Lainnya. "Lainnya" membuka sheet, bukan layar — geser ke kiri dari
+    // Keuangan membuka sheet Lainnya (sama seperti mengetuk tab Lainnya).
+    val swipeableTabs = listOf("beranda", "stok", "kasir", "keuangan", "lainnya")
     // Arah navigasi antar tab (1 = maju/ke kanan, -1 = mundur/ke kiri) —
     // dipakai transisi NavHost supaya layar mengikuti arah geser/ketukan.
     var navDirection by remember { mutableIntStateOf(1) }
@@ -116,7 +117,12 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                 onDragEnd = {
                     val currentIndex = swipeableTabs.indexOf(current)
                     if (swipeOffset < -swipeThresholdPx && currentIndex < swipeableTabs.lastIndex) {
-                        goToTab(swipeableTabs[currentIndex + 1]) // Geser ke kiri -> tab berikutnya
+                        val next = swipeableTabs[currentIndex + 1]
+                        if (next == "lainnya") {
+                            showMoreSheet = true // Geser ke kiri dari Keuangan -> buka sheet Lainnya
+                        } else {
+                            goToTab(next) // Geser ke kiri -> tab berikutnya
+                        }
                     } else if (swipeOffset > swipeThresholdPx && currentIndex > 0) {
                         goToTab(swipeableTabs[currentIndex - 1]) // Geser ke kanan -> tab sebelumnya
                     }
