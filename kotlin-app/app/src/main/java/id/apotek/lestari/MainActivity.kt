@@ -1,5 +1,6 @@
 package id.apotek.lestari
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,10 +39,23 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         DatabaseProvider.init(applicationContext)
         setContent {
+            // Pilihan tema (Gelap/Terang) tersimpan di SharedPreferences,
+            // dibaca sekali saat aplikasi dibuka.
+            val prefs = remember { getSharedPreferences("apotek_prefs", Context.MODE_PRIVATE) }
+            var isDark by remember { mutableStateOf(prefs.getBoolean("dark_theme", true)) }
             // Kelas lebar jendela (HP/tablet, portrait/landscape) untuk layout adaptif.
             val windowSizeClass = calculateWindowSizeClass(this)
             CompositionLocalProvider(LocalWindowWidthClass provides windowSizeClass.widthSizeClass) {
-                ApotikLestariTheme { ApotekApp() }
+                ApotikLestariTheme(darkTheme = isDark) {
+                    ApotekApp(
+                        isDark = isDark,
+                        onToggleTheme = {
+                            val next = !isDark
+                            isDark = next
+                            prefs.edit().putBoolean("dark_theme", next).apply()
+                        }
+                    )
+                }
             }
         }
     }
@@ -58,7 +72,7 @@ val TABS = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ApotekApp() {
+fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route ?: "beranda"
@@ -176,6 +190,30 @@ fun ApotekApp() {
                         Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                         Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                }
+                // Ganti tema Gelap <-> Terang (pilihan tersimpan, dipakai lagi saat aplikasi dibuka).
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        onToggleTheme()
+                        showMoreSheet = false
+                    }.padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Icon(
+                            if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(10.dp).size(22.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        if (isDark) "Mode Terang" else "Mode Gelap",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
