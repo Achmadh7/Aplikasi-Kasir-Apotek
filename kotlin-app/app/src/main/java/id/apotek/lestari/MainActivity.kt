@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -24,6 +25,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.ContentScale
@@ -366,11 +368,13 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     }
 }
 
-// Animasi splash saat aplikasi dibuka: logo muncul di tengah layar (fade + membesar),
-// lalu "terbang" mengecil ke posisi logo header Beranda, kemudian seluruh splash memudar
-// sehingga logo header yang asli (di posisi & ukuran yang sama) terlihat — seolah-olah
-// logo splash berubah menjadi logo header. Total sekitar 2 detik, hanya saat cold start
-// (state showSplash di ApotekApp; kembali dari background tidak mengulang splash).
+// Animasi splash saat aplikasi dibuka (elegan): logo muncul di tengah layar dari
+// kabur menjadi tajam (blur + fade + membesar sangat halus), lalu meluncur pelan
+// mengecil ke posisi logo header Beranda (easing lembut, tanpa pantulan), kemudian
+// seluruh splash memudar sehingga logo header yang asli (di posisi & ukuran yang
+// sama) terlihat — seolah-olah logo splash berubah menjadi logo header. Total sekitar
+// 2,3 detik, hanya saat cold start (state showSplash di ApotekApp; kembali dari
+// background tidak mengulang splash).
 // Target pendaratan diukur dari logo header Beranda (koordinat window) supaya pas di
 // semua ukuran layar — bukan posisi kira-kira.
 @Composable
@@ -388,12 +392,17 @@ private fun SplashOverlay(
     val intro = remember { Animatable(0f) }
     val fly = remember { Animatable(0f) }
     val splashAlpha = remember { Animatable(1f) }
+    // Easing lembut (ease-out kubik): gerakan mengalir lalu melambat halus saat
+    // mendarat, tanpa pantulan — kesan elegan, bukan "pop".
+    val gentleEase = CubicBezierEasing(0.0f, 0.0f, 0.2f, 1.0f)
     LaunchedEffect(headerLogoRect) {
         if (headerLogoRect == null) return@LaunchedEffect
         flyTarget = Rect(headerLogoRect.topLeft - splashRootPos, headerLogoRect.size)
-        intro.animateTo(1f, tween(500, easing = FastOutSlowInEasing))
-        delay(300)
-        fly.animateTo(1f, tween(900, easing = FastOutSlowInEasing))
+        // Intro: kabur -> tajam + fade + membesar halus (700ms).
+        intro.animateTo(1f, tween(700, easing = gentleEase))
+        delay(250)
+        // Luncur pelan ke header (1000ms, easing lembut).
+        fly.animateTo(1f, tween(1000, easing = gentleEase))
         splashAlpha.animateTo(0f, tween(300))
         onFinished()
     }
@@ -422,15 +431,20 @@ private fun SplashOverlay(
         val curCenterX = centerX + (targetCenterX - centerX) * fly.value
         val curCenterY = centerY + (targetCenterY - centerY) * fly.value
         val curSize = splashSizePx + (targetSize - splashSizePx) * fly.value
-        // Skala intro (0.7 -> 1): selama intro logo membesar di tengah; selama terbang
-        // intro sudah 1 sehingga ukuran murni mengikuti lerp.
-        val dispSize = curSize * (0.7f + 0.3f * intro.value)
+        // Skala intro (0.85 -> 1): membesar sangat halus di tengah (bukan "pop");
+        // selama terbang intro sudah 1 sehingga ukuran murni mengikuti lerp.
+        val dispSize = curSize * (0.85f + 0.15f * intro.value)
         val left = (curCenterX - dispSize / 2).roundToInt()
         val top = (curCenterY - dispSize / 2).roundToInt()
+        // Radius blur: 16dp saat intro 0 (kabur) -> 0dp saat intro 1 (tajam).
+        // Di Android < 12 (API < 31) blur diabaikan tanpa crash, sehingga animasi
+        // tetap jalan lewat fade + skala.
+        val blurRadius = (1f - intro.value) * 16f
         Box(
             modifier = Modifier
                 .offset { IntOffset(left, top) }
                 .size(with(density) { dispSize.toDp() })
+                .blur(blurRadius.dp)
                 .graphicsLayer { alpha = intro.value },
             contentAlignment = Alignment.Center
         ) {
