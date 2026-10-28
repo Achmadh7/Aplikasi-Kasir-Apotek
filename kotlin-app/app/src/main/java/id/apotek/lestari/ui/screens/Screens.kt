@@ -1014,6 +1014,21 @@ fun KasirScreen() {
                         }
                     }
                 }
+                // Pratinjau struk sebelum bayar — kasir bisa cek isi, total,
+                // metode, dan kembalian dulu; ikut berubah saat keranjang,
+                // metode, atau uang diterima diubah.
+                if (cart.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    Text("PRATINJAU STRUK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(6.dp))
+                    ReceiptPreviewCard(
+                        items = cart,
+                        total = total,
+                        method = method,
+                        paid = paid,
+                        change = change
+                    )
+                }
                 Spacer(Modifier.height(16.dp))
                 val bayarInteraction = remember { MutableInteractionSource() }
                 val bayarScale = pressBounceScale(bayarInteraction)
@@ -2466,6 +2481,117 @@ private fun InvoiceInfoBox(label: String, value: String, modifier: Modifier = Mo
             Text(label, color = InvoiceMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Spacer(Modifier.height(4.dp))
             Text(value, color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+// Pratinjau struk sebelum bayar — tampil di sheet keranjang supaya kasir bisa
+// cek isi, total, metode, dan kembalian sebelum pembayaran diproses.
+// Formatnya mengikuti kartu struk asli (InvoiceDetailCard) tapi lebih ringkas:
+// tanpa nomor invoice & tanggal (belum ada penjualan), dengan lencana PRATINJAU.
+@Composable
+private fun ReceiptPreviewCard(
+    items: List<CartItem>,
+    total: Int,
+    method: String,
+    paid: Int,
+    change: Int,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = InvoicePaper),
+        shape = RoundedCornerShape(28.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                "APOTEK LESTARI", color = InvoiceBlue,
+                style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                letterSpacing = 4.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Pratinjau Struk", color = InvoiceMuted,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                Surface(color = InvoiceBoxBg, shape = RoundedCornerShape(16.dp)) {
+                    Text(
+                        "PRATINJAU", color = InvoiceMuted,
+                        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            DashedDivider()
+            Spacer(Modifier.height(16.dp))
+            Text("RINCIAN OBAT", color = InvoiceMuted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Spacer(Modifier.height(8.dp))
+            items.forEachIndexed { index, ci ->
+                if (index > 0) DashedDivider(modifier = Modifier.padding(vertical = 10.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                    Surface(color = InvoiceBlue.copy(alpha = 0.12f), shape = CircleShape) {
+                        Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                            Text("${index + 1}", color = InvoiceBlue, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(ci.medicine.name, color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        if (ci.medicine.category.isNotBlank() || ci.medicine.unit.isNotBlank()) {
+                            Text("${ci.medicine.category} • ${ci.medicine.unit}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text("${ci.qty} × ${formatIDR(ci.medicine.sellPrice)}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(formatIDR(ci.medicine.sellPrice * ci.qty), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Surface(color = InvoiceBoxBg, shape = RoundedCornerShape(16.dp)) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Total (${items.size} item)", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                        Text(formatIDR(total), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Metode Bayar", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                        Text(method, color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    }
+                    if (method == "Tunai") {
+                        Spacer(Modifier.height(8.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Dibayar", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                            Text(formatIDR(paid), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        if (change > 0) {
+                            Spacer(Modifier.height(8.dp))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Kembalian", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                                Text(formatIDR(change), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    HorizontalDivider(color = InvoiceDash)
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Total Bayar", color = InvoiceInk, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(formatIDR(total), color = InvoiceBlue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Pratinjau — struk resmi dibuat setelah pembayaran berhasil.",
+                color = InvoiceMuted, style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
