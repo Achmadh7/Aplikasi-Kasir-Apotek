@@ -105,6 +105,7 @@ import id.apotek.lestari.ui.components.BarcodeScanner
 import id.apotek.lestari.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -917,20 +918,32 @@ fun KasirScreen() {
         // Overlay animasi terbang ke keranjang: ikon obat melayang dari kartu
         // yang diketuk ke bar keranjang, mengecil & memudar. Overlay ini tidak
         // menghalangi sentuhan (tidak ada clickable di dalamnya).
+        // Posisi dianimasikan lewat progress 0f -> 1f + lerp manual, bukan
+        // Animatable<Offset> — Offset.VectorConverter tidak ter-resolve di
+        // versi Compose ini (itu penyebab error build). coroutineScope
+        // menunggu ketiga animasi selesai dulu sebelum overlay dihapus —
+        // tanpa itu, flyFrom = null langsung jalan dan overlay hilang
+        // sebelum animasi terlihat.
         if (flyFrom != null) {
             key(flyId) {
                 val start = flyFrom!!
                 val end = flyTo
                 val iconHalfPx = with(flyDensity) { 22.dp.toPx() }
-                val offset = remember { Animatable(start, Offset.VectorConverter) }
+                val progress = remember { Animatable(0f) }
                 val scale = remember { Animatable(1f) }
                 val alpha = remember { Animatable(1f) }
                 LaunchedEffect(flyId) {
-                    launch { offset.animateTo(end, animationSpec = tween(500, easing = FastOutSlowInEasing)) }
-                    launch { scale.animateTo(0.4f, animationSpec = tween(500)) }
-                    launch { alpha.animateTo(0f, animationSpec = tween(500)) }
+                    coroutineScope {
+                        launch { progress.animateTo(1f, animationSpec = tween(500, easing = FastOutSlowInEasing)) }
+                        launch { scale.animateTo(0.4f, animationSpec = tween(500)) }
+                        launch { alpha.animateTo(0f, animationSpec = tween(500)) }
+                    }
                     flyFrom = null
                 }
+                val current = Offset(
+                    x = start.x + (end.x - start.x) * progress.value,
+                    y = start.y + (end.y - start.y) * progress.value
+                )
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.TopStart
@@ -939,8 +952,8 @@ fun KasirScreen() {
                         modifier = Modifier
                             .offset {
                                 IntOffset(
-                                    (offset.value.x - iconHalfPx).roundToInt(),
-                                    (offset.value.y - iconHalfPx).roundToInt()
+                                    (current.x - iconHalfPx).roundToInt(),
+                                    (current.y - iconHalfPx).roundToInt()
                                 )
                             }
                             .size(44.dp)
