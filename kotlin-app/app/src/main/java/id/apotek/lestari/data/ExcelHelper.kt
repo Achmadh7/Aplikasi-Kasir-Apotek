@@ -3,6 +3,8 @@ package id.apotek.lestari.data
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.DataFormatter
 import org.apache.poi.ss.usermodel.DateUtil
+import org.apache.poi.ss.usermodel.FillPatternType
+import org.apache.poi.ss.usermodel.IndexedColors
 import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
@@ -126,8 +128,16 @@ object ExcelHelper {
 
     private fun buildStockSheet(wb: XSSFWorkbook, rows: List<Array<Any>>) {
         val sheet = wb.createSheet(SHEET_STOK)
+        // Header: tebal + warna hitam eksplisit + latar biru muda, supaya judul kolom
+        // jelas terlihat di semua penampil Excel (beberapa penampil menampilkan
+        // font tanpa warna sebagai teks tak terlihat di atas latar putih).
         val headerStyle = wb.createCellStyle().apply {
-            setFont(wb.createFont().apply { bold = true })
+            setFont(wb.createFont().apply {
+                bold = true
+                color = IndexedColors.BLACK.index
+            })
+            fillForegroundColor = IndexedColors.PALE_BLUE.index
+            fillPattern = FillPatternType.SOLID_FOREGROUND
         }
         val header = sheet.createRow(0)
         HEADERS.forEachIndexed { i, h ->
