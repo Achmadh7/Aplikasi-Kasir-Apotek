@@ -1221,7 +1221,14 @@ fun StokScreen() {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var search by remember { mutableStateOf("") }
     var statusFilter by remember { mutableStateOf("all") }
-    var sortAz by remember { mutableStateOf(true) }
+    var sortMode by remember { mutableStateOf("az") } // az | za | low (stok terendah)
+    // Mode pilih banyak (hapus massal): kartu menampilkan checkbox, ketuk kartu
+    // untuk centang; tombol Hapus muncul di bar seleksi. Disimpan sebagai
+    // Map id -> obat (bukan cuma id) supaya hapus massal + Urungkan tetap
+    // benar walau daftar berubah karena pencarian/filter selama memilih.
+    var selectMode by remember { mutableStateOf(false) }
+    var selectedMeds by remember { mutableStateOf<Map<Int, Medicine>>(emptyMap()) }
+    var showBulkDeleteConfirm by remember { mutableStateOf(false) }
     var showScanner by remember { mutableStateOf(false) }
     var showForm by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Medicine?>(null) }
@@ -1312,7 +1319,13 @@ fun StokScreen() {
         "habis" -> medicines.filter { stockLabel(it.stock) == "Habis" }
         else -> medicines
     }
-    val sorted = if (sortAz) shown.sortedBy { it.name.lowercase() } else shown.sortedByDescending { it.name.lowercase() }
+    val sorted = when (sortMode) {
+        "za" -> shown.sortedByDescending { it.name.lowercase() }
+        // Stok terendah dulu (habis/menipis paling atas); nama A-Z sebagai
+        // penyeimbang supaya urutan stabil bila stoknya sama.
+        "low" -> shown.sortedWith(compareBy({ it.stock }, { it.name.lowercase() }))
+        else -> shown.sortedBy { it.name.lowercase() }
+    }
     if (showScanner) BarcodeScanner(onDetected = { code ->
         showScanner = false
         scope.launch {
@@ -1429,7 +1442,45 @@ fun StokScreen() {
                 Text("$countHabis", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                 Text(" habis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
-                SortToggle(sortAz = sortAz, onToggle = { sortAz = !sortAz })
+                // Tombol Pilih/Batal (mode pilih banyak) + tombol urut 3 mode
+                // (A-Z -> Z-A -> Terendah -> kembali ke A-Z).
+                OutlinedButton(
+                    onClick = {
+                        if (selectMode) { selectMode = false; selectedMeds = emptyMap() }
+                        else selectMode = true
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Icon(if (selectMode) Icons.Default.Close else Icons.Default.Checklist, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(if (selectMode) "Batal" else "Pilih", style = MaterialTheme.typography.bodyMedium)
+                }
+                Spacer(Modifier.width(8.dp))
+                OutlinedButton(
+                    onClick = {
+                        sortMode = when (sortMode) {
+                            "az" -> "za"
+                            "za" -> "low"
+                            else -> "az"
+                        }
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Icon(Icons.Default.Sort, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        when (sortMode) {
+                            "za" -> "Z-A"
+                            "low" -> "Terendah"
+                            else -> "A-Z"
+                        },
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
             Spacer(Modifier.height(8.dp))
             // Filter status stok (menggantikan legenda; jumlah per status terlihat di chip).
@@ -1442,6 +1493,30 @@ fun StokScreen() {
                     "habis" to "Habis ($countHabis)"
                 ).forEach { (k, l) ->
                     FilterChip(selected = statusFilter == k, onClick = { statusFilter = k }, label = { Text(l) })
+                }
+            }
+            // Bar seleksi (hanya di mode pilih banyak): jumlah terpilih + Hapus massal.
+            if (selectMode) {
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        if (selectedMeds.isEmpty()) "Ketuk kartu obat untuk memilih."
+                        else "${selectedMeds.size} obat dipilih",
+                        style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Button(
+                        onClick = { showBulkDeleteConfirm = true },
+                        enabled = selectedMeds.isNotEmpty(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = Color.White),
+                        shape = RoundedCornerShape(20.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Hapus (${selectedMeds.size})", style = MaterialTheme.typography.bodyMedium)
+                    }
                 }
             }
             Spacer(Modifier.height(4.dp))
@@ -1473,8 +1548,26 @@ fun StokScreen() {
                     expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
                 exit = fadeOut()
             ) {
-            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.fillMaxWidth().then(
+                    if (selectMode) Modifier.clickable {
+                        selectedMeds = if (selectedMeds.containsKey(m.id)) selectedMeds - m.id else selectedMeds + (m.id to m)
+                    } else Modifier
+                )
+            ) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Di mode pilih banyak: checkbox ganti tombol Edit/Hapus,
+                    // dan ketuk kartu = centang/batal centang.
+                    if (selectMode) {
+                        Checkbox(
+                            checked = selectedMeds.containsKey(m.id),
+                            onCheckedChange = {
+                                selectedMeds = if (selectedMeds.containsKey(m.id)) selectedMeds - m.id else selectedMeds + (m.id to m)
+                            }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -1492,9 +1585,11 @@ fun StokScreen() {
                         Text("${m.stock}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = if (m.stock <= 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
                         Text(m.unit, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    IconButton(onClick = { prefillBarcode = ""; editing = m; showForm = true }) { Icon(Icons.Default.Edit, "Edit obat") }
-                    IconButton(onClick = { deleteTarget = m }) {
-                        Icon(Icons.Default.Delete, "Hapus obat", tint = MaterialTheme.colorScheme.error)
+                    if (!selectMode) {
+                        IconButton(onClick = { prefillBarcode = ""; editing = m; showForm = true }) { Icon(Icons.Default.Edit, "Edit obat") }
+                        IconButton(onClick = { deleteTarget = m }) {
+                            Icon(Icons.Default.Delete, "Hapus obat", tint = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
@@ -1546,6 +1641,49 @@ fun StokScreen() {
                 ) { Text("Hapus", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
             },
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Batal") } }
+        )
+    }
+    // Konfirmasi hapus massal: hapus semua yang terpilih, lalu Snackbar
+    // "Urungkan" membuat ulang obat-obat itu (pola yang sama seperti hapus satuan).
+    if (showBulkDeleteConfirm) {
+        val count = selectedMeds.size
+        AlertDialog(
+            onDismissRequest = { showBulkDeleteConfirm = false },
+            title = { Text("Hapus $count Obat?") },
+            text = { Text("Hapus $count obat yang dipilih dari stok?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showBulkDeleteConfirm = false
+                        val toDelete = selectedMeds.values.toList()
+                        selectMode = false
+                        selectedMeds = emptyMap()
+                        scope.launch {
+                            toDelete.forEach { repo.deleteMedicine(it.id) }
+                            reload()
+                            val result = snackbarHostState.showSnackbar(
+                                message = "${toDelete.size} obat dihapus.",
+                                actionLabel = "Urungkan",
+                                duration = SnackbarDuration.Long
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                toDelete.forEach {
+                                    repo.createMedicine(
+                                        MedicineArgs(
+                                            it.name, it.category, it.unit,
+                                            it.buyPrice, it.sellPrice, it.stock,
+                                            it.minStock, it.expiryDate, it.barcode
+                                        )
+                                    )
+                                }
+                                reload()
+                                msg = "${toDelete.size} obat dikembalikan."
+                            }
+                        }
+                    }
+                ) { Text("Hapus", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = { showBulkDeleteConfirm = false }) { Text("Batal") } }
         )
     }
 }
