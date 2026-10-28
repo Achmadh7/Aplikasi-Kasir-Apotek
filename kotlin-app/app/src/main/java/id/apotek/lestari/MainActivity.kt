@@ -22,6 +22,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -142,11 +143,23 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
             // tanpa pil mengambang dan tanpa sembunyi saat gulir. FAB Kasir 60dp di tengah
             // naik di atas bar (tetap di dalam area bottomBar 104dp, tidak menutupi konten).
             Box(modifier = Modifier.fillMaxWidth().height(104.dp)) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    // Sudut atas bar membulat (24dp); sudut bawah tetap menempel di tepi layar.
-                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                // Kaca halus (subtle glass): bar tetap datar selebar layar, tapi
+                // latarnya gradasi tembus pandang + kilau terang tipis di tepi atas
+                // (mengikuti lengkung 24dp). Bukan blur backdrop penuh — konten
+                // tidak mengalir di bawah bar — jadi label/ikon tetap terbaca jelas.
+                Box(
                     modifier = Modifier.fillMaxWidth().height(80.dp).align(Alignment.BottomCenter)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color.White.copy(alpha = 0.22f),
+                                    0.05f to MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
+                                    1.0f to MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f)
+                                )
+                            ),
+                            // Sudut atas bar membulat (24dp); sudut bawah tetap menempel di tepi layar.
+                            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                        )
                 ) {
                     // Indikator pill yang bergeser halus antar tab (bukan langsung pindah).
                     // NavigationBarItem bawaan tidak menggeser indikatornya, jadi pill
