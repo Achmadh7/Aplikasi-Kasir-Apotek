@@ -13,6 +13,8 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
@@ -43,6 +45,14 @@ val BluePrimaryDark = Color(0xFFA1C9FF)
 val ExpressiveAmber = Color(0xFFFFD97A)
 val ExpressiveAmberContainer = Color(0xFF4A3F00)
 val ExpressiveGreen = Color(0xFF7EDC9A)
+
+// Apakah aplikasi sedang dalam mode gelap (pilihan user di pengaturan tema,
+// bukan pengaturan sistem HP). Dipakai warna yang harus beda per tema.
+val LocalIsDarkTheme = staticCompositionLocalOf { true }
+
+/** Hijau angka laba/untung — terang di mode gelap, pekat di mode terang supaya terbaca. */
+@Composable
+fun profitGreen(): Color = if (LocalIsDarkTheme.current) ExpressiveGreen else Color(0xFF2E7D32)
 
 private val LightColors = lightColorScheme(
     primary = BluePrimary,
@@ -151,12 +161,14 @@ fun ExpressiveCard(
 // Tampilan mengikuti web app (mode gelap) apa pun pengaturan sistem HP.
 @Composable
 fun ApotikLestariTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        shapes = ExpressiveShapes,
-        typography = ExpressiveTypography,
-        content = content
-    )
+    CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkColors else LightColors,
+            shapes = ExpressiveShapes,
+            typography = ExpressiveTypography,
+            content = content
+        )
+    }
 }
 
 fun formatIDR(n: Int): String = "Rp " + "%,d".format(java.util.Locale("id", "ID"), n).replace(',', '.')

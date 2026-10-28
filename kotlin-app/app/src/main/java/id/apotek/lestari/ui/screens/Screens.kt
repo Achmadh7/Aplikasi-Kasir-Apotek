@@ -446,7 +446,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                                 Text(if (d.todayProfit >= 0) "Untung Hari Ini" else "Rugi Hari Ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Spacer(Modifier.height(2.dp))
-                                Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (d.todayProfit >= 0) ExpressiveGreen else ChiliRed, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (d.todayProfit >= 0) profitGreen() else ChiliRed, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                         Spacer(Modifier.height(12.dp))
@@ -454,7 +454,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         Spacer(Modifier.height(8.dp))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text(if (d.monthProfit >= 0) "Untung Bulan Ini" else "Rugi Bulan Ini", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                            Text(formatIDR(d.monthProfit), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (d.monthProfit >= 0) ExpressiveGreen else ChiliRed)
+                            Text(formatIDR(d.monthProfit), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (d.monthProfit >= 0) profitGreen() else ChiliRed)
                         }
                         Spacer(Modifier.height(4.dp))
                         Text("Masuk ${formatIDR(d.monthIn)} • Keluar ${formatIDR(d.monthOut)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
