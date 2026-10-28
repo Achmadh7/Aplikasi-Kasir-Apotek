@@ -2383,20 +2383,48 @@ fun LabaScreen() {
             item {
                 ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp)) {
-                        Text("Laba Kotor 7 Hari Terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        // Judul grafik mengikuti periode yang dipilih.
+                        val chartTitle = when (period) {
+                            "today" -> "Laba Kotor Hari Ini"
+                            "month" -> "Laba Kotor Bulan Ini"
+                            "last30" -> "Laba Kotor 30 Hari Terakhir"
+                            else -> "Laba Kotor Semua"
+                        }
+                        Text(chartTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(20.dp))
-                        val daily = r.daily.takeLast(7)
+                        val daily = r.daily
                         if (daily.isEmpty()) {
                             Text("Belum ada data laba harian.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             val maxProfit = daily.maxOf { it.profit }.coerceAtLeast(1)
                             val todayIndex = daily.lastIndex
+                            // Grafik mengikuti periode: <= 7 batang memenuhi lebar
+                            // kartu; lebih dari itu bisa digulir horizontal supaya
+                            // tiap batang tetap terbaca (kolom tetap 44dp).
+                            val scrollable = daily.size > 7
+                            val chartScroll = rememberScrollState()
+                            if (scrollable) {
+                                // Buka grafik pada ujung terbaru (kanan) begitu
+                                // periode berubah (tunggu satu frame supaya
+                                // maxValue sudah terukur).
+                                LaunchedEffect(period, daily.size) {
+                                    withFrameNanos { }
+                                    chartScroll.scrollTo(chartScroll.maxValue)
+                                }
+                            }
                             Column {
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().then(if (scrollable) Modifier.horizontalScroll(chartScroll) else Modifier),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.Bottom
+                                ) {
                                     daily.forEachIndexed { barIndex, day ->
                                         val isMax = day.profit == maxProfit && day.profit > 0
                                         val isToday = barIndex == todayIndex
-                                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Column(
+                                            modifier = if (scrollable) Modifier.width(44.dp) else Modifier.weight(1f),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
                                             Text(
                                                 formatCompactIDR(day.profit),
                                                 style = MaterialTheme.typography.labelSmall,
@@ -2411,7 +2439,9 @@ fun LabaScreen() {
                                             Spacer(Modifier.height(4.dp))
                                             key(period) {
                                                 val grow = remember { Animatable(0f) }
-                                                LaunchedEffect(period) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = barIndex * 70, easing = FastOutSlowInEasing)) }
+                                                // Jepit jeda animasi supaya grafik panjang
+                                                // tidak butuh waktu lama untuk selesai tumbuh.
+                                                LaunchedEffect(period) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
                                                 val barH = ((110f * day.profit / maxProfit * grow.value).coerceIn(0f, 110f)).let { if (day.profit > 0) it.coerceAtLeast(4f) else 0f }
                                                 Box(
                                                     Modifier.width(28.dp).height(barH.dp)
@@ -2436,7 +2466,8 @@ fun LabaScreen() {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                 Spacer(Modifier.height(6.dp))
                                 Text(
-                                    "Batang biru pekat = laba tertinggi • Label hari ini ditebalkan",
+                                    if (scrollable) "Geser untuk melihat hari lain • Batang biru pekat = laba tertinggi • Label hari ini ditebalkan"
+                                    else "Batang biru pekat = laba tertinggi • Label hari ini ditebalkan",
                                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }

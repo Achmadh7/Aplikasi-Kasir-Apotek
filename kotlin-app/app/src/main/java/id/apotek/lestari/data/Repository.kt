@@ -72,6 +72,10 @@ class Repository {
     private fun dayLabelID(date: Date): String =
         SimpleDateFormat("EEE", Locale("id", "ID")).apply { timeZone = jakarta }.format(date)
 
+    /** Label tanggal Indonesia: "27 Okt" (untuk grafik laba per periode). */
+    private fun dayDateLabelID(date: Date): String =
+        SimpleDateFormat("d MMM", Locale("id", "ID")).apply { timeZone = jakarta }.format(date)
+
     private fun marginPctOf(revenue: Int, profit: Int): Double =
         if (revenue > 0) Math.round(profit.toDouble() / revenue * 1000) / 10.0 else 0.0
 
@@ -477,9 +481,26 @@ class Repository {
             ProfitByCategory(category, m.qty, m.revenue, m.hpp, m.profit, m.marginPct)
         }.sortedByDescending { it.profit }
 
-        // Laba kotor 7 hari terakhir (tidak tergantung periode yang dipilih)
+        // Laba harian untuk periode yang dipilih (grafik mengikuti periode):
+        // dari awal periode sampai hari ini. "Semua" memakai hari penjualan
+        // pertama; dibatasi 365 hari supaya grafik tidak meledak bila data
+        // sudah bertahun-tahun.
         val saleById = salesRows.associateBy { it.id }
-        val daily = (6 downTo 0).map { offset ->
+        val firstDayStart = when (period) {
+            "today" -> startToday
+            "month" -> startMonth
+            "last30" -> startLast30
+            "all" -> periodSales.minOfOrNull { parseISODate(it.createdAt)?.time ?: Long.MAX_VALUE }
+                ?.let { t ->
+                    Calendar.getInstance(jakarta).apply {
+                        time = Date(t)
+                        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+                } ?: startToday
+            else -> startToday
+        }
+        val dayCount = ((endToday - firstDayStart) / (24L * 60 * 60 * 1000)).toInt().coerceAtLeast(1).coerceAtMost(365)
+        val daily = (dayCount - 1 downTo 0).map { offset ->
             val dayStart = jakartaDayStartMillis(-offset)
             val next = dayStart + 24L * 60 * 60 * 1000
             var rev = 0
@@ -493,7 +514,9 @@ class Repository {
                 }
             }
             val date = Date(dayStart)
-            ProfitDaily(dayKeyID(date), dayLabelID(date), rev, cost, rev - cost)
+            // Label tanggal ("27 Okt") supaya tidak ambigu bila grafik panjang
+            // (nama hari saja berulang); Keuangan tetap pakai dayLabelID.
+            ProfitDaily(dayKeyID(date), dayDateLabelID(date), rev, cost, rev - cost)
         }
 
         ProfitReport(
