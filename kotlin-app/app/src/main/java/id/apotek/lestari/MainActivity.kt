@@ -171,7 +171,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                         }
                         val pillX by animateDpAsState(
                             targetValue = slotWidth * lastSlot + (slotWidth - pillWidth) / 2,
-                            animationSpec = tween(200, easing = FastOutSlowInEasing),
+                            animationSpec = tween(250, easing = FastOutSlowInEasing),
                             label = "pillX"
                         )
                         val pillAlpha by animateFloatAsState(
@@ -247,10 +247,10 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                 startDestination = "beranda",
                 // Transisi antar tab: pudar + geser halus, bukan ganti mendadak.
                 // Arah geser mengikuti navDirection (1 = maju, -1 = mundur).
-                enterTransition = { fadeIn(animationSpec = tween(180)) + slideInHorizontally(animationSpec = tween(180), initialOffsetX = { it / 4 * navDirection }) },
-                exitTransition = { fadeOut(animationSpec = tween(180)) + slideOutHorizontally(animationSpec = tween(180), targetOffsetX = { -it / 4 * navDirection }) },
-                popEnterTransition = { fadeIn(animationSpec = tween(180)) + slideInHorizontally(animationSpec = tween(180), initialOffsetX = { -it / 4 * navDirection }) },
-                popExitTransition = { fadeOut(animationSpec = tween(180)) + slideOutHorizontally(animationSpec = tween(180), targetOffsetX = { it / 4 * navDirection }) },
+                enterTransition = { fadeIn(animationSpec = tween(200)) + slideInHorizontally(animationSpec = tween(200), initialOffsetX = { it / 4 * navDirection }) },
+                exitTransition = { fadeOut(animationSpec = tween(200)) + slideOutHorizontally(animationSpec = tween(200), targetOffsetX = { -it / 4 * navDirection }) },
+                popEnterTransition = { fadeIn(animationSpec = tween(200)) + slideInHorizontally(animationSpec = tween(200), initialOffsetX = { -it / 4 * navDirection }) },
+                popExitTransition = { fadeOut(animationSpec = tween(200)) + slideOutHorizontally(animationSpec = tween(200), targetOffsetX = { it / 4 * navDirection }) },
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
                 composable("beranda") { BerandaScreen(onGoStok = { goToTab("stok") }, onGoPengingat = { goToTab("pengingat") }, onGoLaba = { goToTab("laba") }, onGoRiwayat = { goToTab("riwayat") }) }
