@@ -415,13 +415,14 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             Text("Pengingat", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(6.dp))
-                        // Stok menipis: nama obat + sisa stok (bukan cuma jumlah).
+                        // Stok menipis: nama obat + sisa stok, ditulis sama seperti
+                        // stok habis (titik & nama merah) supaya sama-sama terlihat mendesak.
                         if (lowStockMeds.isNotEmpty()) {
                             lowStockMeds.take(5).forEach { (name, stock) ->
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                                    Box(Modifier.size(6.dp).background(Color(0xFFD97706), CircleShape))
+                                    Box(Modifier.size(6.dp).background(ChiliRed, CircleShape))
                                     Spacer(Modifier.width(8.dp))
-                                    Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = ChiliRed, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Text("Sisa: $stock", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
