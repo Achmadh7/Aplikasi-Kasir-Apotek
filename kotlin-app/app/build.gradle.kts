@@ -21,9 +21,11 @@ val signingProperties =
 
 // Font Poppins (OFL, gratis) — diunduh saat build dari google/fonts, karena
 // file .ttf biner tidak bisa di-push lewat API teks. Disimpan di direktori
-// generated (build/generated/res/font) supaya repo tetap bersih; R.font
-// ter-generate dari sana sebelum kompilasi Kotlin.
-val poppinsFontDir = layout.buildDirectory.dir("generated/res/font")
+// generated (build/generated/res/font) supaya repo tetap bersih. Direktori
+// build/generated/res didaftarkan sebagai res source set — Gradle mencari
+// subdirektori font/ di dalamnya, jadi R.font ter-generate sebelum kompilasi.
+val poppinsResDir = layout.buildDirectory.dir("generated/res")
+val poppinsFontDir = poppinsResDir.map { it.dir("font") }
 val downloadPoppinsFonts = tasks.register("downloadPoppinsFonts") {
     val outDir = poppinsFontDir.get().asFile
     outputs.dir(outDir)
@@ -55,7 +57,7 @@ android {
 
     sourceSets {
         getByName("main") {
-            res.srcDirs("src/main/res", poppinsFontDir)
+            res.srcDirs("src/main/res", poppinsResDir)
         }
     }
 
