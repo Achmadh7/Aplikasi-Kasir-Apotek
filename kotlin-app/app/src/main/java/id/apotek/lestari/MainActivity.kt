@@ -296,7 +296,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
 // atas pill hitam); bila tidak terpilih, ikon/label putih/abu. Ketukan tanpa
 // ripple supaya tampilannya bersih seperti referensi.
 @Composable
-private fun PillTab(
+private fun RowScope.PillTab(
     selected: Boolean,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
