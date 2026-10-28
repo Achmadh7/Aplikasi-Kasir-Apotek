@@ -67,7 +67,6 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -299,7 +298,7 @@ private fun StockBadge(stock: Int, showCount: Boolean = true) {
 // ---------- Beranda ----------
 
 @Composable
-fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit, onHeaderLogoPositioned: ((Rect) -> Unit)? = null) {
+fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit) {
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
     var salesTab by remember { mutableIntStateOf(0) }
     var outOfStockNames by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -331,14 +330,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val logo = rememberLogoBitmap()
                 if (logo != null) {
-                    Surface(
-                        color = Color.White, shape = CircleShape,
-                        modifier = Modifier.size(44.dp).onGloballyPositioned { coords ->
-                            // Posisi logo header (koordinat window) untuk animasi splash:
-                            // logo splash "mendarat" tepat di posisi ini.
-                            onHeaderLogoPositioned?.invoke(coords.boundsInWindow())
-                        }
-                    ) {
+                    Surface(color = Color.White, shape = CircleShape, modifier = Modifier.size(44.dp)) {
                         Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(4.dp).fillMaxSize())
                     }
                     Spacer(Modifier.width(10.dp))

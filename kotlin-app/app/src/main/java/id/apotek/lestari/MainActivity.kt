@@ -11,8 +11,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -21,17 +19,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -49,11 +39,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import id.apotek.lestari.data.local.DatabaseProvider
-import id.apotek.lestari.ui.rememberLogoBitmap
 import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
-import kotlinx.coroutines.delay
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 class MainActivity : ComponentActivity() {
@@ -119,12 +106,6 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
         navDirection = if (tabPosition(route) >= tabPosition(current)) 1 else -1
         nav.navigate(route) { popUpTo("beranda"); launchSingleTop = true }
     }
-    // Animasi splash saat aplikasi dibuka: logo muncul di tengah layar lalu
-    // "terbang" mengecil ke posisi logo header Beranda, baru aplikasi tampil.
-    // Beranda sudah di-compose di bawah splash (jadi datanya sempat dimuat),
-    // dan posisi logo header-nya diukur untuk jadi target pendaratan.
-    var showSplash by remember { mutableStateOf(true) }
-    var headerLogoRect by remember { mutableStateOf<Rect?>(null) }
     // Geser kiri/kanan di konten untuk pindah tab (hanya di tab utama;
     // dimatikan di sub-menu Lainnya supaya tidak bentrok dengan gulir horizontal).
     val density = LocalDensity.current
@@ -155,9 +136,6 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     } else {
         Modifier
     }
-    // Box akar: menampung Scaffold + overlay splash di atasnya (splash menutupi
-    // seluruh layar, termasuk bar bawah, sampai animasinya selesai).
-    Box(Modifier.fillMaxSize()) {
     Scaffold(
         bottomBar = {
             // Bar bawah seperti awal: bar datar selebar layar (80dp) menempel di tepi bawah,
@@ -275,7 +253,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                 popExitTransition = { fadeOut(animationSpec = tween(200)) + slideOutHorizontally(animationSpec = tween(200), targetOffsetX = { it / 4 * navDirection }) },
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
-                composable("beranda") { BerandaScreen(onGoStok = { goToTab("stok") }, onGoPengingat = { goToTab("pengingat") }, onGoLaba = { goToTab("laba") }, onGoRiwayat = { goToTab("riwayat") }, onHeaderLogoPositioned = { rect -> if (showSplash) headerLogoRect = rect }) }
+                composable("beranda") { BerandaScreen(onGoStok = { goToTab("stok") }, onGoPengingat = { goToTab("pengingat") }, onGoLaba = { goToTab("laba") }, onGoRiwayat = { goToTab("riwayat") }) }
                 composable("kasir") { KasirScreen() }
                 composable("stok") { StokScreen() }
                 composable("keuangan") { KeuanganScreen() }
@@ -286,11 +264,6 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                 composable("terlaris") { ObatTerlarisScreen() }
                 composable("tentang") { TentangScreen() }
             }
-        }
-    }
-        // Splash pembuka menutupi seluruh layar sampai animasi logo selesai.
-        if (showSplash) {
-            SplashOverlay(headerLogoRect = headerLogoRect, onFinished = { showSplash = false })
         }
     }
     // Sheet "Lainnya": Laba, Pengingat, Riwayat, Backup & Restore.
@@ -367,116 +340,6 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
         }
     }
 }
-
-// Animasi splash saat aplikasi dibuka (elegan): logo muncul di tengah layar dari
-// kabur menjadi tajam (blur + fade + membesar sangat halus), lalu meluncur pelan
-// mengecil ke posisi logo header Beranda (easing lembut, tanpa pantulan). Setelah
-// logo mendarat, handoff-nya 2 tahap supaya smooth: latar splash memudar dulu
-// sehingga konten aplikasi muncul di sekeliling logo yang tetap menempel di header,
-// baru logo memudar menyatu ke logo header yang asli — bukan semuanya hilang
-// sekaligus. Total sekitar 2,8 detik, hanya saat cold start (state showSplash di
-// ApotekApp; kembali dari background tidak mengulang splash).
-// Target pendaratan diukur dari logo header Beranda (koordinat window) supaya pas di
-// semua ukuran layar — bukan posisi kira-kira.
-@Composable
-private fun SplashOverlay(
-    headerLogoRect: Rect?,
-    onFinished: () -> Unit
-) {
-    val logo = rememberLogoBitmap()
-    val density = LocalDensity.current
-    // Posisi window Box splash sendiri (untuk mengubah koordinat window -> lokal).
-    var splashRootPos by remember { mutableStateOf(Offset.Zero) }
-    // Target pendaratan (koordinat lokal, ditangkap sekali saat animasi mulai supaya
-    // tidak bergeser di tengah animasi).
-    var flyTarget by remember { mutableStateOf<Rect?>(null) }
-    val intro = remember { Animatable(0f) }
-    val fly = remember { Animatable(0f) }
-    // Dua alpha terpisah untuk handoff yang smooth: latar memudar dulu (konten
-    // aplikasi muncul di sekeliling logo yang tetap menempel di header), baru
-    // logo memudar menyatu ke logo header asli — bukan semuanya hilang sekaligus.
-    val backgroundAlpha = remember { Animatable(1f) }
-    val logoAlpha = remember { Animatable(1f) }
-    // Easing lembut (ease-out kubik): gerakan mengalir lalu melambat halus saat
-    // mendarat, tanpa pantulan — kesan elegan, bukan "pop".
-    val gentleEase = CubicBezierEasing(0.0f, 0.0f, 0.2f, 1.0f)
-    LaunchedEffect(headerLogoRect) {
-        if (headerLogoRect == null) return@LaunchedEffect
-        flyTarget = Rect(headerLogoRect.topLeft - splashRootPos, headerLogoRect.size)
-        // Intro: kabur -> tajam + fade + membesar halus (700ms).
-        intro.animateTo(1f, tween(700, easing = gentleEase))
-        delay(250)
-        // Luncur pelan ke header (1000ms, easing lembut).
-        fly.animateTo(1f, tween(1000, easing = gentleEase))
-        // Handoff 2 tahap: latar memudar dulu (500ms) sehingga konten aplikasi
-        // muncul di sekeliling logo yang tetap menempel di header; baru logo
-        // memudar (300ms) menyatu ke logo header asli.
-        backgroundAlpha.animateTo(0f, tween(500, easing = gentleEase))
-        logoAlpha.animateTo(0f, tween(300, easing = gentleEase))
-        onFinished()
-    }
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = backgroundAlpha.value))
-            .onGloballyPositioned { splashRootPos = it.positionInWindow() }
-            // Blokir sentuhan selama splash (tanpa ripple) supaya tidak ada
-            // ketukan "buta" ke layar Beranda di bawahnya.
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = {}
-            )
-    ) {
-        val splashSizePx = with(density) { 120.dp.toPx() }
-        val centerX = with(density) { maxWidth.toPx() / 2 }
-        val centerY = with(density) { maxHeight.toPx() / 2 }
-        val target = flyTarget
-        val targetCenterX = target?.center?.x ?: centerX
-        val targetCenterY = target?.center?.y ?: centerY
-        val targetSize = target?.width ?: splashSizePx
-        // Posisi + ukuran logo saat ini: lerp tengah -> target mengikuti progress terbang.
-        val curCenterX = centerX + (targetCenterX - centerX) * fly.value
-        val curCenterY = centerY + (targetCenterY - centerY) * fly.value
-        val curSize = splashSizePx + (targetSize - splashSizePx) * fly.value
-        // Skala intro (0.85 -> 1): membesar sangat halus di tengah (bukan "pop");
-        // selama terbang intro sudah 1 sehingga ukuran murni mengikuti lerp.
-        val dispSize = curSize * (0.85f + 0.15f * intro.value)
-        val left = (curCenterX - dispSize / 2).roundToInt()
-        val top = (curCenterY - dispSize / 2).roundToInt()
-        // Radius blur: 16dp saat intro 0 (kabur) -> 0dp saat intro 1 (tajam).
-        // Di Android < 12 (API < 31) blur diabaikan tanpa crash, sehingga animasi
-        // tetap jalan lewat fade + skala.
-        val blurRadius = (1f - intro.value) * 16f
-        Box(
-            modifier = Modifier
-                .offset { IntOffset(left, top) }
-                .size(with(density) { dispSize.toDp() })
-                .blur(blurRadius.dp)
-                .graphicsLayer { alpha = intro.value * logoAlpha.value },
-            contentAlignment = Alignment.Center
-        ) {
-            if (logo != null) {
-                // Struktur sama persis seperti logo header (lingkaran putih + logo
-                // di dalamnya) supaya saat mendarat (44dp) terlihat identik.
-                Surface(color = Color.White, shape = CircleShape, modifier = Modifier.fillMaxSize()) {
-                    Image(bitmap = logo, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.padding(4.dp).fillMaxSize())
-                }
-            }
-        }
-        // Nama aplikasi di bawah logo tengah — muncul saat intro, memudar saat logo terbang.
-        Text(
-            "Apotek Lestari",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(y = with(density) { (splashSizePx / 2 + 16.dp.toPx()).toDp() })
-                .graphicsLayer { alpha = intro.value * (1f - fly.value) }
-        )
-    }
-}
-
 
 
 
