@@ -326,7 +326,9 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             }
             Spacer(Modifier.height(8.dp))
             Text("Penjualan Hari Ini", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 1)
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
             DemoBanner()
         }
         dashboard?.let { d ->
@@ -669,7 +671,9 @@ fun KasirScreen() {
             Spacer(Modifier.width(12.dp))
             Text("Kasir", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Spacer(Modifier.height(16.dp))
         DemoBanner()
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             SearchField(
@@ -1115,7 +1119,9 @@ fun StokScreen() {
                     shape = RoundedCornerShape(32.dp)
                 ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("Tambah Obat") }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 SearchField(
@@ -1548,7 +1554,9 @@ fun KeuanganScreen() {
                 Spacer(Modifier.width(12.dp))
                 Text("Keuangan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("today" to "Hari Ini", "month" to "Bulan Ini", "all" to "Semua").forEach { (k, l) ->
@@ -1806,7 +1814,9 @@ fun LabaScreen() {
                 Spacer(Modifier.width(12.dp))
                 Text("Laporan Laba", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 listOf("today" to "Hari Ini", "month" to "Bulan Ini", "last30" to "30 Hari", "all" to "Semua").forEach { (k, l) ->
@@ -1986,7 +1996,9 @@ fun ObatTerlarisScreen() {
                 Spacer(Modifier.width(12.dp))
                 Text("Obat Terlaris", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 listOf("today" to "Hari Ini", "month" to "Bulan Ini", "last30" to "30 Hari", "all" to "Semua").forEach { (k, l) ->
@@ -2111,7 +2123,9 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                 Spacer(Modifier.width(12.dp))
                 Text("Pengingat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
             DemoBanner()
             Text("MASA KADALUARSA", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(6.dp))
@@ -2607,7 +2621,9 @@ fun RiwayatScreen() {
             Spacer(Modifier.width(12.dp))
             Text("Riwayat Penjualan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Spacer(Modifier.height(16.dp))
         DemoBanner()
         if (sales.isEmpty()) Text("Belum ada penjualan tercatat.")
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2717,7 +2733,9 @@ fun BackupScreen() {
                 Text("Simpan dan pulihkan semua data apotek.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Spacer(Modifier.height(16.dp))
         ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
