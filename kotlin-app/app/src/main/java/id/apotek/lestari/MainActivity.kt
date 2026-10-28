@@ -20,9 +20,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -85,6 +88,48 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     // Sheet "Lainnya": Laba, Pengingat, Riwayat, Backup & Restore — menu yang tidak lagi ada di bar bawah.
     var showMoreSheet by remember { mutableStateOf(false) }
     val moreSheetState = rememberModalBottomSheetState()
+    // Urutan tab untuk swipe & arah transisi (kiri ke kanan): Beranda, Stok,
+    // Kasir, Keuangan. "Lainnya" membuka sheet, bukan layar — tidak ikut swipe.
+    val swipeableTabs = listOf("beranda", "stok", "kasir", "keuangan")
+    // Arah navigasi antar tab (1 = maju/ke kanan, -1 = mundur/ke kiri) —
+    // dipakai transisi NavHost supaya layar mengikuti arah geser/ketukan.
+    var navDirection by remember { mutableIntStateOf(1) }
+    fun tabPosition(route: String): Int = when (route) {
+        "beranda" -> 0
+        "stok" -> 1
+        "kasir" -> 2
+        "keuangan" -> 3
+        else -> 4 // Lainnya + sub-menunya
+    }
+    fun goToTab(route: String) {
+        navDirection = if (tabPosition(route) >= tabPosition(current)) 1 else -1
+        nav.navigate(route) { popUpTo("beranda"); launchSingleTop = true }
+    }
+    // Geser kiri/kanan di konten untuk pindah tab (hanya di tab utama;
+    // dimatikan di sub-menu Lainnya supaya tidak bentrok dengan gulir horizontal).
+    val density = LocalDensity.current
+    val swipeThresholdPx = with(density) { 80.dp.toPx() }
+    var swipeOffset by remember { mutableFloatStateOf(0f) }
+    val swipeModifier = if (current in swipeableTabs) {
+        Modifier.pointerInput(current) {
+            detectHorizontalDragGestures(
+                onDragEnd = {
+                    val currentIndex = swipeableTabs.indexOf(current)
+                    if (swipeOffset < -swipeThresholdPx && currentIndex < swipeableTabs.lastIndex) {
+                        goToTab(swipeableTabs[currentIndex + 1]) // Geser ke kiri -> tab berikutnya
+                    } else if (swipeOffset > swipeThresholdPx && currentIndex > 0) {
+                        goToTab(swipeableTabs[currentIndex - 1]) // Geser ke kanan -> tab sebelumnya
+                    }
+                    swipeOffset = 0f
+                },
+                onHorizontalDrag = { _, dragAmount ->
+                    swipeOffset += dragAmount
+                }
+            )
+        }
+    } else {
+        Modifier
+    }
     Scaffold(
         bottomBar = {
             // Bar bawah seperti awal: bar datar selebar layar (80dp) menempel di tepi bawah,
@@ -146,7 +191,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                             TABS.forEachIndexed { index, tab ->
                                 NavigationBarItem(
                                     selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang") else current == tab.route,
-                                    onClick = { if (tab.route == "lainnya") showMoreSheet = true else nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
+                                    onClick = { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) },
                                     icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
                                     label = { Text(tab.label) },
                                     colors = NavigationBarItemDefaults.colors(
@@ -168,7 +213,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                     modifier = Modifier.align(Alignment.TopCenter)
                 ) {
                     FloatingActionButton(
-                        onClick = { nav.navigate("kasir") { popUpTo("beranda"); launchSingleTop = true } },
+                        onClick = { goToTab("kasir") },
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = CircleShape,
@@ -189,23 +234,25 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     ) { padding ->
         // Lebar konten dibatasi ~840.dp dan dipusatkan di layar lebar (tablet/landscape),
         // supaya daftar tidak merentang dari ujung ke ujung. Navigasi bawah tetap selebar layar.
-        Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        // swipeModifier: geser kiri/kanan di konten untuk pindah tab (hanya di tab utama).
+        Box(modifier = Modifier.padding(padding).fillMaxSize().then(swipeModifier), contentAlignment = Alignment.TopCenter) {
             NavHost(
                 navController = nav,
                 startDestination = "beranda",
                 // Transisi antar tab: pudar + geser halus, bukan ganti mendadak.
-                enterTransition = { fadeIn(animationSpec = tween(250)) + slideInHorizontally(animationSpec = tween(250), initialOffsetX = { it / 4 }) },
-                exitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(animationSpec = tween(250), targetOffsetX = { -it / 4 }) },
-                popEnterTransition = { fadeIn(animationSpec = tween(250)) + slideInHorizontally(animationSpec = tween(250), initialOffsetX = { -it / 4 }) },
-                popExitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(animationSpec = tween(250), targetOffsetX = { it / 4 }) },
+                // Arah geser mengikuti navDirection (1 = maju, -1 = mundur).
+                enterTransition = { fadeIn(animationSpec = tween(250)) + slideInHorizontally(animationSpec = tween(250), initialOffsetX = { it / 4 * navDirection }) },
+                exitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(animationSpec = tween(250), targetOffsetX = { -it / 4 * navDirection }) },
+                popEnterTransition = { fadeIn(animationSpec = tween(250)) + slideInHorizontally(animationSpec = tween(250), initialOffsetX = { -it / 4 * navDirection }) },
+                popExitTransition = { fadeOut(animationSpec = tween(250)) + slideOutHorizontally(animationSpec = tween(250), targetOffsetX = { it / 4 * navDirection }) },
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
-                composable("beranda") { BerandaScreen(onGoStok = { nav.navigate("stok") }, onGoPengingat = { nav.navigate("pengingat") }, onGoLaba = { nav.navigate("laba") }, onGoRiwayat = { nav.navigate("riwayat") }) }
+                composable("beranda") { BerandaScreen(onGoStok = { goToTab("stok") }, onGoPengingat = { goToTab("pengingat") }, onGoLaba = { goToTab("laba") }, onGoRiwayat = { goToTab("riwayat") }) }
                 composable("kasir") { KasirScreen() }
                 composable("stok") { StokScreen() }
                 composable("keuangan") { KeuanganScreen() }
                 composable("laba") { LabaScreen() }
-                composable("pengingat") { PengingatScreen(onGoStok = { nav.navigate("stok") }) }
+                composable("pengingat") { PengingatScreen(onGoStok = { goToTab("stok") }) }
                 composable("riwayat") { RiwayatScreen() }
                 composable("backup") { BackupScreen() }
                 composable("terlaris") { ObatTerlarisScreen() }
@@ -233,7 +280,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().clickable {
                             showMoreSheet = false
-                            nav.navigate(route) { popUpTo("beranda"); launchSingleTop = true }
+                            goToTab(route)
                         }.padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
                         Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -273,7 +320,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().clickable {
                         showMoreSheet = false
-                        nav.navigate("tentang") { popUpTo("beranda"); launchSingleTop = true }
+                        goToTab("tentang")
                     }.padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
