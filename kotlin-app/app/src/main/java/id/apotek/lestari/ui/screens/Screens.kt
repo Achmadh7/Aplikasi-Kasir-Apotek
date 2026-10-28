@@ -707,6 +707,8 @@ fun KasirScreen() {
     // cart sendiri dibangun ulang dari daftar obat begitu tersedia.
     var savedCart by rememberSaveable { mutableStateOf<List<Int>>(emptyList()) }
     val cart = remember { mutableStateListOf<CartItem>() }
+    // Obat yang jumlahnya sedang diubah lewat dialog ketik angka (null = dialog tutup).
+    var qtyEditTarget by remember { mutableStateOf<CartItem?>(null) }
     val scope = rememberCoroutineScope()
     // Supaya field Uang Diterima otomatis tergulir ke atas keyboard saat diketuk.
     val amountBringIntoView = remember { BringIntoViewRequester() }
@@ -1000,7 +1002,20 @@ fun KasirScreen() {
                             key(ci.qty) {
                                 val qtyPop = remember { Animatable(1.35f) }
                                 LaunchedEffect(ci.qty) { qtyPop.animateTo(1f, expressiveSpring()) }
-                                Text("${ci.qty}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(24.dp).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value), textAlign = TextAlign.Center)
+                                // Angka jumlah bisa diketuk untuk ketik jumlah langsung
+                                // (pill abu-abu menandakan bisa diketuk).
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.clickable { qtyEditTarget = ci }
+                                ) {
+                                    Text(
+                                        "${ci.qty}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.width(44.dp).padding(vertical = 2.dp).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                             StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
                             Spacer(Modifier.width(8.dp))
@@ -1211,6 +1226,54 @@ fun KasirScreen() {
                 }
             }
         }
+    }
+    // Dialog ubah jumlah langsung: ketuk angka jumlah di keranjang, lalu ketik
+    // angka pasti — tidak perlu mengetuk + berulang kali. Jumlah 0 mengeluarkan
+    // obat dari keranjang (sama seperti − saat jumlah 1); jumlah di atas stok
+    // dijepit ke stok (sama seperti tombol +).
+    if (qtyEditTarget != null) {
+        val target = qtyEditTarget!!
+        var qtyText by remember { mutableStateOf("${target.qty}") }
+        var qtyError by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { qtyEditTarget = null },
+            title = { Text("Ubah Jumlah") },
+            text = {
+                Column {
+                    Text(target.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Stok tersedia: ${target.medicine.stock} ${target.medicine.unit}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = qtyText,
+                        onValueChange = { qtyText = it.filter { ch -> ch.isDigit() }; qtyError = "" },
+                        label = { Text("Jumlah") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (qtyError.isNotEmpty()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(qtyError, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val v = qtyText.toIntOrNull()
+                        if (v == null) {
+                            qtyError = "Masukkan angka yang valid."
+                        } else {
+                            val clamped = minOf(v, target.medicine.stock)
+                            if (clamped <= 0) cart.remove(target) else target.qty = clamped
+                            qtyEditTarget = null
+                        }
+                    }
+                ) { Text("Simpan", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = { qtyEditTarget = null }) { Text("Batal") } }
+        )
     }
 }
 
