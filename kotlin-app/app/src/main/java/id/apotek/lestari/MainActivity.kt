@@ -95,7 +95,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                     ) {
                         TABS.forEachIndexed { index, tab ->
                             NavigationBarItem(
-                                selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris") else current == tab.route,
+                                selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang") else current == tab.route,
                                 onClick = { if (tab.route == "lainnya") showMoreSheet = true else nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
                                 icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
                                 label = { Text(tab.label) },
@@ -157,6 +157,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                 composable("riwayat") { RiwayatScreen() }
                 composable("backup") { BackupScreen() }
                 composable("terlaris") { ObatTerlarisScreen() }
+                composable("tentang") { TentangScreen() }
             }
         }
     }
@@ -214,6 +215,21 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.weight(1f)
                     )
+                }
+                // Tentang Aplikasi, di bawah ganti tema.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        showMoreSheet = false
+                        nav.navigate("tentang") { popUpTo("beranda"); launchSingleTop = true }
+                    }.padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text("Tentang Aplikasi", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

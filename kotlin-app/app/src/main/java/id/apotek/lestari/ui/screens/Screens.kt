@@ -2828,3 +2828,67 @@ fun BackupScreen() {
         )
     }
 }
+
+/** Tentang Aplikasi: logo, nama, versi, dan deskripsi singkat. */
+@Composable
+fun TentangScreen() {
+    // Samakan dengan versionName di build.gradle.kts.
+    val version = "1.0.0"
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                    Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text("Tentang Aplikasi", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        }
+        item {
+            // Logo + nama + versi, di tengah.
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                val logo = rememberLogoBitmap()
+                if (logo != null) {
+                    Surface(color = Color.White, shape = CircleShape, modifier = Modifier.size(88.dp)) {
+                        Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(8.dp).fillMaxSize())
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Apotek Lestari", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text("Versi $version", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        item {
+            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text(
+                        "Aplikasi kasir dan manajemen stok obat untuk Apotek Lestari. Bekerja sepenuhnya offline \u2014 data obat, penjualan, dan kas tersimpan di perangkat dan tetap aman tanpa internet.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+        item {
+            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Versi", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(version, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Dikembangkan untuk", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Apotek Lestari", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+        }
+    }
+}
