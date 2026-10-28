@@ -6,6 +6,7 @@ import id.apotek.lestari.data.local.MedicineEntity
 import id.apotek.lestari.data.local.SaleEntity
 import id.apotek.lestari.data.local.SaleItemEntity
 import androidx.room.withTransaction
+import kotlinx.coroutines.CancellationException
 import id.apotek.lestari.ui.theme.dayKeyID
 import id.apotek.lestari.ui.theme.parseISODate
 import java.text.SimpleDateFormat
@@ -31,6 +32,8 @@ class Repository {
 
     private suspend fun <T> call(block: suspend () -> T): ApiResult<T> = try {
         ApiResult.Success(block())
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         ApiResult.Error(e.message ?: "Terjadi kesalahan", e)
     }
@@ -90,13 +93,12 @@ class Repository {
         val meds = db.medicineDao().getAll()
         val salesRows = db.saleDao().getAll()
         val items = db.saleDao().getAllItems()
-        val now = Date()
         val startToday = jakartaDayStartMillis(0)
         val endToday = jakartaDayStartMillis(1)
         val startYesterday = jakartaDayStartMillis(-1)
         val startMonth = jakartaMonthStartMillis()
-        val todayKey = dayKeyID(now)
         val in30Key = dayKeyID(Date(jakartaDayStartMillis(30)))
+        val medById = meds.associateBy { it.id }
 
         fun instantOf(iso: String): Long? = parseISODate(iso)?.time
         var todayIn = 0
@@ -123,17 +125,19 @@ class Repository {
             }
         }
         // Stok menipis: di bawah 20 (sama dengan status "Rendah" di Stok).
-        val lowStockCount = meds.count { it.stock < 10 }
-        // Kadaluarsa: tanggal kalender hari ini s.d. 30 hari ke depan (WIB).
+        val lowStockCount = meds.count { it.stock < 20 }
+        // Kadaluarsa: semua obat yang kedaluwarsa maupun akan kedaluwarsa
+        // dalam 30 hari ke depan (WIB) — tanpa batas bawah, supaya obat yang
+        // SUDAH kedaluwarsa ikut terhitung.
         val expiringCount = meds.count {
-            it.expiryDate != null && it.expiryDate >= todayKey && it.expiryDate <= in30Key
+            it.expiryDate != null && it.expiryDate <= in30Key
         }
         val todaySales = salesRows.filter { (instantOf(it.createdAt) ?: -1) in startToday until endToday }
         // "Obat yang Terjual" di Beranda hanya dari penjualan hari ini.
         val todaySaleIds = todaySales.map { it.id }.toSet()
         val bestSellers = items.filter { it.saleId in todaySaleIds }
-            .groupBy { it.medicineName }
-            .map { (name, list) -> BestSeller(name, list.sumOf { it.qty }, list.sumOf { it.subtotal }) }
+            .groupBy { it.medicineId }
+            .map { (id, list) -> BestSeller(medById[id]?.name ?: list.first().medicineName, list.sumOf { it.qty }, list.sumOf { it.subtotal }) }
             .sortedByDescending { it.qty }
         val last7Days = (6 downTo 0).map { offset ->
             val dayStart = jakartaDayStartMillis(-offset)
@@ -166,7 +170,7 @@ class Repository {
         val filtered = if (q.isBlank()) rows else rows.filter {
             it.name.contains(q, ignoreCase = true) ||
                 it.category.contains(q, ignoreCase = true) ||
-                (it.barcode?.contains(q) == true)
+                (it.barcode?.contains(q, ignoreCase = true) == true)
         }
         ListMedicinesResponse(filtered.map { it.toModel() })
     }
@@ -177,6 +181,9 @@ class Repository {
     }
 
     suspend fun createMedicine(args: MedicineArgs): ApiResult<IdResponse> = call {
+        if (args.name.isBlank()) throw IllegalArgumentException("Nama obat tidak boleh kosong")
+        if (args.buyPrice <= 0) throw IllegalArgumentException("Harga beli harus lebih dari 0")
+        if (args.sellPrice <= 0) throw IllegalArgumentException("Harga jual harus lebih dari 0")
         val dao = DatabaseProvider.db.medicineDao()
         val barcode = args.barcode?.trim().orEmpty().ifBlank { null }
         if (barcode != null) {
@@ -195,6 +202,9 @@ class Repository {
     }
 
     suspend fun updateMedicine(args: UpdateMedicineArgs): ApiResult<OkResponse> = call {
+        if (args.name.isBlank()) throw IllegalArgumentException("Nama obat tidak boleh kosong")
+        if (args.buyPrice <= 0) throw IllegalArgumentException("Harga beli harus lebih dari 0")
+        if (args.sellPrice <= 0) throw IllegalArgumentException("Harga jual harus lebih dari 0")
         val dao = DatabaseProvider.db.medicineDao()
         val barcode = args.barcode?.trim().orEmpty().ifBlank { null }
         if (barcode != null) {
@@ -204,7 +214,7 @@ class Repository {
             }
         }
         val old = dao.getById(args.id)
-        dao.update(
+        val changed = dao.update(
             MedicineEntity(
                 id = args.id, name = args.name, category = args.category, unit = args.unit,
                 buyPrice = args.buyPrice, sellPrice = args.sellPrice,
@@ -213,48 +223,67 @@ class Repository {
                 createdAt = old?.createdAt ?: nowIso()
             )
         )
+        if (changed == 0) throw IllegalStateException("Obat tidak ditemukan")
         OkResponse(true)
     }
 
     suspend fun deleteMedicine(id: Int): ApiResult<OkResponse> = call {
         // Riwayat penjualan tetap utuh: item penjualan menyimpan snapshot
         // nama obat, jadi menghapus obat tidak menghapus riwayat.
-        DatabaseProvider.db.medicineDao().deleteById(id)
+        val deleted = DatabaseProvider.db.medicineDao().deleteById(id)
+        if (deleted == 0) throw IllegalStateException("Obat tidak ditemukan")
         OkResponse(true)
     }
 
     suspend fun bulkImport(args: BulkImportArgs): ApiResult<BulkImportResponse> = call {
-        val dao = DatabaseProvider.db.medicineDao()
+        val db = DatabaseProvider.db
+        val dao = db.medicineDao()
         var inserted = 0
         var updated = 0
         var skipped = 0
-        for (item in args.items) {
-            if (item.name.isBlank()) {
-                skipped++
-                continue
-            }
-            val barcode = item.barcode?.trim().orEmpty().ifBlank { null }
-            val existing = if (barcode != null) dao.findByBarcode(barcode) else null
-            if (existing != null) {
-                dao.update(
-                    existing.copy(
-                        name = item.name, category = item.category, unit = item.unit,
-                        buyPrice = item.buyPrice, sellPrice = item.sellPrice,
-                        stock = item.stock, minStock = item.minStock,
-                        expiryDate = item.expiryDate, barcode = barcode
+        db.withTransaction {
+            for (item in args.items) {
+                if (item.name.isBlank()) {
+                    skipped++
+                    continue
+                }
+                if (item.buyPrice <= 0 || item.sellPrice <= 0) {
+                    skipped++
+                    continue
+                }
+                val barcode = item.barcode?.trim().orEmpty().ifBlank { null }
+                // Baris tanpa barcode: cocokkan juga via nama (+ kategori/satuan,
+                // case-insensitive) supaya impor ulang tidak menggandakan obat.
+                val existing = if (barcode != null) {
+                    dao.findByBarcode(barcode)
+                } else {
+                    dao.getAll().firstOrNull {
+                        it.name.trim().equals(item.name.trim(), ignoreCase = true) &&
+                            it.category.trim().equals(item.category.trim(), ignoreCase = true) &&
+                            it.unit.trim().equals(item.unit.trim(), ignoreCase = true)
+                    }
+                }
+                if (existing != null) {
+                    dao.update(
+                        existing.copy(
+                            name = item.name, category = item.category, unit = item.unit,
+                            buyPrice = item.buyPrice, sellPrice = item.sellPrice,
+                            stock = item.stock, minStock = item.minStock,
+                            expiryDate = item.expiryDate, barcode = barcode
+                        )
                     )
-                )
-                updated++
-            } else {
-                dao.insert(
-                    MedicineEntity(
-                        name = item.name, category = item.category, unit = item.unit,
-                        buyPrice = item.buyPrice, sellPrice = item.sellPrice,
-                        stock = item.stock, minStock = item.minStock,
-                        expiryDate = item.expiryDate, barcode = barcode, createdAt = nowIso()
+                    updated++
+                } else {
+                    dao.insert(
+                        MedicineEntity(
+                            name = item.name, category = item.category, unit = item.unit,
+                            buyPrice = item.buyPrice, sellPrice = item.sellPrice,
+                            stock = item.stock, minStock = item.minStock,
+                            expiryDate = item.expiryDate, barcode = barcode, createdAt = nowIso()
+                        )
                     )
-                )
-                inserted++
+                    inserted++
+                }
             }
         }
         BulkImportResponse(inserted = inserted, updated = updated, skipped = skipped, total = args.items.size)
@@ -271,58 +300,68 @@ class Repository {
     suspend fun createSale(args: CreateSaleArgs): ApiResult<CreateSaleResponse> = call {
         val db = DatabaseProvider.db
         if (args.items.isEmpty()) throw IllegalArgumentException("Keranjang kosong")
+        for (item in args.items) {
+            if (item.qty <= 0) throw IllegalArgumentException("Jumlah obat harus lebih dari 0")
+        }
+        // Agregasi qty per obat dulu (D19): keranjang bisa berisi obat yang
+        // sama dua kali, jadi cek stok harus atas total qty gabungan.
+        val qtyById = args.items.groupBy { it.medicineId }
+            .mapValues { (_, list) -> list.sumOf { it.qty } }
         var total = 0
         data class Line(val med: MedicineEntity, val qty: Int, val subtotal: Int)
         val lines = args.items.map { item ->
             val med = db.medicineDao().getById(item.medicineId)
                 ?: throw IllegalStateException("Obat tidak ditemukan")
-            if (med.stock < item.qty) throw IllegalStateException("Stok ${med.name} tidak cukup")
             val subtotal = med.sellPrice * item.qty
             total += subtotal
             Line(med, item.qty, subtotal)
         }
-        val change = (args.amountPaid - total).coerceAtLeast(0)
+        // Kurang bayar ditolak sebagai Error (bukan lunas dengan kembalian 0).
+        if (args.amountPaid < total) throw IllegalArgumentException("Uang dibayar kurang dari total")
+        val change = args.amountPaid - total
         val now = Date()
-        val invoiceNo = "INV-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).apply {
+        val invoiceNo = "INV-" + SimpleDateFormat("yyyyMMdd-HHmmss-SSS", Locale.US).apply {
             timeZone = jakarta
         }.format(now)
         val createdAt = nowIso()
-        val saleId = db.saleDao().insert(
-            SaleEntity(
-                invoiceNo = invoiceNo, total = total, paymentMethod = args.paymentMethod,
-                amountPaid = args.amountPaid, changeAmount = change, createdAt = createdAt
-            )
-        ).toInt()
-        db.saleDao().insertItems(
-            lines.map {
-                SaleItemEntity(
-                    saleId = saleId, medicineId = it.med.id, medicineName = it.med.name,
-                    qty = it.qty, price = it.med.sellPrice, buyPrice = it.med.buyPrice,
-                    subtotal = it.subtotal
-                )
+        val nameById = lines.associate { it.med.id to it.med.name }
+        db.withTransaction {
+            // Kurangi stok secara atomik; decrementStock return 0 = stok tidak cukup.
+            for ((medicineId, qty) in qtyById) {
+                val changed = db.medicineDao().decrementStock(medicineId, qty)
+                if (changed == 0) throw IllegalStateException("Stok ${nameById[medicineId] ?: "obat"} tidak cukup")
             }
-        )
-        // Kurangi stok obat yang terjual
-        lines.forEach { line ->
-            db.medicineDao().update(line.med.copy(stock = (line.med.stock - line.qty).coerceAtLeast(0)))
-        }
-        // Catat kas masuk supaya Keuangan & Beranda ikut berubah
-        db.cashDao().insert(
-            CashEntryEntity(
-                type = "in", category = "Penjualan", description = "Penjualan $invoiceNo",
-                amount = total, source = "sale", createdAt = createdAt
+            val saleId = db.saleDao().insert(
+                SaleEntity(
+                    invoiceNo = invoiceNo, total = total, paymentMethod = args.paymentMethod,
+                    amountPaid = args.amountPaid, changeAmount = change, createdAt = createdAt
+                )
+            ).toInt()
+            db.saleDao().insertItems(
+                lines.map {
+                    SaleItemEntity(
+                        saleId = saleId, medicineId = it.med.id, medicineName = it.med.name,
+                        qty = it.qty, price = it.med.sellPrice, buyPrice = it.med.buyPrice,
+                        subtotal = it.subtotal, category = it.med.category, unit = it.med.unit
+                    )
+                }
             )
-        )
-        CreateSaleResponse(saleId, invoiceNo, total, change)
+            // Catat kas masuk supaya Keuangan & Beranda ikut berubah
+            db.cashDao().insert(
+                CashEntryEntity(
+                    type = "in", category = "Penjualan", description = "Penjualan $invoiceNo",
+                    amount = total, source = "sale", createdAt = createdAt
+                )
+            )
+            CreateSaleResponse(saleId, invoiceNo, total, change)
+        }
     }
 
-    suspend fun listSales(limit: Int = 50): ApiResult<ListSalesResponse> = call {
+    suspend fun listSales(limit: Int = 200): ApiResult<ListSalesResponse> = call {
         val db = DatabaseProvider.db
-        val medById = db.medicineDao().getAll().associateBy { it.id }
         val sales = db.saleDao().getAll().take(limit).map { s ->
             val items = db.saleDao().getItemsForSale(s.id).map {
-                val med = medById[it.medicineId]
-                SaleItem(it.medicineName, it.qty, it.price, it.subtotal, med?.category ?: "", med?.unit ?: "")
+                SaleItem(it.medicineName, it.qty, it.price, it.subtotal, it.category, it.unit)
             }
             Sale(s.id, s.invoiceNo, s.total, s.paymentMethod, s.amountPaid, s.changeAmount, s.createdAt, items)
         }
@@ -330,6 +369,11 @@ class Repository {
     }
 
     // ---- Kas ----
+
+    suspend fun getCashBalance(): ApiResult<CashBalance> = call {
+        val dao = DatabaseProvider.db.cashDao()
+        CashBalance(dao.sumIn(), dao.sumOut())
+    }
 
     suspend fun listCashEntries(limit: Int = 200): ApiResult<ListCashResponse> = call {
         val entries = DatabaseProvider.db.cashDao().getAll().take(limit).map { it.toModel() }
@@ -340,14 +384,19 @@ class Repository {
         val id = DatabaseProvider.db.cashDao().insert(
             CashEntryEntity(
                 type = args.type, category = args.category, description = args.description,
-                amount = args.amount, source = "manual", createdAt = nowIso()
+                amount = args.amount, source = "manual", createdAt = args.createdAt ?: nowIso()
             )
         ).toInt()
         IdResponse(id)
     }
 
     suspend fun deleteCashEntry(id: Int): ApiResult<OkResponse> = call {
-        DatabaseProvider.db.cashDao().deleteById(id)
+        // Kas dari penjualan tidak bisa dihapus — kalau bisa, Saldo Kas dan
+        // laporan tidak lagi cocok dengan riwayat penjualan.
+        val entry = DatabaseProvider.db.cashDao().getAll().firstOrNull { it.id == id }
+        if (entry?.source == "sale") throw IllegalStateException("Kas penjualan tidak bisa dihapus")
+        val deleted = DatabaseProvider.db.cashDao().deleteById(id)
+        if (deleted == 0) throw IllegalStateException("Kas tidak ditemukan")
         OkResponse(true)
     }
 
@@ -369,7 +418,8 @@ class Repository {
             "today" -> startToday
             "month" -> startMonth
             "last30" -> startLast30
-            else -> 0L // "all"
+            "all" -> 0L
+            else -> throw IllegalArgumentException("Periode tidak dikenal: $period")
         }
         val end = if (period == "all") Long.MAX_VALUE else endToday
         fun inPeriod(iso: String): Boolean {
@@ -380,11 +430,12 @@ class Repository {
         val periodSaleIds = periodSales.map { it.id }.toSet()
         val periodItems = items.filter { it.saleId in periodSaleIds }
 
-        // Biaya tiap item: snapshot harga beli saat transaksi; kalau 0,
-        // pakai harga beli obat saat ini; kalau obat sudah dihapus dan tidak
-        // ada snapshot, biayanya 0 dan dihitung di costMissingQty.
+        // Biaya tiap item: HANYA snapshot harga beli saat transaksi.
+        // Kalau snapshot 0 (mis. obat dibuat sebelum snapshot dicatat),
+        // biayanya 0 dan item dihitung di costMissingQty — jangan fallback
+        // ke harga beli saat ini, karena itu mengubah laba histori.
         fun costOf(it: SaleItemEntity): Int =
-            if (it.buyPrice > 0) it.buyPrice else (medById[it.medicineId]?.buyPrice ?: 0)
+            if (it.buyPrice > 0) it.buyPrice else 0
 
         val revenue = periodItems.sumOf { it.subtotal }
         val hpp = periodItems.sumOf { costOf(it) * it.qty }
@@ -394,29 +445,32 @@ class Repository {
         val costMissingQty = periodItems.filter { costOf(it) == 0 }.sumOf { it.qty }
 
         val periodOut = entries.filter { it.type == "out" && inPeriod(it.createdAt) }
-        val operationalExpense = periodOut.filter { it.category != "Beli Stok" }.sumOf { it.amount }
-        val stockPurchaseExpense = periodOut.filter { it.category == "Beli Stok" }.sumOf { it.amount }
+        val operationalExpense = periodOut.filter { !it.category.trim().equals("Beli Stok", ignoreCase = true) }.sumOf { it.amount }
+        val stockPurchaseExpense = periodOut.filter { it.category.trim().equals("Beli Stok", ignoreCase = true) }.sumOf { it.amount }
         val netProfit = grossProfit - operationalExpense
 
         data class Agg(var qty: Int = 0, var revenue: Int = 0, var hpp: Int = 0)
-        val medAgg = linkedMapOf<String, Agg>()
-        val medCategory = mutableMapOf<String, String>()
+        val medAgg = linkedMapOf<Int, Agg>()
+        val medName = mutableMapOf<Int, String>()
+        val medCategory = mutableMapOf<Int, String>()
         val catAgg = linkedMapOf<String, Agg>()
         for (it in periodItems) {
             val cost = costOf(it) * it.qty
             val category = medById[it.medicineId]?.category ?: "Lainnya"
-            val cur = medAgg.getOrPut(it.medicineName) { Agg() }
+            val cur = medAgg.getOrPut(it.medicineId) { Agg() }
             cur.qty += it.qty; cur.revenue += it.subtotal; cur.hpp += cost
-            medCategory[it.medicineName] = category
+            // Nama tampilan: nama obat saat ini, fallback ke snapshot nama item.
+            medName[it.medicineId] = medById[it.medicineId]?.name ?: it.medicineName
+            medCategory[it.medicineId] = category
             val cc = catAgg.getOrPut(category) { Agg() }
             cc.qty += it.qty; cc.revenue += it.subtotal; cc.hpp += cost
         }
         fun withMargin(a: Agg) = ProfitAgg(
             a.qty, a.revenue, a.hpp, a.revenue - a.hpp, marginPctOf(a.revenue, a.revenue - a.hpp)
         )
-        val byMedicine = medAgg.entries.map { (name, a) ->
+        val byMedicine = medAgg.entries.map { (id, a) ->
             val m = withMargin(a)
-            ProfitByMedicine(name, medCategory[name] ?: "Lainnya", m.qty, m.revenue, m.hpp, m.profit, m.marginPct)
+            ProfitByMedicine(medName[id] ?: "", medCategory[id] ?: "Lainnya", m.qty, m.revenue, m.hpp, m.profit, m.marginPct)
         }.sortedByDescending { it.profit }
         val byCategory = catAgg.entries.map { (category, a) ->
             val m = withMargin(a)
@@ -458,6 +512,7 @@ class Repository {
         val db = DatabaseProvider.db
         val salesRows = db.saleDao().getAll()
         val items = db.saleDao().getAllItems()
+        val medById = db.medicineDao().getAll().associateBy { it.id }
         val startToday = jakartaDayStartMillis(0)
         val endToday = jakartaDayStartMillis(1)
         val startMonth = jakartaMonthStartMillis()
@@ -466,7 +521,8 @@ class Repository {
             "today" -> startToday
             "month" -> startMonth
             "last30" -> startLast30
-            else -> 0L // "all"
+            "all" -> 0L
+            else -> throw IllegalArgumentException("Periode tidak dikenal: $period")
         }
         val end = if (period == "all") Long.MAX_VALUE else endToday
         fun inPeriod(iso: String): Boolean {
@@ -475,9 +531,10 @@ class Repository {
         }
         val periodSaleIds = salesRows.filter { inPeriod(it.createdAt) }.map { it.id }.toSet()
         items.filter { it.saleId in periodSaleIds }
-            .groupBy { it.medicineName }
-            .map { (name, list) -> BestSeller(name, list.sumOf { it.qty }, list.sumOf { it.subtotal }) }
+            .groupBy { it.medicineId }
+            .map { (id, list) -> BestSeller(medById[id]?.name ?: list.first().medicineName, list.sumOf { it.qty }, list.sumOf { it.subtotal }) }
             .sortedByDescending { it.qty }
+            .take(20)
     }
 
     suspend fun downloadProfitReport(period: String = "month"): ApiResult<DownloadResponse> =

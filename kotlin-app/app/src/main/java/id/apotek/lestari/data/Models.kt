@@ -47,6 +47,10 @@ data class CashEntry(
     val createdAt: String = ""
 )
 
+data class CashBalance(val totalIn: Int = 0, val totalOut: Int = 0) {
+    val balance: Int get() = totalIn - totalOut
+}
+
 data class BestSeller(val name: String = "", val qty: Int = 0, val revenue: Int = 0)
 data class DayCash(val date: String = "", val label: String = "", val income: Int = 0, val expense: Int = 0)
 data class RecentSale(val id: Int = 0, val invoiceNo: String = "", val total: Int = 0, val createdAt: String = "")
@@ -90,17 +94,12 @@ data class ProfitReport(
 )
 
 // ---- Per-action request args ----
-data class ListMedicinesArgs(val search: String = "")
-data class BarcodeArgs(val barcode: String)
 data class MedicineArgs(val name: String, val category: String, val unit: String, val buyPrice: Int, val sellPrice: Int, val stock: Int, val minStock: Int, val expiryDate: String? = null, val barcode: String? = null)
 data class UpdateMedicineArgs(val id: Int, val name: String, val category: String, val unit: String, val buyPrice: Int, val sellPrice: Int, val stock: Int, val minStock: Int, val expiryDate: String? = null, val barcode: String? = null)
-data class IdArgs(val id: Int)
-data class BulkImportArgs(val items: List<MedicineArgs>, val mode: String = "upsert")
+data class BulkImportArgs(val items: List<MedicineArgs>)
 data class CreateSaleItemArgs(val medicineId: Int, val qty: Int)
 data class CreateSaleArgs(val items: List<CreateSaleItemArgs>, val paymentMethod: String, val amountPaid: Int)
-data class ListLimitArgs(val limit: Int = 50)
-data class CreateCashEntryArgs(val type: String, val category: String, val description: String, val amount: Int)
-data class ProfitArgs(val period: String = "month")
+data class CreateCashEntryArgs(val type: String, val category: String, val description: String, val amount: Int, val createdAt: String? = null)
 
 // ---- Per-action responses ----
 data class ListMedicinesResponse(val medicines: List<Medicine> = emptyList())

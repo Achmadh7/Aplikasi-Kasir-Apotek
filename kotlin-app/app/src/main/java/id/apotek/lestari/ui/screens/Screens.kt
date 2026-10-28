@@ -73,6 +73,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.util.lerp
@@ -98,6 +100,7 @@ import id.apotek.lestari.ui.components.BarcodeScanner
 import id.apotek.lestari.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -296,9 +299,10 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data }
         val meds = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
         outOfStockNames = meds.filter { it.stock <= 0 }.map { it.name }.sorted()
-        val todayKey = dayKeyID(Date())
         val in30Key = dayKeyID(Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000))
-        expiringMeds = meds.filter { it.expiryDate != null && it.expiryDate >= todayKey && it.expiryDate <= in30Key }
+        // Tanpa batas bawah: obat yang sudah kadaluarsa ikut tampil di sini
+        // (konsisten dengan expiringCount di Dashboard).
+        expiringMeds = meds.filter { it.expiryDate != null && it.expiryDate <= in30Key }
             .sortedBy { it.expiryDate }
             .map { it.name to it.expiryDate!! }
     }
@@ -435,7 +439,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 }
             }
             item {
-                // Kartu uang: Pengeluaran & Untung/Rugi Hari Ini sejajar, Bulan Ini di bawah.
+                // Kartu uang: Pengeluaran & Selisih Kas Hari Ini sejajar, Bulan Ini di bawah.
                 ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -445,7 +449,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ChiliRed, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                Text(if (d.todayProfit >= 0) "Untung Hari Ini" else "Rugi Hari Ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("Selisih Kas Hari Ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Spacer(Modifier.height(2.dp))
                                 Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (d.todayProfit >= 0) profitGreen() else ChiliRed, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
@@ -454,7 +458,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Spacer(Modifier.height(8.dp))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(if (d.monthProfit >= 0) "Untung Bulan Ini" else "Rugi Bulan Ini", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Text("Selisih Kas Bulan Ini", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                             Text(formatIDR(d.monthProfit), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (d.monthProfit >= 0) profitGreen() else ChiliRed)
                         }
                         Spacer(Modifier.height(4.dp))
@@ -541,6 +545,32 @@ class CartItem(val medicine: Medicine, qty: Int) {
     var qty by mutableStateOf(qty)
 }
 
+/**
+ * Millis tengah malam UTC untuk tanggal "yyyy-MM-dd" — dipakai sebagai
+ * initialSelectedDateMillis DatePicker. DatePicker memakai UTC, sedangkan
+ * parseISODate memakai timezone default HP untuk pola "yyyy-MM-dd", sehingga
+ * tanggal yang dipilih sebelumnya bisa geser 1 hari di zona WIB.
+ */
+private fun utcMidnightMillis(dateKey: String): Long? {
+    if (dateKey.isBlank()) return null
+    return try {
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+            isLenient = false
+        }.parse(dateKey)?.time
+    } catch (_: Exception) {
+        null
+    }
+}
+
+/** "yyyy-MM-dd" (WIB) -> string ISO UTC ("2026-10-27T00:00:00.000Z") untuk createdAt entri kas. */
+private fun dayKeyToIsoUtc(dayKey: String): String? {
+    val millis = utcMidnightMillis(dayKey) ?: return null
+    return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }.format(Date(millis))
+}
+
 // Kolom cari ramping berbentuk pil (BasicTextField + decorationBox), dipakai Kasir & Stok.
 // OutlinedTextField tidak dipakai di sini karena tinggi paksa yang kecil (44dp)
 // membuat teksnya terpotong — OutlinedTextField Material 3 mencadangkan ruang
@@ -620,23 +650,52 @@ private fun SortToggle(sortAz: Boolean, onToggle: () -> Unit) {
 @Composable
 fun KasirScreen() {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
-    var search by remember { mutableStateOf("") }
+    var search by rememberSaveable { mutableStateOf("") }
     var sortAz by remember { mutableStateOf(true) }
     var showScanner by remember { mutableStateOf(false) }
     var scanMsg by remember { mutableStateOf("") }
-    var method by remember { mutableStateOf("Tunai") }
-    var uangDiterima by remember { mutableIntStateOf(0) }
-    var payMsg by remember { mutableStateOf("") }
+    var method by rememberSaveable { mutableStateOf("Tunai") }
+    // TextFieldValue (bukan Int) + formatDecimalFieldValue supaya kursor tidak
+    // meloncat saat mengetik nominal; TextFieldValue punya Saver bawaan.
+    var uangDiterima by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
+    var payMsg by rememberSaveable { mutableStateOf("") }
     var payCount by remember { mutableIntStateOf(0) }
+    // Struk terakhir disimpan sebagai id saja, lalu dimuat ulang dari repo.
+    var lastSaleId by rememberSaveable { mutableIntStateOf(0) }
     var lastSale by remember { mutableStateOf<Sale?>(null) }
     var showSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val receiptLayer = rememberGraphicsLayer()
+    // Keranjang survive rotasi lewat pasangan (medicineId, qty) yang saveable;
+    // cart sendiri dibangun ulang dari daftar obat begitu tersedia.
+    var savedCart by rememberSaveable { mutableStateOf<List<Int>>(emptyList()) }
     val cart = remember { mutableStateListOf<CartItem>() }
     val scope = rememberCoroutineScope()
     // Supaya field Uang Diterima otomatis tergulir ke atas keyboard saat diketuk.
     val amountBringIntoView = remember { BringIntoViewRequester() }
     LaunchedEffect(Unit) { (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines } }
+    // Simpan isi keranjang (id + qty) setiap kali berubah — kecuali saat kosong,
+    // supaya pasangan hasil restore tidak tertimpa sebelum daftar obat dimuat.
+    val cartSnapshot = cart.map { it.medicine.id to it.qty }
+    LaunchedEffect(cartSnapshot) {
+        if (cart.isNotEmpty()) savedCart = cartSnapshot.flatMap { listOf(it.first, it.second) }
+    }
+    // Pulihkan keranjang dari pasangan tersimpan begitu daftar obat dimuat.
+    LaunchedEffect(medicines) {
+        if (cart.isEmpty() && savedCart.isNotEmpty() && medicines.isNotEmpty()) {
+            val byId = medicines.associateBy { it.id }
+            savedCart.chunked(2).forEach { pair ->
+                if (pair.size == 2) byId[pair[0]]?.let { cart.add(CartItem(it, pair[1])) }
+            }
+            savedCart = emptyList()
+        }
+    }
+    // Muat ulang struk terakhir dari id tersimpan (untuk restore setelah rotasi).
+    LaunchedEffect(lastSaleId) {
+        if (lastSaleId != 0 && lastSale?.id != lastSaleId) {
+            lastSale = (repo.listSales() as? ApiResult.Success)?.data?.sales?.firstOrNull { it.id == lastSaleId }
+        }
+    }
     if (showScanner) BarcodeScanner(onDetected = { code ->
         showScanner = false
         scope.launch {
@@ -650,6 +709,7 @@ fun KasirScreen() {
                     scanMsg = "Stok ${med.name} hanya ${med.stock} — tidak bisa ditambah lagi"
                 } else {
                     lastSale = null
+                    lastSaleId = 0
                     payMsg = ""
                     if (ex != null) ex.qty++ else cart.add(CartItem(med, 1))
                     scanMsg = "${med.name} ditambahkan"
@@ -661,7 +721,7 @@ fun KasirScreen() {
     val sorted = if (sortAz) filtered.sortedBy { it.name.lowercase() } else filtered.sortedByDescending { it.name.lowercase() }
     val total = cart.sumOf { it.medicine.sellPrice * it.qty }
     val cartQty = cart.sumOf { it.qty }
-    val paid = uangDiterima
+    val paid = parseDecimal(uangDiterima.text)
     val change = if (method == "Tunai") (paid - total).coerceAtLeast(0) else 0
     val canPay = cart.isNotEmpty() && (method != "Tunai" || paid >= total)
     Box(Modifier.fillMaxSize()) {
@@ -716,6 +776,7 @@ fun KasirScreen() {
                             scanMsg = "Stok ${m.name} hanya ${m.stock} — tidak bisa ditambah lagi"
                         } else {
                             lastSale = null
+                            lastSaleId = 0
                             payMsg = ""
                             if (ex != null) ex.qty++ else cart.add(CartItem(m, 1))
                         }
@@ -895,13 +956,19 @@ fun KasirScreen() {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                                 listOf(20000 to "Rp20.000", 50000 to "Rp50.000", 100000 to "Rp100.000").forEach { (nominal, label) ->
                                     OutlinedButton(
-                                        onClick = { uangDiterima += nominal },
+                                        onClick = {
+                                            val formatted = formatDecimal((parseDecimal(uangDiterima.text) + nominal).toString())
+                                            uangDiterima = TextFieldValue(formatted, TextRange(formatted.length))
+                                        },
                                         shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f),
                                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                                     ) { Text(label, maxLines = 1) }
                                 }
                                 Button(
-                                    onClick = { uangDiterima = total },
+                                    onClick = {
+                                        val formatted = formatDecimal(total.toString())
+                                        uangDiterima = TextFieldValue(formatted, TextRange(formatted.length))
+                                    },
                                     colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
                                     shape = RoundedCornerShape(32.dp), modifier = Modifier.weight(1f),
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
@@ -911,8 +978,8 @@ fun KasirScreen() {
                             Text("Ketuk nominal untuk menambah, atau Uang Pas untuk jumlah persis.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(6.dp))
                             OutlinedTextField(
-                                value = if (uangDiterima == 0) "" else formatDecimal(uangDiterima.toString()),
-                                onValueChange = { uangDiterima = it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 },
+                                value = uangDiterima,
+                                onValueChange = { uangDiterima = formatDecimalFieldValue(it) },
                                 label = { Text("cth: 50.000") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
@@ -947,15 +1014,21 @@ fun KasirScreen() {
                         scope.launch {
                             val amt = if (method == "Tunai") paid else total
                             val result = repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty) }, method, amt))
-                            payMsg = "Pembayaran $method berhasil. Total ${formatIDR(total)}" + if (method == "Tunai") " • Kembalian ${formatIDR(change)}" else ""
-                            payCount++
-                            cart.clear()
-                            uangDiterima = 0
-                            val after = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
-                            medicines = after
                             if (result is ApiResult.Success) {
+                                payMsg = "Pembayaran $method berhasil. Total ${formatIDR(total)}" + if (method == "Tunai") " • Kembalian ${formatIDR(change)}" else ""
+                                payCount++
+                                cart.clear()
+                                savedCart = emptyList()
+                                uangDiterima = TextFieldValue("")
+                                val after = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
+                                medicines = after
                                 val fresh = (repo.listSales() as? ApiResult.Success)?.data?.sales.orEmpty()
                                 lastSale = fresh.firstOrNull { it.id == result.data.id }
+                                lastSaleId = result.data.id
+                            } else {
+                                // Gagal: keranjang & uang diterima dibiarkan utuh supaya
+                                // kasir bisa mencoba lagi tanpa mengulang input.
+                                payMsg = "Pembayaran gagal: ${(result as? ApiResult.Error)?.message ?: "tidak diketahui"}"
                             }
                         }
                     },
@@ -1074,7 +1147,13 @@ fun StokScreen() {
             }
         }
     }
-    LaunchedEffect(Unit) { reload() }
+    // Pencarian di-debounce: satu reload 300ms setelah ketikan terakhir,
+    // supaya coroutine pencarian lama tidak saling mendahului hasil terbaru.
+    // LaunchedEffect(search) juga memuat daftar awal (search = "").
+    LaunchedEffect(search) {
+        delay(300)
+        reload()
+    }
     // Daftar muncul bertahap begitu data pertama kali tiba; tidak berulang saat scroll.
     LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
     // Ringkasan + filter status stok (Aman >20, Sedang ==20, Rendah <20, Habis 0).
@@ -1130,7 +1209,7 @@ fun StokScreen() {
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 SearchField(
-                    value = search, onValueChange = { search = it; reload() },
+                    value = search, onValueChange = { search = it },
                     modifier = Modifier.weight(1f)
                 )
                 OutlinedButton(
@@ -1394,6 +1473,7 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
     var stock by remember(editing) { mutableStateOf(editing?.stock?.toString() ?: "") }
     var minStock by remember(editing) { mutableStateOf(editing?.minStock?.toString() ?: "10") }
     var expiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
+    var formError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
@@ -1438,6 +1518,9 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
+            if (formError.isNotEmpty()) {
+                Text(formError, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = onDismiss, shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f).height(52.dp)) { Text("Batal") }
                 Button(
@@ -1451,15 +1534,19 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
                             val ms = minStock.toIntOrNull() ?: 10
                             val exp = expiry.ifBlank { null }
                             val bc = barcode.ifBlank { null }
-                            if (editing == null) {
+                            val result = if (editing == null) {
                                 repo.createMedicine(MedicineArgs(name, cat, unt, b, s, st, ms, exp, bc))
                             } else {
                                 repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, b, s, st, ms, exp, bc))
                             }
-                            onSaved()
+                            if (result is ApiResult.Success) {
+                                onSaved()
+                            } else {
+                                formError = (result as? ApiResult.Error)?.message ?: "Gagal menyimpan obat."
+                            }
                         }
                     },
-                    enabled = name.isNotBlank(),
+                    enabled = name.isNotBlank() && parseDecimal(buy.text) > 0 && parseDecimal(sell.text) > 0,
                     colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.weight(1f).height(52.dp)
@@ -1468,7 +1555,9 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
         }
     }
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = parseISODate(expiry)?.time)
+        // Tanggal dinormalisasi ke tengah malam UTC supaya DatePicker tidak
+        // menggeser tanggal 1 hari (parseISODate memakai timezone HP).
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = utcMidnightMillis(expiry))
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
@@ -1506,12 +1595,19 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
 @Composable
 fun KeuanganScreen() {
     var entries by remember { mutableStateOf<List<CashEntry>>(emptyList()) }
+    var cashBalance by remember { mutableStateOf<CashBalance?>(null) }
     var period by remember { mutableStateOf("all") } // today | month | all
     var typeFilter by remember { mutableStateOf("all") } // all | in | out
     var showForm by remember { mutableStateOf(false) }
     var formType by remember { mutableStateOf("in") }
     val scope = rememberCoroutineScope()
-    fun reload() { scope.launch { (repo.listCashEntries() as? ApiResult.Success)?.let { entries = it.data.entries } } }
+    fun reload() {
+        scope.launch {
+            (repo.listCashEntries() as? ApiResult.Success)?.let { entries = it.data.entries }
+            // Saldo dihitung dari SEMUA entri (bukan 200 terbaru saja).
+            (repo.getCashBalance() as? ApiResult.Success)?.let { cashBalance = it.data }
+        }
+    }
     LaunchedEffect(Unit) { reload() }
     val todayKey = dayKeyID(Date())
     val monthKey = monthKeyID(Date())
@@ -1526,6 +1622,11 @@ fun KeuanganScreen() {
     val masuk = periodEntries.filter { it.type == "in" }.sumOf { it.amount }
     val keluar = periodEntries.filter { it.type == "out" }.sumOf { it.amount }
     val shown = periodEntries.filter { typeFilter == "all" || it.type == typeFilter }
+    // Saldo hero memakai total agregat (semua entri); bila gagal dimuat, pakai
+    // jumlah periode terpilih sebagai fallback supaya layar tetap menampilkan angka.
+    val saldoIn = cashBalance?.totalIn ?: masuk
+    val saldoOut = cashBalance?.totalOut ?: keluar
+    val saldo = cashBalance?.balance ?: (masuk - keluar)
     // Arus kas 7 hari terakhir (grafik) — selalu 7 hari, tidak mengikuti filter periode.
     val jakartaTz = TimeZone.getTimeZone("Asia/Jakarta")
     val cal = Calendar.getInstance(jakartaTz).apply {
@@ -1582,9 +1683,9 @@ fun KeuanganScreen() {
                     }
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        formatIDR(masuk - keluar),
+                        formatIDR(saldo),
                         style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
-                        color = if (masuk - keluar < 0) ChiliRed else MaterialTheme.colorScheme.onSurface
+                        color = if (saldo < 0) ChiliRed else MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(8.dp))
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -1596,7 +1697,7 @@ fun KeuanganScreen() {
                                 Spacer(Modifier.width(4.dp))
                                 Text("MASUK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text(formatIDR(masuk), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(formatIDR(saldoIn), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
                         Box(Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outlineVariant))
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
@@ -1605,16 +1706,16 @@ fun KeuanganScreen() {
                                 Spacer(Modifier.width(4.dp))
                                 Text("KELUAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text(formatIDR(keluar), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ChiliRed)
+                            Text(formatIDR(saldoOut), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ChiliRed)
                         }
                     }
-                    // Bar proporsi Masuk (biru) vs Keluar (burgundy) pada periode terpilih — tipis (compact).
+                    // Bar proporsi Masuk (biru) vs Keluar (merah) dari total keseluruhan — tipis (compact).
                     Spacer(Modifier.height(8.dp))
-                    val totalFlow = masuk + keluar
+                    val totalFlow = saldoIn + saldoOut
                     Row(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.outlineVariant)) {
                         if (totalFlow > 0) {
-                            if (masuk > 0) Box(Modifier.weight(masuk.toFloat()).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
-                            if (keluar > 0) Box(Modifier.weight(keluar.toFloat()).fillMaxHeight().background(ChiliRed))
+                            if (saldoIn > 0) Box(Modifier.weight(saldoIn.toFloat()).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+                            if (saldoOut > 0) Box(Modifier.weight(saldoOut.toFloat()).fillMaxHeight().background(ChiliRed))
                         }
                     }
                 }
@@ -1732,6 +1833,16 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
     var category by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf(TextFieldValue("")) }
+    // Tanggal entri (WIB), default hari ini; hanya dikirim ke repo bila user
+    // mengubahnya — bila tidak, repo memakai waktu sekarang (createdAt = null).
+    var entryDate by remember { mutableStateOf(dayKeyID(Date())) }
+    var dateChanged by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var formError by remember { mutableStateOf("") }
+    val dateInteraction = remember { MutableInteractionSource() }
+    LaunchedEffect(dateInteraction) {
+        dateInteraction.interactions.collect { if (it is PressInteraction.Press) showDatePicker = true }
+    }
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
@@ -1753,6 +1864,18 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
             OutlinedTextField(category, { category = it }, label = { Text("Kategori") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(description, { description = it }, label = { Text("Keterangan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(amount, { amount = formatDecimalFieldValue(it) }, label = { Text("Jumlah (Rp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = formatDateID(entryDate),
+                onValueChange = {},
+                label = { Text("Tanggal") },
+                readOnly = true, singleLine = true,
+                trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = "Pilih tanggal") },
+                interactionSource = dateInteraction,
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (formError.isNotEmpty()) {
+                Text(formError, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(
                     onClick = onDismiss,
@@ -1762,15 +1885,20 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                 Button(
                     onClick = {
                         scope.launch {
-                            repo.createCashEntry(
+                            val result = repo.createCashEntry(
                                 CreateCashEntryArgs(
                                     type,
                                     category.ifBlank { "Lainnya" },
                                     description.ifBlank { if (isIn) "Kas masuk" else "Kas keluar" },
-                                    parseDecimal(amount.text)
+                                    parseDecimal(amount.text),
+                                    createdAt = if (dateChanged) dayKeyToIsoUtc(entryDate) else null
                                 )
                             )
-                            onSaved()
+                            if (result is ApiResult.Success) {
+                                onSaved()
+                            } else {
+                                formError = (result as? ApiResult.Error)?.message ?: "Gagal menyimpan entri kas."
+                            }
                         }
                     },
                     enabled = parseDecimal(amount.text) > 0,
@@ -1781,6 +1909,26 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.weight(1f).height(52.dp)
                 ) { Text("Simpan") }
+            }
+        }
+    }
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = utcMidnightMillis(entryDate))
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let {
+                        entryDate = dayKeyID(Date(it))
+                        dateChanged = true
+                    }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Batal") } }
+        ) {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                DatePicker(state = datePickerState)
             }
         }
     }
@@ -2177,6 +2325,9 @@ fun PengingatScreen(onGoStok: () -> Unit) {
             val d = daysUntilExpiry(m.expiryDate)
             val isCritical = m.stock == 0
             val suggest = (2 * m.minStock - m.stock).coerceAtLeast(0)
+            // Saran restock hanya bila ada stok minimum yang valid dan sarannya > 0
+            // (bila minStock = 0, saran "0 unit" tidak ada gunanya).
+            val showSuggest = m.minStock > 0 && suggest > 0
             AnimatedVisibility(
                 visible = listEntered,
                 enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
@@ -2230,9 +2381,13 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                         Icon(Icons.Default.Lightbulb, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            if (isCritical) "Stok habis — restock segera, disarankan $suggest ${m.unit} (target 2× stok minimum)."
-                            else if (m.stock <= m.minStock) "Stok menipis — disarankan restock $suggest ${m.unit} (target 2× stok minimum ${m.minStock})."
-                            else if (d != null && d < 0) "Sudah kadaluarsa — jangan dijual, segera pisahkan dari stok."
+                            if (isCritical) {
+                                if (showSuggest) "Stok habis — restock segera, disarankan $suggest ${m.unit} (target 2× stok minimum)."
+                                else "Stok habis — restock segera."
+                            } else if (m.stock <= m.minStock) {
+                                if (showSuggest) "Stok menipis — disarankan restock $suggest ${m.unit} (target 2× stok minimum ${m.minStock})."
+                                else "Stok menipis — restock segera."
+                            } else if (d != null && d < 0) "Sudah kadaluarsa — jangan dijual, segera pisahkan dari stok."
                             else "Kedaluwarsa dalam ${d ?: 0} hari — prioritaskan penjualan.",
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -2615,8 +2770,16 @@ fun RiwayatScreen() {
     var sales by remember { mutableStateOf<List<Sale>>(emptyList()) }
     var expanded by remember { mutableStateOf<Int?>(null) }
     var listEntered by remember { mutableStateOf(false) }
+    var salesLimit by remember { mutableIntStateOf(50) }
+    var hasMore by remember { mutableStateOf(false) }
     val receiptLayer = rememberGraphicsLayer()
-    LaunchedEffect(Unit) { (repo.listSales() as? ApiResult.Success)?.let { sales = it.data.sales } }
+    LaunchedEffect(salesLimit) {
+        (repo.listSales(salesLimit) as? ApiResult.Success)?.let {
+            sales = it.data.sales
+            // Hasil penuh (= limit) berarti kemungkinan masih ada penjualan lama.
+            hasMore = it.data.sales.size >= salesLimit
+        }
+    }
     LaunchedEffect(sales) { if (sales.isNotEmpty() && !listEntered) listEntered = true }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2674,6 +2837,14 @@ fun RiwayatScreen() {
                 }
                 }
             }
+        }
+        if (hasMore) {
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = { salesLimit += 50 },
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp)
+            ) { Text("Tampilkan lebih banyak") }
         }
     }
 }
@@ -2832,8 +3003,8 @@ fun BackupScreen() {
 /** Tentang Aplikasi: logo, nama, versi, dan deskripsi singkat. */
 @Composable
 fun TentangScreen() {
-    // Samakan dengan versionName di build.gradle.kts.
-    val version = "1.0.0"
+    // Versi dari BuildConfig (sama dengan versionName di build.gradle.kts).
+    val version = id.apotek.lestari.BuildConfig.VERSION_NAME
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 20.dp),

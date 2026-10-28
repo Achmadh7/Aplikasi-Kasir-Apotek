@@ -203,7 +203,14 @@ fun formatDecimalFieldValue(value: TextFieldValue): TextFieldValue {
 }
 
 /** "100.000" -> 100000 — buang pemisah ribuan sebelum diubah ke angka. */
-fun parseDecimal(formatted: String): Int = formatted.filter { it.isDigit() }.toIntOrNull() ?: 0
+fun parseDecimal(formatted: String): Int {
+    val digits = formatted.filter { it.isDigit() }
+    if (digits.isEmpty()) return 0
+    // Parse sebagai Long lalu clamp ke rentang Int: angka yang overflow Int
+    // tidak lagi diam-diam jadi 0, melainkan dibatasi ke Int.MAX_VALUE.
+    val v = digits.toLongOrNull() ?: return Int.MAX_VALUE
+    return v.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+}
 
 /** "150rb" / "2,5jt" — nilai ringkas untuk label diagram. */
 fun formatCompactIDR(n: Int): String {

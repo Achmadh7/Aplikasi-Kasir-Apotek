@@ -5,6 +5,7 @@ import id.apotek.lestari.data.local.MedicineEntity
 import id.apotek.lestari.data.local.SaleEntity
 import id.apotek.lestari.data.local.SaleItemEntity
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 
 /**
@@ -71,6 +72,8 @@ object BackupHelper {
             o.put("saleId", it.saleId)
             o.put("medicineId", it.medicineId)
             o.put("medicineName", it.medicineName)
+            o.put("category", it.category)
+            o.put("unit", it.unit)
             o.put("qty", it.qty)
             o.put("price", it.price)
             o.put("buyPrice", it.buyPrice)
@@ -107,79 +110,178 @@ object BackupHelper {
         if (version != VERSION) throw IllegalArgumentException("Versi backup tidak dikenali (versi $version)")
         if (root.optString("app", "") != "apotek-lestari") throw IllegalArgumentException("File bukan backup Apotek Lestari")
 
+        // A3: keempat array wajib ada — file tanpa array bukan backup kosong,
+        // melainkan backup tidak lengkap dan harus ditolak.
+        val medArr = requireArray(root, "medicines")
+        val saleArr = requireArray(root, "sales")
+        val itemArr = requireArray(root, "saleItems")
+        val entryArr = requireArray(root, "cashEntries")
+
         val medicines = mutableListOf<MedicineEntity>()
-        val medArr = root.optJSONArray("medicines") ?: JSONArray()
         for (i in 0 until medArr.length()) {
-            val o = medArr.getJSONObject(i)
-            medicines.add(
-                MedicineEntity(
-                    id = o.getInt("id"),
-                    name = o.getString("name"),
-                    category = o.optString("category", "Umum"),
-                    unit = o.optString("unit", "Strip"),
-                    buyPrice = o.optInt("buyPrice", 0),
-                    sellPrice = o.optInt("sellPrice", 0),
-                    stock = o.optInt("stock", 0),
-                    minStock = o.optInt("minStock", 10),
-                    expiryDate = if (o.isNull("expiryDate")) null else o.optString("expiryDate"),
-                    barcode = if (o.isNull("barcode")) null else o.optString("barcode"),
-                    createdAt = o.optString("createdAt", "")
+            val label = "Baris obat ke-${i + 1}"
+            val o = rowObject(medArr, i, label)
+            try {
+                medicines.add(
+                    MedicineEntity(
+                        id = reqInt(o, "id", label),
+                        name = reqString(o, "name", label),
+                        category = o.optString("category", "Umum"),
+                        unit = o.optString("unit", "Strip"),
+                        buyPrice = reqInt(o, "buyPrice", label),
+                        sellPrice = reqInt(o, "sellPrice", label),
+                        stock = reqInt(o, "stock", label),
+                        minStock = reqInt(o, "minStock", label),
+                        expiryDate = if (o.isNull("expiryDate")) null else o.optString("expiryDate"),
+                        barcode = if (o.isNull("barcode")) null else o.optString("barcode"),
+                        createdAt = o.optString("createdAt", "")
+                    )
                 )
-            )
+            } catch (e: JSONException) {
+                throw IllegalArgumentException("$label rusak: ${e.message}")
+            }
         }
 
         val sales = mutableListOf<SaleEntity>()
-        val saleArr = root.optJSONArray("sales") ?: JSONArray()
         for (i in 0 until saleArr.length()) {
-            val o = saleArr.getJSONObject(i)
-            sales.add(
-                SaleEntity(
-                    id = o.getInt("id"),
-                    invoiceNo = o.getString("invoiceNo"),
-                    total = o.optInt("total", 0),
-                    paymentMethod = o.optString("paymentMethod", "Tunai"),
-                    amountPaid = o.optInt("amountPaid", 0),
-                    changeAmount = o.optInt("changeAmount", 0),
-                    createdAt = o.optString("createdAt", "")
+            val label = "Baris penjualan ke-${i + 1}"
+            val o = rowObject(saleArr, i, label)
+            try {
+                sales.add(
+                    SaleEntity(
+                        id = reqInt(o, "id", label),
+                        invoiceNo = reqString(o, "invoiceNo", label),
+                        total = reqInt(o, "total", label),
+                        paymentMethod = o.optString("paymentMethod", "Tunai"),
+                        amountPaid = reqInt(o, "amountPaid", label),
+                        changeAmount = reqInt(o, "changeAmount", label),
+                        createdAt = o.optString("createdAt", "")
+                    )
                 )
-            )
+            } catch (e: JSONException) {
+                throw IllegalArgumentException("$label rusak: ${e.message}")
+            }
         }
 
         val items = mutableListOf<SaleItemEntity>()
-        val itemArr = root.optJSONArray("saleItems") ?: JSONArray()
         for (i in 0 until itemArr.length()) {
-            val o = itemArr.getJSONObject(i)
-            items.add(
-                SaleItemEntity(
-                    id = o.getInt("id"),
-                    saleId = o.getInt("saleId"),
-                    medicineId = o.getInt("medicineId"),
-                    medicineName = o.optString("medicineName", ""),
-                    qty = o.optInt("qty", 0),
-                    price = o.optInt("price", 0),
-                    buyPrice = o.optInt("buyPrice", 0),
-                    subtotal = o.optInt("subtotal", 0)
+            val label = "Baris item penjualan ke-${i + 1}"
+            val o = rowObject(itemArr, i, label)
+            try {
+                val qty = reqInt(o, "qty", label)
+                val price = reqInt(o, "price", label)
+                val subtotal = reqInt(o, "subtotal", label)
+                // A4: subtotal harus konsisten dengan qty * price (data uang).
+                if (subtotal.toLong() != qty.toLong() * price.toLong()) {
+                    throw IllegalArgumentException(
+                        "$label rusak: subtotal $subtotal tidak sama dengan qty $qty x harga $price"
+                    )
+                }
+                items.add(
+                    SaleItemEntity(
+                        id = reqInt(o, "id", label),
+                        saleId = reqInt(o, "saleId", label),
+                        medicineId = reqInt(o, "medicineId", label),
+                        medicineName = o.optString("medicineName", ""),
+                        category = o.optString("category", ""),
+                        unit = o.optString("unit", ""),
+                        qty = qty,
+                        price = price,
+                        buyPrice = reqInt(o, "buyPrice", label),
+                        subtotal = subtotal
+                    )
                 )
-            )
+            } catch (e: JSONException) {
+                throw IllegalArgumentException("$label rusak: ${e.message}")
+            }
         }
 
         val entries = mutableListOf<CashEntryEntity>()
-        val entryArr = root.optJSONArray("cashEntries") ?: JSONArray()
         for (i in 0 until entryArr.length()) {
-            val o = entryArr.getJSONObject(i)
-            entries.add(
-                CashEntryEntity(
-                    id = o.getInt("id"),
-                    type = o.optString("type", "in"),
-                    category = o.optString("category", ""),
-                    description = o.optString("description", ""),
-                    amount = o.optInt("amount", 0),
-                    source = o.optString("source", "manual"),
-                    createdAt = o.optString("createdAt", "")
+            val label = "Baris kas ke-${i + 1}"
+            val o = rowObject(entryArr, i, label)
+            try {
+                // A4: type wajib "in"/"out" — jangan default ke "in" karena
+                // itu bisa membalik pengeluaran jadi pemasukan.
+                val type = o.optString("type", "")
+                if (type != "in" && type != "out") {
+                    throw IllegalArgumentException(
+                        "$label rusak: type \"$type\" tidak valid (harus \"in\" atau \"out\")"
+                    )
+                }
+                entries.add(
+                    CashEntryEntity(
+                        id = reqInt(o, "id", label),
+                        type = type,
+                        category = o.optString("category", ""),
+                        description = o.optString("description", ""),
+                        amount = reqInt(o, "amount", label),
+                        source = o.optString("source", "manual"),
+                        createdAt = o.optString("createdAt", "")
+                    )
                 )
-            )
+            } catch (e: JSONException) {
+                throw IllegalArgumentException("$label rusak: ${e.message}")
+            }
+        }
+
+        // A4: validasi relasi — setiap item penjualan harus punya penjualan induk.
+        val saleIds = sales.map { it.id }.toSet()
+        for ((index, item) in items.withIndex()) {
+            if (item.saleId !in saleIds) {
+                throw IllegalArgumentException(
+                    "Baris item penjualan ke-${index + 1} rusak: saleId ${item.saleId} " +
+                        "tidak ditemukan di daftar sales"
+                )
+            }
         }
 
         return BackupData(medicines, sales, items, entries)
+    }
+
+    /** A3: array wajib ada dan benar-benar JSONArray; kalau tidak, backup ditolak. */
+    private fun requireArray(root: JSONObject, key: String): JSONArray {
+        if (!root.has(key) || root.optJSONArray(key) == null) {
+            throw IllegalArgumentException("Backup tidak lengkap: array \"$key\" tidak ditemukan")
+        }
+        return root.getJSONArray(key)
+    }
+
+    /** A4: ambil objek baris ke-i; kalau elemennya bukan objek JSON, laporkan barisnya. */
+    private fun rowObject(arr: JSONArray, index: Int, label: String): JSONObject {
+        return try {
+            arr.getJSONObject(index)
+        } catch (e: JSONException) {
+            throw IllegalArgumentException("$label rusak: ${e.message}")
+        }
+    }
+
+    /**
+     * A4: field wajib bertipe Int. Bila key hilang / null / tipenya salah,
+     * lempar IllegalArgumentException (bukan diam-diam 0) — berlaku untuk
+     * field uang (total, amountPaid, changeAmount, qty, price, buyPrice,
+     * subtotal, amount) dan field kunci/relasi (id, saleId, medicineId).
+     */
+    private fun reqInt(o: JSONObject, key: String, label: String): Int {
+        if (!o.has(key) || o.isNull(key)) {
+            throw IllegalArgumentException("$label rusak: field \"$key\" hilang")
+        }
+        return try {
+            o.getInt(key)
+        } catch (e: JSONException) {
+            throw IllegalArgumentException("$label rusak: field \"$key\" tidak valid (${e.message})")
+        }
+    }
+
+    /** A4: field wajib bertipe String (field kunci/relasi seperti name dan invoiceNo). */
+    private fun reqString(o: JSONObject, key: String, label: String): String {
+        if (!o.has(key) || o.isNull(key)) {
+            throw IllegalArgumentException("$label rusak: field \"$key\" hilang")
+        }
+        return try {
+            o.getString(key)
+        } catch (e: JSONException) {
+            throw IllegalArgumentException("$label rusak: field \"$key\" tidak valid (${e.message})")
+        }
     }
 }

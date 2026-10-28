@@ -11,7 +11,12 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
+import java.time.DateTimeException
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.ResolverStyle
 import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Import / Export / Template Excel (.xlsx) untuk Stok Obat.
@@ -90,6 +95,8 @@ object ExcelHelper {
      * Baca file .xlsx hasil pilihan pengguna. Kolom dikenali dari baris header,
      * jadi urutan kolom boleh beda. Baris tanpa Nama Obat dilewati (dicatat
      * nomor barisnya); baris kosong seluruhnya diabaikan diam-diam.
+     * Baris dengan angka rusak, tanggal kadaluarsa tidak valid, atau barcode
+     * yang sudah muncul di baris sebelumnya juga dilewati dan dicatat.
      */
     fun parseImport(bytes: ByteArray): ParsedImport {
         val items = mutableListOf<MedicineArgs>()
@@ -104,11 +111,20 @@ object ExcelHelper {
                     val h = formatter.formatCellValue(cell).trim()
                     if (h.isNotEmpty()) colIndex[h.lowercase()] = cell.columnIndex
                 }
+                // C11: file harus template Stok Obat — kolom "Nama Obat" wajib ada.
+                if (!colIndex.containsKey("nama obat")) {
+                    throw IllegalArgumentException(
+                        "File bukan template Stok Obat: kolom 'Nama Obat' tidak ditemukan"
+                    )
+                }
                 fun idx(name: String, fallback: Int) = colIndex[name.lowercase()] ?: fallback
                 fun text(row: Row, name: String, fallback: Int): String {
                     val cell = row.getCell(idx(name, fallback)) ?: return ""
                     return formatter.formatCellValue(cell).trim()
                 }
+                // C11: barcode yang sudah terlihat di file, supaya duplikat di
+                // dalam file tidak diam-diam menimpa baris sebelumnya.
+                val seenBarcodes = mutableSetOf<String>()
                 for (row in sheet) {
                     if (row.rowNum == 0) continue
                     val name = text(row, "Nama Obat", 0)
@@ -120,11 +136,45 @@ object ExcelHelper {
                     val barcode = text(row, "Barcode", 1).ifBlank { null }
                     val category = text(row, "Kategori", 2).ifBlank { "Umum" }
                     val unit = text(row, "Satuan", 3).ifBlank { "Strip" }
-                    val buy = text(row, "Harga Beli", 4).toIntOrZero()
-                    val sell = text(row, "Harga Jual", 5).toIntOrZero()
-                    val stock = text(row, "Stok", 6).toIntOrZero()
-                    val minStock = text(row, "Stok Minimum", 7).toIntOrZero().let { if (it <= 0) 10 else it }
-                    val expiry = readExpiry(row, idx("Tanggal Kadaluarsa", 8), formatter)
+                    // A7: angka rusak (null dari parser) jangan diam-diam jadi 0 —
+                    // baris dilewati dan dicatat di skippedRows.
+                    val buy = text(row, "Harga Beli", 4).toIntOrNullStrict()
+                    val sell = text(row, "Harga Jual", 5).toIntOrNullStrict()
+                    val stock = text(row, "Stok", 6).toIntOrNullStrict()
+                    if (buy == null || sell == null || stock == null) {
+                        skipped.add(row.rowNum + 1)
+                        continue
+                    }
+                    // C13: Stok Minimum kosong -> 10; "0" eksplisit -> 0;
+                    // gagal parse -> baris dilewati.
+                    val minStockRaw = text(row, "Stok Minimum", 7)
+                    val minStock = if (minStockRaw.isBlank()) {
+                        10
+                    } else {
+                        minStockRaw.toIntOrNullStrict() ?: run {
+                            skipped.add(row.rowNum + 1)
+                            continue
+                        }
+                    }
+                    // C7: tanggal terisi tapi tidak bisa diparse -> baris dilewati;
+                    // tanggal kosong -> null (boleh).
+                    val expiryRaw = text(row, "Tanggal Kadaluarsa", 8)
+                    val expiry = if (expiryRaw.isBlank()) {
+                        null
+                    } else {
+                        readExpiry(row, idx("Tanggal Kadaluarsa", 8), formatter)
+                    }
+                    if (expiryRaw.isNotBlank() && expiry == null) {
+                        skipped.add(row.rowNum + 1)
+                        continue
+                    }
+                    // C11: barcode duplikat di dalam file — baris kedua dan
+                    // seterusnya dilewati supaya tidak ada obat yang hilang
+                    // diam-diam karena tertimpa.
+                    if (barcode != null && !seenBarcodes.add(barcode)) {
+                        skipped.add(row.rowNum + 1)
+                        continue
+                    }
                     items.add(MedicineArgs(name, category, unit, buy, sell, stock, minStock, expiry, barcode))
                 }
             } finally {
@@ -178,26 +228,78 @@ object ExcelHelper {
         return bytes
     }
 
-    private fun String.toIntOrZero(): Int = filter { it.isDigit() }.toIntOrNull() ?: 0
+    /**
+     * A7: parser angka Indonesia yang ketat. Terima pemisah ribuan `.` dan
+     * desimal `,` (mis. "12.000,50" -> 12000.50). Kembalikan null (bukan 0)
+     * bila: string kosong, ada huruf / karakter lain, negatif, atau hasilnya
+     * bukan bilangan bulat (mis. "12.5"). Pemanggil memperlakukan null
+     * sebagai "baris bermasalah" (masuk skippedRows).
+     */
+    private fun String.toIntOrNullStrict(): Int? {
+        val s = replace(" ", "").trim()
+        if (s.isEmpty()) return null
+        if (s.startsWith("-")) return null
+        if (s.any { !it.isDigit() && it != '.' && it != ',' }) return null
+        val normalized = when {
+            s.contains(',') && s.contains('.') -> s.replace(".", "").replace(',', '.')
+            s.contains(',') -> s.replace(',', '.')
+            s.contains('.') && s.matches(Regex("\\d{1,3}(\\.\\d{3})+")) -> s.replace(".", "")
+            else -> s
+        }
+        val value = normalized.toDoubleOrNull() ?: return null
+        if (value < 0 || value % 1.0 != 0.0) return null
+        if (value > Int.MAX_VALUE.toDouble()) return null
+        return value.toInt()
+    }
 
     private fun readExpiry(row: Row, colIdx: Int, formatter: DataFormatter): String? {
         val cell = row.getCell(colIdx) ?: return null
         if (cell.cellType == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
-            return SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cell.dateCellValue)
+            // C7: pakai zona Asia/Jakarta (bukan default HP) supaya tanggal
+            // tidak geser 1 hari.
+            return SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("Asia/Jakarta")
+            }.format(cell.dateCellValue)
         }
         return normalizeDate(formatter.formatCellValue(cell))
     }
 
+    /**
+     * C7: normalisasi tanggal dengan validasi KALENDER yang ketat
+     * (LocalDate STRICT — tolak "2027-13-45", "2027-02-30").
+     * Format yang diterima: "yyyy-MM-dd", "DD/MM/YYYY" (didahulukan, format
+     * Indonesia), "YYYY/MM/DD", "DD-MM-YYYY". Format lain -> null.
+     */
     private fun normalizeDate(raw: String): String? {
         val s = raw.trim()
         if (s.isEmpty()) return null
-        if (s.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) return s
+        if (s.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
+            return try {
+                LocalDate.parse(s, DateTimeFormatter.ISO_LOCAL_DATE.withResolverStyle(ResolverStyle.STRICT)).toString()
+            } catch (e: DateTimeException) {
+                null
+            }
+        }
         Regex("(\\d{2})/(\\d{2})/(\\d{4})").matchEntire(s)?.let {
-            return "${it.groupValues[3]}-${it.groupValues[2]}-${it.groupValues[1]}"
+            // DD/MM/YYYY (Indonesia); bila hari > 12 maka pasti DD/MM,
+            // bila keduanya <= 12 tetap dianggap DD/MM.
+            return strictDate(it.groupValues[3], it.groupValues[2], it.groupValues[1])
+        }
+        Regex("(\\d{4})/(\\d{2})/(\\d{2})").matchEntire(s)?.let {
+            return strictDate(it.groupValues[1], it.groupValues[2], it.groupValues[3])
         }
         Regex("(\\d{2})-(\\d{2})-(\\d{4})").matchEntire(s)?.let {
-            return "${it.groupValues[3]}-${it.groupValues[2]}-${it.groupValues[1]}"
+            return strictDate(it.groupValues[3], it.groupValues[2], it.groupValues[1])
         }
         return null
+    }
+
+    /** Validasi kalender ketat via LocalDate; kembalikan "yyyy-MM-dd" atau null. */
+    private fun strictDate(year: String, month: String, day: String): String? {
+        return try {
+            LocalDate.of(year.toInt(), month.toInt(), day.toInt()).toString()
+        } catch (e: DateTimeException) {
+            null
+        }
     }
 }
