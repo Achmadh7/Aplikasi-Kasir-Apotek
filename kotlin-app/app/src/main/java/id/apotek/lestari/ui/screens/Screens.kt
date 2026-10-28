@@ -2457,6 +2457,21 @@ fun PengingatScreen(onGoStok: () -> Unit) {
             // Saran restock hanya bila ada stok minimum yang valid dan sarannya > 0
             // (bila minStock = 0, saran "0 unit" tidak ada gunanya).
             val showSuggest = m.minStock > 0 && suggest > 0
+            // Keterangan digabung: kalau obat bebarengan bermasalah stok
+            // (habis/menipis) DAN kadaluarsa, kedua keterangan ditulis supaya
+            // informasinya jelas (sebelumnya hanya satu yang tampil karena
+            // rantai if/else berhenti di kondisi pertama yang cocok).
+            val stockNote = when {
+                isCritical -> if (showSuggest) "Stok habis — restock segera, disarankan $suggest ${m.unit} (target 2× stok minimum)." else "Stok habis — restock segera."
+                m.stock <= m.minStock -> if (showSuggest) "Stok menipis — disarankan restock $suggest ${m.unit} (target 2× stok minimum ${m.minStock})." else "Stok menipis — restock segera."
+                else -> null
+            }
+            val expiryNote = when {
+                d != null && d < 0 -> "Sudah kadaluarsa — jangan dijual, segera pisahkan dari stok."
+                d != null -> "Kedaluwarsa dalam $d hari — prioritaskan penjualan."
+                else -> null
+            }
+            val advice = listOfNotNull(stockNote, expiryNote).joinToString(" ")
             AnimatedVisibility(
                 visible = listEntered,
                 enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
@@ -2510,14 +2525,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                         Icon(Icons.Default.Lightbulb, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            if (isCritical) {
-                                if (showSuggest) "Stok habis — restock segera, disarankan $suggest ${m.unit} (target 2× stok minimum)."
-                                else "Stok habis — restock segera."
-                            } else if (m.stock <= m.minStock) {
-                                if (showSuggest) "Stok menipis — disarankan restock $suggest ${m.unit} (target 2× stok minimum ${m.minStock})."
-                                else "Stok menipis — restock segera."
-                            } else if (d != null && d < 0) "Sudah kadaluarsa — jangan dijual, segera pisahkan dari stok."
-                            else "Kedaluwarsa dalam ${d ?: 0} hari — prioritaskan penjualan.",
+                            advice,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
