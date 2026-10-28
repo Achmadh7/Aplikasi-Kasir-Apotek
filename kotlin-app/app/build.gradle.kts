@@ -69,17 +69,6 @@ android {
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     }
-
-    // Nama file APK release: apotek-lestari.apk (bukan app-release.apk).
-    // (androidComponents.outputFileName tidak tersedia di AGP 8.5.2, jadi
-    // pakai applicationVariants yang klasik.)
-    applicationVariants.all {
-        outputs.all {
-            if (buildType.name == "release") {
-                outputFileName = "apotek-lestari.apk"
-            }
-        }
-    }
 }
 
 dependencies {
