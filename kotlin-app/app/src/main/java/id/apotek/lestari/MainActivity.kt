@@ -4,7 +4,9 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
@@ -72,10 +74,11 @@ class MainActivity : ComponentActivity() {
 }
 
 data class TabDef(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
-// Tab bar bawah (Kasir tidak di sini — jadi tombol FAB di tengah).
+// Tab pill bawah: 5 tab (Kasir kini tab biasa, bukan FAB melayang).
 val TABS = listOf(
     TabDef("beranda", "Beranda", Icons.Default.Home),
     TabDef("stok", "Stok", Icons.Default.Medication),
+    TabDef("kasir", "Kasir", Icons.Default.PointOfSale),
     TabDef("keuangan", "Keuangan", Icons.Default.AccountBalanceWallet),
     TabDef("lainnya", "Lainnya", Icons.Default.MoreHoriz)
 )
@@ -139,114 +142,45 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     }
     Scaffold(
         bottomBar = {
-            // Bar bawah seperti awal: bar datar selebar layar (80dp) menempel di tepi bawah,
-            // tanpa pil mengambang dan tanpa sembunyi saat gulir. FAB Kasir 60dp di tengah
-            // naik di atas bar (tetap di dalam area bottomBar 104dp, tidak menutupi konten).
-            Box(modifier = Modifier.fillMaxWidth().height(104.dp)) {
-                // Kaca halus (subtle glass): bar tetap datar selebar layar, tapi
-                // latarnya gradasi tembus pandang + kilau terang tipis di tepi atas
-                // (mengikuti lengkung 24dp). Bukan blur backdrop penuh — konten
-                // tidak mengalir di bawah bar — jadi label/ikon tetap terbaca jelas.
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(80.dp).align(Alignment.BottomCenter)
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colorStops = arrayOf(
-                                    0.0f to Color.White.copy(alpha = 0.22f),
-                                    0.05f to MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
-                                    1.0f to MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f)
-                                )
-                            ),
-                            // Sudut atas bar membulat (24dp); sudut bawah tetap menempel di tepi layar.
-                            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-                        )
+            // Pill mengambang (kapsul) seperti referensi: 5 tab (Beranda, Stok,
+            // Kasir, Keuangan, Lainnya) dalam satu pill gelap berbordir tipis.
+            // Kasir kini tab biasa (bukan FAB melayang). Tab terpilih: lingkaran
+            // + ikon/label biru; tidak terpilih: putih/abu. Pill dibatasi 480dp
+            // supaya di tablet tidak merentang terlalu lebar.
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    color = if (isDark) Color(0xFF1B1E22) else Color.White,
+                    shape = RoundedCornerShape(36.dp),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
+                    ),
+                    modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp).height(72.dp)
                 ) {
-                    // Indikator pill yang bergeser halus antar tab (bukan langsung pindah).
-                    // NavigationBarItem bawaan tidak menggeser indikatornya, jadi pill
-                    // digambar sendiri dan posisi-x-nya dianimasikan mengikuti tab aktif.
-                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                        val slotWidth = maxWidth / 5 // 4 tab + 1 celah Kasir di tengah
-                        val pillWidth = 64.dp
-                        val pillHeight = 32.dp
-                        // Slot tab yang dipilih: Beranda 0, Stok 1, Keuangan 3, Lainnya 4.
-                        // -1 saat di Kasir (tidak ada tab yang dipilih).
-                        val selectedSlot = when {
-                            current == "beranda" -> 0
-                            current == "stok" -> 1
-                            current == "keuangan" -> 3
-                            current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang") -> 4
-                            else -> -1
-                        }
-                        // Simpan slot terakhir supaya pill tidak melompat saat di Kasir.
-                        var lastSlot by remember { mutableIntStateOf(0) }
-                        LaunchedEffect(selectedSlot) {
-                            if (selectedSlot >= 0) lastSlot = selectedSlot
-                        }
-                        val pillX by animateDpAsState(
-                            targetValue = slotWidth * lastSlot + (slotWidth - pillWidth) / 2,
-                            animationSpec = tween(250, easing = FastOutSlowInEasing),
-                            label = "pillX"
-                        )
-                        val pillAlpha by animateFloatAsState(
-                            targetValue = if (selectedSlot >= 0) 1f else 0f,
-                            animationSpec = tween(200),
-                            label = "pillAlpha"
-                        )
-                        // Pill indikator (di belakang ikon tab).
-                        Box(
-                            modifier = Modifier
-                                .offset(x = pillX, y = 14.dp)
-                                .size(pillWidth, pillHeight)
-                                .graphicsLayer { alpha = pillAlpha }
-                                .background(
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxSize().selectableGroup(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            TABS.forEachIndexed { index, tab ->
-                                NavigationBarItem(
-                                    selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang") else current == tab.route,
-                                    onClick = { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) },
-                                    icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
-                                    label = { Text(tab.label) },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        // Indikator bawaan dimatikan (transparan) — diganti pill geser di atas.
-                                        indicatorColor = Color.Transparent,
-                                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                                        selectedTextColor = MaterialTheme.colorScheme.primary
-                                    )
-                                )
-                                // Celah selebar satu tab di tengah untuk tombol Kasir.
-                                if (index == 1) Spacer(Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-                // Tombol Kasir: FAB biru besar di tengah + label "Kasir" di bawahnya.
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                ) {
-                    FloatingActionButton(
-                        onClick = { goToTab("kasir") },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = CircleShape,
-                        modifier = Modifier.size(60.dp)
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.PointOfSale, contentDescription = "Kasir", modifier = Modifier.size(28.dp))
+                        TABS.forEach { tab ->
+                            val selected = when (tab.route) {
+                                "beranda" -> current == "beranda"
+                                "stok" -> current == "stok"
+                                "kasir" -> current == "kasir"
+                                "keuangan" -> current == "keuangan"
+                                else -> current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang")
+                            }
+                            PillTab(
+                                selected = selected,
+                                icon = tab.icon,
+                                label = tab.label,
+                                isDark = isDark,
+                                onClick = { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) }
+                            )
+                        }
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Kasir",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (current == "kasir") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
         }
@@ -356,3 +290,57 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
 
 
 
+// Satu tab di pill bawah: ikon di atas, label di bawah (seperti referensi).
+// Bila terpilih, tampil lingkaran di belakangnya + ikon/label biru (di mode
+// gelap birunya dibuat lebih cerah, karena biru medis #0061A4 agak gelap di
+// atas pill hitam); bila tidak terpilih, ikon/label putih/abu. Ketukan tanpa
+// ripple supaya tampilannya bersih seperti referensi.
+@Composable
+private fun PillTab(
+    selected: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isDark: Boolean,
+    onClick: () -> Unit
+) {
+    val selectedColor = if (isDark) Color(0xFF64B5F6) else MaterialTheme.colorScheme.primary
+    val unselectedColor = if (isDark) Color.White.copy(alpha = 0.75f) else Color.Black.copy(alpha = 0.60f)
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(
+                        color = if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.06f),
+                        shape = CircleShape
+                    )
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (selected) selectedColor else unselectedColor,
+                modifier = Modifier.size(26.dp)
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                color = if (selected) selectedColor else unselectedColor,
+                maxLines = 1
+            )
+        }
+    }
+}
