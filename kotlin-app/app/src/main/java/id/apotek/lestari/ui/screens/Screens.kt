@@ -562,7 +562,10 @@ private fun SearchField(
             .onFocusEvent { focused = it.isFocused },
         decorationBox = { innerTextField ->
             Surface(
-                color = MaterialTheme.colorScheme.surface,
+                // Latar surfaceContainer (bukan surface) supaya pill terlihat jelas
+                // di atas latar layar — surface sama dengan latar (#0A0E14 di mode
+                // gelap) sehingga pill sebelumnya hanya dibatasi garis tipis.
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = RoundedCornerShape(22.dp),
                 border = BorderStroke(
                     1.dp,
