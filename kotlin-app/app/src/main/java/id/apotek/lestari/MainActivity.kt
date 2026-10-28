@@ -11,12 +11,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -87,26 +93,72 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
             Box(modifier = Modifier.fillMaxWidth().height(104.dp)) {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainer,
+                    // Sudut atas bar membulat (24dp); sudut bawah tetap menempel di tepi layar.
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                     modifier = Modifier.fillMaxWidth().height(80.dp).align(Alignment.BottomCenter)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize().selectableGroup(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TABS.forEachIndexed { index, tab ->
-                            NavigationBarItem(
-                                selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang") else current == tab.route,
-                                onClick = { if (tab.route == "lainnya") showMoreSheet = true else nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
-                                icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
-                                label = { Text(tab.label) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                                    selectedTextColor = MaterialTheme.colorScheme.primary
+                    // Indikator pill yang bergeser halus antar tab (bukan langsung pindah).
+                    // NavigationBarItem bawaan tidak menggeser indikatornya, jadi pill
+                    // digambar sendiri dan posisi-x-nya dianimasikan mengikuti tab aktif.
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                        val slotWidth = maxWidth / 5 // 4 tab + 1 celah Kasir di tengah
+                        val pillWidth = 64.dp
+                        val pillHeight = 32.dp
+                        // Slot tab yang dipilih: Beranda 0, Stok 1, Keuangan 3, Lainnya 4.
+                        // -1 saat di Kasir (tidak ada tab yang dipilih).
+                        val selectedSlot = when {
+                            current == "beranda" -> 0
+                            current == "stok" -> 1
+                            current == "keuangan" -> 3
+                            current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang") -> 4
+                            else -> -1
+                        }
+                        // Simpan slot terakhir supaya pill tidak melompat saat di Kasir.
+                        var lastSlot by remember { mutableIntStateOf(0) }
+                        LaunchedEffect(selectedSlot) {
+                            if (selectedSlot >= 0) lastSlot = selectedSlot
+                        }
+                        val pillX by animateDpAsState(
+                            targetValue = slotWidth * lastSlot + (slotWidth - pillWidth) / 2,
+                            animationSpec = tween(300, easing = FastOutSlowInEasing),
+                            label = "pillX"
+                        )
+                        val pillAlpha by animateFloatAsState(
+                            targetValue = if (selectedSlot >= 0) 1f else 0f,
+                            animationSpec = tween(200),
+                            label = "pillAlpha"
+                        )
+                        // Pill indikator (di belakang ikon tab).
+                        Box(
+                            modifier = Modifier
+                                .offset(x = pillX, y = 14.dp)
+                                .size(pillWidth, pillHeight)
+                                .graphicsLayer { alpha = pillAlpha }
+                                .background(
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = RoundedCornerShape(16.dp)
                                 )
-                            )
-                            // Celah selebar satu tab di tengah untuk tombol Kasir.
-                            if (index == 1) Spacer(Modifier.weight(1f))
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxSize().selectableGroup(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TABS.forEachIndexed { index, tab ->
+                                NavigationBarItem(
+                                    selected = if (tab.route == "lainnya") current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang") else current == tab.route,
+                                    onClick = { if (tab.route == "lainnya") showMoreSheet = true else nav.navigate(tab.route) { popUpTo("beranda"); launchSingleTop = true } },
+                                    icon = { Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(26.dp)) },
+                                    label = { Text(tab.label) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        // Indikator bawaan dimatikan (transparan) — diganti pill geser di atas.
+                                        indicatorColor = Color.Transparent,
+                                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                                        selectedTextColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                                // Celah selebar satu tab di tengah untuk tombol Kasir.
+                                if (index == 1) Spacer(Modifier.weight(1f))
+                            }
                         }
                     }
                 }
