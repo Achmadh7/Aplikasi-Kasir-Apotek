@@ -481,13 +481,14 @@ class Repository {
             ProfitByCategory(category, m.qty, m.revenue, m.hpp, m.profit, m.marginPct)
         }.sortedByDescending { it.profit }
 
-        // Laba harian untuk periode yang dipilih (grafik mengikuti periode):
-        // dari awal periode sampai hari ini. "Semua" memakai hari penjualan
-        // pertama; dibatasi 365 hari supaya grafik tidak meledak bila data
-        // sudah bertahun-tahun.
+        // Laba harian untuk grafik: mengikuti periode, kecuali "Hari Ini" yang
+        // tetap 7 hari terakhir supaya jelas (1 batang saja tidak memberi konteks
+        // tren). "Semua" memakai hari penjualan pertama; dibatasi 365 hari supaya
+        // grafik tidak meledak bila data sudah bertahun-tahun. Total laba/
+        // revenue/HPP di atas grafik tetap mengikuti periode yang dipilih.
         val saleById = salesRows.associateBy { it.id }
         val firstDayStart = when (period) {
-            "today" -> startToday
+            "today" -> jakartaDayStartMillis(-6)
             "month" -> startMonth
             "last30" -> startLast30
             "all" -> periodSales.minOfOrNull { parseISODate(it.createdAt)?.time ?: Long.MAX_VALUE }

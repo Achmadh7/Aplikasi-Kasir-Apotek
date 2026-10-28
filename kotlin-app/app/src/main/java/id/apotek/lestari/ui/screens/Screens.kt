@@ -1980,7 +1980,9 @@ fun KeuanganScreen() {
     val saldoIn = cashBalance?.totalIn ?: masuk
     val saldoOut = cashBalance?.totalOut ?: keluar
     val saldo = cashBalance?.balance ?: (masuk - keluar)
-    // Arus kas mengikuti periode yang dipilih (dulu selalu 7 hari).
+    // Arus kas mengikuti periode yang dipilih, kecuali "Hari Ini" yang tetap
+    // menampilkan 7 hari terakhir supaya jelas (1 batang saja di tengah kartu
+    // terlihat kosong dan tidak memberi konteks tren).
     val jakartaTz = TimeZone.getTimeZone("Asia/Jakarta")
     val cal = Calendar.getInstance(jakartaTz).apply {
         time = Date()
@@ -1988,7 +1990,9 @@ fun KeuanganScreen() {
     }
     val todayStartMillis = cal.timeInMillis
     val dayCount = when (period) {
-        "today" -> 1
+        // "today" -> 7 hari terakhir (bukan 1 hari saja); "Bulan Ini"/"Semua"
+        // tetap mengikuti periode.
+        "today" -> 7
         "month" -> cal.get(Calendar.DAY_OF_MONTH)
         else -> {
             // "all": dari hari entri pertama sampai hari ini (maks 365 hari).
@@ -2100,7 +2104,7 @@ fun KeuanganScreen() {
             ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(20.dp)) {
                     val chartTitle = when (period) {
-                        "today" -> "Arus Kas Hari Ini"
+                        "today" -> "Arus Kas 7 Hari Terakhir"
                         "month" -> "Arus Kas Bulan Ini"
                         else -> "Arus Kas Semua"
                     }
@@ -2125,7 +2129,7 @@ fun KeuanganScreen() {
                     if (periodIn + periodOut == 0) {
                         Text(
                             when (period) {
-                                "today" -> "Belum ada arus kas hari ini."
+                                "today" -> "Belum ada arus kas 7 hari terakhir."
                                 "month" -> "Belum ada arus kas bulan ini."
                                 else -> "Belum ada arus kas."
                             },
@@ -2452,9 +2456,10 @@ fun LabaScreen() {
             item {
                 ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp)) {
-                        // Judul grafik mengikuti periode yang dipilih.
+                        // Judul grafik mengikuti periode; "Hari Ini" menampilkan
+                        // 7 hari terakhir (judulnya pun demikian).
                         val chartTitle = when (period) {
-                            "today" -> "Laba Kotor Hari Ini"
+                            "today" -> "Laba Kotor 7 Hari Terakhir"
                             "month" -> "Laba Kotor Bulan Ini"
                             "last30" -> "Laba Kotor 30 Hari Terakhir"
                             else -> "Laba Kotor Semua"
