@@ -156,7 +156,8 @@ fun buildReceiptBytes(sale: Sale): ByteArray {
     }
     line("-".repeat(LINE_WIDTH))
     raw(ALIGN_CENTER)
-    line(center("Terima kasih"))
+    line(center("Semoga Cepat Sembuh"))
+    line(center("Terima Kasih Atas Kunjungan Anda"))
     line(center("Barang yang sudah dibeli"))
     line(center("tidak dapat ditukar"))
     raw(ALIGN_LEFT)

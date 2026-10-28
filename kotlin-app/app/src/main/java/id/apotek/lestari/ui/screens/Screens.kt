@@ -2586,6 +2586,17 @@ private fun ReceiptPreviewCard(
                     }
                 }
             }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Semoga Cepat Sembuh",
+                color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                "Terima Kasih Atas Kunjungan Anda",
+                color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+            )
             Spacer(Modifier.height(12.dp))
             Text(
                 "Pratinjau — struk resmi dibuat setelah pembayaran berhasil.",
@@ -2705,6 +2716,17 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
                     }
                 }
             }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Semoga Cepat Sembuh",
+                color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                "Terima Kasih Atas Kunjungan Anda",
+                color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
