@@ -1,3 +1,4 @@
+import java.net.URL
 import java.util.Properties
 
 plugins {
@@ -33,7 +34,7 @@ val downloadPoppinsFonts = tasks.register("downloadPoppinsFonts") {
             val out = outDir.resolve("poppins_${weight.lowercase()}.ttf")
             if (!out.exists() || out.length() == 0L) {
                 try {
-                    java.net.URL("$base/Poppins-$weight.ttf").openStream().use { input ->
+                    URL("$base/Poppins-$weight.ttf").openStream().use { input ->
                         out.outputStream().use { output -> input.copyTo(output) }
                     }
                 } catch (e: Exception) {
