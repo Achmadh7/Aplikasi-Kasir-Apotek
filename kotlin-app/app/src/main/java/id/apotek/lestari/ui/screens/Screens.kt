@@ -321,7 +321,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     Spacer(Modifier.width(10.dp))
                 }
                 Column {
-                    Text("Apotek Lestari", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Apotek Lestari", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, fontFamily = Poppins)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
@@ -3032,7 +3032,7 @@ fun TentangScreen() {
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Apotek Lestari", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("Apotek Lestari", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, fontFamily = Poppins)
                 Spacer(Modifier.height(4.dp))
                 Text("Versi $version", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
