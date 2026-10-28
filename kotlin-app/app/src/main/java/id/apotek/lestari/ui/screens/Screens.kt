@@ -170,11 +170,12 @@ private fun pressBounceScale(interactionSource: MutableInteractionSource): Float
 
 /** Tombol stepper +/- Kasir dengan pantulan saat ditekan. */
 @Composable
+/** Tombol −/+ di keranjang: ringkas (32dp) supaya muat satu baris dengan nama, harga, dan hapus. */
 private fun StepperButton(icon: ImageVector, description: String, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val scale = pressBounceScale(interactionSource)
-    IconButton(onClick = onClick, interactionSource = interactionSource, modifier = Modifier.graphicsLayer(scaleX = scale, scaleY = scale)) {
-        Icon(icon, description)
+    IconButton(onClick = onClick, interactionSource = interactionSource, modifier = Modifier.size(32.dp).graphicsLayer(scaleX = scale, scaleY = scale)) {
+        Icon(icon, description, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -801,23 +802,22 @@ fun KasirScreen() {
                 }
                 if (cart.isNotEmpty()) {
                     cart.forEachIndexed { index, ci ->
-                        // Nama obat di baris atas (lebar penuh) supaya tampil lengkap;
-                        // stepper di baris bawah.
-                        Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                                Text(formatIDR(ci.medicine.sellPrice * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.width(92.dp), textAlign = TextAlign.End)
+                        // Satu baris: nama | stepper (di tengah) | harga | hapus.
+                        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            Spacer(Modifier.width(8.dp))
+                            StepperButton(Icons.Default.Remove, "Kurangi") { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
+                            key(ci.qty) {
+                                val qtyPop = remember { Animatable(1.35f) }
+                                LaunchedEffect(ci.qty) { qtyPop.animateTo(1f, expressiveSpring()) }
+                                Text("${ci.qty}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(24.dp).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value), textAlign = TextAlign.Center)
                             }
-                            Spacer(Modifier.height(2.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Spacer(Modifier.weight(1f))
-                                StepperButton(Icons.Default.Remove, "Kurangi") { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
-                                key(ci.qty) {
-                                    val qtyPop = remember { Animatable(1.35f) }
-                                    LaunchedEffect(ci.qty) { qtyPop.animateTo(1f, expressiveSpring()) }
-                                    Text("${ci.qty}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(24.dp).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value), textAlign = TextAlign.Center)
-                                }
-                                StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
+                            StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
+                            Spacer(Modifier.width(8.dp))
+                            Text(formatIDR(ci.medicine.sellPrice * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.End)
+                            // Hapus: keluarkan obat dari keranjang.
+                            IconButton(onClick = { cart.remove(ci) }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Default.Delete, "Hapus", tint = ChiliRed, modifier = Modifier.size(20.dp))
                             }
                         }
                         if (index < cart.lastIndex) {
