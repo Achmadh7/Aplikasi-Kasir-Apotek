@@ -2869,7 +2869,7 @@ fun TentangScreen() {
             ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
                     Text(
-                        "Aplikasi kasir dan manajemen stok obat untuk Apotek Lestari. Bekerja sepenuhnya offline \u2014 data obat, penjualan, dan kas tersimpan di perangkat dan tetap aman tanpa internet.",
+                        "Aplikasi kasir dan manajemen stok obat untuk Apotek Lestari. Data obat, penjualan, dan kas tersimpan di perangkat.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
