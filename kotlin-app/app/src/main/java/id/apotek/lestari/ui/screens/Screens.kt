@@ -3079,47 +3079,90 @@ fun RiwayatScreen() {
         Spacer(Modifier.height(16.dp))
         DemoBanner()
         if (sales.isEmpty()) Text("Belum ada penjualan tercatat.")
+        // Kelompokkan penjualan per hari (WIB): header tanggal + total omzet
+        // harian, supaya riwayat lebih mudah dipindai daripada daftar datar.
+        // dayKeyID/parseISODate sudah dipakai layar Keuangan untuk batas WIB.
+        val jakartaTz = TimeZone.getTimeZone("Asia/Jakarta")
+        val todayCal = Calendar.getInstance(jakartaTz).apply {
+            time = Date()
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }
+        val todayKey = dayKeyID(todayCal.time)
+        val yesterdayKey = dayKeyID((todayCal.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }.time)
+        val groupedSales = sales.groupBy { s -> parseISODate(s.createdAt)?.let { dayKeyID(it) } ?: "" }
+        // Urutkan grup dari hari terbaru (pakai createdAt terbesar di grup).
+        val sortedGroups = groupedSales.entries.sortedByDescending { (_, list) ->
+            list.maxOfOrNull { parseISODate(it.createdAt)?.time ?: 0L } ?: 0L
+        }
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            itemsIndexed(sales) { index, s ->
-                val isOpen = expanded == s.id
-                AnimatedVisibility(
-                    visible = listEntered,
-                    enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
-                        expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
-                    exit = fadeOut()
-                ) {
-                ExpressiveCard(
-                    shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow)).clickable { expanded = if (isOpen) null else s.id }
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
-                                Icon(Icons.Default.Receipt, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(20.dp))
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(s.invoiceNo, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                                Text(
-                                    "${formatDateTimeID(s.createdAt)} • ${s.paymentMethod} • ${s.items.size} item",
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Text(formatIDR(s.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Icon(
-                                if (isOpen) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        if (isOpen) {
-                            Spacer(Modifier.height(16.dp))
-                            InvoiceDetailCard(sale = s, graphicsLayer = receiptLayer)
-                            Spacer(Modifier.height(12.dp))
-                            ReceiptActionsRow(graphicsLayer = receiptLayer, invoiceNo = s.invoiceNo, sale = s)
-                        }
+            var offset = 0
+            sortedGroups.forEach { (dayKey, daySales) ->
+                val groupOffset = offset
+                offset += daySales.size
+                // Header tanggal: label hari + jumlah transaksi & total omzet hari itu.
+                item(key = "header-$dayKey") {
+                    val dayDate = daySales.firstNotNullOfOrNull { parseISODate(it.createdAt) }
+                    val label = when (dayKey) {
+                        todayKey -> "Hari ini"
+                        yesterdayKey -> "Kemarin"
+                        else -> dayDate?.let {
+                            SimpleDateFormat("d MMM yyyy", Locale("id", "ID")).apply { timeZone = jakartaTz }.format(it)
+                        } ?: "Tanpa tanggal"
+                    }
+                    val dayTotal = daySales.sumOf { it.total }
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                        Text(label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(8.dp))
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "${daySales.size} transaksi • ${formatIDR(dayTotal)}",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
+                itemsIndexed(daySales) { index, s ->
+                    val globalIndex = groupOffset + index
+                    val isOpen = expanded == s.id
+                    AnimatedVisibility(
+                        visible = listEntered,
+                        enter = fadeIn(animationSpec = tween(300, entranceDelay(globalIndex), FastOutSlowInEasing)) +
+                            slideInVertically(animationSpec = tween(300, entranceDelay(globalIndex), FastOutSlowInEasing)) { it / 3 } +
+                            expandVertically(animationSpec = tween(300, entranceDelay(globalIndex), FastOutSlowInEasing)),
+                        exit = fadeOut()
+                    ) {
+                    ExpressiveCard(
+                        shape = RoundedCornerShape(28.dp),
+                        modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow)).clickable { expanded = if (isOpen) null else s.id }
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                                    Icon(Icons.Default.Receipt, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(20.dp))
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(s.invoiceNo, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "${formatDateTimeID(s.createdAt)} • ${s.paymentMethod} • ${s.items.size} item",
+                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(formatIDR(s.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Icon(
+                                    if (isOpen) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (isOpen) {
+                                Spacer(Modifier.height(16.dp))
+                                InvoiceDetailCard(sale = s, graphicsLayer = receiptLayer)
+                                Spacer(Modifier.height(12.dp))
+                                ReceiptActionsRow(graphicsLayer = receiptLayer, invoiceNo = s.invoiceNo, sale = s)
+                            }
+                        }
+                    }
+                    }
                 }
             }
         }
