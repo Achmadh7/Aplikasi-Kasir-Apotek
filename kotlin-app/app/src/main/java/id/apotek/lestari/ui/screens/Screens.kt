@@ -1018,14 +1018,16 @@ fun StokScreen() {
     // File Excel dibuka/disimpan lewat Storage Access Framework — tanpa izin penyimpanan.
     val templateLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(ExcelHelper.MIME_XLSX)) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
+        val current = medicines
         scope.launch {
-            val ok = withContext(Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    context.contentResolver.openOutputStream(uri)?.use { it.write(ExcelHelper.templateBytes()) }
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(ExcelHelper.templateBytes(current)) }
                         ?: throw IllegalStateException("Tidak bisa membuka file tujuan")
-                }.isSuccess
+                }
             }
-            msg = if (ok) "Template Excel berhasil disimpan." else "Gagal menyimpan template Excel."
+            msg = if (result.isSuccess) "Template Excel berhasil disimpan (${if (current.isEmpty()) 3 else current.size} obat)."
+            else "Gagal menyimpan template Excel: ${result.exceptionOrNull()?.message}"
         }
     }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(ExcelHelper.MIME_XLSX)) { uri ->

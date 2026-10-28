@@ -41,7 +41,8 @@ object ExcelHelper {
         "Template Import Stok Obat — Petunjuk",
         "",
         "1. Isi data obat di sheet 'Stok Obat', satu obat per baris.",
-        "2. Hapus atau ganti 3 baris contoh sebelum import jika tidak diperlukan.",
+        "2. Template ini sudah berisi stok obat saat ini (atau 3 baris contoh jika stok masih kosong).",
+        "   Edit, tambah, atau hapus baris sesuai kebutuhan, lalu simpan sebelum import.",
         "3. Kolom wajib: Nama Obat. Kolom lain boleh kosong (akan diisi nilai bawaan).",
         "   - Barcode: kode barcode pada kemasan obat (boleh kosong). Barcode yang sama tidak boleh dipakai dua obat berbeda.",
         "   - Kategori: Umum, Antibiotik, Vitamin, Pereda Nyeri, Obat Batuk & Flu, Pencernaan, Kulit, Mata, Lainnya",
@@ -53,10 +54,17 @@ object ExcelHelper {
         "5. Jika Barcode sudah ada di stok, data obat itu diperbarui; jika belum ada, ditambahkan sebagai obat baru.",
     )
 
-    /** Template kosong berisi 3 baris contoh + sheet Petunjuk (sama seperti web app). */
-    fun templateBytes(): ByteArray {
+    /** Template berisi stok saat ini (supaya tinggal diedit lalu di-import lagi untuk
+     *  sinkron), atau 3 baris contoh jika stok masih kosong. Dilengkapi sheet Petunjuk. */
+    fun templateBytes(medicines: List<Medicine>): ByteArray {
         val wb = XSSFWorkbook()
-        buildStockSheet(wb, TEMPLATE_EXAMPLES)
+        val rows = if (medicines.isEmpty()) TEMPLATE_EXAMPLES else medicines.map { m ->
+            arrayOf<Any>(
+                m.name, m.barcode ?: "", m.category, m.unit,
+                m.buyPrice, m.sellPrice, m.stock, m.minStock, m.expiryDate ?: ""
+            )
+        }
+        buildStockSheet(wb, rows)
         val info = wb.createSheet(SHEET_PETUNJUK)
         PETUNJUK.forEachIndexed { i, line -> info.createRow(i).createCell(0).setCellValue(line) }
         info.setColumnWidth(0, 110 * 256)
