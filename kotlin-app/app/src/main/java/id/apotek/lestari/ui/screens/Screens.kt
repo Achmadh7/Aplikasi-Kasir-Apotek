@@ -56,12 +56,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -83,7 +85,10 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import id.apotek.lestari.data.*
 import id.apotek.lestari.ui.BtPrinter
 import id.apotek.lestari.ui.buildReceiptBytes
@@ -294,11 +299,18 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
     var salesTab by remember { mutableIntStateOf(0) }
     var outOfStockNames by remember { mutableStateOf<List<String>>(emptyList()) }
+    var lowStockMeds by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
     var expiringMeds by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     LaunchedEffect(Unit) {
         (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data }
         val meds = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
         outOfStockNames = meds.filter { it.stock <= 0 }.map { it.name }.sorted()
+        // Stok menipis (1-19, di bawah 20 seperti lowStockCount) — diurutkan dari
+        // yang paling sedikit supaya yang paling mendesak tampil duluan.
+        // Stok 0 tidak ikut di sini karena sudah tampil di bagian Habis.
+        lowStockMeds = meds.filter { it.stock > 0 && it.stock < 20 }
+            .sortedBy { it.stock }
+            .map { it.name to it.stock }
         val in30Key = dayKeyID(Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000))
         // Tanpa batas bawah: obat yang sudah kadaluarsa ikut tampil di sini
         // (konsisten dengan expiringCount di Dashboard).
@@ -403,13 +415,26 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             Text("Pengingat", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(6.dp))
-                        if (d.lowStockCount > 0) Text("• ${d.lowStockCount} obat stok menipis", style = MaterialTheme.typography.bodyMedium)
+                        // Stok menipis: nama obat + sisa stok (bukan cuma jumlah).
+                        if (lowStockMeds.isNotEmpty()) {
+                            lowStockMeds.take(5).forEach { (name, stock) ->
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+                                    Box(Modifier.size(6.dp).background(Color(0xFFD97706), CircleShape))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("Sisa: $stock", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            if (lowStockMeds.size > 5) Text("+${lowStockMeds.size - 5} lainnya", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
+                        }
+                        // Stok habis: nama obat + keterangan "Habis".
                         if (outOfStockNames.isNotEmpty()) {
                             outOfStockNames.take(5).forEach { name ->
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
                                     Box(Modifier.size(6.dp).background(ChiliRed, CircleShape))
                                     Spacer(Modifier.width(8.dp))
-                                    Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = ChiliRed, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = ChiliRed, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("Habis", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                             if (outOfStockNames.size > 5) Text("+${outOfStockNames.size - 5} lainnya", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
@@ -681,6 +706,20 @@ fun KasirScreen() {
     val scope = rememberCoroutineScope()
     // Supaya field Uang Diterima otomatis tergulir ke atas keyboard saat diketuk.
     val amountBringIntoView = remember { BringIntoViewRequester() }
+    // Animasi "terbang ke keranjang": saat obat ditambahkan, ikon obat melayang
+    // dari kartu obat yang diketuk ke bar keranjang. Posisi dicatat dalam
+    // koordinat window lalu diubah ke koordinat lokal Box root (dikurangi
+    // posisi window Box root). cardCenters = pusat kartu obat per id obat.
+    var rootWindowPos by remember { mutableStateOf(Offset.Zero) }
+    var rootSizePx by remember { mutableStateOf(IntSize.Zero) }
+    var cartBarCenter by remember { mutableStateOf<Offset?>(null) }
+    val cardCenters = remember { mutableStateMapOf<Int, Offset>() }
+    var flyFrom by remember { mutableStateOf<Offset?>(null) }
+    var flyTo by remember { mutableStateOf(Offset.Zero) }
+    var flyId by remember { mutableIntStateOf(0) }
+    // Density dibaca di sini (saat komposisi) supaya bisa dipakai di dalam
+    // handler klik untuk menghitung posisi fallback target.
+    val flyDensity = LocalDensity.current
     LaunchedEffect(Unit) { (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines } }
     // Simpan isi keranjang (id + qty) setiap kali berubah — kecuali saat kosong,
     // supaya pasangan hasil restore tidak tertimpa sebelum daftar obat dimuat.
@@ -732,7 +771,13 @@ fun KasirScreen() {
     val paid = parseDecimal(uangDiterima.text)
     val change = if (method == "Tunai") (paid - total).coerceAtLeast(0) else 0
     val canPay = cart.isNotEmpty() && (method != "Tunai" || paid >= total)
-    Box(Modifier.fillMaxSize()) {
+    Box(
+        Modifier.fillMaxSize()
+            .onGloballyPositioned {
+                rootWindowPos = it.positionInWindow()
+                rootSizePx = it.size
+            }
+    ) {
         // Daftar obat memenuhi layar; keranjang & pembayaran pindah ke bottom sheet.
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(16.dp)) {
 
@@ -778,7 +823,9 @@ fun KasirScreen() {
                 val out = m.stock <= 0
                 ExpressiveCard(
                     shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.fillMaxWidth().clickable(enabled = !out) {
+                    modifier = Modifier.fillMaxWidth()
+                        .onGloballyPositioned { cardCenters[m.id] = it.boundsInWindow().center }
+                        .clickable(enabled = !out) {
                         val ex = cart.firstOrNull { it.medicine.id == m.id }
                         if (ex != null && ex.qty >= m.stock) {
                             scanMsg = "Stok ${m.name} hanya ${m.stock} — tidak bisa ditambah lagi"
@@ -787,6 +834,21 @@ fun KasirScreen() {
                             lastSaleId = 0
                             payMsg = ""
                             if (ex != null) ex.qty++ else cart.add(CartItem(m, 1))
+                            // Picu animasi terbang ke keranjang: dari pusat kartu
+                            // obat ini ke pusat bar keranjang (koordinat lokal Box).
+                            // Kalau posisi bar keranjang belum tercatat (keranjang
+                            // masih kosong saat obat pertama ditambah), pakai
+                            // perkiraan tengah-bawah layar sebagai target.
+                            val start = cardCenters[m.id]
+                            if (start != null) {
+                                val fallbackTarget = Offset(
+                                    rootSizePx.width / 2f,
+                                    rootSizePx.height - with(flyDensity) { 64.dp.toPx() }
+                                )
+                                flyFrom = start - rootWindowPos
+                                flyTo = (cartBarCenter ?: fallbackTarget) - rootWindowPos
+                                flyId++
+                            }
                         }
                     }
                 ) {
@@ -820,7 +882,9 @@ fun KasirScreen() {
         ) {
             ExpressiveCard(
                 shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).clickable { showSheet = true }
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
+                    .onGloballyPositioned { cartBarCenter = it.boundsInWindow().center }
+                    .clickable { showSheet = true }
             ) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     key(cartQty) {
@@ -845,6 +909,47 @@ fun KasirScreen() {
                         shape = RoundedCornerShape(28.dp),
                         modifier = Modifier.height(48.dp)
                     ) { Text("Bayar", style = MaterialTheme.typography.titleMedium) }
+                }
+            }
+        }
+
+        // Overlay animasi terbang ke keranjang: ikon obat melayang dari kartu
+        // yang diketuk ke bar keranjang, mengecil & memudar. Overlay ini tidak
+        // menghalangi sentuhan (tidak ada clickable di dalamnya).
+        if (flyFrom != null) {
+            key(flyId) {
+                val start = flyFrom!!
+                val end = flyTo
+                val iconHalfPx = with(flyDensity) { 22.dp.toPx() }
+                val offset = remember { Animatable(start, Offset.VectorConverter) }
+                val scale = remember { Animatable(1f) }
+                val alpha = remember { Animatable(1f) }
+                LaunchedEffect(flyId) {
+                    launch { offset.animateTo(end, animationSpec = tween(500, easing = FastOutSlowInEasing)) }
+                    launch { scale.animateTo(0.4f, animationSpec = tween(500)) }
+                    launch { alpha.animateTo(0f, animationSpec = tween(500)) }
+                    flyFrom = null
+                }
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.TopStart
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    (offset.value.x - iconHalfPx).roundToInt(),
+                                    (offset.value.y - iconHalfPx).roundToInt()
+                                )
+                            }
+                            .size(44.dp)
+                            .graphicsLayer(scaleX = scale.value, scaleY = scale.value, alpha = alpha.value),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(color = BlueButton, shape = CircleShape, modifier = Modifier.fillMaxSize()) {
+                            Icon(Icons.Default.Medication, null, tint = Color.White, modifier = Modifier.padding(10.dp))
+                        }
+                    }
                 }
             }
         }
