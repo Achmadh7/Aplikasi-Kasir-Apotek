@@ -583,25 +583,33 @@ private fun SearchField(
     modifier: Modifier = Modifier
 ) {
     var focused by remember { mutableStateOf(false) }
+    // Di mode gelap, pill dibuat putih supaya jelas terlihat (permintaan Achmad);
+    // teks & ikon ikut jadi gelap supaya tetap terbaca di atas putih.
+    // Mode terang tidak berubah.
+    val isDark = LocalIsDarkTheme.current
+    val pillColor = if (isDark) Color.White else MaterialTheme.colorScheme.surfaceContainer
+    val textColor = if (isDark) Color(0xFF111418) else MaterialTheme.colorScheme.onSurface
+    val hintColor = if (isDark) Color(0xFF43474E) else MaterialTheme.colorScheme.onSurfaceVariant
+    val borderColor = if (focused) {
+        if (isDark) BluePrimary else MaterialTheme.colorScheme.primary
+    } else {
+        if (isDark) Color(0xFFC3C7CF) else MaterialTheme.colorScheme.outline
+    }
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+        textStyle = MaterialTheme.typography.bodyMedium.copy(color = textColor),
         modifier = modifier
             .height(44.dp)
             .onFocusEvent { focused = it.isFocused },
         decorationBox = { innerTextField ->
             Surface(
-                // Latar surfaceContainer (bukan surface) supaya pill terlihat jelas
-                // di atas latar layar — surface sama dengan latar (#0A0E14 di mode
-                // gelap) sehingga pill sebelumnya hanya dibatasi garis tipis.
-                color = MaterialTheme.colorScheme.surfaceContainer,
+                // Latar putih di mode gelap (bukan surfaceContainer) supaya pill
+                // terlihat jelas di atas latar layar yang gelap.
+                color = pillColor,
                 shape = RoundedCornerShape(22.dp),
-                border = BorderStroke(
-                    1.dp,
-                    if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                ),
+                border = BorderStroke(1.dp, borderColor),
                 modifier = Modifier.fillMaxSize()
             ) {
                 Row(
@@ -610,7 +618,7 @@ private fun SearchField(
                 ) {
                     Icon(
                         Icons.Default.Search, null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = hintColor,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
@@ -619,7 +627,7 @@ private fun SearchField(
                             Text(
                                 "Cari obat…",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = hintColor,
                                 maxLines = 1
                             )
                         }
