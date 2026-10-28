@@ -151,9 +151,12 @@ object ExcelHelper {
                     val minStock = if (minStockRaw.isBlank()) {
                         10
                     } else {
-                        minStockRaw.toIntOrNullStrict() ?: run {
+                        val parsed = minStockRaw.toIntOrNullStrict()
+                        if (parsed == null) {
                             skipped.add(row.rowNum + 1)
                             continue
+                        } else {
+                            parsed
                         }
                     }
                     // C7: tanggal terisi tapi tidak bisa diparse -> baris dilewati;

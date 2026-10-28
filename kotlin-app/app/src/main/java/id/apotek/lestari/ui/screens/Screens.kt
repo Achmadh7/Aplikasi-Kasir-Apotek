@@ -3003,8 +3003,9 @@ fun BackupScreen() {
 /** Tentang Aplikasi: logo, nama, versi, dan deskripsi singkat. */
 @Composable
 fun TentangScreen() {
-    // Versi dari BuildConfig (sama dengan versionName di build.gradle.kts).
-    val version = id.apotek.lestari.BuildConfig.VERSION_NAME
+    // Versi hardcoded — samakan dengan versionName di build.gradle.kts.
+    // (BuildConfig tidak digenerate di setup AGP proyek ini, jadi jangan pakai BuildConfig.VERSION_NAME.)
+    val version = "1.0.0"
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 20.dp),
