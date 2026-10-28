@@ -71,6 +71,15 @@ android {
     }
 }
 
+// Nama file APK release: apotek-lestari.apk (bukan app-release.apk).
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.outputs.forEach { output ->
+            output.outputFileName.set("apotek-lestari.apk")
+        }
+    }
+}
+
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.09.00")
     implementation(composeBom)
