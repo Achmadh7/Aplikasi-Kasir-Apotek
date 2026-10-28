@@ -16,9 +16,22 @@
 -keep class org.apache.poi.** { *; }
 -keep class org.openxmlformats.** { *; }
 -keep class org.apache.xmlbeans.** { *; }
+# Dependensi transitif POI (dipakai saat tulis/baca .xlsx — ZIP, IO, koleksi,
+# log). Wajib di-keep juga: tanpa ini, R8 di build release bisa membuangnya
+# sehingga Template & Export Excel jadi file kosong (0 byte).
+-keep class org.apache.commons.io.** { *; }
+-keep class org.apache.commons.compress.** { *; }
+-keep class org.apache.commons.collections4.** { *; }
+-keep class org.apache.commons.math3.** { *; }
+-keep class org.apache.logging.log4j.** { *; }
+-keep class com.zaxxer.sparsebits.** { *; }
 -dontwarn org.apache.poi.**
 -dontwarn org.openxmlformats.**
 -dontwarn org.apache.xmlbeans.**
+-dontwarn org.apache.commons.io.**
+-dontwarn org.apache.commons.compress.**
+-dontwarn org.apache.commons.collections4.**
+-dontwarn org.apache.commons.math3.**
 
 # ML Kit Barcode Scanning & CameraX membawa consumer rules sendiri;
 # redam peringatan yang tidak relevan supaya build tidak berisik.

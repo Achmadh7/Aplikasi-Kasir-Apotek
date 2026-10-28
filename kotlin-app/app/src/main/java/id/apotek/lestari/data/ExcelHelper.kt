@@ -171,7 +171,11 @@ object ExcelHelper {
         val out = ByteArrayOutputStream()
         wb.write(out)
         wb.close()
-        return out.toByteArray()
+        val bytes = out.toByteArray()
+        // Jangan diam-diam menghasilkan file kosong — kalau POI tidak menulis
+        // apa-apa (mis. class POI terbuang R8), lempar supaya pesannya jelas.
+        require(bytes.isNotEmpty()) { "File Excel kosong (POI tidak menulis apa-apa)" }
+        return bytes
     }
 
     private fun String.toIntOrZero(): Int = filter { it.isDigit() }.toIntOrNull() ?: 0
