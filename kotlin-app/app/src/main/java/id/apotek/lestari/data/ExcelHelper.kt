@@ -23,7 +23,7 @@ import java.util.TimeZone
  * Formatnya sama dengan template web app (Aplikasi Apotik Lestari), jadi satu
  * file bisa dipakai di keduanya.
  *
- * Kolom: Nama Obat | Barcode | Kategori | Satuan | Harga Beli | Harga Jual |
+ * Kolom: Nama Obat | Kategori | Satuan | Harga Beli | Harga Jual |
  * Stok | Tanggal Kadaluarsa (YYYY-MM-DD)
  */
 object ExcelHelper {
@@ -32,14 +32,14 @@ object ExcelHelper {
     const val SHEET_PETUNJUK = "Petunjuk"
 
     val HEADERS = arrayOf(
-        "Nama Obat", "Barcode", "Kategori", "Satuan",
+        "Nama Obat", "Kategori", "Satuan",
         "Harga Beli", "Harga Jual", "Stok", "Tanggal Kadaluarsa"
     )
 
     private val TEMPLATE_EXAMPLES = listOf(
-        arrayOf<Any>("Paracetamol 500mg", "8991234567890", "Pereda Nyeri", "Strip", 8000, 12000, 50, "2027-12-31"),
-        arrayOf<Any>("Amoxicillin 500mg", "8991234567891", "Antibiotik", "Strip", 15000, 22000, 30, "2026-11-30"),
-        arrayOf<Any>("Vitamin C 1000mg", "8991234567892", "Vitamin", "Botol", 35000, 50000, 20, "2028-06-30"),
+        arrayOf<Any>("Paracetamol 500mg", "Pereda Nyeri", "Strip", 8000, 12000, 50, "2027-12-31"),
+        arrayOf<Any>("Amoxicillin 500mg", "Antibiotik", "Strip", 15000, 22000, 30, "2026-11-30"),
+        arrayOf<Any>("Vitamin C 1000mg", "Vitamin", "Botol", 35000, 50000, 20, "2028-06-30"),
     )
 
     private val PETUNJUK = listOf(
@@ -49,14 +49,13 @@ object ExcelHelper {
         "2. Template ini sudah berisi stok obat saat ini (atau 3 baris contoh jika stok masih kosong).",
         "   Edit, tambah, atau hapus baris sesuai kebutuhan, lalu simpan sebelum import.",
         "3. Kolom wajib: Nama Obat. Kolom lain boleh kosong (akan diisi nilai bawaan).",
-        "   - Barcode: kode barcode pada kemasan obat (boleh kosong). Barcode yang sama tidak boleh dipakai dua obat berbeda.",
         "   - Kategori: Umum, Obat Bebas, Obat Bebas Terbatas, Obat Keras, Antibiotik, Vitamin, Pereda Nyeri, Obat Batuk & Flu, Pencernaan, Kulit, Mata, Lainnya",
         "   - Satuan: Strip, Botol, Vial, Ampul, Box, Tablet, Kapsul, Tube, Sachet, Pcs",
         "   - Harga Beli & Harga Jual: angka saja, contoh 12000 (tanpa Rp / titik)",
         "   - Stok: angka bulat",
         "   - Tanggal Kadaluarsa: format YYYY-MM-DD, contoh 2027-12-31 (boleh kosong)",
         "4. Simpan file, lalu di aplikasi buka Stok > Import Excel dan pilih file ini.",
-        "5. Jika Barcode sudah ada di stok, data obat itu diperbarui; jika belum ada, ditambahkan sebagai obat baru.",
+        "5. Jika obat dengan Nama + Kategori + Satuan yang sama sudah ada di stok, data obat itu diperbarui; jika belum ada, ditambahkan sebagai obat baru.",
     )
 
     /** Template berisi stok saat ini (supaya tinggal diedit lalu di-import lagi untuk
@@ -65,7 +64,7 @@ object ExcelHelper {
         val wb = XSSFWorkbook()
         val rows = if (medicines.isEmpty()) TEMPLATE_EXAMPLES else medicines.map { m ->
             arrayOf<Any>(
-                m.name, m.barcode ?: "", m.category, m.unit,
+                m.name, m.category, m.unit,
                 m.buyPrice, m.sellPrice, m.stock, m.expiryDate ?: ""
             )
         }
@@ -81,7 +80,7 @@ object ExcelHelper {
         val wb = XSSFWorkbook()
         val rows = medicines.map { m ->
             arrayOf<Any>(
-                m.name, m.barcode ?: "", m.category, m.unit,
+                m.name, m.category, m.unit,
                 m.buyPrice, m.sellPrice, m.stock, m.expiryDate ?: ""
             )
         }
@@ -95,8 +94,8 @@ object ExcelHelper {
      * Baca file .xlsx hasil pilihan pengguna. Kolom dikenali dari baris header,
      * jadi urutan kolom boleh beda. Baris tanpa Nama Obat dilewati (dicatat
      * nomor barisnya); baris kosong seluruhnya diabaikan diam-diam.
-     * Baris dengan angka rusak, tanggal kadaluarsa tidak valid, atau barcode
-     * yang sudah muncul di baris sebelumnya juga dilewati dan dicatat.
+     * Baris dengan angka rusak atau tanggal kadaluarsa tidak valid juga
+     * dilewati dan dicatat.
      */
     fun parseImport(bytes: ByteArray): ParsedImport {
         val items = mutableListOf<MedicineArgs>()
@@ -122,49 +121,42 @@ object ExcelHelper {
                     val cell = row.getCell(idx(name, fallback)) ?: return ""
                     return formatter.formatCellValue(cell).trim()
                 }
-                // C11: barcode yang sudah terlihat di file, supaya duplikat di
-                // dalam file tidak diam-diam menimpa baris sebelumnya.
-                val seenBarcodes = mutableSetOf<String>()
                 for (row in sheet) {
                     if (row.rowNum == 0) continue
                     val name = text(row, "Nama Obat", 0)
                     if (name.isBlank()) {
-                        val anyValue = (0..7).any { text(row, HEADERS[it], it).isNotEmpty() }
+                        val anyValue = (0..6).any { text(row, HEADERS[it], it).isNotEmpty() }
                         if (anyValue) skipped.add(row.rowNum + 1)
                         continue
                     }
-                    val barcode = text(row, "Barcode", 1).ifBlank { null }
-                    val category = text(row, "Kategori", 2).ifBlank { "Umum" }
-                    val unit = text(row, "Satuan", 3).ifBlank { "Strip" }
+                    // Kolom Barcode sudah tidak dipakai (dihapus dari template
+                    // 2026-10-29); file lama yang masih punya kolom itu tetap
+                    // bisa diimpor — kolomnya diabaikan dan obat dicocokkan
+                    // lewat Nama + Kategori + Satuan di Repository.bulkImport.
+                    val category = text(row, "Kategori", 1).ifBlank { "Umum" }
+                    val unit = text(row, "Satuan", 2).ifBlank { "Strip" }
                     // A7: angka rusak (null dari parser) jangan diam-diam jadi 0 —
                     // baris dilewati dan dicatat di skippedRows.
-                    val buy = text(row, "Harga Beli", 4).toIntOrNullStrict()
-                    val sell = text(row, "Harga Jual", 5).toIntOrNullStrict()
-                    val stock = text(row, "Stok", 6).toIntOrNullStrict()
+                    val buy = text(row, "Harga Beli", 3).toIntOrNullStrict()
+                    val sell = text(row, "Harga Jual", 4).toIntOrNullStrict()
+                    val stock = text(row, "Stok", 5).toIntOrNullStrict()
                     if (buy == null || sell == null || stock == null) {
                         skipped.add(row.rowNum + 1)
                         continue
                     }
                     // C7: tanggal terisi tapi tidak bisa diparse -> baris dilewati;
                     // tanggal kosong -> null (boleh).
-                    val expiryRaw = text(row, "Tanggal Kadaluarsa", 7)
+                    val expiryRaw = text(row, "Tanggal Kadaluarsa", 6)
                     val expiry = if (expiryRaw.isBlank()) {
                         null
                     } else {
-                        readExpiry(row, idx("Tanggal Kadaluarsa", 7), formatter)
+                        readExpiry(row, idx("Tanggal Kadaluarsa", 6), formatter)
                     }
                     if (expiryRaw.isNotBlank() && expiry == null) {
                         skipped.add(row.rowNum + 1)
                         continue
                     }
-                    // C11: barcode duplikat di dalam file — baris kedua dan
-                    // seterusnya dilewati supaya tidak ada obat yang hilang
-                    // diam-diam karena tertimpa.
-                    if (barcode != null && !seenBarcodes.add(barcode)) {
-                        skipped.add(row.rowNum + 1)
-                        continue
-                    }
-                    items.add(MedicineArgs(name, category, unit, buy, sell, stock, expiry, barcode))
+                    items.add(MedicineArgs(name, category, unit, buy, sell, stock, expiry))
                 }
             } finally {
                 wb.close()
@@ -201,7 +193,7 @@ object ExcelHelper {
                 }
             }
         }
-        intArrayOf(30, 18, 18, 10, 13, 13, 8, 18).forEachIndexed { i, w ->
+        intArrayOf(30, 18, 10, 13, 13, 8, 18).forEachIndexed { i, w ->
             sheet.setColumnWidth(i, w * 256)
         }
     }
