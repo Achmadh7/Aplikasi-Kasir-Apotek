@@ -145,9 +145,18 @@ object ExcelHelper {
                         skipped.add(row.rowNum + 1)
                         continue
                     }
-                    // Harga grosir OPSIONAL: kosong / tidak ada kolomnya /
-                    // isinya rusak -> 0 (belum diatur), baris tetap diterima.
-                    val grosir = text(row, "Harga Jual Grosir", 5).toIntOrNullStrict() ?: 0
+                    // Harga grosir OPSIONAL: kosong / isinya rusak -> 0
+                    // (belum diatur), baris tetap diterima. Kolom ini dibaca
+                    // HANYA bila header-nya benar-benar ada di file — jangan
+                    // pakai fallback posisi: di template lama, posisi 5 itu
+                    // Harga Jual (layout era barcode) atau Stok (layout 7
+                    // kolom), jadi file lama akan mengisi harga grosir palsu
+                    // (bug N1, audit 2026-10-30).
+                    val grosir = if (colIndex.containsKey("harga jual grosir")) {
+                        text(row, "Harga Jual Grosir", 5).toIntOrNullStrict() ?: 0
+                    } else {
+                        0
+                    }
                     // C7: tanggal terisi tapi tidak bisa diparse -> baris dilewati;
                     // tanggal kosong -> null (boleh).
                     val expiryRaw = text(row, "Tanggal Kadaluarsa", 7)

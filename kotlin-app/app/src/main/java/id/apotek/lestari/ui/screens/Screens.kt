@@ -754,18 +754,27 @@ fun KasirScreen() {
     // handler klik untuk menghitung posisi fallback target.
     val flyDensity = LocalDensity.current
     LaunchedEffect(Unit) { (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines } }
-    // Simpan isi keranjang (id + qty) setiap kali berubah — kecuali saat kosong,
-    // supaya pasangan hasil restore tidak tertimpa sebelum daftar obat dimuat.
-    val cartSnapshot = cart.map { it.medicine.id to it.qty }
+    // Simpan isi keranjang (id + qty + pilihan grosir) setiap kali berubah —
+    // kecuali saat kosong, supaya hasil restore tidak tertimpa sebelum daftar
+    // obat dimuat. Pilihan grosir ikut disimpan (audit N2, 2026-10-30): tanpa
+    // itu, item yang dipulihkan diam-diam kembali ke harga Ecer dan total
+    // berubah sementara isian Uang Diterima tetap.
+    val cartSnapshot = cart.map { Triple(it.medicine.id, it.qty, it.useWholesale) }
     LaunchedEffect(cartSnapshot) {
-        if (cart.isNotEmpty()) savedCart = cartSnapshot.flatMap { listOf(it.first, it.second) }
+        if (cart.isNotEmpty()) savedCart = cartSnapshot.flatMap { listOf(it.first, it.second, if (it.third) 1 else 0) }
     }
-    // Pulihkan keranjang dari pasangan tersimpan begitu daftar obat dimuat.
+    // Pulihkan keranjang dari data tersimpan begitu daftar obat dimuat.
     LaunchedEffect(medicines) {
         if (cart.isEmpty() && savedCart.isNotEmpty() && medicines.isNotEmpty()) {
-            val byId = medicines.associateBy { it.id }
-            savedCart.chunked(2).forEach { pair ->
-                if (pair.size == 2) byId[pair[0]]?.let { cart.add(CartItem(it, pair[1])) }
+            // Format lama (berpasangan id+qty) tidak berkelipatan 3 — buang
+            // saja daripada memulihkan keranjang yang salah tafsir.
+            if (savedCart.size % 3 == 0) {
+                val byId = medicines.associateBy { it.id }
+                savedCart.chunked(3).forEach { triple ->
+                    if (triple.size == 3) byId[triple[0]]?.let { med ->
+                        cart.add(CartItem(med, triple[1]).also { ci -> ci.useWholesale = triple[2] == 1 })
+                    }
+                }
             }
             savedCart = emptyList()
         }
@@ -4022,9 +4031,12 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                     // Pemilih satuan per baris: ketukan ditangkap lewat
                     // interactionSource baris ini (pola field read-only yang
                     // sama seperti Tanggal Beli), membuka OptionPickerSheet
-                    // untuk baris yang bersangkutan.
-                    val unitInteraction = remember { MutableInteractionSource() }
-                    LaunchedEffect(unitInteraction) {
+                    // untuk baris yang bersangkutan. Sumber + efek DIKUNCI ke
+                    // objek baris (audit N3, 2026-10-30): tanpa kunci, slot
+                    // remember bergeser setelah baris lain dihapus dan
+                    // ketukan bisa membuka pemilih untuk baris yang salah.
+                    val unitInteraction = remember(row) { MutableInteractionSource() }
+                    LaunchedEffect(row, unitInteraction) {
                         unitInteraction.interactions.collect { if (it is PressInteraction.Press) unitPickerRow = row }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
