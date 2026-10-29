@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectableGroup
@@ -26,6 +27,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -144,24 +146,58 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     }
     Scaffold(
         bottomBar = {
-            // Pill mengambang (kapsul) seperti referensi: 5 tab (Beranda, Stok,
-            // Kasir, Keuangan, Lainnya) dalam satu pill gelap berbordir tipis.
-            // Kasir kini tab biasa (bukan FAB melayang). Tab terpilih: lingkaran
-            // + ikon/label biru; tidak terpilih: putih/abu. Pill dibatasi 480dp
-            // supaya di tablet tidak merentang terlalu lebar.
+            // Pill mengambang (kapsul): 5 tab (Beranda, Stok, Kasir, Keuangan,
+            // Lainnya). Kasir kini tab biasa (bukan FAB melayang). Pill
+            // dibatasi 480dp supaya di tablet tidak merentang terlalu lebar.
+            // Gaya KACA (pilihan Achmad 2026-10-30, opsi 4): badan pill
+            // semi-transparan bergradasi halus + kilau di tepi atas, bordir
+            // biru tipis dengan bayangan biru lembut (efek menyala), dan tab
+            // terpilih berupa lingkaran gradasi biru berisi ikon/label putih.
+            val pillShape = RoundedCornerShape(36.dp)
+            val glowColor = Color(0xFF42A5F5)
+            val glassBrush = if (isDark) {
+                Brush.verticalGradient(
+                    listOf(Color(0xFF262C34).copy(alpha = 0.88f), Color(0xFF14171C).copy(alpha = 0.88f))
+                )
+            } else {
+                Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.94f), Color(0xFFEDF3FA).copy(alpha = 0.94f))
+                )
+            }
             Box(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Surface(
-                    color = if (isDark) Color(0xFF1B1E22) else Color.White,
-                    shape = RoundedCornerShape(36.dp),
-                    border = BorderStroke(
-                        1.dp,
-                        if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
-                    ),
-                    modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp).height(72.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 480.dp)
+                        .height(72.dp)
+                        .shadow(
+                            elevation = 16.dp,
+                            shape = pillShape,
+                            ambientColor = glowColor.copy(alpha = 0.30f),
+                            spotColor = glowColor.copy(alpha = 0.45f)
+                        )
+                        .background(brush = glassBrush, shape = pillShape)
+                        .border(
+                            1.dp,
+                            if (isDark) glowColor.copy(alpha = 0.55f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                            pillShape
+                        )
                 ) {
+                    // Kilau kaca: sorotan putih tipis di separuh atas pill.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.5f)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = if (isDark) 0.10f else 0.35f), Color.Transparent)
+                                ),
+                                shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp)
+                            )
+                    )
                     Row(
                         modifier = Modifier.fillMaxSize(),
                         verticalAlignment = Alignment.CenterVertically
@@ -299,10 +335,9 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
 
 
 // Satu tab di pill bawah: ikon di atas, label di bawah (seperti referensi).
-// Bila terpilih, tampil lingkaran di belakangnya + ikon/label biru (di mode
-// gelap birunya dibuat lebih cerah, karena biru medis #0061A4 agak gelap di
-// atas pill hitam); bila tidak terpilih, ikon/label putih/abu. Ketukan tanpa
-// ripple supaya tampilannya bersih seperti referensi.
+// Bila terpilih, tampil lingkaran gradasi biru di belakangnya + ikon/label
+// PUTIH (kontras di atas gradasi biru); bila tidak terpilih, ikon/label
+// putih/abu. Ketukan tanpa ripple supaya tampilannya bersih seperti referensi.
 @Composable
 private fun RowScope.PillTab(
     selected: Boolean,
@@ -311,7 +346,6 @@ private fun RowScope.PillTab(
     isDark: Boolean,
     onClick: () -> Unit
 ) {
-    val selectedColor = if (isDark) Color(0xFF64B5F6) else MaterialTheme.colorScheme.primary
     val unselectedColor = if (isDark) Color.White.copy(alpha = 0.75f) else Color.Black.copy(alpha = 0.60f)
     Box(
         modifier = Modifier
@@ -329,7 +363,9 @@ private fun RowScope.PillTab(
                 modifier = Modifier
                     .size(56.dp)
                     .background(
-                        color = if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.06f),
+                        brush = Brush.linearGradient(
+                            listOf(Color(0xFF64B5F6), Color(0xFF1E88E5))
+                        ),
                         shape = CircleShape
                     )
             )
@@ -338,7 +374,7 @@ private fun RowScope.PillTab(
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = if (selected) selectedColor else unselectedColor,
+                tint = if (selected) Color.White else unselectedColor,
                 modifier = Modifier.size(26.dp)
             )
             Spacer(Modifier.height(2.dp))
@@ -346,7 +382,7 @@ private fun RowScope.PillTab(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                color = if (selected) selectedColor else unselectedColor,
+                color = if (selected) Color.White else unselectedColor,
                 maxLines = 1
             )
         }
