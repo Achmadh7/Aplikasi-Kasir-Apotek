@@ -3709,6 +3709,7 @@ fun PbfScreen() {
     var expanded by remember { mutableStateOf<Int?>(null) }
     var showForm by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<Purchase?>(null) }
+    var paidTarget by remember { mutableStateOf<Purchase?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -3855,7 +3856,16 @@ fun PbfScreen() {
                                     }
                                 }
                                 Spacer(Modifier.height(8.dp))
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = if (p.paymentType == "KREDIT") Arrangement.SpaceBetween else Arrangement.End) {
+                                    // Tandai Lunas hanya untuk pembelian Kredit:
+                                    // mengubahnya jadi Cash supaya masuk ringkasan.
+                                    if (p.paymentType == "KREDIT") {
+                                        TextButton(onClick = { paidTarget = p }) {
+                                            Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(4.dp))
+                                            Text("Tandai Lunas", color = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
                                     TextButton(onClick = { deleteTarget = p }) {
                                         Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(4.dp))
@@ -3903,6 +3913,29 @@ fun PbfScreen() {
                 }) { Text("Hapus", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Batal") } }
+        )
+    }
+
+    paidTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { paidTarget = null },
+            title = { Text("Tandai Lunas?") },
+            text = { Text("Pembelian dari ${target.pbfName} (${formatDateID(target.date)}) sebesar ${formatIDR(target.total)} akan diubah jadi Cash. Nominalnya masuk ke ringkasan Belanja Hari Ini/Bulan Ini mengikuti tanggal belinya.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    paidTarget = null
+                    scope.launch {
+                        val res = repo.markPurchasePaid(target.id)
+                        if (res is ApiResult.Success) {
+                            resumeKey++
+                            snackbarHostState.showSnackbar("Pembelian ditandai lunas.")
+                        } else {
+                            snackbarHostState.showSnackbar((res as? ApiResult.Error)?.message ?: "Gagal menandai lunas")
+                        }
+                    }
+                }) { Text("Tandai Lunas", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = { paidTarget = null }) { Text("Batal") } }
         )
     }
 }

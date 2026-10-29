@@ -664,6 +664,14 @@ class Repository {
         OkResponse(true)
     }
 
+    /** Tandai pembelian Kredit sebagai lunas: paymentType diubah ke CASH,
+     *  sehingga nominalnya masuk ringkasan belanja (sesuai tanggal belinya). */
+    suspend fun markPurchasePaid(id: Int): ApiResult<OkResponse> = call {
+        val changed = DatabaseProvider.db.purchaseDao().updatePaymentType(id, "CASH")
+        if (changed == 0) throw IllegalStateException("Catatan pembelian tidak ditemukan")
+        OkResponse(true)
+    }
+
     // ---- Backup & Restore (semua data lokal dalam satu file JSON) ----
 
     /** Seluruh isi database (obat, penjualan, item, kas) sebagai string JSON. */

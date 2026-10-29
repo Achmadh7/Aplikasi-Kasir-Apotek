@@ -199,6 +199,9 @@ interface PurchaseDao {
     @Query("DELETE FROM purchase_items WHERE purchaseId = :purchaseId")
     suspend fun deleteItemsForPurchase(purchaseId: Int)
 
+    @Query("UPDATE purchases SET paymentType = :paymentType WHERE id = :id")
+    suspend fun updatePaymentType(id: Int, paymentType: String): Int
+
     @Query("DELETE FROM purchases")
     suspend fun deleteAll()
 
