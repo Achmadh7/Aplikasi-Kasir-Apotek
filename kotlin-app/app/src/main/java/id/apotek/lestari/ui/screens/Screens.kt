@@ -1816,7 +1816,6 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
     var buy by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.buyPrice?.toString() ?: ""))) }
     var sell by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.sellPrice?.toString() ?: ""))) }
     var stock by remember(editing) { mutableStateOf(editing?.stock?.toString() ?: "") }
-    var minStock by remember(editing) { mutableStateOf(editing?.minStock?.toString() ?: "10") }
     var expiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
     var formError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -1852,7 +1851,6 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
             OutlinedTextField(buy, { buy = formatDecimalFieldValue(it) }, label = { Text("Harga Beli") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(sell, { sell = formatDecimalFieldValue(it) }, label = { Text("Harga Jual") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() } }, label = { Text("Stok") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(minStock, { minStock = it.filter { c -> c.isDigit() } }, label = { Text("Stok Minimum") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 value = if (expiry.isBlank()) "" else formatDateID(expiry),
                 onValueChange = {},
@@ -1876,7 +1874,9 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
                             val b = parseDecimal(buy.text)
                             val s = parseDecimal(sell.text)
                             val st = stock.toIntOrNull() ?: 0
-                            val ms = minStock.toIntOrNull() ?: 10
+                            // Stok minimum tidak lagi diisi lewat formulir: nilai
+                            // yang sudah ada dipertahankan, obat baru bawaan 10.
+                            val ms = editing?.minStock ?: 10
                             val exp = expiry.ifBlank { null }
                             val bc = barcode.ifBlank { null }
                             val result = if (editing == null) {
