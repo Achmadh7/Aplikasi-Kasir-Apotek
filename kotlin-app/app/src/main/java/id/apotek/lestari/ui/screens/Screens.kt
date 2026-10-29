@@ -103,7 +103,6 @@ import id.apotek.lestari.ui.printReceiptToPrinter
 import id.apotek.lestari.ui.rememberLogoBitmap
 import id.apotek.lestari.ui.savePrinter
 import id.apotek.lestari.ui.shareReceiptBitmap
-import id.apotek.lestari.ui.components.BarcodeScanner
 import id.apotek.lestari.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
@@ -689,8 +688,10 @@ fun KasirScreen() {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var search by rememberSaveable { mutableStateOf("") }
     var sortAz by remember { mutableStateOf(true) }
-    var showScanner by remember { mutableStateOf(false) }
-    var scanMsg by remember { mutableStateOf("") }
+    // Pesan umpan balik di bawah kolom cari (mis. stok tidak cukup saat obat
+    // diketuk). Dulu juga dipakai hasil scan barcode; scan kamera dihapus
+    // atas permintaan Achmad 2026-10-29.
+    var cartMsg by remember { mutableStateOf("") }
     var method by rememberSaveable { mutableStateOf("Tunai") }
     // TextFieldValue (bukan Int) + formatDecimalFieldValue supaya kursor tidak
     // meloncat saat mengetik nominal; TextFieldValue punya Saver bawaan.
@@ -749,27 +750,6 @@ fun KasirScreen() {
             lastSale = (repo.listSales() as? ApiResult.Success)?.data?.sales?.firstOrNull { it.id == lastSaleId }
         }
     }
-    if (showScanner) BarcodeScanner(onDetected = { code ->
-        showScanner = false
-        scope.launch {
-            val r = repo.findByBarcode(code)
-            val med = (r as? ApiResult.Success)?.data?.medicine
-            if (med != null) {
-                val ex = cart.firstOrNull { it.medicine.id == med.id }
-                if (med.stock <= 0) {
-                    scanMsg = "${med.name} stok habis"
-                } else if (ex != null && ex.qty >= med.stock) {
-                    scanMsg = "Stok ${med.name} hanya ${med.stock} — tidak bisa ditambah lagi"
-                } else {
-                    lastSale = null
-                    lastSaleId = 0
-                    payMsg = ""
-                    if (ex != null) ex.qty++ else cart.add(CartItem(med, 1))
-                    scanMsg = "${med.name} ditambahkan"
-                }
-            } else scanMsg = "Barcode $code tidak ditemukan"
-        }
-    }, onClose = { showScanner = false })
     val filtered = medicines.filter { search.isBlank() || it.name.contains(search, true) || it.category.contains(search, true) || (it.barcode?.contains(search) == true) }
     val sorted = if (sortAz) filtered.sortedBy { it.name.lowercase() } else filtered.sortedByDescending { it.name.lowercase() }
     val total = cart.sumOf { it.medicine.sellPrice * it.qty }
@@ -798,25 +778,13 @@ fun KasirScreen() {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Spacer(Modifier.height(16.dp))
         DemoBanner()
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            SearchField(
-                value = search, onValueChange = { search = it },
-                modifier = Modifier.weight(1f)
-            )
-            OutlinedButton(
-                onClick = { showScanner = true },
-                shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.height(44.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp)
-            ) {
-                Icon(Icons.Default.QrCodeScanner, "Scan barcode")
-                Spacer(Modifier.width(8.dp))
-                Text("Scan")
-            }
-        }
-        if (scanMsg.isNotEmpty()) {
+        SearchField(
+            value = search, onValueChange = { search = it },
+            modifier = Modifier.fillMaxWidth()
+        )
+        if (cartMsg.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
-            Text(scanMsg, style = MaterialTheme.typography.bodySmall)
+            Text(cartMsg, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -834,7 +802,7 @@ fun KasirScreen() {
                         .clickable(enabled = !out) {
                         val ex = cart.firstOrNull { it.medicine.id == m.id }
                         if (ex != null && ex.qty >= m.stock) {
-                            scanMsg = "Stok ${m.name} hanya ${m.stock} — tidak bisa ditambah lagi"
+                            cartMsg = "Stok ${m.name} hanya ${m.stock} — tidak bisa ditambah lagi"
                         } else {
                             lastSale = null
                             lastSaleId = 0
@@ -1292,10 +1260,8 @@ fun StokScreen() {
     var selectMode by remember { mutableStateOf(false) }
     var selectedMeds by remember { mutableStateOf<Map<Int, Medicine>>(emptyMap()) }
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
-    var showScanner by remember { mutableStateOf(false) }
     var showForm by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Medicine?>(null) }
-    var prefillBarcode by remember { mutableStateOf("") }
     var msg by remember { mutableStateOf("") }
     var deleteTarget by remember { mutableStateOf<Medicine?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -1389,14 +1355,6 @@ fun StokScreen() {
         "low" -> shown.sortedWith(compareBy({ it.stock }, { it.name.lowercase() }))
         else -> shown.sortedBy { it.name.lowercase() }
     }
-    if (showScanner) BarcodeScanner(onDetected = { code ->
-        showScanner = false
-        scope.launch {
-            val med = (repo.findByBarcode(code) as? ApiResult.Success)?.data?.medicine
-            msg = if (med != null) "Ditemukan: ${med.name} — stok ${med.stock}" else "Barcode $code belum terdaftar — gunakan Tambah Obat"
-            if (med == null) { prefillBarcode = code; editing = null; showForm = true }
-        }
-    }, onClose = { showScanner = false })
     Box(Modifier.fillMaxSize()) {
     // Satu LazyColumn untuk seluruh layar (header + daftar) supaya layar bisa
     // digulir penuh saat lanskap — header tetap + LazyColumn weight(1f) membuat
@@ -1418,7 +1376,7 @@ fun StokScreen() {
                     Text("${medicines.size} jenis obat tercatat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Button(
-                    onClick = { prefillBarcode = ""; editing = null; showForm = true },
+                    onClick = { editing = null; showForm = true },
                     colors = ButtonDefaults.buttonColors(containerColor = LightBlueCard, contentColor = OnLightBlue),
                     shape = RoundedCornerShape(32.dp)
                 ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("Tambah Obat") }
@@ -1427,22 +1385,10 @@ fun StokScreen() {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(16.dp))
             DemoBanner()
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                SearchField(
-                    value = search, onValueChange = { search = it },
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedButton(
-                    onClick = { showScanner = true },
-                    shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.height(44.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp)
-                ) {
-                    Icon(Icons.Default.QrCodeScanner, "Scan barcode stok")
-                    Spacer(Modifier.width(8.dp))
-                    Text("Scan")
-                }
-            }
+            SearchField(
+                value = search, onValueChange = { search = it },
+                modifier = Modifier.fillMaxWidth()
+            )
             if (msg.isNotEmpty()) {
                 Spacer(Modifier.height(6.dp))
                 Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -1649,7 +1595,7 @@ fun StokScreen() {
                         Text(m.unit, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (!selectMode) {
-                        IconButton(onClick = { prefillBarcode = ""; editing = m; showForm = true }) { Icon(Icons.Default.Edit, "Edit obat") }
+                        IconButton(onClick = { editing = m; showForm = true }) { Icon(Icons.Default.Edit, "Edit obat") }
                         IconButton(onClick = { deleteTarget = m }) {
                             Icon(Icons.Default.Delete, "Hapus obat", tint = MaterialTheme.colorScheme.error)
                         }
@@ -1661,7 +1607,7 @@ fun StokScreen() {
     }
         SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
     }
-    if (showForm) MedicineFormDialog(editing = editing, initialBarcode = prefillBarcode, onDismiss = { showForm = false; prefillBarcode = "" }, onSaved = { showForm = false; prefillBarcode = ""; reload() })
+    if (showForm) MedicineFormDialog(editing = editing, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
     if (showImportDialog && importSummary != null) {
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
@@ -1790,9 +1736,9 @@ private fun OptionPickerSheet(
 }
 
 @Composable
-private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", onDismiss: () -> Unit, onSaved: () -> Unit) {
+private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () -> Unit) {
     var name by remember(editing) { mutableStateOf(editing?.name ?: "") }
-    var barcode by remember(editing, initialBarcode) { mutableStateOf(editing?.barcode ?: initialBarcode) }
+    var barcode by remember(editing) { mutableStateOf(editing?.barcode ?: "") }
     var category by remember(editing) { mutableStateOf(editing?.category ?: "Umum") }
     var unit by remember(editing) { mutableStateOf(editing?.unit ?: "Strip") }
     var showCategorySheet by remember { mutableStateOf(false) }
