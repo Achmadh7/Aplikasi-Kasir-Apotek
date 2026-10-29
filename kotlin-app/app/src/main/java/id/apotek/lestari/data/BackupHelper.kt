@@ -110,6 +110,7 @@ object BackupHelper {
             o.put("id", p.id)
             o.put("pbfName", p.pbfName)
             o.put("invoiceNo", p.invoiceNo)
+            o.put("ppn", p.ppn)
             o.put("date", p.date)
             o.put("total", p.total)
             o.put("createdAt", p.createdAt)
@@ -288,6 +289,7 @@ object BackupHelper {
                             invoiceNo = o.optString("invoiceNo", ""),
                             date = o.optString("date", ""),
                             total = reqInt(o, "total", label),
+                            ppn = o.optInt("ppn", 0),
                             createdAt = o.optString("createdAt", "")
                         )
                     )

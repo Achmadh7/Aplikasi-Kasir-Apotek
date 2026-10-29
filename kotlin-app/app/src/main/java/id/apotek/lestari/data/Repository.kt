@@ -606,6 +606,7 @@ class Repository {
                 invoiceNo = p.invoiceNo,
                 date = p.date,
                 total = p.total,
+                ppn = p.ppn,
                 createdAt = p.createdAt,
                 items = itemsByPurchase[p.id].orEmpty().map { it.toModel() }
             )
@@ -625,13 +626,14 @@ class Repository {
         val dao = db.purchaseDao()
         var newId = 0
         db.withTransaction {
-            val total = args.items.sumOf { it.qty * it.buyPrice }
+            val total = args.items.sumOf { it.qty * it.buyPrice } + args.ppn
             newId = dao.insert(
                 PurchaseEntity(
                     pbfName = args.pbfName.trim(),
                     invoiceNo = args.invoiceNo.trim(),
                     date = args.date,
                     total = total,
+                    ppn = args.ppn,
                     createdAt = nowIso()
                 )
             ).toInt()

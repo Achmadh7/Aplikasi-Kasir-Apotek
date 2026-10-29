@@ -3845,6 +3845,12 @@ fun PbfScreen() {
                                         Text(formatIDR(pItem.subtotal), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
+                                if (p.ppn > 0) {
+                                    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Text("PPN", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                                        Text(formatIDR(p.ppn), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
                                 Spacer(Modifier.height(8.dp))
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                                     TextButton(onClick = { deleteTarget = p }) {
@@ -3902,6 +3908,7 @@ fun PbfScreen() {
 private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     var pbfName by remember { mutableStateOf("") }
     var invoiceNo by remember { mutableStateOf("") }
+    var ppn by remember { mutableStateOf(TextFieldValue("")) }
     var date by remember { mutableStateOf(dayKeyID(Date())) }
     var rows by remember { mutableStateOf(listOf(PurchaseItemRow())) }
     var activeRow by remember { mutableStateOf<PurchaseItemRow?>(null) }
@@ -3926,7 +3933,10 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
         dateInteraction.interactions.collect { if (it is PressInteraction.Press) showDatePicker = true }
     }
 
-    val total = rows.sumOf { (it.qty.toIntOrNull() ?: 0) * parseDecimal(it.price.text) }
+    // Total Belanja = subtotal semua obat + PPN (PPN diketik sebagai nominal
+    // rupiah; kosong = 0).
+    val itemsTotal = rows.sumOf { (it.qty.toIntOrNull() ?: 0) * parseDecimal(it.price.text) }
+    val total = itemsTotal + parseDecimal(ppn.text)
     val valid = pbfName.isNotBlank() && rows.all {
         it.name.isNotBlank() && (it.qty.toIntOrNull() ?: 0) > 0 && parseDecimal(it.price.text) > 0
     }
@@ -4036,6 +4046,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 Text("Tambah Obat")
             }
             Spacer(Modifier.height(4.dp))
+            OutlinedTextField(ppn, { ppn = formatDecimalFieldValue(it) }, label = { Text("Jumlah PPN (Rp)") }, placeholder = { Text("0") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Total Belanja", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 Text(formatIDR(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -4050,7 +4061,8 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                                 pbfName = pbfName,
                                 date = date,
                                 items = rows.map { CreatePurchaseItemArgs(it.name, it.qty.toIntOrNull() ?: 0, parseDecimal(it.price.text), it.unit) },
-                                invoiceNo = invoiceNo
+                                invoiceNo = invoiceNo,
+                                ppn = parseDecimal(ppn.text)
                             )
                         )
                         if (res is ApiResult.Success) onSaved()
