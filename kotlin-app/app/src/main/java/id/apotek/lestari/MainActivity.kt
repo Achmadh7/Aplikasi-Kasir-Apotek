@@ -5,7 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectableGroup
@@ -22,13 +21,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -146,82 +142,35 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     }
     Scaffold(
         bottomBar = {
-            // Pill mengambang (kapsul): 5 tab (Beranda, Stok, Kasir, Keuangan,
-            // Lainnya). Kasir kini tab biasa (bukan FAB melayang). Pill
-            // dibatasi 480dp supaya di tablet tidak merentang terlalu lebar.
-            // Gaya KACA (pilihan Achmad 2026-10-30, opsi 4): badan pill
-            // semi-transparan bergradasi halus + kilau di tepi atas, bordir
-            // biru tipis dengan bayangan biru lembut (efek menyala), dan tab
-            // terpilih berupa lingkaran gradasi biru berisi ikon/label putih.
-            // Pill diperbesar sedikit (tinggi 72 -> 80dp, jari-jari 36 -> 40dp;
-            // permintaan Achmad 2026-10-30) supaya tepi di sekeliling
-            // lingkaran tab aktif 64dp tidak terlalu tipis.
-            val pillShape = RoundedCornerShape(40.dp)
-            val glowColor = Color(0xFF42A5F5)
-            val glassBrush = if (isDark) {
-                Brush.verticalGradient(
-                    listOf(Color(0xFF262C34).copy(alpha = 0.88f), Color(0xFF14171C).copy(alpha = 0.88f))
-                )
-            } else {
-                Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.94f), Color(0xFFEDF3FA).copy(alpha = 0.94f))
-                )
-            }
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 480.dp)
-                        .height(80.dp)
-                        .shadow(
-                            elevation = 16.dp,
-                            shape = pillShape,
-                            ambientColor = glowColor.copy(alpha = 0.30f),
-                            spotColor = glowColor.copy(alpha = 0.45f)
-                        )
-                        .background(brush = glassBrush, shape = pillShape)
-                        .border(
-                            1.dp,
-                            if (isDark) glowColor.copy(alpha = 0.55f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
-                            pillShape
-                        )
-                ) {
-                    // Kilau kaca: sorotan putih tipis di separuh atas pill.
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.5f)
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    listOf(Color.White.copy(alpha = if (isDark) 0.10f else 0.35f), Color.Transparent)
-                                ),
-                                shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
-                            )
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TABS.forEach { tab ->
-                            val selected = when (tab.route) {
-                                "beranda" -> current == "beranda"
-                                "stok" -> current == "stok"
-                                "kasir" -> current == "kasir"
-                                "keuangan" -> current == "keuangan"
-                                else -> current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf")
-                            }
-                            PillTab(
-                                selected = selected,
-                                icon = tab.icon,
-                                label = tab.label,
-                                isDark = isDark,
-                                onClick = { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) }
-                            )
-                        }
+            // Bar bawah RATA klasik Material 3 (pilihan Achmad 2026-10-30,
+            // opsi 1 revamp total): menempel penuh di tepi bawah, TIDAK
+            // mengambang. Tab aktif ditandai kapsul mendatar lembut di
+            // belakang ikonnya (indikator bawaan NavigationBarItem); ikon +
+            // label selalu tampil di semua tab. Menggantikan pill kaca
+            // gradasi yang di HP terlihat aneh (lingkaran 64dp terlalu
+            // dominan dan seperti menonjol keluar dari pill).
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                TABS.forEach { tab ->
+                    val selected = when (tab.route) {
+                        "beranda" -> current == "beranda"
+                        "stok" -> current == "stok"
+                        "kasir" -> current == "kasir"
+                        "keuangan" -> current == "keuangan"
+                        else -> current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf")
                     }
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) },
+                        icon = { Icon(tab.icon, contentDescription = tab.label) },
+                        label = { Text(tab.label) },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
                 }
             }
         }
@@ -331,66 +280,6 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                     Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-        }
-    }
-}
-
-
-
-// Satu tab di pill bawah: ikon di atas, label di bawah (seperti referensi).
-// Bila terpilih, tampil lingkaran gradasi biru di belakangnya + ikon/label
-// PUTIH (kontras di atas gradasi biru); bila tidak terpilih, ikon/label
-// putih/abu. Ketukan tanpa ripple supaya tampilannya bersih seperti referensi.
-@Composable
-private fun RowScope.PillTab(
-    selected: Boolean,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    isDark: Boolean,
-    onClick: () -> Unit
-) {
-    val unselectedColor = if (isDark) Color.White.copy(alpha = 0.75f) else Color.Black.copy(alpha = 0.60f)
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxHeight()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    // 56 -> 64dp (permintaan Achmad 2026-10-30): label panjang
-                    // seperti "Keuangan" sebelumnya tidak muat di dalam
-                    // lingkaran 56dp; 64dp pas di pill setinggi 80dp.
-                    .size(64.dp)
-                    .background(
-                        brush = Brush.linearGradient(
-                            listOf(Color(0xFF64B5F6), Color(0xFF1E88E5))
-                        ),
-                        shape = CircleShape
-                    )
-            )
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = if (selected) Color.White else unselectedColor,
-                modifier = Modifier.size(26.dp)
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                color = if (selected) Color.White else unselectedColor,
-                maxLines = 1
-            )
         }
     }
 }
