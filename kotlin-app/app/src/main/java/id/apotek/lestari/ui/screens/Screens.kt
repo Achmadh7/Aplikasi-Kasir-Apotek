@@ -988,19 +988,16 @@ fun KasirScreen() {
                 }
                 if (cart.isNotEmpty()) {
                     cart.forEachIndexed { index, ci ->
-                        // Dua baris per item: (nama | total baris | hapus), lalu
-                        // (pilihan Ecer/Grosir | stepper jumlah | harga satuan).
-                        // Pilihan harga ditaruh persis di samping tombol -/+
-                        // jumlah, sesuai permintaan Achmad 2026-10-29.
+                        // Dua baris per item: (nama | total baris), lalu
+                        // (pilihan Ecer/Grosir | stepper jumlah | hapus | harga
+                        // satuan). Pilihan harga ditaruh persis di samping tombol
+                        // -/+ jumlah, dan ikon hapus di sebelah kanan tombol +
+                        // (keduanya sesuai permintaan Achmad 2026-10-29).
                         Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                                 Spacer(Modifier.width(8.dp))
                                 Text(formatIDR(ci.unitPrice * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.End)
-                                // Hapus: keluarkan obat dari keranjang.
-                                IconButton(onClick = { cart.remove(ci) }, modifier = Modifier.size(32.dp)) {
-                                    Icon(Icons.Default.Delete, "Hapus", tint = ChiliRed, modifier = Modifier.size(20.dp))
-                                }
                             }
                             Spacer(Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1032,6 +1029,12 @@ fun KasirScreen() {
                                     }
                                 }
                                 StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
+                                Spacer(Modifier.width(8.dp))
+                                // Hapus: keluarkan obat dari keranjang (di kanan
+                                // tombol + jumlah).
+                                IconButton(onClick = { cart.remove(ci) }, modifier = Modifier.size(32.dp)) {
+                                    Icon(Icons.Default.Delete, "Hapus", tint = ChiliRed, modifier = Modifier.size(20.dp))
+                                }
                                 Spacer(Modifier.weight(1f))
                                 Text("@ ${formatIDR(ci.unitPrice)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
