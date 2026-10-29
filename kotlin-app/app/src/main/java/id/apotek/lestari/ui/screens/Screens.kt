@@ -507,20 +507,23 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 }
             }
             item {
-                // Kartu uang: Pengeluaran & Selisih Kas Hari Ini sejajar, Bulan Ini di bawah.
+                // Kartu uang: Pengeluaran & Selisih Kas Hari Ini disusun
+                // VERTIKAL selebar kartu (label di atas, angka di bawah) —
+                // diubah dari sejajar setengah lebar (saran asisten, dipilih
+                // Achmad 2026-10-30) supaya teks 20sp tidak kepotong.
+                // Selisih Kas Bulan Ini di bawah garis pemisah.
                 ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Pengeluaran Hari Ini", style = MaterialTheme.typography.labelSmall.copy(fontSize = 20.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Spacer(Modifier.height(2.dp))
-                                Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp), fontWeight = FontWeight.Bold, color = ChiliRed, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                Text("Selisih Kas Hari Ini", style = MaterialTheme.typography.labelSmall.copy(fontSize = 20.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Spacer(Modifier.height(2.dp))
-                                Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp), fontWeight = FontWeight.Bold, color = if (d.todayProfit >= 0) profitGreen() else ChiliRed, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
+                        Column {
+                            Text("Pengeluaran Hari Ini", style = MaterialTheme.typography.labelSmall.copy(fontSize = 20.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Spacer(Modifier.height(2.dp))
+                            Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp), fontWeight = FontWeight.Bold, color = ChiliRed, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Column {
+                            Text("Selisih Kas Hari Ini", style = MaterialTheme.typography.labelSmall.copy(fontSize = 20.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Spacer(Modifier.height(2.dp))
+                            Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp), fontWeight = FontWeight.Bold, color = if (d.todayProfit >= 0) profitGreen() else ChiliRed, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         Spacer(Modifier.height(12.dp))
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
