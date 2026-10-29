@@ -3942,7 +3942,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 Text("Catat Pembelian PBF", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
             }
-            OutlinedTextField(pbfName, { pbfName = it }, label = { Text("Nama PBF") }, placeholder = { Text("mis. nama distributornya") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(pbfName, { pbfName = it }, label = { Text("Faktur PBF") }, placeholder = { Text("mis. nama distributornya") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(invoiceNo, { invoiceNo = it }, label = { Text("Nomor Faktur (boleh kosong)") }, placeholder = { Text("mis. nomor faktur dari PBF") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 value = formatDateID(date), onValueChange = {}, label = { Text("Tanggal Beli") },

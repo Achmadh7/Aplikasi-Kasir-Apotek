@@ -614,7 +614,7 @@ class Repository {
     }
 
     suspend fun createPurchase(args: CreatePurchaseArgs): ApiResult<IdResponse> = call {
-        if (args.pbfName.isBlank()) throw IllegalArgumentException("Nama PBF tidak boleh kosong")
+        if (args.pbfName.isBlank()) throw IllegalArgumentException("Faktur PBF tidak boleh kosong")
         if (args.items.isEmpty()) throw IllegalArgumentException("Isi minimal satu obat yang dibeli")
         args.items.forEach {
             if (it.medicineName.isBlank()) throw IllegalArgumentException("Nama obat tidak boleh kosong")
