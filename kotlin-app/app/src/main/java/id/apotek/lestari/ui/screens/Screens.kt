@@ -189,6 +189,25 @@ private fun StepperButton(icon: ImageVector, description: String, onClick: () ->
     }
 }
 
+/** Pilihan harga satuan di keranjang Kasir: "Ecer" (harga jual biasa) atau
+ *  "Grosir" (harga jual grosir). Chip terpilih biru solid. */
+@Composable
+private fun PriceModeChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+        )
+    }
+}
+
 /** Centang sukses pembayaran: lingkaran membesar dengan pegas, centang tergambar. */
 @Composable
 private fun AnimatedCheckmark() {
@@ -571,6 +590,13 @@ fun ShortcutCard(label: String, icon: androidx.compose.ui.graphics.vector.ImageV
 
 class CartItem(val medicine: Medicine, qty: Int) {
     var qty by mutableStateOf(qty)
+    // Pilihan harga per item di keranjang: ecer (bawaan) atau grosir
+    // (permintaan Achmad 2026-10-29). Harga satuan yang berlaku dihitung
+    // dari pilihan ini; Repository.createSale menerapkan aturan yang sama
+    // saat harga disimpan ke penjualan.
+    var useWholesale by mutableStateOf(false)
+    val unitPrice: Int
+        get() = if (useWholesale && medicine.wholesalePrice > 0) medicine.wholesalePrice else medicine.sellPrice
 }
 
 /**
@@ -752,7 +778,7 @@ fun KasirScreen() {
     }
     val filtered = medicines.filter { search.isBlank() || it.name.contains(search, true) || it.category.contains(search, true) || (it.barcode?.contains(search) == true) }
     val sorted = if (sortAz) filtered.sortedBy { it.name.lowercase() } else filtered.sortedByDescending { it.name.lowercase() }
-    val total = cart.sumOf { it.medicine.sellPrice * it.qty }
+    val total = cart.sumOf { it.unitPrice * it.qty }
     val cartQty = cart.sumOf { it.qty }
     val paid = parseDecimal(uangDiterima.text)
     val change = if (method == "Tunai") (paid - total).coerceAtLeast(0) else 0
@@ -962,35 +988,52 @@ fun KasirScreen() {
                 }
                 if (cart.isNotEmpty()) {
                     cart.forEachIndexed { index, ci ->
-                        // Satu baris: nama | stepper (di tengah) | harga | hapus.
-                        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            Spacer(Modifier.width(8.dp))
-                            StepperButton(Icons.Default.Remove, "Kurangi") { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
-                            key(ci.qty) {
-                                val qtyPop = remember { Animatable(1.35f) }
-                                LaunchedEffect(ci.qty) { qtyPop.animateTo(1f, expressiveSpring()) }
-                                // Angka jumlah bisa diketuk untuk ketik jumlah langsung
-                                // (pill abu-abu menandakan bisa diketuk).
-                                Surface(
-                                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.clickable { qtyEditTarget = ci }
-                                ) {
-                                    Text(
-                                        "${ci.qty}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        modifier = Modifier.width(44.dp).padding(vertical = 2.dp).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value),
-                                        textAlign = TextAlign.Center
-                                    )
+                        // Dua baris per item: (nama | total baris | hapus), lalu
+                        // (pilihan Ecer/Grosir | stepper jumlah | harga satuan).
+                        // Pilihan harga ditaruh persis di samping tombol -/+
+                        // jumlah, sesuai permintaan Achmad 2026-10-29.
+                        Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                Spacer(Modifier.width(8.dp))
+                                Text(formatIDR(ci.unitPrice * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.End)
+                                // Hapus: keluarkan obat dari keranjang.
+                                IconButton(onClick = { cart.remove(ci) }, modifier = Modifier.size(32.dp)) {
+                                    Icon(Icons.Default.Delete, "Hapus", tint = ChiliRed, modifier = Modifier.size(20.dp))
                                 }
                             }
-                            StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
-                            Spacer(Modifier.width(8.dp))
-                            Text(formatIDR(ci.medicine.sellPrice * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.End)
-                            // Hapus: keluarkan obat dari keranjang.
-                            IconButton(onClick = { cart.remove(ci) }, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Default.Delete, "Hapus", tint = ChiliRed, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Pilihan harga hanya muncul bila harga grosir
+                                // obat ini sudah diatur (> 0) di data obat.
+                                if (ci.medicine.wholesalePrice > 0) {
+                                    PriceModeChip("Ecer", selected = !ci.useWholesale) { ci.useWholesale = false }
+                                    Spacer(Modifier.width(6.dp))
+                                    PriceModeChip("Grosir", selected = ci.useWholesale) { ci.useWholesale = true }
+                                    Spacer(Modifier.width(12.dp))
+                                }
+                                StepperButton(Icons.Default.Remove, "Kurangi") { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
+                                key(ci.qty) {
+                                    val qtyPop = remember { Animatable(1.35f) }
+                                    LaunchedEffect(ci.qty) { qtyPop.animateTo(1f, expressiveSpring()) }
+                                    // Angka jumlah bisa diketuk untuk ketik jumlah langsung
+                                    // (pill abu-abu menandakan bisa diketuk).
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.clickable { qtyEditTarget = ci }
+                                    ) {
+                                        Text(
+                                            "${ci.qty}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            modifier = Modifier.width(44.dp).padding(vertical = 2.dp).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value),
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                                StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
+                                Spacer(Modifier.weight(1f))
+                                Text("@ ${formatIDR(ci.unitPrice)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         if (index < cart.lastIndex) {
@@ -1140,7 +1183,7 @@ fun KasirScreen() {
                     onClick = {
                         scope.launch {
                             val amt = if (method == "Tunai") paid else total
-                            val result = repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty) }, method, amt))
+                            val result = repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty, it.useWholesale) }, method, amt))
                             if (result is ApiResult.Success) {
                                 payMsg = "Pembayaran $method berhasil. Total ${formatIDR(total)}" + if (method == "Tunai") " • Kembalian ${formatIDR(change)}" else ""
                                 payCount++
@@ -1639,7 +1682,8 @@ fun StokScreen() {
                                     MedicineArgs(
                                         target.name, target.category, target.unit,
                                         target.buyPrice, target.sellPrice, target.stock,
-                                        target.expiryDate, target.barcode
+                                        target.expiryDate, target.barcode,
+                                        wholesalePrice = target.wholesalePrice
                                     )
                                 )
                                 reload()
@@ -1681,7 +1725,8 @@ fun StokScreen() {
                                         MedicineArgs(
                                             it.name, it.category, it.unit,
                                             it.buyPrice, it.sellPrice, it.stock,
-                                            it.expiryDate, it.barcode
+                                            it.expiryDate, it.barcode,
+                                            wholesalePrice = it.wholesalePrice
                                         )
                                     )
                                 }
@@ -1760,6 +1805,9 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
     }
     var buy by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.buyPrice?.toString() ?: ""))) }
     var sell by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.sellPrice?.toString() ?: ""))) }
+    // Harga jual grosir: boleh kosong (= belum diatur, nilai 0); ditampilkan
+    // kosong bila 0 supaya tidak tertukar dengan harga beneran.
+    var grosir by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.wholesalePrice?.takeIf { it > 0 }?.toString() ?: ""))) }
     var stock by remember(editing) { mutableStateOf(editing?.stock?.toString() ?: "") }
     var expiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
     var formError by remember { mutableStateOf("") }
@@ -1794,6 +1842,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
             )
             OutlinedTextField(buy, { buy = formatDecimalFieldValue(it) }, label = { Text("Harga Beli") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(sell, { sell = formatDecimalFieldValue(it) }, label = { Text("Harga Jual") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(grosir, { grosir = formatDecimalFieldValue(it) }, label = { Text("Harga Jual Grosir (boleh kosong)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() } }, label = { Text("Stok") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 value = if (expiry.isBlank()) "" else formatDateID(expiry),
@@ -1825,9 +1874,9 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                             // supaya pencocokan impor berikutnya tidak rusak.
                             val bc = editing?.barcode
                             val result = if (editing == null) {
-                                repo.createMedicine(MedicineArgs(name, cat, unt, b, s, st, exp, bc))
+                                repo.createMedicine(MedicineArgs(name, cat, unt, b, s, st, exp, bc, wholesalePrice = parseDecimal(grosir.text)))
                             } else {
-                                repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, b, s, st, exp, bc))
+                                repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, b, s, st, exp, bc, wholesalePrice = parseDecimal(grosir.text)))
                             }
                             if (result is ApiResult.Success) {
                                 onSaved()
@@ -2919,10 +2968,10 @@ private fun ReceiptPreviewCard(
                         if (ci.medicine.category.isNotBlank() || ci.medicine.unit.isNotBlank()) {
                             Text("${ci.medicine.category} • ${ci.medicine.unit}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
                         }
-                        Text("${ci.qty} × ${formatIDR(ci.medicine.sellPrice)}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
+                        Text("${ci.qty} × ${formatIDR(ci.unitPrice)}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(formatIDR(ci.medicine.sellPrice * ci.qty), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    Text(formatIDR(ci.unitPrice * ci.qty), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 }
             }
             Spacer(Modifier.height(16.dp))

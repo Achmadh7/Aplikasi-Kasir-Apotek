@@ -25,6 +25,9 @@ data class MedicineEntity(
     val unit: String,
     val buyPrice: Int,
     val sellPrice: Int,
+    // Harga jual grosir (permintaan Achmad 2026-10-29); 0 = belum diatur,
+    // Kasir hanya menawarkan pilihan Grosir bila nilainya > 0.
+    @ColumnInfo(defaultValue = "0") val wholesalePrice: Int = 0,
     val stock: Int,
     val expiryDate: String?, // "yyyy-MM-dd" atau null
     val barcode: String?,
@@ -243,9 +246,17 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Kolom harga jual grosir untuk obat. Obat lama bernilai 0 (belum
+        // diatur) lewat DEFAULT kolom.
+        db.execSQL("ALTER TABLE `medicines` ADD COLUMN `wholesalePrice` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -270,7 +281,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
                 }
             }
         }

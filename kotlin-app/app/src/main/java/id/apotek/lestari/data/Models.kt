@@ -9,6 +9,7 @@ data class Medicine(
     val unit: String = "Strip",
     val buyPrice: Int = 0,
     val sellPrice: Int = 0,
+    val wholesalePrice: Int = 0, // harga jual grosir; 0 = belum diatur
     val stock: Int = 0,
     val expiryDate: String? = null,
     val barcode: String? = null,
@@ -111,10 +112,10 @@ data class ProfitReport(
 )
 
 // ---- Per-action request args ----
-data class MedicineArgs(val name: String, val category: String, val unit: String, val buyPrice: Int, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null)
-data class UpdateMedicineArgs(val id: Int, val name: String, val category: String, val unit: String, val buyPrice: Int, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null)
+data class MedicineArgs(val name: String, val category: String, val unit: String, val buyPrice: Int, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null, val wholesalePrice: Int = 0)
+data class UpdateMedicineArgs(val id: Int, val name: String, val category: String, val unit: String, val buyPrice: Int, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null, val wholesalePrice: Int = 0)
 data class BulkImportArgs(val items: List<MedicineArgs>)
-data class CreateSaleItemArgs(val medicineId: Int, val qty: Int)
+data class CreateSaleItemArgs(val medicineId: Int, val qty: Int, val useWholesale: Boolean = false)
 data class CreateSaleArgs(val items: List<CreateSaleItemArgs>, val paymentMethod: String, val amountPaid: Int)
 data class CreateCashEntryArgs(val type: String, val category: String, val description: String, val amount: Int, val createdAt: String? = null)
 data class CreatePurchaseItemArgs(val medicineName: String, val qty: Int, val buyPrice: Int, val unit: String = "Strip")

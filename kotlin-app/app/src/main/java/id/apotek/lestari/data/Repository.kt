@@ -84,7 +84,7 @@ class Repository {
     // ---- Pemetaan Entity -> Model UI ----
 
     private fun MedicineEntity.toModel() = Medicine(
-        id, name, category, unit, buyPrice, sellPrice, stock, expiryDate, barcode, createdAt
+        id, name, category, unit, buyPrice, sellPrice, wholesalePrice, stock, expiryDate, barcode, createdAt
     )
 
     private fun CashEntryEntity.toModel() = CashEntry(
@@ -201,6 +201,7 @@ class Repository {
             MedicineEntity(
                 name = args.name, category = args.category, unit = args.unit,
                 buyPrice = args.buyPrice, sellPrice = args.sellPrice,
+                wholesalePrice = args.wholesalePrice,
                 stock = args.stock,
                 expiryDate = args.expiryDate, barcode = barcode, createdAt = nowIso()
             )
@@ -225,6 +226,7 @@ class Repository {
             MedicineEntity(
                 id = args.id, name = args.name, category = args.category, unit = args.unit,
                 buyPrice = args.buyPrice, sellPrice = args.sellPrice,
+                wholesalePrice = args.wholesalePrice,
                 stock = args.stock,
                 expiryDate = args.expiryDate, barcode = barcode,
                 createdAt = old?.createdAt ?: nowIso()
@@ -287,6 +289,7 @@ class Repository {
                         MedicineEntity(
                             name = item.name, category = item.category, unit = item.unit,
                             buyPrice = item.buyPrice, sellPrice = item.sellPrice,
+                            wholesalePrice = item.wholesalePrice,
                             stock = item.stock,
                             expiryDate = item.expiryDate, barcode = barcode, createdAt = nowIso()
                         )
@@ -317,13 +320,16 @@ class Repository {
         val qtyById = args.items.groupBy { it.medicineId }
             .mapValues { (_, list) -> list.sumOf { it.qty } }
         var total = 0
-        data class Line(val med: MedicineEntity, val qty: Int, val subtotal: Int)
+        data class Line(val med: MedicineEntity, val qty: Int, val unitPrice: Int, val subtotal: Int)
         val lines = args.items.map { item ->
             val med = db.medicineDao().getById(item.medicineId)
                 ?: throw IllegalStateException("Obat tidak ditemukan")
-            val subtotal = med.sellPrice * item.qty
+            // Harga satuan yang berlaku: grosir bila dipilih DAN harga grosir
+            // obat itu sudah diatur (> 0); selain itu harga jual ecer biasa.
+            val unitPrice = if (item.useWholesale && med.wholesalePrice > 0) med.wholesalePrice else med.sellPrice
+            val subtotal = unitPrice * item.qty
             total += subtotal
-            Line(med, item.qty, subtotal)
+            Line(med, item.qty, unitPrice, subtotal)
         }
         // Kurang bayar ditolak sebagai Error (bukan lunas dengan kembalian 0).
         if (args.amountPaid < total) throw IllegalArgumentException("Uang dibayar kurang dari total")
@@ -350,7 +356,7 @@ class Repository {
                 lines.map {
                     SaleItemEntity(
                         saleId = saleId, medicineId = it.med.id, medicineName = it.med.name,
-                        qty = it.qty, price = it.med.sellPrice, buyPrice = it.med.buyPrice,
+                        qty = it.qty, price = it.unitPrice, buyPrice = it.med.buyPrice,
                         subtotal = it.subtotal, category = it.med.category, unit = it.med.unit
                     )
                 }
