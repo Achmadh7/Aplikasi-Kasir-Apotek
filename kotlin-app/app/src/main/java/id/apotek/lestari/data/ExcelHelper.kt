@@ -51,7 +51,7 @@ object ExcelHelper {
         "3. Kolom wajib: Nama Obat. Kolom lain boleh kosong (akan diisi nilai bawaan).",
         "   - Barcode: kode barcode pada kemasan obat (boleh kosong). Barcode yang sama tidak boleh dipakai dua obat berbeda.",
         "   - Kategori: Umum, Obat Bebas, Obat Bebas Terbatas, Obat Keras, Antibiotik, Vitamin, Pereda Nyeri, Obat Batuk & Flu, Pencernaan, Kulit, Mata, Lainnya",
-        "   - Satuan: Strip, Botol, Box, Tablet, Kapsul, Tube, Sachet, Pcs",
+        "   - Satuan: Strip, Botol, Vial, Ampul, Box, Tablet, Kapsul, Tube, Sachet, Pcs",
         "   - Harga Beli & Harga Jual: angka saja, contoh 12000 (tanpa Rp / titik)",
         "   - Stok: angka bulat",
         "   - Tanggal Kadaluarsa: format YYYY-MM-DD, contoh 2027-12-31 (boleh kosong)",
