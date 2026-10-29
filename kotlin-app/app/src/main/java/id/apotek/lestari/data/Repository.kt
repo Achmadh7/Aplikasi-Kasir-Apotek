@@ -324,16 +324,18 @@ class Repository {
         val qtyById = args.items.groupBy { it.medicineId }
             .mapValues { (_, list) -> list.sumOf { it.qty } }
         var total = 0
-        data class Line(val med: MedicineEntity, val qty: Int, val unitPrice: Int, val subtotal: Int)
+        data class Line(val med: MedicineEntity, val qty: Int, val unitPrice: Int, val priceType: String, val subtotal: Int)
         val lines = args.items.map { item ->
             val med = db.medicineDao().getById(item.medicineId)
                 ?: throw IllegalStateException("Obat tidak ditemukan")
             // Harga satuan yang berlaku: grosir bila dipilih DAN harga grosir
             // obat itu sudah diatur (> 0); selain itu harga jual ecer biasa.
-            val unitPrice = if (item.useWholesale && med.wholesalePrice > 0) med.wholesalePrice else med.sellPrice
+            // Jenisnya disimpan juga (priceType) untuk keterangan di invoice.
+            val wholesale = item.useWholesale && med.wholesalePrice > 0
+            val unitPrice = if (wholesale) med.wholesalePrice else med.sellPrice
             val subtotal = unitPrice * item.qty
             total += subtotal
-            Line(med, item.qty, unitPrice, subtotal)
+            Line(med, item.qty, unitPrice, if (wholesale) "GROSIR" else "ECER", subtotal)
         }
         // Kurang bayar ditolak sebagai Error (bukan lunas dengan kembalian 0).
         if (args.amountPaid < total) throw IllegalArgumentException("Uang dibayar kurang dari total")
@@ -360,7 +362,7 @@ class Repository {
                 lines.map {
                     SaleItemEntity(
                         saleId = saleId, medicineId = it.med.id, medicineName = it.med.name,
-                        qty = it.qty, price = it.unitPrice, buyPrice = it.med.buyPrice,
+                        qty = it.qty, price = it.unitPrice, priceType = it.priceType, buyPrice = it.med.buyPrice,
                         subtotal = it.subtotal, category = it.med.category, unit = it.med.unit
                     )
                 }
@@ -380,7 +382,7 @@ class Repository {
         val db = DatabaseProvider.db
         val sales = db.saleDao().getAll().take(limit).map { s ->
             val items = db.saleDao().getItemsForSale(s.id).map {
-                SaleItem(it.medicineName, it.qty, it.price, it.subtotal, it.category, it.unit)
+                SaleItem(it.medicineName, it.qty, it.price, it.subtotal, it.category, it.unit, it.priceType)
             }
             Sale(s.id, s.invoiceNo, s.total, s.paymentMethod, s.amountPaid, s.changeAmount, s.createdAt, items)
         }

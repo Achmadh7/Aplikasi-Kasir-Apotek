@@ -83,6 +83,7 @@ object BackupHelper {
             o.put("unit", it.unit)
             o.put("qty", it.qty)
             o.put("price", it.price)
+            o.put("priceType", it.priceType)
             o.put("buyPrice", it.buyPrice)
             o.put("subtotal", it.subtotal)
             items.put(o)
@@ -220,6 +221,7 @@ object BackupHelper {
                         unit = o.optString("unit", ""),
                         qty = qty,
                         price = price,
+                        priceType = o.optString("priceType", "ECER"),
                         buyPrice = reqInt(o, "buyPrice", label),
                         subtotal = subtotal
                     )

@@ -23,7 +23,9 @@ data class SaleItem(
     val subtotal: Int = 0,
     // Kategori & satuan obat saat penjualan terjadi (kosong kalau obatnya sudah dihapus dari Stok).
     val category: String = "",
-    val unit: String = ""
+    val unit: String = "",
+    // Jenis harga saat transaksi: "ECER" / "GROSIR" (ditampilkan di invoice).
+    val priceType: String = "ECER"
 )
 
 data class Sale(

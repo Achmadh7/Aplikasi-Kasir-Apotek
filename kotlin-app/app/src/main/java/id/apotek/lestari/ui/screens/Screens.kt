@@ -2968,7 +2968,7 @@ private fun ReceiptPreviewCard(
                         if (ci.medicine.category.isNotBlank() || ci.medicine.unit.isNotBlank()) {
                             Text("${ci.medicine.category} • ${ci.medicine.unit}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
                         }
-                        Text("${ci.qty} × ${formatIDR(ci.unitPrice)}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
+                        Text("${ci.qty} × ${formatIDR(ci.unitPrice)} • ${if (ci.useWholesale && ci.medicine.wholesalePrice > 0) "Grosir" else "Ecer"}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(formatIDR(ci.unitPrice * ci.qty), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
@@ -3103,7 +3103,7 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
                         if (it.category.isNotBlank() || it.unit.isNotBlank()) {
                             Text("${it.category} • ${it.unit}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
                         }
-                        Text("${it.qty} × ${formatIDR(it.price)}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
+                        Text("${it.qty} × ${formatIDR(it.price)} • ${if (it.priceType == "GROSIR") "Grosir" else "Ecer"}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(formatIDR(it.subtotal), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)

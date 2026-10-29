@@ -55,6 +55,9 @@ data class SaleItemEntity(
     val unit: String = "", // snapshot satuan saat transaksi
     val qty: Int,
     val price: Int, // harga jual saat transaksi
+    // Jenis harga yang dipakai: "ECER" atau "GROSIR" (permintaan Achmad
+    // 2026-10-29 — ditampilkan di invoice). Penjualan lama = "ECER".
+    @ColumnInfo(defaultValue = "ECER") val priceType: String = "ECER",
     val buyPrice: Int, // harga beli saat transaksi (snapshot HPP)
     val subtotal: Int
 )
@@ -254,9 +257,17 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
     }
 }
 
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Jenis harga (ECER/GROSIR) per item penjualan, untuk keterangan di
+        // invoice. Penjualan lama dianggap ECER lewat DEFAULT kolom.
+        db.execSQL("ALTER TABLE `sale_items` ADD COLUMN `priceType` TEXT NOT NULL DEFAULT 'ECER'")
+    }
+}
+
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -281,7 +292,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
                 }
             }
         }

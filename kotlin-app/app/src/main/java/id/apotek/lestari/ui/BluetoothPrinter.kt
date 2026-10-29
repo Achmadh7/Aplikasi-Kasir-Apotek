@@ -137,7 +137,9 @@ fun buildReceiptBytes(sale: Sale): ByteArray {
     line("Metode: ${sale.paymentMethod}".take(LINE_WIDTH))
     line("-".repeat(LINE_WIDTH))
     sale.items.forEach { item ->
-        line(item.medicineName.take(LINE_WIDTH))
+        // Jenis harga (Ecer/Grosir) ditempel di belakang nama obat — baris
+        // qty x harga tidak cukup lebar untuk label di kertas 32 karakter.
+        line((item.medicineName + if (item.priceType == "GROSIR") " (Grosir)" else " (Ecer)").take(LINE_WIDTH))
         line(leftRight("  ${item.qty} x ${formatIDR(item.price)}", formatIDR(item.subtotal)))
     }
     line("-".repeat(LINE_WIDTH))
