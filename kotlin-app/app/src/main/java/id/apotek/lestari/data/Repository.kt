@@ -277,6 +277,10 @@ class Repository {
                         existing.copy(
                             name = item.name, category = item.category, unit = item.unit,
                             buyPrice = item.buyPrice, sellPrice = item.sellPrice,
+                            // Harga grosir dari file dipakai bila terisi (> 0);
+                            // file lama tanpa kolom itu / sel kosong TIDAK
+                            // menghapus harga grosir yang sudah tersimpan.
+                            wholesalePrice = if (item.wholesalePrice > 0) item.wholesalePrice else existing.wholesalePrice,
                             stock = item.stock,
                             // Baris impor tanpa barcode: pertahankan barcode lama
                             // (jangan ditimpa null — obat jadi tidak bisa dipindai).
