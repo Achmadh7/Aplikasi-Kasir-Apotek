@@ -361,7 +361,10 @@ private fun RowScope.PillTab(
         if (selected) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    // 56 -> 64dp (permintaan Achmad 2026-10-30): label panjang
+                    // seperti "Keuangan" sebelumnya tidak muat di dalam
+                    // lingkaran 56dp; 64dp masih pas di pill setinggi 72dp.
+                    .size(64.dp)
                     .background(
                         brush = Brush.linearGradient(
                             listOf(Color(0xFF64B5F6), Color(0xFF1E88E5))
