@@ -189,6 +189,25 @@ private fun StepperButton(icon: ImageVector, description: String, onClick: () ->
     }
 }
 
+/** Chip penanda cara bayar di kartu pembelian Faktur PBF: "Cash" biru muda,
+ *  "Kredit" kuning amber supaya pembelian belum lunas langsung terlihat. */
+@Composable
+private fun PurchasePaymentChip(paymentType: String) {
+    val kredit = paymentType == "KREDIT"
+    Surface(
+        color = if (kredit) Color(0xFFF6C343) else MaterialTheme.colorScheme.primaryContainer,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Text(
+            if (kredit) "Kredit" else "Cash",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = if (kredit) Color(0xFF4A3200) else MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
 /** Pilihan harga satuan di keranjang Kasir: "Ecer" (harga jual biasa) atau
  *  "Grosir" (harga jual grosir). Chip terpilih biru solid. */
 @Composable
@@ -3837,9 +3856,13 @@ fun PbfScreen() {
                                     Text(p.pbfName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                     val namesPreview = p.items.take(3).joinToString(", ") { it.medicineName }
                                     val suffix = if (p.items.size > 3) " +${p.items.size - 3} lagi" else ""
-                                    Text("${p.items.size} obat • ${if (p.paymentType == "KREDIT") "Kredit" else "Cash"} • $namesPreview$suffix", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("${p.items.size} obat • $namesPreview$suffix", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                                 Spacer(Modifier.width(8.dp))
+                                // Chip penanda cara bayar, di tengah antara nama
+                                // PBF dan nominal (permintaan Achmad 2026-10-30).
+                                PurchasePaymentChip(p.paymentType)
+                                Spacer(Modifier.width(10.dp))
                                 Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 Icon(if (isOpen) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
