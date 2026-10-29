@@ -308,10 +308,10 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data }
         val meds = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
         outOfStockNames = meds.filter { it.stock <= 0 }.map { it.name }.sorted()
-        // Stok menipis (1-19, di bawah 20 seperti lowStockCount) — diurutkan dari
+        // Stok menipis = Rendah (1-9 pada skala status baru) — diurutkan dari
         // yang paling sedikit supaya yang paling mendesak tampil duluan.
         // Stok 0 tidak ikut di sini karena sudah tampil di bagian Habis.
-        lowStockMeds = meds.filter { it.stock > 0 && it.stock < 20 }
+        lowStockMeds = meds.filter { it.stock in 1..9 }
             .sortedBy { it.stock }
             .map { it.name to it.stock }
         val in30Key = dayKeyID(Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000))
@@ -1693,7 +1693,7 @@ fun StokScreen() {
                                     MedicineArgs(
                                         target.name, target.category, target.unit,
                                         target.buyPrice, target.sellPrice, target.stock,
-                                        target.minStock, target.expiryDate, target.barcode
+                                        target.expiryDate, target.barcode
                                     )
                                 )
                                 reload()
@@ -1735,7 +1735,7 @@ fun StokScreen() {
                                         MedicineArgs(
                                             it.name, it.category, it.unit,
                                             it.buyPrice, it.sellPrice, it.stock,
-                                            it.minStock, it.expiryDate, it.barcode
+                                            it.expiryDate, it.barcode
                                         )
                                     )
                                 }
@@ -1874,15 +1874,12 @@ private fun MedicineFormDialog(editing: Medicine?, initialBarcode: String = "", 
                             val b = parseDecimal(buy.text)
                             val s = parseDecimal(sell.text)
                             val st = stock.toIntOrNull() ?: 0
-                            // Stok minimum tidak lagi diisi lewat formulir: nilai
-                            // yang sudah ada dipertahankan, obat baru bawaan 10.
-                            val ms = editing?.minStock ?: 10
                             val exp = expiry.ifBlank { null }
                             val bc = barcode.ifBlank { null }
                             val result = if (editing == null) {
-                                repo.createMedicine(MedicineArgs(name, cat, unt, b, s, st, ms, exp, bc))
+                                repo.createMedicine(MedicineArgs(name, cat, unt, b, s, st, exp, bc))
                             } else {
-                                repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, b, s, st, ms, exp, bc))
+                                repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, b, s, st, exp, bc))
                             }
                             if (result is ApiResult.Success) {
                                 onSaved()
@@ -2686,11 +2683,11 @@ fun PengingatScreen(onGoStok: () -> Unit) {
     LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
     val expired = medicines.filter { (daysUntilExpiry(it.expiryDate) ?: Int.MAX_VALUE) < 0 }
     val withinWindow = medicines.filter { val d = daysUntilExpiry(it.expiryDate); d != null && d >= 0 && d <= window }
-    val low = medicines.filter { it.stock <= it.minStock }
+    val low = medicines.filter { it.stock in 1..9 }
     val critical = medicines.filter { it.stock == 0 }
     val priority = medicines.filter { m ->
         val d = daysUntilExpiry(m.expiryDate)
-        m.stock <= m.minStock || (d != null && d <= window)
+        m.stock < 10 || (d != null && d <= window)
     }.sortedWith(
         compareBy<Medicine> { if (it.stock == 0) 0 else 1 }
             .thenBy { daysUntilExpiry(it.expiryDate) ?: Int.MAX_VALUE }
@@ -2700,7 +2697,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
         val d = daysUntilExpiry(m.expiryDate)
         when (filter) {
             "expiry" -> d != null && d <= window
-            "low" -> m.stock <= m.minStock
+            "low" -> m.stock in 1..9
             "critical" -> m.stock == 0
             else -> true
         }
@@ -2766,17 +2763,17 @@ fun PengingatScreen(onGoStok: () -> Unit) {
         itemsIndexed(shown) { index, m ->
             val d = daysUntilExpiry(m.expiryDate)
             val isCritical = m.stock == 0
-            val suggest = (2 * m.minStock - m.stock).coerceAtLeast(0)
-            // Saran restock hanya bila ada stok minimum yang valid dan sarannya > 0
-            // (bila minStock = 0, saran "0 unit" tidak ada gunanya).
-            val showSuggest = m.minStock > 0 && suggest > 0
+            // Saran restock: jumlah untuk mencapai batas Aman (16) pada skala
+            // status baru; hanya ditampilkan bila sarannya > 0.
+            val suggest = (16 - m.stock).coerceAtLeast(0)
+            val showSuggest = suggest > 0
             // Keterangan digabung: kalau obat bebarengan bermasalah stok
             // (habis/menipis) DAN kadaluarsa, kedua keterangan ditulis supaya
             // informasinya jelas (sebelumnya hanya satu yang tampil karena
             // rantai if/else berhenti di kondisi pertama yang cocok).
             val stockNote = when {
-                isCritical -> if (showSuggest) "Stok habis — restock segera, disarankan $suggest ${m.unit} (target 2× stok minimum)." else "Stok habis — restock segera."
-                m.stock <= m.minStock -> if (showSuggest) "Stok menipis — disarankan restock $suggest ${m.unit} (target 2× stok minimum ${m.minStock})." else "Stok menipis — restock segera."
+                isCritical -> if (showSuggest) "Stok habis — restock segera, disarankan $suggest ${m.unit} (target stok Aman 16)." else "Stok habis — restock segera."
+                m.stock in 1..9 -> if (showSuggest) "Stok menipis — disarankan restock $suggest ${m.unit} (target stok Aman 16)." else "Stok menipis — restock segera."
                 else -> null
             }
             val expiryNote = when {
@@ -2818,7 +2815,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                                 }
                             }
                             Text(
-                                "${m.category} • Stok ${m.stock} ${m.unit} (min. ${m.minStock})" +
+                                "${m.category} • Stok ${m.stock} ${m.unit} • ${stockLabel(m.stock)}" +
                                     if (m.expiryDate != null) {
                                         " • Exp ${formatDateID(m.expiryDate)}" + if (d != null) {
                                             if (d < 0) " • Lewat ${-d} hari" else " • Sisa $d hari"
@@ -2856,7 +2853,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
         }
         item {
             Text(
-                "Jumlah restock adalah saran otomatis (target stok 2× stok minimum). Untuk mengubah stok, tanggal kadaluarsa, atau stok minimum, buka obatnya di menu Stok.",
+                "Jumlah restock adalah saran otomatis (target stok Aman, 16). Untuk mengubah stok atau tanggal kadaluarsa, buka obatnya di menu Stok.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

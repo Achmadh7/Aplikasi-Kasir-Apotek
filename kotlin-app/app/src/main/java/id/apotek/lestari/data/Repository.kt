@@ -82,7 +82,7 @@ class Repository {
     // ---- Pemetaan Entity -> Model UI ----
 
     private fun MedicineEntity.toModel() = Medicine(
-        id, name, category, unit, buyPrice, sellPrice, stock, minStock, expiryDate, barcode, createdAt
+        id, name, category, unit, buyPrice, sellPrice, stock, expiryDate, barcode, createdAt
     )
 
     private fun CashEntryEntity.toModel() = CashEntry(
@@ -128,8 +128,9 @@ class Repository {
                 else if (e.type == "out") monthOut += e.amount
             }
         }
-        // Stok menipis: di bawah 20 (sama dengan status "Rendah" di Stok).
-        val lowStockCount = meds.count { it.stock < 20 }
+        // Stok perlu perhatian: Habis (0) + Rendah (1-9) pada skala status
+        // stok yang baru — dipakai Beranda sebagai penanda ada stok mendesak.
+        val lowStockCount = meds.count { it.stock < 10 }
         // Kadaluarsa: semua obat yang kedaluwarsa maupun akan kedaluwarsa
         // dalam 30 hari ke depan (WIB) — tanpa batas bawah, supaya obat yang
         // SUDAH kedaluwarsa ikut terhitung.
@@ -198,7 +199,7 @@ class Repository {
             MedicineEntity(
                 name = args.name, category = args.category, unit = args.unit,
                 buyPrice = args.buyPrice, sellPrice = args.sellPrice,
-                stock = args.stock, minStock = args.minStock,
+                stock = args.stock,
                 expiryDate = args.expiryDate, barcode = barcode, createdAt = nowIso()
             )
         ).toInt()
@@ -222,7 +223,7 @@ class Repository {
             MedicineEntity(
                 id = args.id, name = args.name, category = args.category, unit = args.unit,
                 buyPrice = args.buyPrice, sellPrice = args.sellPrice,
-                stock = args.stock, minStock = args.minStock,
+                stock = args.stock,
                 expiryDate = args.expiryDate, barcode = barcode,
                 createdAt = old?.createdAt ?: nowIso()
             )
@@ -272,7 +273,7 @@ class Repository {
                         existing.copy(
                             name = item.name, category = item.category, unit = item.unit,
                             buyPrice = item.buyPrice, sellPrice = item.sellPrice,
-                            stock = item.stock, minStock = item.minStock,
+                            stock = item.stock,
                             // Baris impor tanpa barcode: pertahankan barcode lama
                             // (jangan ditimpa null — obat jadi tidak bisa dipindai).
                             expiryDate = item.expiryDate, barcode = barcode ?: existing.barcode
@@ -284,7 +285,7 @@ class Repository {
                         MedicineEntity(
                             name = item.name, category = item.category, unit = item.unit,
                             buyPrice = item.buyPrice, sellPrice = item.sellPrice,
-                            stock = item.stock, minStock = item.minStock,
+                            stock = item.stock,
                             expiryDate = item.expiryDate, barcode = barcode, createdAt = nowIso()
                         )
                     )

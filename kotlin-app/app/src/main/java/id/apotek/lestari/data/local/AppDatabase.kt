@@ -25,7 +25,6 @@ data class MedicineEntity(
     val buyPrice: Int,
     val sellPrice: Int,
     val stock: Int,
-    val minStock: Int,
     val expiryDate: String?, // "yyyy-MM-dd" atau null
     val barcode: String?,
     val createdAt: String // ISO UTC, mis. "2026-10-26T00:15:00.000Z"
@@ -159,9 +158,24 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Stok minimum dihapus sepenuhnya (keputusan Achmad 2026-10-29): kolom
+        // minStock dibuang dari tabel medicines. SQLite lama di Android belum
+        // mendukung DROP COLUMN, jadi tabel dibuat ulang tanpa kolom itu,
+        // data disalin, tabel lama dibuang, lalu indeks unik barcode dibuat
+        // lagi. Semua baris obat dipertahankan apa adanya.
+        db.execSQL("CREATE TABLE IF NOT EXISTS `medicines_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `category` TEXT NOT NULL, `unit` TEXT NOT NULL, `buyPrice` INTEGER NOT NULL, `sellPrice` INTEGER NOT NULL, `stock` INTEGER NOT NULL, `expiryDate` TEXT, `barcode` TEXT, `createdAt` TEXT NOT NULL)")
+        db.execSQL("INSERT INTO `medicines_new` (`id`, `name`, `category`, `unit`, `buyPrice`, `sellPrice`, `stock`, `expiryDate`, `barcode`, `createdAt`) SELECT `id`, `name`, `category`, `unit`, `buyPrice`, `sellPrice`, `stock`, `expiryDate`, `barcode`, `createdAt` FROM `medicines`")
+        db.execSQL("DROP TABLE IF EXISTS `medicines`")
+        db.execSQL("ALTER TABLE `medicines_new` RENAME TO `medicines`")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_medicines_barcode` ON `medicines` (`barcode`)")
+    }
+}
+
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -185,7 +199,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
                 }
             }
         }

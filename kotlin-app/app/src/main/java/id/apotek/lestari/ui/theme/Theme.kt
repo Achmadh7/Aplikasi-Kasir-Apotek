@@ -235,11 +235,13 @@ fun formatCompactIDR(n: Int): String {
     return "$sign$s$suffix"
 }
 
-// Stock status rule (same as web): >20 Aman, ==20 Sedang, <20 Rendah, 0 Habis
+// Aturan status stok — skala tetap (keputusan Achmad 2026-10-29, menggantikan
+// stok minimum): 0 Habis, 1-9 Rendah, 10-15 Sedang, 16+ Aman. Fungsi ini
+// dipakai bersama oleh Stok, Kasir, Beranda, dan Pengingat supaya konsisten.
 fun stockLabel(stock: Int): String = when {
     stock <= 0 -> "Habis"
-    stock < 20 -> "Rendah"
-    stock == 20 -> "Sedang"
+    stock < 10 -> "Rendah"
+    stock <= 15 -> "Sedang"
     else -> "Aman"
 }
 

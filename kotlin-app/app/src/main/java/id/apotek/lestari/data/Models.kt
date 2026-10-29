@@ -10,7 +10,6 @@ data class Medicine(
     val buyPrice: Int = 0,
     val sellPrice: Int = 0,
     val stock: Int = 0,
-    val minStock: Int = 10,
     val expiryDate: String? = null,
     val barcode: String? = null,
     val createdAt: String = ""
@@ -94,8 +93,8 @@ data class ProfitReport(
 )
 
 // ---- Per-action request args ----
-data class MedicineArgs(val name: String, val category: String, val unit: String, val buyPrice: Int, val sellPrice: Int, val stock: Int, val minStock: Int, val expiryDate: String? = null, val barcode: String? = null)
-data class UpdateMedicineArgs(val id: Int, val name: String, val category: String, val unit: String, val buyPrice: Int, val sellPrice: Int, val stock: Int, val minStock: Int, val expiryDate: String? = null, val barcode: String? = null)
+data class MedicineArgs(val name: String, val category: String, val unit: String, val buyPrice: Int, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null)
+data class UpdateMedicineArgs(val id: Int, val name: String, val category: String, val unit: String, val buyPrice: Int, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null)
 data class BulkImportArgs(val items: List<MedicineArgs>)
 data class CreateSaleItemArgs(val medicineId: Int, val qty: Int)
 data class CreateSaleArgs(val items: List<CreateSaleItemArgs>, val paymentMethod: String, val amountPaid: Int)

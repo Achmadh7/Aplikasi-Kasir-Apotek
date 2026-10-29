@@ -24,7 +24,7 @@ import java.util.TimeZone
  * file bisa dipakai di keduanya.
  *
  * Kolom: Nama Obat | Barcode | Kategori | Satuan | Harga Beli | Harga Jual |
- * Stok | Stok Minimum | Tanggal Kadaluarsa (YYYY-MM-DD)
+ * Stok | Tanggal Kadaluarsa (YYYY-MM-DD)
  */
 object ExcelHelper {
     const val MIME_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -33,13 +33,13 @@ object ExcelHelper {
 
     val HEADERS = arrayOf(
         "Nama Obat", "Barcode", "Kategori", "Satuan",
-        "Harga Beli", "Harga Jual", "Stok", "Stok Minimum", "Tanggal Kadaluarsa"
+        "Harga Beli", "Harga Jual", "Stok", "Tanggal Kadaluarsa"
     )
 
     private val TEMPLATE_EXAMPLES = listOf(
-        arrayOf<Any>("Paracetamol 500mg", "8991234567890", "Pereda Nyeri", "Strip", 8000, 12000, 50, 10, "2027-12-31"),
-        arrayOf<Any>("Amoxicillin 500mg", "8991234567891", "Antibiotik", "Strip", 15000, 22000, 30, 10, "2026-11-30"),
-        arrayOf<Any>("Vitamin C 1000mg", "8991234567892", "Vitamin", "Botol", 35000, 50000, 20, 5, "2028-06-30"),
+        arrayOf<Any>("Paracetamol 500mg", "8991234567890", "Pereda Nyeri", "Strip", 8000, 12000, 50, "2027-12-31"),
+        arrayOf<Any>("Amoxicillin 500mg", "8991234567891", "Antibiotik", "Strip", 15000, 22000, 30, "2026-11-30"),
+        arrayOf<Any>("Vitamin C 1000mg", "8991234567892", "Vitamin", "Botol", 35000, 50000, 20, "2028-06-30"),
     )
 
     private val PETUNJUK = listOf(
@@ -53,7 +53,7 @@ object ExcelHelper {
         "   - Kategori: Umum, Antibiotik, Vitamin, Pereda Nyeri, Obat Batuk & Flu, Pencernaan, Kulit, Mata, Lainnya",
         "   - Satuan: Strip, Botol, Box, Tablet, Kapsul, Tube, Sachet, Pcs",
         "   - Harga Beli & Harga Jual: angka saja, contoh 12000 (tanpa Rp / titik)",
-        "   - Stok & Stok Minimum: angka bulat",
+        "   - Stok: angka bulat",
         "   - Tanggal Kadaluarsa: format YYYY-MM-DD, contoh 2027-12-31 (boleh kosong)",
         "4. Simpan file, lalu di aplikasi buka Stok > Import Excel dan pilih file ini.",
         "5. Jika Barcode sudah ada di stok, data obat itu diperbarui; jika belum ada, ditambahkan sebagai obat baru.",
@@ -66,7 +66,7 @@ object ExcelHelper {
         val rows = if (medicines.isEmpty()) TEMPLATE_EXAMPLES else medicines.map { m ->
             arrayOf<Any>(
                 m.name, m.barcode ?: "", m.category, m.unit,
-                m.buyPrice, m.sellPrice, m.stock, m.minStock, m.expiryDate ?: ""
+                m.buyPrice, m.sellPrice, m.stock, m.expiryDate ?: ""
             )
         }
         buildStockSheet(wb, rows)
@@ -82,7 +82,7 @@ object ExcelHelper {
         val rows = medicines.map { m ->
             arrayOf<Any>(
                 m.name, m.barcode ?: "", m.category, m.unit,
-                m.buyPrice, m.sellPrice, m.stock, m.minStock, m.expiryDate ?: ""
+                m.buyPrice, m.sellPrice, m.stock, m.expiryDate ?: ""
             )
         }
         buildStockSheet(wb, rows)
@@ -129,7 +129,7 @@ object ExcelHelper {
                     if (row.rowNum == 0) continue
                     val name = text(row, "Nama Obat", 0)
                     if (name.isBlank()) {
-                        val anyValue = (0..8).any { text(row, HEADERS[it], it).isNotEmpty() }
+                        val anyValue = (0..7).any { text(row, HEADERS[it], it).isNotEmpty() }
                         if (anyValue) skipped.add(row.rowNum + 1)
                         continue
                     }
@@ -145,27 +145,13 @@ object ExcelHelper {
                         skipped.add(row.rowNum + 1)
                         continue
                     }
-                    // C13: Stok Minimum kosong -> 10; "0" eksplisit -> 0;
-                    // gagal parse -> baris dilewati.
-                    val minStockRaw = text(row, "Stok Minimum", 7)
-                    val minStock = if (minStockRaw.isBlank()) {
-                        10
-                    } else {
-                        val parsed = minStockRaw.toIntOrNullStrict()
-                        if (parsed == null) {
-                            skipped.add(row.rowNum + 1)
-                            continue
-                        } else {
-                            parsed
-                        }
-                    }
                     // C7: tanggal terisi tapi tidak bisa diparse -> baris dilewati;
                     // tanggal kosong -> null (boleh).
-                    val expiryRaw = text(row, "Tanggal Kadaluarsa", 8)
+                    val expiryRaw = text(row, "Tanggal Kadaluarsa", 7)
                     val expiry = if (expiryRaw.isBlank()) {
                         null
                     } else {
-                        readExpiry(row, idx("Tanggal Kadaluarsa", 8), formatter)
+                        readExpiry(row, idx("Tanggal Kadaluarsa", 7), formatter)
                     }
                     if (expiryRaw.isNotBlank() && expiry == null) {
                         skipped.add(row.rowNum + 1)
@@ -178,7 +164,7 @@ object ExcelHelper {
                         skipped.add(row.rowNum + 1)
                         continue
                     }
-                    items.add(MedicineArgs(name, category, unit, buy, sell, stock, minStock, expiry, barcode))
+                    items.add(MedicineArgs(name, category, unit, buy, sell, stock, expiry, barcode))
                 }
             } finally {
                 wb.close()
@@ -215,7 +201,7 @@ object ExcelHelper {
                 }
             }
         }
-        intArrayOf(30, 18, 18, 10, 13, 13, 8, 14, 18).forEachIndexed { i, w ->
+        intArrayOf(30, 18, 18, 10, 13, 13, 8, 18).forEachIndexed { i, w ->
             sheet.setColumnWidth(i, w * 256)
         }
     }

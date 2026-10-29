@@ -43,7 +43,6 @@ object BackupHelper {
             o.put("buyPrice", m.buyPrice)
             o.put("sellPrice", m.sellPrice)
             o.put("stock", m.stock)
-            o.put("minStock", m.minStock)
             if (m.expiryDate != null) o.put("expiryDate", m.expiryDate) else o.put("expiryDate", JSONObject.NULL)
             if (m.barcode != null) o.put("barcode", m.barcode) else o.put("barcode", JSONObject.NULL)
             o.put("createdAt", m.createdAt)
@@ -131,7 +130,6 @@ object BackupHelper {
                         buyPrice = reqInt(o, "buyPrice", label),
                         sellPrice = reqInt(o, "sellPrice", label),
                         stock = reqInt(o, "stock", label),
-                        minStock = reqInt(o, "minStock", label),
                         expiryDate = if (o.isNull("expiryDate")) null else o.optString("expiryDate"),
                         barcode = if (o.isNull("barcode")) null else o.optString("barcode"),
                         createdAt = o.optString("createdAt", "")
