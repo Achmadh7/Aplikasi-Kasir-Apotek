@@ -2741,21 +2741,23 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
-                        ReminderCount(Icons.Default.Inventory, "STOK NIPIS", "${low.size}", MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
+                        ReminderCount(Icons.Default.Inventory, "RENDAH", "${low.size}", MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
                     }
                     ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
-                        ReminderCount(Icons.Default.PriorityHigh, "KRITIS", "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.fillMaxWidth().padding(16.dp))
+                        ReminderCount(Icons.Default.PriorityHigh, "HABIS", "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.fillMaxWidth().padding(16.dp))
                     }
                 }
             }
         }
         item {
-            // Label dipersingkat ("Semua", "Kritis") + jarak dirapatkan supaya keempat
-            // chip filter muat satu baris tanpa terpotong ("Kritis Saja" sebelumnya
-            // terpotong jadi "Kritis S..."). Scroll horizontal dipertahankan sebagai
-            // cadangan untuk layar yang sangat sempit.
+            // Istilah stok di Pengingat disamakan dengan menu Stok (keputusan
+            // Achmad 2026-10-29): stok 1-9 disebut "Rendah" dan stok 0 disebut
+            // "Habis" — bukan lagi "Stok Menipis"/"Kritis" — supaya informasi
+            // di kedua menu konsisten. Label pendek juga membuat keempat chip
+            // filter muat satu baris tanpa terpotong; scroll horizontal
+            // dipertahankan sebagai cadangan untuk layar yang sangat sempit.
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                listOf("all" to "Semua", "expiry" to "Kadaluwarsa", "low" to "Stok Menipis", "critical" to "Kritis").forEach { (k, l) ->
+                listOf("all" to "Semua", "expiry" to "Kadaluwarsa", "low" to "Rendah", "critical" to "Habis").forEach { (k, l) ->
                     FilterChip(selected = filter == k, onClick = { filter = k }, label = { Text(l) })
                 }
             }
@@ -2773,7 +2775,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
             // rantai if/else berhenti di kondisi pertama yang cocok).
             val stockNote = when {
                 isCritical -> if (showSuggest) "Stok habis — restock segera, disarankan $suggest ${m.unit} (target stok Aman 16)." else "Stok habis — restock segera."
-                m.stock in 1..9 -> if (showSuggest) "Stok menipis — disarankan restock $suggest ${m.unit} (target stok Aman 16)." else "Stok menipis — restock segera."
+                m.stock in 1..9 -> if (showSuggest) "Stok rendah — disarankan restock $suggest ${m.unit} (target stok Aman 16)." else "Stok rendah — restock segera."
                 else -> null
             }
             val expiryNote = when {
@@ -2807,7 +2809,7 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                                 Spacer(Modifier.width(8.dp))
                                 Surface(color = if (isCritical) RedBadgeBg else MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(16.dp), modifier = if (isCritical) Modifier.pulseKritis() else Modifier) {
                                     Text(
-                                        if (isCritical) "KRITIS" else "PANTAU",
+                                        if (isCritical) "HABIS" else "PANTAU",
                                         color = if (isCritical) Color.White else MaterialTheme.colorScheme.primary,
                                         style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
