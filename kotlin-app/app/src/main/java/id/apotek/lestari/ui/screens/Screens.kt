@@ -342,7 +342,9 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        // Jarak antar kartu diperbesar 12 -> 20dp (permintaan Achmad
+        // 2026-10-30 dari screenshot Beranda — kartu-kartu tampak terlalu rapat).
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
