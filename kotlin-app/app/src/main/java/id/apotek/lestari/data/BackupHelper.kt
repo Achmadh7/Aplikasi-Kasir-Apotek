@@ -2,6 +2,8 @@ package id.apotek.lestari.data
 
 import id.apotek.lestari.data.local.CashEntryEntity
 import id.apotek.lestari.data.local.MedicineEntity
+import id.apotek.lestari.data.local.PurchaseEntity
+import id.apotek.lestari.data.local.PurchaseItemEntity
 import id.apotek.lestari.data.local.SaleEntity
 import id.apotek.lestari.data.local.SaleItemEntity
 import org.json.JSONArray
@@ -13,7 +15,10 @@ import org.json.JSONObject
  * item penjualan, kas) dalam satu file JSON.
  *
  * Format file: {"version":1, "app":"apotek-lestari",
- *   "medicines":[...], "sales":[...], "saleItems":[...], "cashEntries":[...]}
+ *   "medicines":[...], "sales":[...], "saleItems":[...], "cashEntries":[...],
+ *   "purchases":[...], "purchaseItems":[...]}
+ * Array purchases/purchaseItems (fitur PBF) bersifat OPSIONAL saat dibaca:
+ * backup lama yang belum punya kedua array itu tetap bisa dipulihkan.
  * Dipakai org.json bawaan Android, jadi tidak perlu dependensi baru.
  * Restore MENGGANTI seluruh data saat ini dengan isi file backup
  * (ID dipertahankan supaya relasi penjualan-item tetap utuh).
@@ -22,7 +27,9 @@ data class BackupData(
     val medicines: List<MedicineEntity> = emptyList(),
     val sales: List<SaleEntity> = emptyList(),
     val saleItems: List<SaleItemEntity> = emptyList(),
-    val cashEntries: List<CashEntryEntity> = emptyList()
+    val cashEntries: List<CashEntryEntity> = emptyList(),
+    val purchases: List<PurchaseEntity> = emptyList(),
+    val purchaseItems: List<PurchaseItemEntity> = emptyList()
 )
 
 object BackupHelper {
@@ -94,6 +101,31 @@ object BackupHelper {
             entries.put(o)
         }
         root.put("cashEntries", entries)
+
+        val purchases = JSONArray()
+        for (p in data.purchases) {
+            val o = JSONObject()
+            o.put("id", p.id)
+            o.put("pbfName", p.pbfName)
+            o.put("date", p.date)
+            o.put("total", p.total)
+            o.put("createdAt", p.createdAt)
+            purchases.put(o)
+        }
+        root.put("purchases", purchases)
+
+        val purchaseItems = JSONArray()
+        for (pi in data.purchaseItems) {
+            val o = JSONObject()
+            o.put("id", pi.id)
+            o.put("purchaseId", pi.purchaseId)
+            o.put("medicineName", pi.medicineName)
+            o.put("qty", pi.qty)
+            o.put("buyPrice", pi.buyPrice)
+            o.put("subtotal", pi.subtotal)
+            purchaseItems.put(o)
+        }
+        root.put("purchaseItems", purchaseItems)
 
         return root.toString(2)
     }
@@ -234,7 +266,74 @@ object BackupHelper {
             }
         }
 
-        return BackupData(medicines, sales, items, entries)
+        // Pembelian PBF: array OPSIONAL — backup lama tidak punya array ini
+        // dan tetap sah (dianggap belum ada catatan pembelian).
+        val purchases = mutableListOf<PurchaseEntity>()
+        val purchaseArr = root.optJSONArray("purchases")
+        if (purchaseArr != null) {
+            for (i in 0 until purchaseArr.length()) {
+                val label = "Baris pembelian ke-${i + 1}"
+                val o = rowObject(purchaseArr, i, label)
+                try {
+                    purchases.add(
+                        PurchaseEntity(
+                            id = reqInt(o, "id", label),
+                            pbfName = reqString(o, "pbfName", label),
+                            date = o.optString("date", ""),
+                            total = reqInt(o, "total", label),
+                            createdAt = o.optString("createdAt", "")
+                        )
+                    )
+                } catch (e: JSONException) {
+                    throw IllegalArgumentException("$label rusak: ${e.message}")
+                }
+            }
+        }
+
+        val purchaseItems = mutableListOf<PurchaseItemEntity>()
+        val purchaseItemArr = root.optJSONArray("purchaseItems")
+        if (purchaseItemArr != null) {
+            for (i in 0 until purchaseItemArr.length()) {
+                val label = "Baris item pembelian ke-${i + 1}"
+                val o = rowObject(purchaseItemArr, i, label)
+                try {
+                    val qty = reqInt(o, "qty", label)
+                    val buyPrice = reqInt(o, "buyPrice", label)
+                    val subtotal = reqInt(o, "subtotal", label)
+                    // A4: subtotal harus konsisten dengan qty * harga beli.
+                    if (subtotal.toLong() != qty.toLong() * buyPrice.toLong()) {
+                        throw IllegalArgumentException(
+                            "$label rusak: subtotal $subtotal tidak sama dengan qty $qty x harga $buyPrice"
+                        )
+                    }
+                    purchaseItems.add(
+                        PurchaseItemEntity(
+                            id = reqInt(o, "id", label),
+                            purchaseId = reqInt(o, "purchaseId", label),
+                            medicineName = o.optString("medicineName", ""),
+                            qty = qty,
+                            buyPrice = buyPrice,
+                            subtotal = subtotal
+                        )
+                    )
+                } catch (e: JSONException) {
+                    throw IllegalArgumentException("$label rusak: ${e.message}")
+                }
+            }
+        }
+
+        // A4: validasi relasi — setiap item pembelian harus punya pembelian induk.
+        val purchaseIds = purchases.map { it.id }.toSet()
+        for ((index, pItem) in purchaseItems.withIndex()) {
+            if (pItem.purchaseId !in purchaseIds) {
+                throw IllegalArgumentException(
+                    "Baris item pembelian ke-${index + 1} rusak: purchaseId ${pItem.purchaseId} " +
+                        "tidak ditemukan di daftar purchases"
+                )
+            }
+        }
+
+        return BackupData(medicines, sales, items, entries, purchases, purchaseItems)
     }
 
     /** A3: array wajib ada dan benar-benar JSONArray; kalau tidak, backup ditolak. */

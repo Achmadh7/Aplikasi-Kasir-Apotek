@@ -3687,3 +3687,372 @@ fun TentangScreen() {
         }
     }
 }
+
+// ---------- PBF (catatan pembelian dari PBF — data saja) ----------
+// Keputusan Achmad 2026-10-29: menu "PBF" berisi riwayat pembelian obat
+// dari PBF, MURNI catatan — tidak mengubah stok, tidak membuat entri kas,
+// tidak mengubah harga beli. Ringkasan di atas menjawab "hari ini belanja
+// di PBF mana saja dan uang keluar hari ini berapa".
+
+private class PurchaseItemRow {
+    var name by mutableStateOf("")
+    var qty by mutableStateOf("")
+    var price by mutableStateOf(TextFieldValue(""))
+}
+
+@Composable
+fun PbfScreen() {
+    var purchases by remember { mutableStateOf<List<Purchase>>(emptyList()) }
+    var expanded by remember { mutableStateOf<Int?>(null) }
+    var showForm by remember { mutableStateOf(false) }
+    var deleteTarget by remember { mutableStateOf<Purchase?>(null) }
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Muat ulang setiap kali layar kembali tampil (ON_RESUME), pola yang
+    // sama seperti Obat Terlaris.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeKey by remember { mutableStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(resumeKey) {
+        (repo.listPurchases() as? ApiResult.Success)?.let { purchases = it.data.purchases }
+    }
+
+    // Tanggal pembelian disimpan sebagai kunci hari "yyyy-MM-dd", jadi
+    // pengelompokan per hari cukup membandingkan string (tanpa konversi).
+    val todayKey = dayKeyID(Date())
+    val yesterdayKey = dayKeyID(Date(System.currentTimeMillis() - 86_400_000L))
+    val monthPrefix = todayKey.substring(0, 7)
+    val todayPurchases = purchases.filter { it.date == todayKey }
+    val todayTotal = todayPurchases.sumOf { it.total }
+    val monthTotal = purchases.filter { it.date.startsWith(monthPrefix) }.sumOf { it.total }
+    val sortedGroups = purchases.groupBy { it.date }.entries.sortedByDescending { it.key }
+
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text("PBF", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(16.dp))
+                DemoBanner()
+                // Ringkasan belanja hari ini + bulan ini (kartu biru muda,
+                // pola yang sama seperti ringkasan Obat Terlaris).
+                Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text("BELANJA HARI INI", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(4.dp))
+                            Text(formatIDR(todayTotal), color = OnLightBlue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text("${todayPurchases.size} pembelian", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
+                        }
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                            Text("BELANJA BULAN INI", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(4.dp))
+                            Text(formatIDR(monthTotal), color = OnLightBlue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = { showForm = true },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(28.dp)
+                ) {
+                    Icon(Icons.Default.Add, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Catat Pembelian")
+                }
+            }
+            if (purchases.isEmpty()) {
+                item {
+                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
+                            Spacer(Modifier.height(8.dp))
+                            Text("Belum ada catatan pembelian. Catat belanja dari PBF lewat tombol + Catat Pembelian — ini murni catatan, tidak mengubah stok dan kas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+            sortedGroups.forEach { (day, dayPurchases) ->
+                item(key = "pbf-header-$day") {
+                    val label = when (day) {
+                        todayKey -> "Hari ini"
+                        yesterdayKey -> "Kemarin"
+                        else -> formatDateID(day)
+                    }
+                    val dayTotal = dayPurchases.sumOf { it.total }
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                        Text(label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(8.dp))
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                        Spacer(Modifier.width(8.dp))
+                        Text("${dayPurchases.size} pembelian • ${formatIDR(dayTotal)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                items(dayPurchases, key = { "pbf-${it.id}" }) { p ->
+                    val isOpen = expanded == p.id
+                    ExpressiveCard(
+                        shape = RoundedCornerShape(28.dp),
+                        modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow)).clickable { expanded = if (isOpen) null else p.id }
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(p.pbfName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                    val namesPreview = p.items.take(3).joinToString(", ") { it.medicineName }
+                                    val suffix = if (p.items.size > 3) " +${p.items.size - 3} lagi" else ""
+                                    Text("${p.items.size} obat • $namesPreview$suffix", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                Icon(if (isOpen) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (isOpen) {
+                                Spacer(Modifier.height(12.dp))
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                Spacer(Modifier.height(12.dp))
+                                p.items.forEach { pItem ->
+                                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(pItem.medicineName, style = MaterialTheme.typography.bodyMedium)
+                                            Text("${pItem.qty} × ${formatIDR(pItem.buyPrice)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        Text(formatIDR(pItem.subtotal), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                    TextButton(onClick = { deleteTarget = p }) {
+                                        Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Hapus", color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
+    }
+
+    if (showForm) {
+        PurchaseFormSheet(
+            onDismiss = { showForm = false },
+            onSaved = {
+                showForm = false
+                resumeKey++
+                scope.launch { snackbarHostState.showSnackbar("Pembelian tercatat.") }
+            }
+        )
+    }
+
+    deleteTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("Hapus Catatan Pembelian?") },
+            text = { Text("Catatan belanja dari ${target.pbfName} (${formatDateID(target.date)}) sebesar ${formatIDR(target.total)} akan dihapus. Ini hanya menghapus catatan — stok dan kas tidak berubah.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleteTarget = null
+                    scope.launch {
+                        val res = repo.deletePurchase(target.id)
+                        if (res is ApiResult.Success) {
+                            if (expanded == target.id) expanded = null
+                            resumeKey++
+                            snackbarHostState.showSnackbar("Catatan pembelian dihapus.")
+                        } else {
+                            snackbarHostState.showSnackbar((res as? ApiResult.Error)?.message ?: "Gagal menghapus")
+                        }
+                    }
+                }) { Text("Hapus", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Batal") } }
+        )
+    }
+}
+
+@Composable
+private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
+    var pbfName by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf(dayKeyID(Date())) }
+    var rows by remember { mutableStateOf(listOf(PurchaseItemRow())) }
+    var activeRow by remember { mutableStateOf<PurchaseItemRow?>(null) }
+    var medNames by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var formError by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Saran nama obat dari data Stok (hanya saran ketik — memilihnya TIDAK
+    // mengubah stok obat yang bersangkutan).
+    LaunchedEffect(Unit) {
+        (repo.listMedicines() as? ApiResult.Success)?.let { res -> medNames = res.data.medicines.map { it.name } }
+    }
+
+    // Field tanggal read-only: ketukan ditangkap lewat interactionSource
+    // (pola yang sama seperti field Kadaluwarsa di formulir obat).
+    val dateInteraction = remember { MutableInteractionSource() }
+    LaunchedEffect(dateInteraction) {
+        dateInteraction.interactions.collect { if (it is PressInteraction.Press) showDatePicker = true }
+    }
+
+    val total = rows.sumOf { (it.qty.toIntOrNull() ?: 0) * parseDecimal(it.price.text) }
+    val valid = pbfName.isNotBlank() && rows.all {
+        it.name.isNotBlank() && (it.qty.toIntOrNull() ?: 0) > 0 && parseDecimal(it.price.text) > 0
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        sheetMaxWidth = adaptiveSheetMaxWidth(),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    ) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Catat Pembelian PBF", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
+            }
+            OutlinedTextField(pbfName, { pbfName = it }, label = { Text("Nama PBF") }, placeholder = { Text("mis. nama distributornya") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = formatDateID(date), onValueChange = {}, label = { Text("Tanggal Beli") },
+                readOnly = true, singleLine = true,
+                trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = "Pilih tanggal") },
+                interactionSource = dateInteraction,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(4.dp))
+            Text("Obat yang Dibeli", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            rows.forEachIndexed { index, row ->
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Obat ${index + 1}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        if (rows.size > 1) {
+                            IconButton(
+                                onClick = { rows = rows - row; if (activeRow == row) activeRow = null },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Delete, "Hapus obat ini", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = row.name,
+                        onValueChange = { row.name = it; activeRow = row },
+                        label = { Text("Nama Obat") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (activeRow == row && row.name.isNotBlank()) {
+                        val suggestions = medNames.filter {
+                            it.contains(row.name.trim(), ignoreCase = true) && !it.equals(row.name.trim(), ignoreCase = true)
+                        }.take(5)
+                        if (suggestions.isNotEmpty()) {
+                            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                suggestions.forEach { s ->
+                                    AssistChip(onClick = { row.name = s }, label = { Text(s) })
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = row.qty,
+                            onValueChange = { row.qty = it.filter { c -> c.isDigit() } },
+                            label = { Text("Jumlah") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = row.price,
+                            onValueChange = { row.price = formatDecimalFieldValue(it) },
+                            label = { Text("Harga Satuan") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(2f)
+                        )
+                    }
+                    val rowSubtotal = (row.qty.toIntOrNull() ?: 0) * parseDecimal(row.price.text)
+                    if (rowSubtotal > 0) {
+                        Text("Subtotal: ${formatIDR(rowSubtotal)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = TextAlign.End)
+                    }
+                }
+            }
+            OutlinedButton(
+                onClick = { rows = rows + PurchaseItemRow(); activeRow = null },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Tambah Obat")
+            }
+            Spacer(Modifier.height(4.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Total Belanja", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(formatIDR(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            }
+            if (formError.isNotEmpty()) Text(formError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+            Button(
+                onClick = {
+                    scope.launch {
+                        formError = ""
+                        val res = repo.createPurchase(
+                            CreatePurchaseArgs(
+                                pbfName = pbfName,
+                                date = date,
+                                items = rows.map { CreatePurchaseItemArgs(it.name, it.qty.toIntOrNull() ?: 0, parseDecimal(it.price.text)) }
+                            )
+                        )
+                        if (res is ApiResult.Success) onSaved()
+                        else formError = (res as? ApiResult.Error)?.message ?: "Gagal menyimpan"
+                    }
+                },
+                enabled = valid,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(52.dp),
+                shape = RoundedCornerShape(28.dp),
+            ) { Text("Simpan") }
+        }
+    }
+    if (showDatePicker) {
+        // Sama seperti pemilih tanggal kadaluwarsa: normalisasi ke tengah
+        // malam UTC supaya tanggal tidak bergeser 1 hari.
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = utcMidnightMillis(date))
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { date = dayKeyID(Date(it)) }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Batal") }
+            }
+        ) {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                DatePicker(state = datePickerState)
+            }
+        }
+    }
+}

@@ -50,6 +50,23 @@ data class CashBalance(val totalIn: Int = 0, val totalOut: Int = 0) {
     val balance: Int get() = totalIn - totalOut
 }
 
+// Catatan pembelian dari PBF — murni catatan, tidak terkait Stok/Kas.
+data class PurchaseItem(
+    val medicineName: String = "",
+    val qty: Int = 0,
+    val buyPrice: Int = 0,
+    val subtotal: Int = 0
+)
+
+data class Purchase(
+    val id: Int = 0,
+    val pbfName: String = "",
+    val date: String = "", // "yyyy-MM-dd"
+    val total: Int = 0,
+    val createdAt: String = "",
+    val items: List<PurchaseItem> = emptyList()
+)
+
 data class BestSeller(val name: String = "", val qty: Int = 0, val revenue: Int = 0)
 data class DayCash(val date: String = "", val label: String = "", val income: Int = 0, val expense: Int = 0)
 data class RecentSale(val id: Int = 0, val invoiceNo: String = "", val total: Int = 0, val createdAt: String = "")
@@ -99,6 +116,8 @@ data class BulkImportArgs(val items: List<MedicineArgs>)
 data class CreateSaleItemArgs(val medicineId: Int, val qty: Int)
 data class CreateSaleArgs(val items: List<CreateSaleItemArgs>, val paymentMethod: String, val amountPaid: Int)
 data class CreateCashEntryArgs(val type: String, val category: String, val description: String, val amount: Int, val createdAt: String? = null)
+data class CreatePurchaseItemArgs(val medicineName: String, val qty: Int, val buyPrice: Int)
+data class CreatePurchaseArgs(val pbfName: String, val date: String, val items: List<CreatePurchaseItemArgs>)
 
 // ---- Per-action responses ----
 data class ListMedicinesResponse(val medicines: List<Medicine> = emptyList())
@@ -110,6 +129,7 @@ data class DownloadResponse(val ok: Boolean = false, val url: String = "", val f
 data class CreateSaleResponse(val id: Int = 0, val invoiceNo: String = "", val total: Int = 0, val changeAmount: Int = 0)
 data class ListSalesResponse(val sales: List<Sale> = emptyList())
 data class ListCashResponse(val entries: List<CashEntry> = emptyList())
+data class ListPurchasesResponse(val purchases: List<Purchase> = emptyList())
 data class ManifestResponse(val ok: Boolean = true, val url: String = "")
 
 sealed class ApiResult<out T> {

@@ -170,7 +170,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                                 "stok" -> current == "stok"
                                 "kasir" -> current == "kasir"
                                 "keuangan" -> current == "keuangan"
-                                else -> current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang")
+                                else -> current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf")
                             }
                             PillTab(
                                 selected = selected,
@@ -209,6 +209,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                 composable("riwayat") { RiwayatScreen() }
                 composable("backup") { BackupScreen() }
                 composable("terlaris") { ObatTerlarisScreen() }
+                composable("pbf") { PbfScreen() }
                 composable("tentang") { TentangScreen() }
             }
         }
@@ -227,6 +228,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                     Triple("terlaris", "Obat Terlaris", Icons.Default.Leaderboard),
                     Triple("pengingat", "Pengingat", Icons.Default.NotificationsActive),
                     Triple("riwayat", "Riwayat", Icons.Default.ReceiptLong),
+                    Triple("pbf", "PBF", Icons.Default.LocalShipping),
                     Triple("backup", "Backup & Restore", Icons.Default.Backup)
                 ).forEach { (route, label, icon) ->
                     Row(

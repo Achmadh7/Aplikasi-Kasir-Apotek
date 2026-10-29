@@ -3,6 +3,8 @@ package id.apotek.lestari.data
 import id.apotek.lestari.data.local.CashEntryEntity
 import id.apotek.lestari.data.local.DatabaseProvider
 import id.apotek.lestari.data.local.MedicineEntity
+import id.apotek.lestari.data.local.PurchaseEntity
+import id.apotek.lestari.data.local.PurchaseItemEntity
 import id.apotek.lestari.data.local.SaleEntity
 import id.apotek.lestari.data.local.SaleItemEntity
 import androidx.room.withTransaction
@@ -573,6 +575,76 @@ class Repository {
     suspend fun getWebAppManifest(): ApiResult<ManifestResponse> =
         ApiResult.Error("Manifest web tidak tersedia di mode offline")
 
+    // ================= PEMBELIAN DARI PBF (catatan saja) =================
+    // Keputusan Achmad 2026-10-29: fitur PBF MURNI catatan pembelian —
+    // TIDAK menambah stok, TIDAK membuat entri kas, TIDAK mengubah harga
+    // beli obat. Gunanya menjawab "hari ini belanja di PBF mana saja dan
+    // uang keluar berapa" lewat riwayat per hari.
+
+    private fun PurchaseItemEntity.toModel() =
+        PurchaseItem(medicineName, qty, buyPrice, subtotal)
+
+    suspend fun listPurchases(): ApiResult<ListPurchasesResponse> = call {
+        val dao = DatabaseProvider.db.purchaseDao()
+        val itemsByPurchase = dao.getAllItems().groupBy { it.purchaseId }
+        val purchases = dao.getAll().map { p ->
+            Purchase(
+                id = p.id,
+                pbfName = p.pbfName,
+                date = p.date,
+                total = p.total,
+                createdAt = p.createdAt,
+                items = itemsByPurchase[p.id].orEmpty().map { it.toModel() }
+            )
+        }
+        ListPurchasesResponse(purchases)
+    }
+
+    suspend fun createPurchase(args: CreatePurchaseArgs): ApiResult<IdResponse> = call {
+        if (args.pbfName.isBlank()) throw IllegalArgumentException("Nama PBF tidak boleh kosong")
+        if (args.items.isEmpty()) throw IllegalArgumentException("Isi minimal satu obat yang dibeli")
+        args.items.forEach {
+            if (it.medicineName.isBlank()) throw IllegalArgumentException("Nama obat tidak boleh kosong")
+            if (it.qty <= 0) throw IllegalArgumentException("Jumlah obat harus lebih dari 0")
+            if (it.buyPrice <= 0) throw IllegalArgumentException("Harga beli harus lebih dari 0")
+        }
+        val db = DatabaseProvider.db
+        val dao = db.purchaseDao()
+        var newId = 0
+        db.withTransaction {
+            val total = args.items.sumOf { it.qty * it.buyPrice }
+            newId = dao.insert(
+                PurchaseEntity(
+                    pbfName = args.pbfName.trim(),
+                    date = args.date,
+                    total = total,
+                    createdAt = nowIso()
+                )
+            ).toInt()
+            dao.insertItems(args.items.map {
+                PurchaseItemEntity(
+                    purchaseId = newId,
+                    medicineName = it.medicineName.trim(),
+                    qty = it.qty,
+                    buyPrice = it.buyPrice,
+                    subtotal = it.qty * it.buyPrice
+                )
+            })
+        }
+        IdResponse(newId)
+    }
+
+    suspend fun deletePurchase(id: Int): ApiResult<OkResponse> = call {
+        val db = DatabaseProvider.db
+        val dao = db.purchaseDao()
+        db.withTransaction {
+            val deleted = dao.deleteById(id)
+            if (deleted == 0) throw IllegalStateException("Catatan pembelian tidak ditemukan")
+            dao.deleteItemsForPurchase(id)
+        }
+        OkResponse(true)
+    }
+
     // ---- Backup & Restore (semua data lokal dalam satu file JSON) ----
 
     /** Seluruh isi database (obat, penjualan, item, kas) sebagai string JSON. */
@@ -582,7 +654,9 @@ class Repository {
             medicines = db.medicineDao().getAll(),
             sales = db.saleDao().getAll(),
             saleItems = db.saleDao().getAllItems(),
-            cashEntries = db.cashDao().getAll()
+            cashEntries = db.cashDao().getAll(),
+            purchases = db.purchaseDao().getAll(),
+            purchaseItems = db.purchaseDao().getAllItems()
         )
         BackupHelper.buildJson(data)
     }
@@ -601,12 +675,16 @@ class Repository {
             db.saleDao().deleteAll()
             db.saleDao().deleteAllItems()
             db.cashDao().deleteAll()
+            db.purchaseDao().deleteAll()
+            db.purchaseDao().deleteAllItems()
             data.medicines.forEach { db.medicineDao().insert(it) }
             data.sales.forEach { db.saleDao().insert(it) }
             if (data.saleItems.isNotEmpty()) db.saleDao().insertItems(data.saleItems)
             data.cashEntries.forEach { db.cashDao().insert(it) }
+            data.purchases.forEach { db.purchaseDao().insert(it) }
+            if (data.purchaseItems.isNotEmpty()) db.purchaseDao().insertItems(data.purchaseItems)
         }
-        "Dipulihkan: ${data.medicines.size} obat, ${data.sales.size} penjualan, ${data.saleItems.size} item, ${data.cashEntries.size} kas."
+        "Dipulihkan: ${data.medicines.size} obat, ${data.sales.size} penjualan, ${data.saleItems.size} item, ${data.cashEntries.size} kas, ${data.purchases.size} pembelian PBF."
     }
 }
 

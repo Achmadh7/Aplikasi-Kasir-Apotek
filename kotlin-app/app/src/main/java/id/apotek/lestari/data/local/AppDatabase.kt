@@ -66,6 +66,27 @@ data class CashEntryEntity(
     val createdAt: String // ISO UTC
 )
 
+// Catatan pembelian dari PBF — MURNI catatan (keputusan Achmad 2026-10-29):
+// tidak mengubah stok obat, tidak membuat entri kas, tidak mengubah harga.
+@Entity(tableName = "purchases")
+data class PurchaseEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val pbfName: String, // nama perusahaan PBF (distributor)
+    val date: String, // "yyyy-MM-dd" — tanggal pembelian yang dipilih pengguna
+    val total: Int,
+    val createdAt: String // ISO UTC — kapan catatan dibuat
+)
+
+@Entity(tableName = "purchase_items")
+data class PurchaseItemEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val purchaseId: Int,
+    val medicineName: String, // teks bebas (snapshot nama) — tidak terikat data Stok
+    val qty: Int,
+    val buyPrice: Int, // harga satuan dari PBF
+    val subtotal: Int
+)
+
 // ---- DAOs ----
 
 @Dao
@@ -140,6 +161,33 @@ interface CashDao {
     suspend fun sumOut(): Int
 }
 
+@Dao
+interface PurchaseDao {
+    @Query("SELECT * FROM purchases ORDER BY date DESC, id DESC")
+    suspend fun getAll(): List<PurchaseEntity>
+
+    @Query("SELECT * FROM purchase_items ORDER BY id")
+    suspend fun getAllItems(): List<PurchaseItemEntity>
+
+    @Insert
+    suspend fun insert(purchase: PurchaseEntity): Long
+
+    @Insert
+    suspend fun insertItems(items: List<PurchaseItemEntity>)
+
+    @Query("DELETE FROM purchases WHERE id = :id")
+    suspend fun deleteById(id: Int): Int
+
+    @Query("DELETE FROM purchase_items WHERE purchaseId = :purchaseId")
+    suspend fun deleteItemsForPurchase(purchaseId: Int)
+
+    @Query("DELETE FROM purchases")
+    suspend fun deleteAll()
+
+    @Query("DELETE FROM purchase_items")
+    suspend fun deleteAllItems()
+}
+
 // ---- Database ----
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -173,15 +221,26 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Fitur PBF: dua tabel BARU untuk catatan pembelian (purchases +
+        // purchase_items). Murni penambahan tabel — tidak menyentuh tabel
+        // yang sudah ada, jadi tidak ada data lama yang berubah.
+        db.execSQL("CREATE TABLE IF NOT EXISTS `purchases` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `pbfName` TEXT NOT NULL, `date` TEXT NOT NULL, `total` INTEGER NOT NULL, `createdAt` TEXT NOT NULL)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `purchase_items` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `purchaseId` INTEGER NOT NULL, `medicineName` TEXT NOT NULL, `qty` INTEGER NOT NULL, `buyPrice` INTEGER NOT NULL, `subtotal` INTEGER NOT NULL)")
+    }
+}
+
 @Database(
-    entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class],
-    version = 3,
+    entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class],
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun medicineDao(): MedicineDao
     abstract fun saleDao(): SaleDao
     abstract fun cashDao(): CashDao
+    abstract fun purchaseDao(): PurchaseDao
 }
 
 object DatabaseProvider {
@@ -199,7 +258,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
                 }
             }
         }
