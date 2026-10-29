@@ -2,6 +2,7 @@ package id.apotek.lestari.data.local
 
 import android.content.Context
 import androidx.room.Dao
+import androidx.room.ColumnInfo
 import androidx.room.Database
 import androidx.room.Entity
 import androidx.room.Index
@@ -83,6 +84,9 @@ data class PurchaseItemEntity(
     val purchaseId: Int,
     val medicineName: String, // teks bebas (snapshot nama) — tidak terikat data Stok
     val qty: Int,
+    // Satuan pembelian (Strip/Botol/Box/Vial/...) — dipilih di formulir PBF
+    // supaya jelas qty itu dalam satuan apa (permintaan Achmad 2026-10-29).
+    @ColumnInfo(defaultValue = "Strip") val unit: String = "Strip",
     val buyPrice: Int, // harga satuan dari PBF
     val subtotal: Int
 )
@@ -231,9 +235,17 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Kolom satuan (unit) untuk item pembelian PBF. Catatan lama diberi
+        // satuan bawaan "Strip" lewat DEFAULT kolom.
+        db.execSQL("ALTER TABLE `purchase_items` ADD COLUMN `unit` TEXT NOT NULL DEFAULT 'Strip'")
+    }
+}
+
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -258,7 +270,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
                 }
             }
         }

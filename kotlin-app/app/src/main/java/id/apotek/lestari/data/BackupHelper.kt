@@ -121,6 +121,7 @@ object BackupHelper {
             o.put("purchaseId", pi.purchaseId)
             o.put("medicineName", pi.medicineName)
             o.put("qty", pi.qty)
+            o.put("unit", pi.unit)
             o.put("buyPrice", pi.buyPrice)
             o.put("subtotal", pi.subtotal)
             purchaseItems.put(o)
@@ -312,6 +313,7 @@ object BackupHelper {
                             purchaseId = reqInt(o, "purchaseId", label),
                             medicineName = o.optString("medicineName", ""),
                             qty = qty,
+                            unit = o.optString("unit", "Strip"),
                             buyPrice = buyPrice,
                             subtotal = subtotal
                         )

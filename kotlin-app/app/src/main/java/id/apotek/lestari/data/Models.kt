@@ -54,6 +54,7 @@ data class CashBalance(val totalIn: Int = 0, val totalOut: Int = 0) {
 data class PurchaseItem(
     val medicineName: String = "",
     val qty: Int = 0,
+    val unit: String = "Strip",
     val buyPrice: Int = 0,
     val subtotal: Int = 0
 )
@@ -116,7 +117,7 @@ data class BulkImportArgs(val items: List<MedicineArgs>)
 data class CreateSaleItemArgs(val medicineId: Int, val qty: Int)
 data class CreateSaleArgs(val items: List<CreateSaleItemArgs>, val paymentMethod: String, val amountPaid: Int)
 data class CreateCashEntryArgs(val type: String, val category: String, val description: String, val amount: Int, val createdAt: String? = null)
-data class CreatePurchaseItemArgs(val medicineName: String, val qty: Int, val buyPrice: Int)
+data class CreatePurchaseItemArgs(val medicineName: String, val qty: Int, val buyPrice: Int, val unit: String = "Strip")
 data class CreatePurchaseArgs(val pbfName: String, val date: String, val items: List<CreatePurchaseItemArgs>)
 
 // ---- Per-action responses ----

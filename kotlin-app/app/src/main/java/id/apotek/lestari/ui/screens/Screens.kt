@@ -3698,6 +3698,7 @@ fun TentangScreen() {
 
 private class PurchaseItemRow {
     var name by mutableStateOf("")
+    var unit by mutableStateOf("Strip")
     var qty by mutableStateOf("")
     var price by mutableStateOf(TextFieldValue(""))
 }
@@ -3835,7 +3836,7 @@ fun PbfScreen() {
                                     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                                         Column(Modifier.weight(1f)) {
                                             Text(pItem.medicineName, style = MaterialTheme.typography.bodyMedium)
-                                            Text("${pItem.qty} × ${formatIDR(pItem.buyPrice)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text("${pItem.qty} ${pItem.unit} × ${formatIDR(pItem.buyPrice)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                         Text(formatIDR(pItem.subtotal), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                                     }
@@ -3899,16 +3900,18 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     var date by remember { mutableStateOf(dayKeyID(Date())) }
     var rows by remember { mutableStateOf(listOf(PurchaseItemRow())) }
     var activeRow by remember { mutableStateOf<PurchaseItemRow?>(null) }
-    var medNames by remember { mutableStateOf<List<String>>(emptyList()) }
+    var unitPickerRow by remember { mutableStateOf<PurchaseItemRow?>(null) }
+    var meds by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var showDatePicker by remember { mutableStateOf(false) }
     var formError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Saran nama obat dari data Stok (hanya saran ketik — memilihnya TIDAK
-    // mengubah stok obat yang bersangkutan).
+    // mengubah stok obat yang bersangkutan). Memilih saran juga mengisi
+    // satuan baris ini dengan satuan obat itu di Stok.
     LaunchedEffect(Unit) {
-        (repo.listMedicines() as? ApiResult.Success)?.let { res -> medNames = res.data.medicines.map { it.name } }
+        (repo.listMedicines() as? ApiResult.Success)?.let { res -> meds = res.data.medicines }
     }
 
     // Field tanggal read-only: ketukan ditangkap lewat interactionSource
@@ -3957,21 +3960,38 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                             }
                         }
                     }
-                    OutlinedTextField(
-                        value = row.name,
-                        onValueChange = { row.name = it; activeRow = row },
-                        label = { Text("Nama Obat") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    // Pemilih satuan per baris: ketukan ditangkap lewat
+                    // interactionSource baris ini (pola field read-only yang
+                    // sama seperti Tanggal Beli), membuka OptionPickerSheet
+                    // untuk baris yang bersangkutan.
+                    val unitInteraction = remember { MutableInteractionSource() }
+                    LaunchedEffect(unitInteraction) {
+                        unitInteraction.interactions.collect { if (it is PressInteraction.Press) unitPickerRow = row }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = row.name,
+                            onValueChange = { row.name = it; activeRow = row },
+                            label = { Text("Nama Obat") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = row.unit, onValueChange = {}, label = { Text("Satuan") },
+                            readOnly = true, singleLine = true,
+                            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih satuan") },
+                            interactionSource = unitInteraction,
+                            modifier = Modifier.width(118.dp)
+                        )
+                    }
                     if (activeRow == row && row.name.isNotBlank()) {
-                        val suggestions = medNames.filter {
-                            it.contains(row.name.trim(), ignoreCase = true) && !it.equals(row.name.trim(), ignoreCase = true)
+                        val suggestions = meds.filter {
+                            it.name.contains(row.name.trim(), ignoreCase = true) && !it.name.equals(row.name.trim(), ignoreCase = true)
                         }.take(5)
                         if (suggestions.isNotEmpty()) {
                             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 suggestions.forEach { s ->
-                                    AssistChip(onClick = { row.name = s }, label = { Text(s) })
+                                    AssistChip(onClick = { row.name = s.name; row.unit = s.unit }, label = { Text(s.name) })
                                 }
                             }
                         }
@@ -4023,7 +4043,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                             CreatePurchaseArgs(
                                 pbfName = pbfName,
                                 date = date,
-                                items = rows.map { CreatePurchaseItemArgs(it.name, it.qty.toIntOrNull() ?: 0, parseDecimal(it.price.text)) }
+                                items = rows.map { CreatePurchaseItemArgs(it.name, it.qty.toIntOrNull() ?: 0, parseDecimal(it.price.text), it.unit) }
                             )
                         )
                         if (res is ApiResult.Success) onSaved()
@@ -4056,5 +4076,11 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 DatePicker(state = datePickerState)
             }
         }
+    }
+    // Pemilih satuan untuk baris yang diketuk (daftar UNITS yang sama dengan
+    // formulir Stok: Strip, Botol, Vial, Ampul, Box, ...).
+    unitPickerRow?.let { target ->
+        val options = if (target.unit in UNITS) UNITS else listOf(target.unit) + UNITS
+        OptionPickerSheet(title = "Satuan", options = options, selected = target.unit, onSelect = { target.unit = it; unitPickerRow = null }, onDismiss = { unitPickerRow = null })
     }
 }
