@@ -23,6 +23,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -221,7 +223,11 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
             sheetState = moreSheetState,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         ) {
-            Column(Modifier.padding(horizontal = 8.dp).padding(top = 8.dp, bottom = 24.dp)) {
+            // Isi sheet bisa DIGULIR: di mode lanskap (HP/tablet) tinggi layar
+            // pendek sehingga tanpa gulir baris terbawah (Mode Terang/Gelap
+            // dan Tentang Aplikasi) terpotong dan tidak bisa diketuk
+            // (laporan Achmad 2026-10-29).
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 8.dp).padding(top = 8.dp, bottom = 24.dp)) {
                 Text("Menu Lainnya", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
                 listOf(
                     Triple("laba", "Laba", Icons.Default.TrendingUp),
