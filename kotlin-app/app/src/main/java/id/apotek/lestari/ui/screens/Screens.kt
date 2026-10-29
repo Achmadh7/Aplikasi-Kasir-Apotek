@@ -118,7 +118,7 @@ import java.util.TimeZone
 
 private val repo = Repository()
 val CATEGORIES = listOf("Umum","Obat Bebas","Obat Bebas Terbatas","Obat Keras","Antibiotik","Vitamin","Pereda Nyeri","Obat Batuk & Flu","Pencernaan","Kulit","Mata","Lainnya")
-val UNITS = listOf("Strip","Botol","Vial","Ampul","Box","Tablet","Kapsul","Tube","Sachet","Pcs")
+val UNITS = listOf("Strip","Botol","Vial","Ampul","Box","Tablet","Kapsul","Tube","Drop","Sachet","Pcs")
 
 // Kelas lebar jendela (HP/tablet, portrait/landscape) untuk layout adaptif.
 // Compact < 600dp, Medium 600-840dp, Expanded > 840dp. Nilai disediakan dari
