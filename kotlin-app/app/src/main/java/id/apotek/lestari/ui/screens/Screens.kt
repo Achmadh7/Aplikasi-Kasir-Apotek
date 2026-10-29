@@ -118,7 +118,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 private val repo = Repository()
-val CATEGORIES = listOf("Umum","Antibiotik","Vitamin","Pereda Nyeri","Obat Batuk & Flu","Pencernaan","Kulit","Mata","Lainnya")
+val CATEGORIES = listOf("Umum","Obat Bebas","Obat Bebas Terbatas","Obat Keras","Antibiotik","Vitamin","Pereda Nyeri","Obat Batuk & Flu","Pencernaan","Kulit","Mata","Lainnya")
 val UNITS = listOf("Strip","Botol","Box","Tablet","Kapsul","Tube","Sachet","Pcs")
 
 // Kelas lebar jendela (HP/tablet, portrait/landscape) untuk layout adaptif.
