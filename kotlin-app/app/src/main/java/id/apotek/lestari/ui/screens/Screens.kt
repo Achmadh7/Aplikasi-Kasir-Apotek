@@ -3749,7 +3749,7 @@ fun PbfScreen() {
                         Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                     }
                     Spacer(Modifier.width(12.dp))
-                    Text("PBF", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text("Faktur PBF", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -3832,6 +3832,10 @@ fun PbfScreen() {
                                 Spacer(Modifier.height(12.dp))
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                 Spacer(Modifier.height(12.dp))
+                                if (p.invoiceNo.isNotBlank()) {
+                                    Text("No. Faktur: ${p.invoiceNo}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Spacer(Modifier.height(8.dp))
+                                }
                                 p.items.forEach { pItem ->
                                     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                                         Column(Modifier.weight(1f)) {
@@ -3897,6 +3901,7 @@ fun PbfScreen() {
 @Composable
 private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     var pbfName by remember { mutableStateOf("") }
+    var invoiceNo by remember { mutableStateOf("") }
     var date by remember { mutableStateOf(dayKeyID(Date())) }
     var rows by remember { mutableStateOf(listOf(PurchaseItemRow())) }
     var activeRow by remember { mutableStateOf<PurchaseItemRow?>(null) }
@@ -3938,6 +3943,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
             }
             OutlinedTextField(pbfName, { pbfName = it }, label = { Text("Nama PBF") }, placeholder = { Text("mis. nama distributornya") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(invoiceNo, { invoiceNo = it }, label = { Text("Nomor Faktur (boleh kosong)") }, placeholder = { Text("mis. nomor faktur dari PBF") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 value = formatDateID(date), onValueChange = {}, label = { Text("Tanggal Beli") },
                 readOnly = true, singleLine = true,
@@ -4043,7 +4049,8 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                             CreatePurchaseArgs(
                                 pbfName = pbfName,
                                 date = date,
-                                items = rows.map { CreatePurchaseItemArgs(it.name, it.qty.toIntOrNull() ?: 0, parseDecimal(it.price.text), it.unit) }
+                                items = rows.map { CreatePurchaseItemArgs(it.name, it.qty.toIntOrNull() ?: 0, parseDecimal(it.price.text), it.unit) },
+                                invoiceNo = invoiceNo
                             )
                         )
                         if (res is ApiResult.Success) onSaved()

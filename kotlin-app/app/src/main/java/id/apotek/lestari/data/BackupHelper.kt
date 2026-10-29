@@ -109,6 +109,7 @@ object BackupHelper {
             val o = JSONObject()
             o.put("id", p.id)
             o.put("pbfName", p.pbfName)
+            o.put("invoiceNo", p.invoiceNo)
             o.put("date", p.date)
             o.put("total", p.total)
             o.put("createdAt", p.createdAt)
@@ -284,6 +285,7 @@ object BackupHelper {
                         PurchaseEntity(
                             id = reqInt(o, "id", label),
                             pbfName = reqString(o, "pbfName", label),
+                            invoiceNo = o.optString("invoiceNo", ""),
                             date = o.optString("date", ""),
                             total = reqInt(o, "total", label),
                             createdAt = o.optString("createdAt", "")

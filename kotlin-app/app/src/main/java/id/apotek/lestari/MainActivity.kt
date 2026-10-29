@@ -234,7 +234,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                     Triple("terlaris", "Obat Terlaris", Icons.Default.Leaderboard),
                     Triple("pengingat", "Pengingat", Icons.Default.NotificationsActive),
                     Triple("riwayat", "Riwayat", Icons.Default.ReceiptLong),
-                    Triple("pbf", "PBF", Icons.Default.LocalShipping),
+                    Triple("pbf", "Faktur PBF", Icons.Default.LocalShipping),
                     Triple("backup", "Backup & Restore", Icons.Default.Backup)
                 ).forEach { (route, label, icon) ->
                     Row(

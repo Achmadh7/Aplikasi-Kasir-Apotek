@@ -79,6 +79,8 @@ data class CashEntryEntity(
 data class PurchaseEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val pbfName: String, // nama perusahaan PBF (distributor)
+    // Nomor faktur dari PBF (permintaan Achmad 2026-10-29); "" = tidak diisi.
+    @ColumnInfo(defaultValue = "") val invoiceNo: String = "",
     val date: String, // "yyyy-MM-dd" — tanggal pembelian yang dipilih pengguna
     val total: Int,
     val createdAt: String // ISO UTC — kapan catatan dibuat
@@ -265,9 +267,17 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Nomor faktur untuk catatan pembelian PBF (menu "Faktur PBF").
+        // Catatan lama kosong lewat DEFAULT kolom.
+        db.execSQL("ALTER TABLE `purchases` ADD COLUMN `invoiceNo` TEXT NOT NULL DEFAULT ''")
+    }
+}
+
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -292,7 +302,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
                 }
             }
         }

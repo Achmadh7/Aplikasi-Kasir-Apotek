@@ -603,6 +603,7 @@ class Repository {
             Purchase(
                 id = p.id,
                 pbfName = p.pbfName,
+                invoiceNo = p.invoiceNo,
                 date = p.date,
                 total = p.total,
                 createdAt = p.createdAt,
@@ -628,6 +629,7 @@ class Repository {
             newId = dao.insert(
                 PurchaseEntity(
                     pbfName = args.pbfName.trim(),
+                    invoiceNo = args.invoiceNo.trim(),
                     date = args.date,
                     total = total,
                     createdAt = nowIso()
