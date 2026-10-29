@@ -1738,7 +1738,6 @@ private fun OptionPickerSheet(
 @Composable
 private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () -> Unit) {
     var name by remember(editing) { mutableStateOf(editing?.name ?: "") }
-    var barcode by remember(editing) { mutableStateOf(editing?.barcode ?: "") }
     var category by remember(editing) { mutableStateOf(editing?.category ?: "Umum") }
     var unit by remember(editing) { mutableStateOf(editing?.unit ?: "Strip") }
     var showCategorySheet by remember { mutableStateOf(false) }
@@ -1779,7 +1778,6 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
             }
             OutlinedTextField(name, { name = it }, label = { Text("Nama Obat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(barcode, { barcode = it }, label = { Text("Barcode (boleh kosong)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 value = category, onValueChange = {}, label = { Text("Kategori") },
                 readOnly = true, singleLine = true,
@@ -1821,7 +1819,11 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                             val s = parseDecimal(sell.text)
                             val st = stock.toIntOrNull() ?: 0
                             val exp = expiry.ifBlank { null }
-                            val bc = barcode.ifBlank { null }
+                            // Barcode tidak lagi diisi lewat formulir (kolomnya
+                            // dihapus atas permintaan Achmad 2026-10-29); saat edit,
+                            // barcode lama (mis. dari impor Excel) dipertahankan
+                            // supaya pencocokan impor berikutnya tidak rusak.
+                            val bc = editing?.barcode
                             val result = if (editing == null) {
                                 repo.createMedicine(MedicineArgs(name, cat, unt, b, s, st, exp, bc))
                             } else {
