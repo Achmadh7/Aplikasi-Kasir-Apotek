@@ -3646,15 +3646,10 @@ fun TentangScreen() {
 
 private class PurchaseItemRow {
     var name by mutableStateOf("")
-    var unit by mutableStateOf("Box")
+    var unit by mutableStateOf("Strip")
     var qty by mutableStateOf("")
     var price by mutableStateOf(TextFieldValue(""))
 }
-
-// Satuan khusus pembelian PBF: hanya Botol dan Box (keputusan Achmad
-// 2026-10-29 — belanja dari PBF memang per botol/box; daftar UNITS lengkap
-// tetap dipakai formulir Stok seperti biasa).
-private val PURCHASE_UNITS = listOf("Botol", "Box")
 
 @Composable
 fun PbfScreen() {
@@ -3861,8 +3856,8 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Saran nama obat dari data Stok (hanya saran ketik — memilihnya TIDAK
-    // mengubah stok obat yang bersangkutan). Satuan baris ikut terisi bila
-    // satuan obat itu di Stok adalah Botol/Box (satuan pembelian PBF).
+    // mengubah stok obat yang bersangkutan). Memilih saran juga mengisi
+    // satuan baris ini dengan satuan obat itu di Stok.
     LaunchedEffect(Unit) {
         (repo.listMedicines() as? ApiResult.Success)?.let { res -> meds = res.data.medicines }
     }
@@ -3944,7 +3939,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                         if (suggestions.isNotEmpty()) {
                             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 suggestions.forEach { s ->
-                                    AssistChip(onClick = { row.name = s.name; if (s.unit in PURCHASE_UNITS) row.unit = s.unit }, label = { Text(s.name) })
+                                    AssistChip(onClick = { row.name = s.name; row.unit = s.unit }, label = { Text(s.name) })
                                 }
                             }
                         }
@@ -4030,12 +4025,11 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
             }
         }
     }
-    // Pemilih satuan untuk baris yang diketuk — khusus pembelian PBF hanya
-    // Botol dan Box (PURCHASE_UNITS). Satuan lama di luar daftar itu (mis.
-    // "Strip" dari catatan sebelum aturan ini) tetap ditampilkan sebagai
-    // pilihan teratas supaya bisa dilihat dan diganti.
+    // Pemilih satuan untuk baris yang diketuk — daftar UNITS yang sama
+    // persis dengan formulir Stok (keputusan Achmad 2026-10-29: satuan PBF
+    // disamakan dengan Stok; sebelumnya sempat hanya Botol/Box).
     unitPickerRow?.let { target ->
-        val options = if (target.unit in PURCHASE_UNITS) PURCHASE_UNITS else listOf(target.unit) + PURCHASE_UNITS
+        val options = if (target.unit in UNITS) UNITS else listOf(target.unit) + UNITS
         OptionPickerSheet(title = "Satuan", options = options, selected = target.unit, onSelect = { target.unit = it; unitPickerRow = null }, onDismiss = { unitPickerRow = null })
     }
 }
