@@ -273,7 +273,9 @@ class Repository {
                             name = item.name, category = item.category, unit = item.unit,
                             buyPrice = item.buyPrice, sellPrice = item.sellPrice,
                             stock = item.stock, minStock = item.minStock,
-                            expiryDate = item.expiryDate, barcode = barcode
+                            // Baris impor tanpa barcode: pertahankan barcode lama
+                            // (jangan ditimpa null — obat jadi tidak bisa dipindai).
+                            expiryDate = item.expiryDate, barcode = barcode ?: existing.barcode
                         )
                     )
                     updated++
@@ -379,7 +381,10 @@ class Repository {
         CashBalance(dao.sumIn(), dao.sumOut())
     }
 
-    suspend fun listCashEntries(limit: Int = 200): ApiResult<ListCashResponse> = call {
+    // Bawaan: muat SEMUA entri (bukan 200 teratas). Keuangan menyaring per
+    // periode di UI dari daftar ini dan Saldo Kas dihitung dari data lengkap,
+    // jadi daftar yang terpotong membuat daftar dan saldo tidak cocok.
+    suspend fun listCashEntries(limit: Int = Int.MAX_VALUE): ApiResult<ListCashResponse> = call {
         val entries = DatabaseProvider.db.cashDao().getAll().take(limit).map { it.toModel() }
         ListCashResponse(entries)
     }
