@@ -153,7 +153,10 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
             // semi-transparan bergradasi halus + kilau di tepi atas, bordir
             // biru tipis dengan bayangan biru lembut (efek menyala), dan tab
             // terpilih berupa lingkaran gradasi biru berisi ikon/label putih.
-            val pillShape = RoundedCornerShape(36.dp)
+            // Pill diperbesar sedikit (tinggi 72 -> 80dp, jari-jari 36 -> 40dp;
+            // permintaan Achmad 2026-10-30) supaya tepi di sekeliling
+            // lingkaran tab aktif 64dp tidak terlalu tipis.
+            val pillShape = RoundedCornerShape(40.dp)
             val glowColor = Color(0xFF42A5F5)
             val glassBrush = if (isDark) {
                 Brush.verticalGradient(
@@ -172,7 +175,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .widthIn(max = 480.dp)
-                        .height(72.dp)
+                        .height(80.dp)
                         .shadow(
                             elevation = 16.dp,
                             shape = pillShape,
@@ -195,7 +198,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                                 brush = Brush.verticalGradient(
                                     listOf(Color.White.copy(alpha = if (isDark) 0.10f else 0.35f), Color.Transparent)
                                 ),
-                                shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp)
+                                shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
                             )
                     )
                     Row(
@@ -363,7 +366,7 @@ private fun RowScope.PillTab(
                 modifier = Modifier
                     // 56 -> 64dp (permintaan Achmad 2026-10-30): label panjang
                     // seperti "Keuangan" sebelumnya tidak muat di dalam
-                    // lingkaran 56dp; 64dp masih pas di pill setinggi 72dp.
+                    // lingkaran 56dp; 64dp pas di pill setinggi 80dp.
                     .size(64.dp)
                     .background(
                         brush = Brush.linearGradient(
