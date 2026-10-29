@@ -149,46 +149,52 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     }
     Scaffold(
         bottomBar = {
-            // Bar bawah RATA klasik Material 3 (pilihan Achmad 2026-10-30,
-            // opsi 1 revamp total): menempel penuh di tepi bawah, TIDAK
-            // mengambang. Tab aktif ditandai kapsul mendatar lembut di
-            // belakang ikonnya (indikator bawaan NavigationBarItem); ikon +
-            // label selalu tampil di semua tab. Menggantikan pill kaca
-            // gradasi yang di HP terlihat aneh (lingkaran 64dp terlalu
-            // dominan dan seperti menonjol keluar dari pill).
-            // Polesan elegan (kombinasi opsi 1 + 2, pilihan Achmad
-            // 2026-10-30): warna bar SAMA dengan latar halaman (menyatu,
-            // elevasi tonal dimatikan) + garis rambut outlineVariant di
-            // tepi atasnya; ikon tab tidak aktif berupa garis (outlined)
-            // dan menjadi terisi (filled) saat aktif.
-            Column {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    tonalElevation = 0.dp
+            // Bar bawah MELAYANG LEMBUT model dock (pilihan Achmad 2026-10-30,
+            // opsi 1 anti-kaku): NavigationBar rata dibungkus Surface membulat
+            // 28dp, berjarak 16dp dari kiri/kanan dan 12dp dari bawah layar,
+            // dengan bayangan lembut — terlepas dari tepi layar TANPA kembali
+            // ke pill kapsul lama. Warna bar tetap sama dengan latar halaman
+            // + bordir rambut outlineVariant (polesan elegan 1+2); ikon tidak
+            // aktif outlined, aktif filled; indikator kapsul bawaan
+            // NavigationBarItem; ikon + label selalu tampil.
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 12.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(28.dp),
+                    color = MaterialTheme.colorScheme.background,
+                    shadowElevation = 8.dp,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                TABS.forEach { tab ->
-                    val selected = when (tab.route) {
-                        "beranda" -> current == "beranda"
-                        "stok" -> current == "stok"
-                        "kasir" -> current == "kasir"
-                        "keuangan" -> current == "keuangan"
-                        else -> current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf")
+                    NavigationBar(
+                        containerColor = Color.Transparent,
+                        tonalElevation = 0.dp,
+                        windowInsets = WindowInsets(0)
+                    ) {
+                        TABS.forEach { tab ->
+                            val selected = when (tab.route) {
+                                "beranda" -> current == "beranda"
+                                "stok" -> current == "stok"
+                                "kasir" -> current == "kasir"
+                                "keuangan" -> current == "keuangan"
+                                else -> current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf")
+                            }
+                            NavigationBarItem(
+                                selected = selected,
+                                onClick = { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) },
+                                icon = { Icon(if (selected) tab.icon else tab.iconOutlined, contentDescription = tab.label) },
+                                label = { Text(tab.label) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
                     }
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) },
-                        icon = { Icon(if (selected) tab.icon else tab.iconOutlined, contentDescription = tab.label) },
-                        label = { Text(tab.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-                }
                 }
             }
         }
