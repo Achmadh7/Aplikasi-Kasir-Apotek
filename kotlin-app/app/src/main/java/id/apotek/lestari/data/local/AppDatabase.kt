@@ -85,6 +85,10 @@ data class PurchaseEntity(
     val total: Int, // total belanja TERMASUK ppn
     // Jumlah PPN (Rp) dari faktur (permintaan Achmad 2026-10-29); 0 = tanpa PPN.
     @ColumnInfo(defaultValue = "0") val ppn: Int = 0,
+    // Cara bayar: "CASH" / "KREDIT" (permintaan Achmad 2026-10-30). Hanya
+    // CASH yang dihitung ringkasan Belanja Hari Ini/Bulan Ini; catatan lama
+    // dianggap CASH lewat DEFAULT kolom.
+    @ColumnInfo(defaultValue = "CASH") val paymentType: String = "CASH",
     val createdAt: String // ISO UTC — kapan catatan dibuat
 )
 
@@ -285,9 +289,18 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
     }
 }
 
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Cara bayar (CASH/KREDIT) untuk catatan Faktur PBF. Catatan lama
+        // dianggap CASH lewat DEFAULT kolom, jadi total ringkasan lama
+        // tidak berubah.
+        db.execSQL("ALTER TABLE `purchases` ADD COLUMN `paymentType` TEXT NOT NULL DEFAULT 'CASH'")
+    }
+}
+
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -312,7 +325,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10).build()
                 }
             }
         }

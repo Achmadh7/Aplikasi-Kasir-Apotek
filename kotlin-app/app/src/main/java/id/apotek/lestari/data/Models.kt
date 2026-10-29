@@ -69,6 +69,7 @@ data class Purchase(
     val date: String = "", // "yyyy-MM-dd"
     val total: Int = 0, // termasuk ppn
     val ppn: Int = 0, // jumlah PPN (Rp); 0 = tanpa PPN
+    val paymentType: String = "CASH", // "CASH" / "KREDIT" — hanya CASH masuk ringkasan belanja
     val createdAt: String = "",
     val items: List<PurchaseItem> = emptyList()
 )
@@ -123,7 +124,7 @@ data class CreateSaleItemArgs(val medicineId: Int, val qty: Int, val useWholesal
 data class CreateSaleArgs(val items: List<CreateSaleItemArgs>, val paymentMethod: String, val amountPaid: Int)
 data class CreateCashEntryArgs(val type: String, val category: String, val description: String, val amount: Int, val createdAt: String? = null)
 data class CreatePurchaseItemArgs(val medicineName: String, val qty: Int, val buyPrice: Int, val unit: String = "Strip")
-data class CreatePurchaseArgs(val pbfName: String, val date: String, val items: List<CreatePurchaseItemArgs>, val invoiceNo: String = "", val ppn: Int = 0)
+data class CreatePurchaseArgs(val pbfName: String, val date: String, val items: List<CreatePurchaseItemArgs>, val invoiceNo: String = "", val ppn: Int = 0, val paymentType: String = "CASH")
 
 // ---- Per-action responses ----
 data class ListMedicinesResponse(val medicines: List<Medicine> = emptyList())

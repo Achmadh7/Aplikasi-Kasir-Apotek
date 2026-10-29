@@ -607,6 +607,7 @@ class Repository {
                 date = p.date,
                 total = p.total,
                 ppn = p.ppn,
+                paymentType = p.paymentType,
                 createdAt = p.createdAt,
                 items = itemsByPurchase[p.id].orEmpty().map { it.toModel() }
             )
@@ -634,6 +635,7 @@ class Repository {
                     date = args.date,
                     total = total,
                     ppn = args.ppn,
+                    paymentType = args.paymentType,
                     createdAt = nowIso()
                 )
             ).toInt()

@@ -3732,9 +3732,12 @@ fun PbfScreen() {
     val todayKey = dayKeyID(Date())
     val yesterdayKey = dayKeyID(Date(System.currentTimeMillis() - 86_400_000L))
     val monthPrefix = todayKey.substring(0, 7)
-    val todayPurchases = purchases.filter { it.date == todayKey }
+    // Ringkasan belanja hanya menghitung pembelian CASH (permintaan Achmad
+    // 2026-10-30): pembelian Kredit belum masuk total Hari Ini/Bulan Ini.
+    // Daftar riwayat di bawah tetap menampilkan semuanya.
+    val todayPurchases = purchases.filter { it.date == todayKey && it.paymentType == "CASH" }
     val todayTotal = todayPurchases.sumOf { it.total }
-    val monthTotal = purchases.filter { it.date.startsWith(monthPrefix) }.sumOf { it.total }
+    val monthTotal = purchases.filter { it.date.startsWith(monthPrefix) && it.paymentType == "CASH" }.sumOf { it.total }
     val sortedGroups = purchases.groupBy { it.date }.entries.sortedByDescending { it.key }
 
     Box(Modifier.fillMaxSize()) {
@@ -3822,7 +3825,7 @@ fun PbfScreen() {
                                     Text(p.pbfName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                     val namesPreview = p.items.take(3).joinToString(", ") { it.medicineName }
                                     val suffix = if (p.items.size > 3) " +${p.items.size - 3} lagi" else ""
-                                    Text("${p.items.size} obat • $namesPreview$suffix", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("${p.items.size} obat • ${if (p.paymentType == "KREDIT") "Kredit" else "Cash"} • $namesPreview$suffix", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                                 Spacer(Modifier.width(8.dp))
                                 Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -3909,6 +3912,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     var pbfName by remember { mutableStateOf("") }
     var invoiceNo by remember { mutableStateOf("") }
     var ppn by remember { mutableStateOf(TextFieldValue("")) }
+    var paymentType by remember { mutableStateOf("CASH") }
     var date by remember { mutableStateOf(dayKeyID(Date())) }
     var rows by remember { mutableStateOf(listOf(PurchaseItemRow())) }
     var activeRow by remember { mutableStateOf<PurchaseItemRow?>(null) }
@@ -3961,6 +3965,12 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 interactionSource = dateInteraction,
                 modifier = Modifier.fillMaxWidth()
             )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Pembayaran", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                PriceModeChip("Cash", selected = paymentType == "CASH") { paymentType = "CASH" }
+                Spacer(Modifier.width(6.dp))
+                PriceModeChip("Kredit", selected = paymentType == "KREDIT") { paymentType = "KREDIT" }
+            }
             Spacer(Modifier.height(4.dp))
             Text("Obat yang Dibeli", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             rows.forEachIndexed { index, row ->
@@ -4062,7 +4072,8 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                                 date = date,
                                 items = rows.map { CreatePurchaseItemArgs(it.name, it.qty.toIntOrNull() ?: 0, parseDecimal(it.price.text), it.unit) },
                                 invoiceNo = invoiceNo,
-                                ppn = parseDecimal(ppn.text)
+                                ppn = parseDecimal(ppn.text),
+                                paymentType = paymentType
                             )
                         )
                         if (res is ApiResult.Success) onSaved()
