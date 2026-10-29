@@ -626,7 +626,7 @@ class Repository {
                     purchaseId = newId,
                     medicineName = it.medicineName.trim(),
                     qty = it.qty,
-                    unit = it.unit.ifBlank { "Strip" },
+                    unit = it.unit.ifBlank { "Box" },
                     buyPrice = it.buyPrice,
                     subtotal = it.qty * it.buyPrice
                 )
