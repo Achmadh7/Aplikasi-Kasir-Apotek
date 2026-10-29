@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -73,14 +74,20 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-data class TabDef(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
-// Tab pill bawah: 5 tab (Kasir kini tab biasa, bukan FAB melayang).
+data class TabDef(
+    val route: String,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val iconOutlined: androidx.compose.ui.graphics.vector.ImageVector
+)
+// Tab bar bawah: 5 tab (Kasir tab biasa, bukan FAB melayang). Tiap tab punya
+// ikon garis (outlined, saat tidak aktif) dan ikon terisi (filled, saat aktif).
 val TABS = listOf(
-    TabDef("beranda", "Beranda", Icons.Default.Home),
-    TabDef("stok", "Stok", Icons.Default.Medication),
-    TabDef("kasir", "Kasir", Icons.Default.PointOfSale),
-    TabDef("keuangan", "Keuangan", Icons.Default.AccountBalanceWallet),
-    TabDef("lainnya", "Lainnya", Icons.Default.MoreHoriz)
+    TabDef("beranda", "Beranda", Icons.Default.Home, Icons.Outlined.Home),
+    TabDef("stok", "Stok", Icons.Default.Medication, Icons.Outlined.Medication),
+    TabDef("kasir", "Kasir", Icons.Default.PointOfSale, Icons.Outlined.PointOfSale),
+    TabDef("keuangan", "Keuangan", Icons.Default.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet),
+    TabDef("lainnya", "Lainnya", Icons.Default.MoreHoriz, Icons.Outlined.MoreHoriz)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -149,7 +156,17 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
             // label selalu tampil di semua tab. Menggantikan pill kaca
             // gradasi yang di HP terlihat aneh (lingkaran 64dp terlalu
             // dominan dan seperti menonjol keluar dari pill).
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            // Polesan elegan (kombinasi opsi 1 + 2, pilihan Achmad
+            // 2026-10-30): warna bar SAMA dengan latar halaman (menyatu,
+            // elevasi tonal dimatikan) + garis rambut outlineVariant di
+            // tepi atasnya; ikon tab tidak aktif berupa garis (outlined)
+            // dan menjadi terisi (filled) saat aktif.
+            Column {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    tonalElevation = 0.dp
+                ) {
                 TABS.forEach { tab ->
                     val selected = when (tab.route) {
                         "beranda" -> current == "beranda"
@@ -161,7 +178,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                     NavigationBarItem(
                         selected = selected,
                         onClick = { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) },
-                        icon = { Icon(tab.icon, contentDescription = tab.label) },
+                        icon = { Icon(if (selected) tab.icon else tab.iconOutlined, contentDescription = tab.label) },
                         label = { Text(tab.label) },
                         colors = NavigationBarItemDefaults.colors(
                             indicatorColor = MaterialTheme.colorScheme.primaryContainer,
@@ -171,6 +188,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
+                }
                 }
             }
         }
