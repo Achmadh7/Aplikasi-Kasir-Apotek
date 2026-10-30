@@ -219,7 +219,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                 composable("stok") { StokScreen() }
                 composable("keuangan") { KeuanganScreen() }
                 composable("laba") { LabaScreen() }
-                composable("pengingat") { PengingatScreen(onGoStok = { goToTab("stok") }) }
+                composable("pengingat") { PengingatScreen(onGoStok = { goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
                 composable("riwayat") { RiwayatScreen() }
                 composable("backup") { BackupScreen() }
                 composable("terlaris") { ObatTerlarisScreen() }

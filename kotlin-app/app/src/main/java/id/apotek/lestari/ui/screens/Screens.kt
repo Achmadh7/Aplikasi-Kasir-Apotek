@@ -350,6 +350,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
     var outOfStockNames by remember { mutableStateOf<List<String>>(emptyList()) }
     var lowStockMeds by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
     var expiringMeds by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var dueBills by remember { mutableStateOf<List<Purchase>>(emptyList()) }
     LaunchedEffect(Unit) {
         (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data }
         val meds = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
@@ -366,6 +367,13 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         expiringMeds = meds.filter { it.expiryDate != null && it.expiryDate <= in30Key }
             .sortedBy { it.expiryDate }
             .map { it.name to it.expiryDate!! }
+        // Tagihan PBF: pembelian Kredit yang jatuh temponya <= 7 hari lagi
+        // atau sudah lewat (pilihan Achmad 2026-10-30, saran no. 1) —
+        // diurutkan dari jatuh tempo paling awal.
+        val purchases = (repo.listPurchases() as? ApiResult.Success)?.data?.purchases.orEmpty()
+        dueBills = purchases.filter { p ->
+            p.paymentType == "KREDIT" && p.dueDate.isNotBlank() && (dueDaysLeft(p.dueDate) ?: Long.MAX_VALUE) <= 7L
+        }.sortedBy { it.dueDate }
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -503,8 +511,30 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             }
                             if (expiringMeds.size > 5) Text("+${expiringMeds.size - 5} lainnya", style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
                         }
-                        if (d.lowStockCount == 0 && d.expiringCount == 0) Text("Semua stok dan kadaluarsa aman.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp))
-                        if (d.lowStockCount > 0 || d.expiringCount > 0) {
+                        // Tagihan PBF mendekati jatuh tempo: nama PBF ditulis
+                        // lengkap + sisa hari di kanan (permintaan Achmad
+                        // 2026-10-30 supaya informasinya lengkap), maks. 3.
+                        if (dueBills.isNotEmpty()) {
+                            Text("• ${dueBills.size} tagihan PBF mendekati jatuh tempo", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp))
+                            dueBills.take(3).forEach { p ->
+                                val daysLeft = dueDaysLeft(p.dueDate) ?: 0L
+                                val (dueLabel, dueColor) = when {
+                                    daysLeft < 0L -> "Lewat ${-daysLeft} hari" to ChiliRed
+                                    daysLeft == 0L -> "Jatuh tempo hari ini" to ChiliRed
+                                    daysLeft == 1L -> "Besok jatuh tempo" to Color(0xFFFFB74D)
+                                    else -> "$daysLeft hari lagi" to Color(0xFFFFB74D)
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+                                    Box(Modifier.size(6.dp).background(dueColor, CircleShape))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(p.pbfName, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(dueLabel, style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = dueColor)
+                                }
+                            }
+                            if (dueBills.size > 3) Text("+${dueBills.size - 3} lainnya", style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
+                        }
+                        if (d.lowStockCount == 0 && d.expiringCount == 0 && dueBills.isEmpty()) Text("Semua stok dan kadaluarsa aman.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp))
+                        if (d.lowStockCount > 0 || d.expiringCount > 0 || dueBills.isNotEmpty()) {
                             Spacer(Modifier.height(6.dp))
                             TextButton(onClick = onGoPengingat) { Text("Lihat Pengingat", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp)) }
                         }
@@ -2716,12 +2746,34 @@ fun ObatTerlarisScreen() {
 // ---------- Pengingat ----------
 
 @Composable
-fun PengingatScreen(onGoStok: () -> Unit) {
+fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
+    var dueBills by remember { mutableStateOf<List<Purchase>>(emptyList()) }
     var window by remember { mutableStateOf(90) }
     var filter by remember { mutableStateOf("all") } // all | expiry | low | critical
     var listEntered by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines } }
+    // Muat ulang setiap kali layar kembali tampil (ON_RESUME, pola yang sama
+    // seperti Laba) supaya tagihan yang baru ditandai lunas di Faktur PBF
+    // langsung hilang dari sini.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeKey by remember { mutableStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(resumeKey) {
+        (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines }
+        // Tagihan PBF: pembelian Kredit yang jatuh temponya <= 7 hari lagi
+        // atau sudah lewat (pilihan Achmad 2026-10-30, saran no. 1) —
+        // diurutkan dari jatuh tempo paling awal (paling mendesak di atas).
+        val purchases = (repo.listPurchases() as? ApiResult.Success)?.data?.purchases.orEmpty()
+        dueBills = purchases.filter { p ->
+            p.paymentType == "KREDIT" && p.dueDate.isNotBlank() && (dueDaysLeft(p.dueDate) ?: Long.MAX_VALUE) <= 7L
+        }.sortedBy { it.dueDate }
+    }
     LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
     val expired = medicines.filter { (daysUntilExpiry(it.expiryDate) ?: Int.MAX_VALUE) < 0 }
     val withinWindow = medicines.filter { val d = daysUntilExpiry(it.expiryDate); d != null && d >= 0 && d <= window }
@@ -2787,6 +2839,44 @@ fun PengingatScreen(onGoStok: () -> Unit) {
                     }
                     ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
                         ReminderCount(Icons.Default.PriorityHigh, "HABIS", "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.fillMaxWidth().padding(16.dp))
+                    }
+                }
+            }
+        }
+        if (dueBills.isNotEmpty()) {
+            item {
+                // Seksi tagihan PBF: nama PBF ditulis lengkap + nominal +
+                // sisa hari (permintaan Achmad 2026-10-30 supaya informasinya
+                // lengkap). Kartu bisa diketuk untuk membuka Faktur PBF.
+                Text("TAGIHAN PBF JATUH TEMPO", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(6.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    dueBills.forEach { p ->
+                        val daysLeft = dueDaysLeft(p.dueDate) ?: 0L
+                        val (dueLabel, dueColor) = when {
+                            daysLeft < 0L -> "Lewat ${-daysLeft} hari" to ChiliRed
+                            daysLeft == 0L -> "Jatuh tempo hari ini" to ChiliRed
+                            daysLeft == 1L -> "Besok jatuh tempo" to Color(0xFFFFB74D)
+                            else -> "$daysLeft hari lagi" to Color(0xFFFFB74D)
+                        }
+                        ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().clickable { onGoPbf() }) {
+                            Column(Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                                        Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
+                                    }
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(p.pbfName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                }
+                                Spacer(Modifier.height(6.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Schedule, null, tint = dueColor, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Jatuh tempo ${formatDateID(p.dueDate)} • $dueLabel", style = MaterialTheme.typography.bodySmall, color = dueColor)
+                                }
+                            }
+                        }
                     }
                 }
             }
