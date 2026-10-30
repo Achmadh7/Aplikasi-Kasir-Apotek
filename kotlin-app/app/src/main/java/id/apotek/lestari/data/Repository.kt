@@ -608,6 +608,7 @@ class Repository {
                 total = p.total,
                 ppn = p.ppn,
                 paymentType = p.paymentType,
+                dueDate = p.dueDate,
                 createdAt = p.createdAt,
                 items = itemsByPurchase[p.id].orEmpty().map { it.toModel() }
             )
@@ -636,6 +637,9 @@ class Repository {
                     total = total,
                     ppn = args.ppn,
                     paymentType = args.paymentType,
+                    // Jatuh tempo hanya berlaku untuk Kredit; selain itu
+                    // selalu disimpan kosong supaya tidak ada sisa tanggal.
+                    dueDate = if (args.paymentType == "KREDIT") args.dueDate.trim() else "",
                     createdAt = nowIso()
                 )
             ).toInt()

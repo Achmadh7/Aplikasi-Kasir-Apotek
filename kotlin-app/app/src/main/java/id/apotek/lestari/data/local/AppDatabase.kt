@@ -89,6 +89,10 @@ data class PurchaseEntity(
     // CASH yang dihitung ringkasan Belanja Hari Ini/Bulan Ini; catatan lama
     // dianggap CASH lewat DEFAULT kolom.
     @ColumnInfo(defaultValue = "CASH") val paymentType: String = "CASH",
+    // Tanggal jatuh tempo pembayaran Kredit "yyyy-MM-dd" (permintaan Achmad
+    // 2026-10-30); "" = tidak diisi / bukan Kredit. Murni informasi hitung
+    // mundur di kartu — tidak memengaruhi ringkasan.
+    @ColumnInfo(defaultValue = "") val dueDate: String = "",
     val createdAt: String // ISO UTC — kapan catatan dibuat
 )
 
@@ -301,9 +305,17 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
     }
 }
 
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Tanggal jatuh tempo untuk pembelian Kredit Faktur PBF. Catatan
+        // lama kosong ('') lewat DEFAULT kolom — tidak ada jatuh tempo.
+        db.execSQL("ALTER TABLE `purchases` ADD COLUMN `dueDate` TEXT NOT NULL DEFAULT ''")
+    }
+}
+
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -328,7 +340,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11).build()
                 }
             }
         }

@@ -208,6 +208,15 @@ private fun PurchasePaymentChip(paymentType: String) {
     }
 }
 
+/** Sisa hari menuju tanggal jatuh tempo (negatif = sudah lewat); null bila
+ *  tanggalnya kosong/rusak. Dihitung dari kunci hari "yyyy-MM-dd" via tengah
+ *  malam UTC supaya tidak bergeser zona waktu. */
+private fun dueDaysLeft(dueDate: String): Long? {
+    val due = utcMidnightMillis(dueDate) ?: return null
+    val today = utcMidnightMillis(dayKeyID(Date())) ?: return null
+    return (due - today) / 86_400_000L
+}
+
 /** Pilihan harga satuan di keranjang Kasir: "Ecer" (harga jual biasa) atau
  *  "Grosir" (harga jual grosir). Chip terpilih biru solid. */
 @Composable
@@ -510,7 +519,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 // Kartu uang: Pengeluaran & Selisih Kas Hari Ini disusun
                 // VERTIKAL selebar kartu (label di atas, angka di bawah) —
                 // diubah dari sejajar setengah lebar (saran asisten, dipilih
-                // Achmad 2026-10-30) supaya teks 20sp tidak kepotong.
+                // Achmad 2026-10-30) supaya teksnya tidak kepotong.
                 // Selisih Kas Bulan Ini di bawah garis pemisah.
                 ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
@@ -3869,6 +3878,29 @@ fun PbfScreen() {
                                 Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 Icon(if (isOpen) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
+                            // Info jatuh tempo untuk pembelian Kredit yang
+                            // tanggalnya diisi (permintaan Achmad 2026-10-30):
+                            // tanggal + sisa hari. Merah bila sudah lewat /
+                            // hari ini, oranye bila <= 7 hari, abu bila masih
+                            // lama. Hilang sendiri setelah Tandai Lunas
+                            // (paymentType berubah jadi CASH).
+                            if (p.paymentType == "KREDIT" && p.dueDate.isNotBlank()) {
+                                val daysLeft = dueDaysLeft(p.dueDate)
+                                if (daysLeft != null) {
+                                    val (dueLabel, dueColor) = when {
+                                        daysLeft < 0L -> "Lewat ${-daysLeft} hari" to ChiliRed
+                                        daysLeft == 0L -> "Jatuh tempo hari ini" to ChiliRed
+                                        daysLeft == 1L -> "Besok jatuh tempo" to Color(0xFFFFB74D)
+                                        daysLeft <= 7L -> "$daysLeft hari lagi" to Color(0xFFFFB74D)
+                                        else -> "$daysLeft hari lagi" to MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                                        Icon(Icons.Default.Schedule, null, tint = dueColor, modifier = Modifier.size(14.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Jatuh tempo ${formatDateID(p.dueDate)} • $dueLabel", style = MaterialTheme.typography.bodySmall, color = dueColor)
+                                    }
+                                }
+                            }
                             if (isOpen) {
                                 Spacer(Modifier.height(12.dp))
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -3983,12 +4015,14 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     var invoiceNo by remember { mutableStateOf("") }
     var ppn by remember { mutableStateOf(TextFieldValue("")) }
     var paymentType by remember { mutableStateOf("CASH") }
+    var dueDate by remember { mutableStateOf("") }
     var date by remember { mutableStateOf(dayKeyID(Date())) }
     var rows by remember { mutableStateOf(listOf(PurchaseItemRow())) }
     var activeRow by remember { mutableStateOf<PurchaseItemRow?>(null) }
     var unitPickerRow by remember { mutableStateOf<PurchaseItemRow?>(null) }
     var meds by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showDuePicker by remember { mutableStateOf(false) }
     var formError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -4005,6 +4039,11 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     val dateInteraction = remember { MutableInteractionSource() }
     LaunchedEffect(dateInteraction) {
         dateInteraction.interactions.collect { if (it is PressInteraction.Press) showDatePicker = true }
+    }
+    // Field Tanggal Jatuh Tempo: pola read-only + interactionSource yang sama.
+    val dueInteraction = remember { MutableInteractionSource() }
+    LaunchedEffect(dueInteraction) {
+        dueInteraction.interactions.collect { if (it is PressInteraction.Press) showDuePicker = true }
     }
 
     // Total Belanja = subtotal semua obat + PPN (PPN diketik sebagai nominal
@@ -4040,6 +4079,19 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 PriceModeChip("Cash", selected = paymentType == "CASH") { paymentType = "CASH" }
                 Spacer(Modifier.width(6.dp))
                 PriceModeChip("Kredit", selected = paymentType == "KREDIT") { paymentType = "KREDIT" }
+            }
+            // Tanggal jatuh tempo hanya untuk pembelian Kredit (permintaan
+            // Achmad 2026-10-30); boleh kosong — tanpa tanggal, kartu tidak
+            // menampilkan hitung mundur. Untuk Cash field ini tidak tampil.
+            if (paymentType == "KREDIT") {
+                OutlinedTextField(
+                    value = if (dueDate.isBlank()) "" else formatDateID(dueDate), onValueChange = {}, label = { Text("Tanggal Jatuh Tempo (boleh kosong)") },
+                    placeholder = { Text("Pilih tanggal") },
+                    readOnly = true, singleLine = true,
+                    trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = "Pilih tanggal jatuh tempo") },
+                    interactionSource = dueInteraction,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
             Spacer(Modifier.height(4.dp))
             Text("Obat yang Dibeli", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -4146,7 +4198,8 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                                 items = rows.map { CreatePurchaseItemArgs(it.name, it.qty.toIntOrNull() ?: 0, parseDecimal(it.price.text), it.unit) },
                                 invoiceNo = invoiceNo,
                                 ppn = parseDecimal(ppn.text),
-                                paymentType = paymentType
+                                paymentType = paymentType,
+                                dueDate = if (paymentType == "KREDIT") dueDate else ""
                             )
                         )
                         if (res is ApiResult.Success) onSaved()
@@ -4177,6 +4230,30 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
         ) {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 DatePicker(state = datePickerState)
+            }
+        }
+    }
+    if (showDuePicker) {
+        // Pemilih tanggal jatuh tempo: pola yang sama seperti Tanggal Beli.
+        // "Hapus" mengosongkan tanggal (jatuh tempo memang boleh kosong).
+        val duePickerState = rememberDatePickerState(initialSelectedDateMillis = utcMidnightMillis(dueDate.ifBlank { date }))
+        DatePickerDialog(
+            onDismissRequest = { showDuePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    duePickerState.selectedDateMillis?.let { dueDate = dayKeyID(Date(it)) }
+                    showDuePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { dueDate = ""; showDuePicker = false }) { Text("Hapus") }
+                    TextButton(onClick = { showDuePicker = false }) { Text("Batal") }
+                }
+            }
+        ) {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                DatePicker(state = duePickerState)
             }
         }
     }
