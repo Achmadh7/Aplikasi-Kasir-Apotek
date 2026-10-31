@@ -184,7 +184,7 @@ private fun pressBounceScale(interactionSource: MutableInteractionSource): Float
 private fun StepperButton(icon: ImageVector, description: String, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val scale = pressBounceScale(interactionSource)
-    IconButton(onClick = onClick, interactionSource = interactionSource, modifier = Modifier.size(32.dp).graphicsLayer(scaleX = scale, scaleY = scale)) {
+    IconButton(onClick = onClick, interactionSource = interactionSource, modifier = Modifier.size(48.dp).graphicsLayer(scaleX = scale, scaleY = scale)) {
         Icon(icon, description, modifier = Modifier.size(20.dp))
     }
 }
@@ -433,7 +433,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             }
                         }
                         Spacer(Modifier.height(8.dp))
-                        AnimatedAmount(d.todayIn, MaterialTheme.typography.displaySmall, MaterialTheme.colorScheme.onPrimaryContainer)
+                        AnimatedAmount(d.todayIn, MaterialTheme.typography.headlineLarge, MaterialTheme.colorScheme.onPrimaryContainer)
                         Spacer(Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Receipt, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(16.dp))
@@ -1097,12 +1097,12 @@ fun KasirScreen() {
                                     Surface(
                                         color = MaterialTheme.colorScheme.surfaceContainerHighest,
                                         shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.clickable { qtyEditTarget = ci }
+                                        modifier = Modifier.height(40.dp).clickable { qtyEditTarget = ci }
                                     ) {
                                         Text(
                                             "${ci.qty}",
                                             style = MaterialTheme.typography.titleMedium,
-                                            modifier = Modifier.width(44.dp).padding(vertical = 2.dp).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value),
+                                            modifier = Modifier.width(44.dp).fillMaxHeight().wrapContentHeight(Alignment.CenterVertically).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value),
                                             textAlign = TextAlign.Center
                                         )
                                     }
@@ -1111,7 +1111,7 @@ fun KasirScreen() {
                                 Spacer(Modifier.width(8.dp))
                                 // Hapus: keluarkan obat dari keranjang (di kanan
                                 // tombol + jumlah).
-                                IconButton(onClick = { cart.remove(ci) }, modifier = Modifier.size(32.dp)) {
+                                IconButton(onClick = { cart.remove(ci) }, modifier = Modifier.size(48.dp)) {
                                     Icon(Icons.Default.Delete, "Hapus", tint = ChiliRed, modifier = Modifier.size(20.dp))
                                 }
                                 Spacer(Modifier.weight(1f))
@@ -2252,13 +2252,14 @@ fun KeuanganScreen() {
                                 }
                             }
                         }
-                        if (scrollable) {
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "Geser untuk melihat hari lain",
-                                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Spacer(Modifier.height(8.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            if (scrollable) "Geser untuk melihat hari lain • Biru = masuk • Merah = keluar • Label hari ini ditebalkan"
+                            else "Biru = masuk • Merah = keluar • Label hari ini ditebalkan",
+                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -2593,7 +2594,7 @@ fun LabaScreen() {
                                                     Modifier.width(28.dp).height(barH.dp)
                                                         .background(
                                                             if (isMax) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
-                                                            RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                                                            RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
                                                         )
                                                 )
                                             }

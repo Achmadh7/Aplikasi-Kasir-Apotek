@@ -168,6 +168,9 @@ fun <T> expressiveSpring() = spring<T>(
 // Semua kartu konten memakai ExpressiveCard berbentuk AppCardShape; padding
 // isi kartu standar 16dp; jarak antar kartu dalam daftar layar CardGap
 // (Beranda memakai 20dp — pilihan Achmad dari screenshot, pengecualian sadar).
+// Tangga angka hero: satu angka penuh selebar kartu = headlineLarge (32sp);
+// ringkasan dua kolom (Obat Terlaris, Faktur PBF) = titleLarge (22sp) supaya
+// nominal panjang tetap muat berdampingan.
 val AppCardShape: Shape = RoundedCornerShape(28.dp)
 val CardGap = 16.dp
 
