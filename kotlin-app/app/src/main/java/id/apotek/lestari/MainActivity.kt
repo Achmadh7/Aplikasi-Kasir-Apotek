@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectableGroup
@@ -27,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -149,14 +151,18 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     }
     Scaffold(
         bottomBar = {
-            // Bar bawah MELAYANG LEMBUT model dock (pilihan Achmad 2026-10-30,
-            // opsi 1 anti-kaku): NavigationBar rata dibungkus Surface membulat
-            // 28dp, berjarak 16dp dari kiri/kanan dan 12dp dari bawah layar,
-            // dengan bayangan lembut — terlepas dari tepi layar TANPA kembali
-            // ke pill kapsul lama. Warna bar tetap sama dengan latar halaman
-            // + bordir rambut outlineVariant (polesan elegan 1+2); ikon tidak
-            // aktif outlined, aktif filled; indikator kapsul bawaan
-            // NavigationBarItem; ikon + label selalu tampil.
+            // Bar bawah MELAYANG model dock: Surface membulat 28dp, berjarak
+            // 16dp dari kiri/kanan dan 12dp dari bawah layar, bayangan lembut,
+            // warna sama dengan latar halaman + bordir rambut outlineVariant.
+            // Isi dock meniru referensi yang dikirim Achmad (2026-10-31):
+            // indikator tab aktif berupa SQUIRCLE (kotak membulat 52x38dp,
+            // sudut 13dp) di belakang ikon — bukan kapsul NavigationBarItem
+            // dan bukan lingkaran pill lama. Sesuai pilihan Achmad, LABEL
+            // TEKS tetap tampil di bawah ikon dan palet tetap biru medis
+            // (squircle primaryContainer, ikon aktif onPrimaryContainer,
+            // label aktif primary tebal). Ikon tidak aktif outlined, aktif
+            // filled. Tab dibuat manual (Row + Column) karena NavigationBarItem
+            // tidak bisa mengganti bentuk indikatornya.
             Box(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 12.dp)
             ) {
@@ -167,10 +173,9 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    NavigationBar(
-                        containerColor = Color.Transparent,
-                        tonalElevation = 0.dp,
-                        windowInsets = WindowInsets(0)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         TABS.forEach { tab ->
                             val selected = when (tab.route) {
@@ -180,19 +185,39 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                                 "keuangan" -> current == "keuangan"
                                 else -> current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf")
                             }
-                            NavigationBarItem(
-                                selected = selected,
-                                onClick = { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) },
-                                icon = { Icon(if (selected) tab.icon else tab.iconOutlined, contentDescription = tab.label) },
-                                label = { Text(tab.label) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.weight(1f)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = ripple()
+                                    ) { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) }
+                                    .padding(vertical = 2.dp)
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.size(width = 52.dp, height = 38.dp)
+                                        .background(
+                                            if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                            RoundedCornerShape(13.dp)
+                                        )
+                                ) {
+                                    Icon(
+                                        if (selected) tab.icon else tab.iconOutlined,
+                                        contentDescription = tab.label,
+                                        tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Spacer(Modifier.height(3.dp))
+                                Text(
+                                    tab.label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            )
+                            }
                         }
                     }
                 }
