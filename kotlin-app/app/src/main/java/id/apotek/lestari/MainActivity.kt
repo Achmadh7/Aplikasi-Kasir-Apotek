@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectableGroup
@@ -27,6 +28,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
@@ -151,31 +153,44 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     }
     Scaffold(
         bottomBar = {
-            // Bar bawah MELAYANG model dock: Surface membulat 28dp, berjarak
-            // 16dp dari kiri/kanan dan 12dp dari bawah layar. TANPA BAYANGAN
-            // sama sekali (flat — pilihan Achmad 2026-10-31, mengikuti
-            // referensinya): bayangan bawaan Surface terbukti berbintik/
-            // kotor di HP-nya, dan bayangan manual bernuansa biru juga
-            // akhirnya tidak dipakai. Pembedanya dari latar halaman kini:
-            // isi bar surfaceContainer (satu tingkat lebih terang dari
-            // background) + bordir rambut outlineVariant.
-            // Isi dock meniru referensi yang dikirim Achmad (2026-10-31):
-            // indikator tab aktif berupa SQUIRCLE (kotak membulat 52x38dp,
-            // sudut 13dp) di belakang ikon — bukan kapsul NavigationBarItem
-            // dan bukan lingkaran pill lama. Sesuai pilihan Achmad, LABEL
-            // TEKS tetap tampil di bawah ikon dan palet tetap biru medis
-            // (squircle primaryContainer, ikon aktif onPrimaryContainer,
-            // label aktif primary tebal). Ikon tidak aktif outlined, aktif
-            // filled. Tab dibuat manual (Row + Column) karena NavigationBarItem
-            // tidak bisa mengganti bentuk indikatornya.
+            // Bar bawah MELAYANG model dock LIQUID GLASS (permintaan Achmad
+            // 2026-10-31, menggantikan versi flat): badan bar gradasi
+            // semi-transparan (lebih terang & berkilau di atas, seperti
+            // permukaan kaca), tepi bercahaya (rim light — bordir gradasi
+            // terang di atas, redup di bawah), TANPA bayangan (bayangan
+            // terbukti berbintik di HP-nya). Blur latar sungguhan tidak
+            // dipakai: konten tidak mengalir di bawah slot bottomBar
+            // Scaffold, jadi di belakang bar hanya ada warna latar —
+            // efek kaca dibuat dari transparansi + cahaya tepi + kilau.
+            // Indikator tab aktif: SQUIRCLE (kotak membulat 52x38dp, sudut
+            // 13dp) gradasi biru #64B5F6 -> #1E88E5 dengan ikon putih;
+            // LABEL TEKS tetap tampil di bawah ikon (pilihan Achmad),
+            // label aktif primary tebal. Ikon tidak aktif outlined, aktif
+            // filled. Tab dibuat manual (Row + Column) karena
+            // NavigationBarItem tidak bisa mengganti bentuk indikatornya.
+            val glassStops: Array<Pair<Float, Color>> = if (isDark) arrayOf(
+                0f to Color.White.copy(alpha = 0.14f),
+                0.45f to MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.80f),
+                1f to MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f)
+            ) else arrayOf(
+                0f to Color.White.copy(alpha = 0.88f),
+                0.45f to Color.White.copy(alpha = 0.62f),
+                1f to Color.White.copy(alpha = 0.50f)
+            )
+            val glassBrush = Brush.verticalGradient(*glassStops)
+            val glassRim = Brush.verticalGradient(
+                if (isDark) listOf(Color.White.copy(alpha = 0.38f), Color.White.copy(alpha = 0.08f))
+                else listOf(Color.White.copy(alpha = 0.95f), Color(0xFF90A4AE).copy(alpha = 0.35f))
+            )
+            val squircleBrush = Brush.linearGradient(listOf(Color(0xFF64B5F6), Color(0xFF1E88E5)))
             Box(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 12.dp)
             ) {
-                Surface(
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                Box(
                     modifier = Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(glassBrush)
+                        .border(1.dp, glassRim, RoundedCornerShape(28.dp))
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
@@ -202,15 +217,15 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                                 Box(
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier.size(width = 52.dp, height = 38.dp)
-                                        .background(
-                                            if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                                            RoundedCornerShape(13.dp)
+                                        .then(
+                                            if (selected) Modifier.background(brush = squircleBrush, shape = RoundedCornerShape(13.dp))
+                                            else Modifier.background(Color.Transparent, RoundedCornerShape(13.dp))
                                         )
                                 ) {
                                     Icon(
                                         if (selected) tab.icon else tab.iconOutlined,
                                         contentDescription = tab.label,
-                                        tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
