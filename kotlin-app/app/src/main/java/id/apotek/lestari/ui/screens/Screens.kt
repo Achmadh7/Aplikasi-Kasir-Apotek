@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -1551,6 +1552,27 @@ fun StokScreen() {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    val listState = rememberLazyListState()
+    // FAB Tambah Obat: sembunyi saat daftar digulir ke bawah, muncul lagi
+    // saat digulir ke atas (permintaan Achmad 2026-10-31).
+    var fabVisible by remember { mutableStateOf(true) }
+    var lastScrollIndex by remember { mutableIntStateOf(0) }
+    var lastScrollOffset by remember { mutableIntStateOf(0) }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                fabVisible = when {
+                    index == 0 && offset == 0 -> true
+                    index > lastScrollIndex -> false
+                    index < lastScrollIndex -> true
+                    offset > lastScrollOffset + 8 -> false
+                    offset < lastScrollOffset - 8 -> true
+                    else -> fabVisible
+                }
+                lastScrollIndex = index
+                lastScrollOffset = offset
+            }
+    }
     // Pencarian di-debounce: satu reload 300ms setelah ketikan terakhir,
     // supaya coroutine pencarian lama tidak saling mendahului hasil terbaru.
     // LaunchedEffect(search) juga memuat daftar awal (search = "").
@@ -1585,8 +1607,9 @@ fun StokScreen() {
     // daftar 0dp dan layar tidak bisa digulir kalau header lebih tinggi dari layar.
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        state = listState,
         verticalArrangement = Arrangement.spacedBy(CardGap),
-        contentPadding = PaddingValues(vertical = 16.dp)
+        contentPadding = PaddingValues(top = 16.dp, bottom = 88.dp)
     ) {
         item {
             Column {
@@ -1602,12 +1625,6 @@ fun StokScreen() {
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Spacer(Modifier.height(SpaceL))
-            Button(
-                onClick = { editing = null; showForm = true },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(28.dp)
-            ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Tambah Obat", style = MaterialTheme.typography.titleMedium) }
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             SearchField(
@@ -1830,6 +1847,28 @@ fun StokScreen() {
             }
         }
     }
+        // FAB Tambah Obat: melayang di kanan bawah; naik sedikit saat
+        // Snackbar tampil supaya tombol aksinya (mis. Urungkan) tidak
+        // tertutup.
+        val fabBottomPadding by animateDpAsState(
+            targetValue = if (snackbarHostState.currentSnackbarData != null) 84.dp else 16.dp,
+            label = "fabBottomPadding"
+        )
+        AnimatedVisibility(
+            visible = fabVisible,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = fabBottomPadding),
+            enter = fadeIn(animationSpec = tween(200)) + slideInVertically(animationSpec = tween(250)) { it / 2 },
+            exit = fadeOut(animationSpec = tween(200)) + slideOutVertically(animationSpec = tween(250)) { it / 2 }
+        ) {
+            ExtendedFloatingActionButton(
+                onClick = { editing = null; showForm = true },
+                containerColor = BlueButton,
+                contentColor = Color.White,
+                shape = RoundedCornerShape(28.dp),
+                icon = { Icon(Icons.Default.Add, null) },
+                text = { Text("Tambah Obat", style = MaterialTheme.typography.titleMedium) }
+            )
+        }
         SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
     }
     if (showForm) MedicineFormDialog(editing = editing, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
