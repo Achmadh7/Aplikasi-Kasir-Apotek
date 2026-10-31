@@ -44,7 +44,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
@@ -2512,7 +2511,9 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                 Triple("out", "Kas Keluar", Icons.Default.NorthEast)
             )
             val selectedKasIndex = kasTypes.indexOfFirst { it.first == entryType }.coerceAtLeast(0)
-            val kasPillColor by animateColorAsState(targetValue = if (isIn) BlueButton else ChiliRed, label = "kasPillColor")
+            // Warna pil dicampur dari fraksi animasi float (animateColorAsState
+            // tidak tersedia di classpath proyek ini): 1 = biru Masuk, 0 = merah Keluar.
+            val kasInFraction by animateFloatAsState(targetValue = if (isIn) 1f else 0f, animationSpec = tween(250), label = "kasPillColorFraction")
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val tabWidth = maxWidth / 2
                 val pillOffset by animateDpAsState(
@@ -2524,11 +2525,12 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                     Modifier.fillMaxWidth().height(48.dp)
                         .background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(32.dp))
                 ) {
-                    Surface(
-                        color = kasPillColor,
-                        shape = RoundedCornerShape(32.dp),
-                        modifier = Modifier.width(tabWidth).height(48.dp).offset(x = pillOffset)
-                    ) {}
+                    Box(
+                        Modifier.width(tabWidth).height(48.dp).offset(x = pillOffset)
+                            .background(ChiliRed, RoundedCornerShape(32.dp))
+                    ) {
+                        Box(Modifier.fillMaxSize().background(BlueButton.copy(alpha = kasInFraction), RoundedCornerShape(32.dp)))
+                    }
                     Row(Modifier.fillMaxSize()) {
                         kasTypes.forEach { (t, label, icon) ->
                             val selected = entryType == t
