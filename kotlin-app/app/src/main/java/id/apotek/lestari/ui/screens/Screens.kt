@@ -299,9 +299,12 @@ private fun Modifier.pulseKritis(): Modifier {
 }
 
 // Warna aksen mengikuti tampilan web app (mode gelap)
+// LightBlueCard kini HANYA untuk cabang terang gradasi hero Beranda.
+// Semua kartu/badge/tombol biru muda lain memakai pasangan tema
+// colorScheme.primaryContainer + onPrimaryContainer (revamp 2026-10-31:
+// pasangan gelap/terang + satu sistem kartu).
 private val LightBlueCard = Color(0xFFD2E4FF)
 private val HeroGradientTop = Color(0xFFA9C9FF)
-private val OnLightBlue = Color(0xFF001D36)
 private val BlueButton = Color(0xFF0061A4)
 // Merah cabai sedang — dipakai menu Keuangan (lebih terang dari burgundy).
 private val ChiliRed = Color(0xFFD32F2F)
@@ -414,41 +417,44 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 Box(
                     modifier = Modifier.fillMaxWidth()
                         .background(
-                            Brush.verticalGradient(listOf(HeroGradientTop, LightBlueCard)),
-                            RoundedCornerShape(24.dp)
+                            Brush.verticalGradient(
+                                if (LocalIsDarkTheme.current) listOf(Color(0xFF0061A4), Color(0xFF00497C))
+                                else listOf(HeroGradientTop, LightBlueCard)
+                            ),
+                            AppCardShape
                         )
                         .animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))
                 ) {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("PEMASUKAN HARI INI", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text("PEMASUKAN HARI INI", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Surface(color = Color.White.copy(alpha = 0.25f), shape = CircleShape) {
-                                Icon(Icons.Default.TrendingUp, null, tint = OnLightBlue, modifier = Modifier.padding(6.dp).size(18.dp))
+                                Icon(Icons.Default.TrendingUp, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(6.dp).size(18.dp))
                             }
                         }
                         Spacer(Modifier.height(8.dp))
-                        AnimatedAmount(d.todayIn, MaterialTheme.typography.displaySmall, OnLightBlue)
+                        AnimatedAmount(d.todayIn, MaterialTheme.typography.displaySmall, MaterialTheme.colorScheme.onPrimaryContainer)
                         Spacer(Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Receipt, null, tint = OnLightBlue, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Receipt, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("${d.totalSalesToday} transaksi penjualan", color = OnLightBlue, style = MaterialTheme.typography.bodySmall)
+                            Text("${d.totalSalesToday} transaksi penjualan", color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
                         }
                         Spacer(Modifier.height(6.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             when {
                                 diff > 0 -> {
-                                    Icon(Icons.Default.TrendingUp, null, tint = GreenButton, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.TrendingUp, null, tint = profitGreen(), modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Naik ${formatIDR(diff)} dari kemarin", color = GreenButton, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                    Text("Naik ${formatIDR(diff)} dari kemarin", color = profitGreen(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
                                 }
                                 diff < 0 -> {
-                                    Icon(Icons.Default.TrendingDown, null, tint = ChiliRed, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.TrendingDown, null, tint = if (LocalIsDarkTheme.current) BurukFg else ChiliRed, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Turun ${formatIDR(-diff)} dari kemarin", color = ChiliRed, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                    Text("Turun ${formatIDR(-diff)} dari kemarin", color = if (LocalIsDarkTheme.current) BurukFg else ChiliRed, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
                                 }
                                 else -> {
-                                    Text("Sama seperti kemarin", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                    Text("Sama seperti kemarin", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
                                 }
                             }
                         }
@@ -464,7 +470,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 }
             }
             item {
-                ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -551,7 +557,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 // diubah dari sejajar setengah lebar (saran asisten, dipilih
                 // Achmad 2026-10-30) supaya teksnya tidak kepotong.
                 // Selisih Kas Bulan Ini di bawah garis pemisah.
-                ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Column {
                             Text("Pengeluaran Hari Ini", style = MaterialTheme.typography.labelSmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -578,7 +584,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             }
             item {
                 // Penjualan Hari Ini: Obat Terjual dan Transaksi dalam satu kartu bertab (compact).
-                ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf("Obat Terjual" to 0, "Transaksi" to 1).forEach { (label, idx) ->
@@ -894,7 +900,7 @@ fun KasirScreen() {
             sorted.forEach { m ->
                 val out = m.stock <= 0
                 ExpressiveCard(
-                    shape = RoundedCornerShape(28.dp),
+                    shape = AppCardShape,
                     modifier = Modifier.fillMaxWidth()
                         .onGloballyPositioned { cardCenters[m.id] = it.boundsInWindow().center }
                         .clickable(enabled = !out) {
@@ -953,7 +959,7 @@ fun KasirScreen() {
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             ExpressiveCard(
-                shape = RoundedCornerShape(28.dp),
+                shape = AppCardShape,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
                     .onGloballyPositioned { cartBarCenter = it.boundsInWindow().center }
                     .clickable { showSheet = true }
@@ -962,11 +968,11 @@ fun KasirScreen() {
                     key(cartQty) {
                         val cartPop = remember { Animatable(1.4f) }
                         LaunchedEffect(cartQty) { cartPop.animateTo(1f, expressiveSpring()) }
-                        Surface(color = LightBlueCard, shape = CircleShape, modifier = Modifier.graphicsLayer(scaleX = cartPop.value, scaleY = cartPop.value)) {
+                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape, modifier = Modifier.graphicsLayer(scaleX = cartPop.value, scaleY = cartPop.value)) {
                             Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.ShoppingCart, null, tint = OnLightBlue, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("$cartQty", color = OnLightBlue, fontWeight = FontWeight.Bold)
+                                Text("$cartQty", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -1479,7 +1485,7 @@ fun StokScreen() {
     // daftar 0dp dan layar tidak bisa digulir kalau header lebih tinggi dari layar.
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(CardGap),
         contentPadding = PaddingValues(vertical = 16.dp)
     ) {
         item {
@@ -1495,7 +1501,7 @@ fun StokScreen() {
                 }
                 Button(
                     onClick = { editing = null; showForm = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = LightBlueCard, contentColor = OnLightBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer),
                     shape = RoundedCornerShape(32.dp)
                 ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("Tambah Obat") }
             }
@@ -1513,7 +1519,7 @@ fun StokScreen() {
             }
             Spacer(Modifier.height(16.dp))
             // Kartu Import / Export / Template Excel — isi banyak obat sekaligus.
-            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -1676,7 +1682,7 @@ fun StokScreen() {
                 exit = fadeOut()
             ) {
             ExpressiveCard(
-                shape = RoundedCornerShape(28.dp),
+                shape = AppCardShape,
                 modifier = Modifier.fillMaxWidth().then(
                     if (selectMode) Modifier.clickable {
                         selectedMeds = if (selectedMeds.containsKey(m.id)) selectedMeds - m.id else selectedMeds + (m.id to m)
@@ -2088,7 +2094,7 @@ fun KeuanganScreen() {
     // daftar 0dp dan layar tidak bisa digulir kalau header lebih tinggi dari layar.
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(CardGap),
         contentPadding = PaddingValues(vertical = 16.dp)
     ) {
         item {
@@ -2112,7 +2118,7 @@ fun KeuanganScreen() {
             Spacer(Modifier.height(16.dp))
             // Kartu Saldo Kas — warna gradasi biru di-revert ke kartu datar seperti semula;
             // bar proporsi + compact dipertahankan.
-            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -2162,7 +2168,7 @@ fun KeuanganScreen() {
             }
             Spacer(Modifier.height(16.dp))
             // Grafik arus kas — judul + isi mengikuti periode yang dipilih.
-            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(20.dp)) {
                     val chartTitle = when (period) {
                         "today" -> "Arus Kas 7 Hari Terakhir"
@@ -2277,7 +2283,7 @@ fun KeuanganScreen() {
         }
         items(shown) { e ->
             val isIn = e.type == "in"
-            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = Color.White, shape = CircleShape) {
                         Icon(
@@ -2458,27 +2464,27 @@ fun LabaScreen() {
         }
         report?.let { r ->
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
+                ExpressiveCard(shape = AppCardShape, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("LABA KOTOR", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text("LABA KOTOR", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Surface(color = Color.White.copy(alpha = 0.25f), shape = RoundedCornerShape(16.dp)) {
                                 Text(
-                                    "Margin ${marginTextID(r.marginPct)}%", color = OnLightBlue,
+                                    "Margin ${marginTextID(r.marginPct)}%", color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                 )
                             }
                         }
                         Spacer(Modifier.height(8.dp))
-                        AnimatedAmount(r.grossProfit, MaterialTheme.typography.headlineLarge, OnLightBlue)
+                        AnimatedAmount(r.grossProfit, MaterialTheme.typography.headlineLarge, MaterialTheme.colorScheme.onPrimaryContainer)
                         Spacer(Modifier.height(4.dp))
-                        Text("${r.transactionCount} transaksi • ${r.itemsSold} item terjual", color = OnLightBlue, style = MaterialTheme.typography.bodySmall)
+                        Text("${r.transactionCount} transaksi • ${r.itemsSold} item terjual", color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
             item {
-                ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         // Grid statistik adaptif: HP portrait 2 kolom, tablet/landscape 3 kolom,
                         // tablet lebar 4 kolom (satu baris).
@@ -2502,7 +2508,7 @@ fun LabaScreen() {
             }
             if (r.costMissingQty > 0) {
                 item {
-                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.padding(20.dp), verticalAlignment = Alignment.Top) {
                             Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
@@ -2515,7 +2521,7 @@ fun LabaScreen() {
                 }
             }
             item {
-                ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp)) {
                         // Judul grafik mengikuti periode; "Hari Ini" menampilkan
                         // 7 hari terakhir (judulnya pun demikian).
@@ -2673,7 +2679,7 @@ fun ObatTerlarisScreen() {
         sellers?.let { list ->
             if (list.isEmpty()) {
                 item {
-                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.Leaderboard, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
                             Spacer(Modifier.height(8.dp))
@@ -2686,23 +2692,23 @@ fun ObatTerlarisScreen() {
                 val totalRevenue = list.sumOf { it.revenue }
                 val maxQty = list.maxOf { it.qty }.coerceAtLeast(1)
                 item {
-                    Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+                    ExpressiveCard(shape = AppCardShape, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Column(Modifier.weight(1f)) {
-                                Text("ITEM TERJUAL", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                                Text("ITEM TERJUAL", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(4.dp))
-                                Text("$totalQty item", color = OnLightBlue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                Text("$totalQty item", color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             }
                             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                Text("OMZET", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                                Text("OMZET", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(4.dp))
-                                Text(formatIDR(totalRevenue), color = OnLightBlue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                Text(formatIDR(totalRevenue), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
                 item {
-                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.fillMaxWidth().padding(20.dp)) {
                             list.forEachIndexed { index, s ->
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -2826,18 +2832,18 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
             // supaya tiap angka lebih menonjol dan layarnya tidak monoton.
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = AppCardShape, modifier = Modifier.weight(1f)) {
                         ReminderCount(Icons.Default.EventBusy, "EXPIRED", "${expired.size}", if (expired.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.fillMaxWidth().padding(16.dp))
                     }
-                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = AppCardShape, modifier = Modifier.weight(1f)) {
                         ReminderCount(Icons.Default.Schedule, "≤ $window HARI", "${withinWindow.size}", MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = AppCardShape, modifier = Modifier.weight(1f)) {
                         ReminderCount(Icons.Default.Inventory, "RENDAH", "${low.size}", MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
                     }
-                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = AppCardShape, modifier = Modifier.weight(1f)) {
                         ReminderCount(Icons.Default.PriorityHigh, "HABIS", "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.fillMaxWidth().padding(16.dp))
                     }
                 }
@@ -2859,7 +2865,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                             daysLeft == 1L -> "Besok jatuh tempo" to warningAmber()
                             else -> "$daysLeft hari lagi" to warningAmber()
                         }
-                        ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().clickable { onGoPbf() }) {
+                        ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth().clickable { onGoPbf() }) {
                             Column(Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -2924,7 +2930,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                 exit = fadeOut()
             ) {
             Column {
-            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(color = if (isCritical) RedBadgeBg else MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -3561,7 +3567,7 @@ fun RiwayatScreen() {
                         exit = fadeOut()
                     ) {
                     ExpressiveCard(
-                        shape = RoundedCornerShape(28.dp),
+                        shape = AppCardShape,
                         modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow)).clickable { expanded = if (isOpen) null else s.id }
                     ) {
                         Column(Modifier.padding(16.dp)) {
@@ -3669,7 +3675,7 @@ fun BackupScreen() {
         Spacer(Modifier.height(16.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Spacer(Modifier.height(16.dp))
-        ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+        ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -3686,7 +3692,7 @@ fun BackupScreen() {
             }
         }
         Spacer(Modifier.height(16.dp))
-        ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+        ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -3711,7 +3717,7 @@ fun BackupScreen() {
             }
         }
         Spacer(Modifier.height(16.dp))
-        ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+        ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -3795,7 +3801,7 @@ fun TentangScreen() {
             }
         }
         item {
-            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
                     Text(
                         "Aplikasi kasir dan manajemen stok obat untuk Apotek Lestari. Data obat, penjualan, dan kas tersimpan di perangkat.",
@@ -3805,7 +3811,7 @@ fun TentangScreen() {
             }
         }
         item {
-            ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("Versi", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -3893,18 +3899,18 @@ fun PbfScreen() {
                 DemoBanner()
                 // Ringkasan belanja hari ini + bulan ini (kartu biru muda,
                 // pola yang sama seperti ringkasan Obat Terlaris).
-                Card(colors = CardDefaults.cardColors(containerColor = LightBlueCard), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+                ExpressiveCard(shape = AppCardShape, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Column(Modifier.weight(1f)) {
-                            Text("BELANJA HARI INI", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text("BELANJA HARI INI", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(4.dp))
-                            Text(formatIDR(todayTotal), color = OnLightBlue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            Text("${todayPurchases.size} pembelian", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
+                            Text(formatIDR(todayTotal), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text("${todayPurchases.size} pembelian", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
                         }
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                            Text("BELANJA BULAN INI", color = OnLightBlue.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text("BELANJA BULAN INI", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(4.dp))
-                            Text(formatIDR(monthTotal), color = OnLightBlue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text(formatIDR(monthTotal), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -3921,7 +3927,7 @@ fun PbfScreen() {
             }
             if (purchases.isEmpty()) {
                 item {
-                    ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) {
+                    ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
                             Spacer(Modifier.height(8.dp))
@@ -3949,7 +3955,7 @@ fun PbfScreen() {
                 items(dayPurchases, key = { "pbf-${it.id}" }) { p ->
                     val isOpen = expanded == p.id
                     ExpressiveCard(
-                        shape = RoundedCornerShape(28.dp),
+                        shape = AppCardShape,
                         modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow)).clickable { expanded = if (isOpen) null else p.id }
                     ) {
                         Column(Modifier.padding(16.dp)) {

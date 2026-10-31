@@ -77,6 +77,7 @@ private val LightColors = lightColorScheme(
     onTertiaryContainer = Color(0xFF2E2300),
     error = Color(0xFFBA1A1A),
     errorContainer = Color(0xFFFFDAD6),
+    background = Color(0xFFF7F9FF),
     surface = Color(0xFFF7F9FF),
     surfaceVariant = Color(0xFFDEE3EB),
     surfaceContainerLowest = Color(0xFFFFFFFF),
@@ -156,6 +157,13 @@ fun <T> expressiveSpring() = spring<T>(
     stiffness = Spring.StiffnessMediumLow
 )
 
+// ---- Token desain: satu sistem kartu & jarak (revamp Achmad 2026-10-31) ----
+// Semua kartu konten memakai ExpressiveCard berbentuk AppCardShape; padding
+// isi kartu standar 16dp; jarak antar kartu dalam daftar layar CardGap
+// (Beranda memakai 20dp — pilihan Achmad dari screenshot, pengecualian sadar).
+val AppCardShape: Shape = RoundedCornerShape(28.dp)
+val CardGap = 16.dp
+
 // ---- Material 3 Expressive penuh (tanpa kaca) ----
 // Kartu memakai permukaan tonal solid (surfaceContainer) dari colorScheme,
 // tanpa tembus pandang dan tanpa garis tepi — sesuai Material 3 Expressive.
@@ -164,7 +172,7 @@ fun <T> expressiveSpring() = spring<T>(
 @Composable
 fun ExpressiveCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(28.dp),
+    shape: Shape = AppCardShape,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     content: @Composable ColumnScope.() -> Unit
 ) {
