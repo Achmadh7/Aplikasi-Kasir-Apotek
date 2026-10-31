@@ -354,7 +354,19 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
     var lowStockMeds by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
     var expiringMeds by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var dueBills by remember { mutableStateOf<List<Purchase>>(emptyList()) }
-    LaunchedEffect(Unit) {
+    // Muat ulang setiap kali layar kembali tampil (ON_RESUME) — pola yang
+    // sama seperti Laba/Obat Terlaris/Pengingat/Faktur PBF, supaya data
+    // selalu segar setelah ada perubahan dari menu lain.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeKey by remember { mutableStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(resumeKey) {
         (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data }
         val meds = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
         outOfStockNames = meds.filter { it.stock <= 0 }.map { it.name }.sorted()
@@ -822,7 +834,19 @@ fun KasirScreen() {
     // Density dibaca di sini (saat komposisi) supaya bisa dipakai di dalam
     // handler klik untuk menghitung posisi fallback target.
     val flyDensity = LocalDensity.current
-    LaunchedEffect(Unit) { (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines } }
+    // Muat ulang setiap kali layar kembali tampil (ON_RESUME) — pola yang
+    // sama seperti Laba/Obat Terlaris/Pengingat/Faktur PBF, supaya data
+    // selalu segar setelah ada perubahan dari menu lain.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeKey by remember { mutableStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(resumeKey) { (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines } }
     // Simpan isi keranjang (id + qty + pilihan grosir) setiap kali berubah —
     // kecuali saat kosong, supaya hasil restore tidak tertimpa sebelum daftar
     // obat dimuat. Pilihan grosir ikut disimpan (audit N2, 2026-10-30): tanpa
@@ -1452,10 +1476,22 @@ fun StokScreen() {
             }
         }
     }
+    // Muat ulang setiap kali layar kembali tampil (ON_RESUME) — pola yang
+    // sama seperti Laba/Obat Terlaris/Pengingat/Faktur PBF, supaya data
+    // selalu segar setelah ada perubahan dari menu lain.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeKey by remember { mutableStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     // Pencarian di-debounce: satu reload 300ms setelah ketikan terakhir,
     // supaya coroutine pencarian lama tidak saling mendahului hasil terbaru.
     // LaunchedEffect(search) juga memuat daftar awal (search = "").
-    LaunchedEffect(search) {
+    LaunchedEffect(search, resumeKey) {
         delay(300)
         reload()
     }
@@ -2032,7 +2068,19 @@ fun KeuanganScreen() {
             (repo.getCashBalance() as? ApiResult.Success)?.let { cashBalance = it.data }
         }
     }
-    LaunchedEffect(Unit) { reload() }
+    // Muat ulang setiap kali layar kembali tampil (ON_RESUME) — pola yang
+    // sama seperti Laba/Obat Terlaris/Pengingat/Faktur PBF, supaya data
+    // selalu segar setelah ada perubahan dari menu lain.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeKey by remember { mutableStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(resumeKey) { reload() }
     val todayKey = dayKeyID(Date())
     val monthKey = monthKeyID(Date())
     val periodEntries = entries.filter { e ->
@@ -3495,7 +3543,19 @@ fun RiwayatScreen() {
     var salesLimit by remember { mutableIntStateOf(50) }
     var hasMore by remember { mutableStateOf(false) }
     val receiptLayer = rememberGraphicsLayer()
-    LaunchedEffect(salesLimit) {
+    // Muat ulang setiap kali layar kembali tampil (ON_RESUME) — pola yang
+    // sama seperti Laba/Obat Terlaris/Pengingat/Faktur PBF, supaya data
+    // selalu segar setelah ada perubahan dari menu lain.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeKey by remember { mutableStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(salesLimit, resumeKey) {
         (repo.listSales(salesLimit) as? ApiResult.Success)?.let {
             sales = it.data.sales
             // Hasil penuh (= limit) berarti kemungkinan masih ada penjualan lama.
