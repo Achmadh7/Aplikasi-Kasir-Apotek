@@ -349,6 +349,8 @@ private fun StockBadge(stock: Int, showCount: Boolean = true) {
 @Composable
 fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit) {
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
+    var listEntered by remember { mutableStateOf(false) }
+    LaunchedEffect(dashboard) { if (dashboard != null && !listEntered) listEntered = true }
     var salesTab by remember { mutableIntStateOf(0) }
     var outOfStockNames by remember { mutableStateOf<List<String>>(emptyList()) }
     var lowStockMeds by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
@@ -398,6 +400,13 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
+            AnimatedVisibility(
+                visible = listEntered,
+                enter = fadeIn(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)) +
+                    slideInVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)) { it / 3 } +
+                    expandVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)),
+                exit = fadeOut()
+            ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val logo = rememberLogoBitmap()
                 if (logo != null) {
@@ -421,9 +430,17 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
+            }
         }
         dashboard?.let { d ->
             item {
+                AnimatedVisibility(
+                    visible = listEntered,
+                    enter = fadeIn(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)) +
+                        slideInVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)) { it / 3 } +
+                        expandVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)),
+                    exit = fadeOut()
+                ) {
                 // Kartu Pemasukan Hari Ini — hero premium: gradasi biru + insight vs kemarin
                 val diff = d.todayIn - d.yesterdayIn
                 Box(
@@ -472,16 +489,32 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         }
                     }
                 }
+                }
             }
             item {
+                AnimatedVisibility(
+                    visible = listEntered,
+                    enter = fadeIn(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)) +
+                        slideInVertically(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)) { it / 3 } +
+                        expandVertically(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)),
+                    exit = fadeOut()
+                ) {
                 // Shortcut ke menu yang tidak lagi ada di bar bawah (Laba, Pengingat, Riwayat).
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
                     ShortcutCard(label = "Laba", icon = Icons.Default.TrendingUp, modifier = Modifier.weight(1f), onClick = onGoLaba)
                     ShortcutCard(label = "Pengingat", icon = Icons.Default.NotificationsActive, modifier = Modifier.weight(1f), onClick = onGoPengingat)
                     ShortcutCard(label = "Riwayat", icon = Icons.Default.ReceiptLong, modifier = Modifier.weight(1f), onClick = onGoRiwayat)
                 }
+                }
             }
             item {
+                AnimatedVisibility(
+                    visible = listEntered,
+                    enter = fadeIn(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)) +
+                        slideInVertically(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)) { it / 3 } +
+                        expandVertically(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)),
+                    exit = fadeOut()
+                ) {
                 ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -562,8 +595,16 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         Text("${d.totalMedicines} jenis obat terdaftar di Stok", style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                }
             }
             item {
+                AnimatedVisibility(
+                    visible = listEntered,
+                    enter = fadeIn(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)) +
+                        slideInVertically(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)) { it / 3 } +
+                        expandVertically(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)),
+                    exit = fadeOut()
+                ) {
                 // Kartu uang: Pengeluaran & Selisih Kas Hari Ini disusun
                 // VERTIKAL selebar kartu (label di atas, angka di bawah) —
                 // diubah dari sejajar setengah lebar (saran asisten, dipilih
@@ -593,8 +634,16 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         Text("Masuk ${formatIDR(d.monthIn)} • Keluar ${formatIDR(d.monthOut)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                }
             }
             item {
+                AnimatedVisibility(
+                    visible = listEntered,
+                    enter = fadeIn(animationSpec = tween(300, entranceDelay(5), FastOutSlowInEasing)) +
+                        slideInVertically(animationSpec = tween(300, entranceDelay(5), FastOutSlowInEasing)) { it / 3 } +
+                        expandVertically(animationSpec = tween(300, entranceDelay(5), FastOutSlowInEasing)),
+                    exit = fadeOut()
+                ) {
                 // Penjualan Hari Ini: Obat Terjual dan Transaksi dalam satu kartu bertab (compact).
                 ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
@@ -650,6 +699,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         }
                         }
                     }
+                }
                 }
             }
         } ?: item {
@@ -793,6 +843,8 @@ private fun SortToggle(sortAz: Boolean, onToggle: () -> Unit) {
 @Composable
 fun KasirScreen() {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
+    var listEntered by remember { mutableStateOf(false) }
+    LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
     var search by rememberSaveable { mutableStateOf("") }
     var sortAz by remember { mutableStateOf(true) }
     // Pesan umpan balik di bawah kolom cari (mis. stok tidak cukup saat obat
@@ -921,7 +973,14 @@ fun KasirScreen() {
         }
         Spacer(Modifier.height(SpaceS))
         Column(verticalArrangement = Arrangement.spacedBy(SpaceM)) {
-            sorted.forEach { m ->
+            sorted.forEachIndexed { index, m ->
+                AnimatedVisibility(
+                    visible = listEntered,
+                    enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
+                        slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
+                        expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                    exit = fadeOut()
+                ) {
                 val out = m.stock <= 0
                 ExpressiveCard(
                     shape = AppCardShape,
@@ -968,6 +1027,7 @@ fun KasirScreen() {
                         }
                         StockBadge(m.stock)
                     }
+                }
                 }
             }
         }
@@ -2055,6 +2115,8 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
 @Composable
 fun KeuanganScreen() {
     var entries by remember { mutableStateOf<List<CashEntry>>(emptyList()) }
+    var listEntered by remember { mutableStateOf(false) }
+    LaunchedEffect(entries) { if (entries.isNotEmpty() && !listEntered) listEntered = true }
     var cashBalance by remember { mutableStateOf<CashBalance?>(null) }
     var period by remember { mutableStateOf("today") } // today | month | all — awalnya "Hari Ini" (permintaan Achmad 2026-10-31), bukan "Semua"
     var typeFilter by remember { mutableStateOf("all") } // all | in | out
@@ -2330,7 +2392,14 @@ fun KeuanganScreen() {
             }
             }
         }
-        items(shown) { e ->
+        itemsIndexed(shown) { index, e ->
+            AnimatedVisibility(
+                visible = listEntered,
+                enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
+                    slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
+                    expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                exit = fadeOut()
+            ) {
             val isIn = e.type == "in"
             ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -2355,6 +2424,7 @@ fun KeuanganScreen() {
                         color = if (isIn) MaterialTheme.colorScheme.primary else ChiliRed
                     )
                 }
+            }
             }
         }
     }
@@ -2474,6 +2544,8 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
 @Composable
 fun LabaScreen() {
     var report by remember { mutableStateOf<ProfitReport?>(null) }
+    var listEntered by remember { mutableStateOf(false) }
+    LaunchedEffect(report) { if (report != null && !listEntered) listEntered = true }
     var period by remember { mutableStateOf("month") }
     // Muat ulang laporan setiap kali layar Laba kembali tampil (ON_RESUME),
     // supaya penjualan terbaru dari Kasir ikut terhitung — bukan hanya saat
@@ -2495,6 +2567,13 @@ fun LabaScreen() {
         verticalArrangement = Arrangement.spacedBy(SpaceL)
     ) {
         item {
+            AnimatedVisibility(
+                visible = listEntered,
+                enter = fadeIn(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)) +
+                    slideInVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)) { it / 3 } +
+                    expandVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)),
+                exit = fadeOut()
+            ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
                     Icon(Icons.Default.TrendingUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
@@ -2511,9 +2590,17 @@ fun LabaScreen() {
                     FilterChip(selected = period == k, onClick = { period = k }, label = { Text(l) })
                 }
             }
+            }
         }
         report?.let { r ->
             item {
+                AnimatedVisibility(
+                    visible = listEntered,
+                    enter = fadeIn(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)) +
+                        slideInVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)) { it / 3 } +
+                        expandVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)),
+                    exit = fadeOut()
+                ) {
                 ExpressiveCard(shape = AppCardShape, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -2532,8 +2619,16 @@ fun LabaScreen() {
                         Text("${r.transactionCount} transaksi • ${r.itemsSold} item terjual", color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
                     }
                 }
+                }
             }
             item {
+                AnimatedVisibility(
+                    visible = listEntered,
+                    enter = fadeIn(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)) +
+                        slideInVertically(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)) { it / 3 } +
+                        expandVertically(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)),
+                    exit = fadeOut()
+                ) {
                 ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceL)) {
                         // Grid statistik adaptif: HP portrait 2 kolom, tablet/landscape 3 kolom,
@@ -2555,9 +2650,17 @@ fun LabaScreen() {
                         }
                     }
                 }
+                }
             }
             if (r.costMissingQty > 0) {
                 item {
+                    AnimatedVisibility(
+                        visible = listEntered,
+                        enter = fadeIn(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)) +
+                            slideInVertically(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)) { it / 3 } +
+                            expandVertically(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)),
+                        exit = fadeOut()
+                    ) {
                     ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
                             Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
@@ -2568,9 +2671,17 @@ fun LabaScreen() {
                             )
                         }
                     }
+                    }
                 }
             }
             item {
+                AnimatedVisibility(
+                    visible = listEntered,
+                    enter = fadeIn(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)) +
+                        slideInVertically(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)) { it / 3 } +
+                        expandVertically(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)),
+                    exit = fadeOut()
+                ) {
                 ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         // Judul grafik mengikuti periode; "Hari Ini" menampilkan
@@ -2665,6 +2776,7 @@ fun LabaScreen() {
                         }
                     }
                 }
+                }
             }
         } ?: item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -2690,6 +2802,8 @@ private fun LabaStat(icon: ImageVector, label: String, value: String, valueColor
 @Composable
 fun ObatTerlarisScreen() {
     var sellers by remember { mutableStateOf<List<BestSeller>?>(null) }
+    var listEntered by remember { mutableStateOf(false) }
+    LaunchedEffect(sellers) { if (!sellers.isNullOrEmpty() && !listEntered) listEntered = true }
     var period by remember { mutableStateOf("month") }
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME), supaya
     // penjualan terbaru dari Kasir ikut terhitung.
@@ -2761,6 +2875,13 @@ fun ObatTerlarisScreen() {
                     ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.fillMaxWidth().padding(16.dp)) {
                             list.forEachIndexed { index, s ->
+                                AnimatedVisibility(
+                                    visible = listEntered,
+                                    enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
+                                        slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
+                                        expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                                    exit = fadeOut()
+                                ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                                     Surface(
                                         color = if (index == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
@@ -2789,6 +2910,7 @@ fun ObatTerlarisScreen() {
                                 }
                                 if (index < list.lastIndex) {
                                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 12.dp))
+                                }
                                 }
                             }
                         }
@@ -3906,6 +4028,8 @@ private class PurchaseItemRow {
 @Composable
 fun PbfScreen() {
     var purchases by remember { mutableStateOf<List<Purchase>>(emptyList()) }
+    var listEntered by remember { mutableStateOf(false) }
+    LaunchedEffect(purchases) { if (purchases.isNotEmpty() && !listEntered) listEntered = true }
     var expanded by remember { mutableStateOf<Int?>(null) }
     var showForm by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<Purchase?>(null) }
@@ -4014,7 +4138,14 @@ fun PbfScreen() {
                         Text("${dayPurchases.size} pembelian • ${formatIDR(dayTotal)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                items(dayPurchases, key = { "pbf-${it.id}" }) { p ->
+                itemsIndexed(dayPurchases, key = { "pbf-${it.id}" }) { index, p ->
+                    AnimatedVisibility(
+                        visible = listEntered,
+                        enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
+                            slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
+                            expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                        exit = fadeOut()
+                    ) {
                     val isOpen = expanded == p.id
                     ExpressiveCard(
                         shape = AppCardShape,
@@ -4101,6 +4232,7 @@ fun PbfScreen() {
                                 }
                             }
                         }
+                    }
                     }
                 }
             }
