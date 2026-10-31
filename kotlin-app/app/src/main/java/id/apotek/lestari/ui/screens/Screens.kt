@@ -521,8 +521,8 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 val (dueLabel, dueColor) = when {
                                     daysLeft < 0L -> "Lewat ${-daysLeft} hari" to ChiliRed
                                     daysLeft == 0L -> "Jatuh tempo hari ini" to ChiliRed
-                                    daysLeft == 1L -> "Besok jatuh tempo" to Color(0xFFFFB74D)
-                                    else -> "$daysLeft hari lagi" to Color(0xFFFFB74D)
+                                    daysLeft == 1L -> "Besok jatuh tempo" to warningAmber()
+                                    else -> "$daysLeft hari lagi" to warningAmber()
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
                                     Box(Modifier.size(6.dp).background(dueColor, CircleShape))
@@ -2856,8 +2856,8 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                         val (dueLabel, dueColor) = when {
                             daysLeft < 0L -> "Lewat ${-daysLeft} hari" to ChiliRed
                             daysLeft == 0L -> "Jatuh tempo hari ini" to ChiliRed
-                            daysLeft == 1L -> "Besok jatuh tempo" to Color(0xFFFFB74D)
-                            else -> "$daysLeft hari lagi" to Color(0xFFFFB74D)
+                            daysLeft == 1L -> "Besok jatuh tempo" to warningAmber()
+                            else -> "$daysLeft hari lagi" to warningAmber()
                         }
                         ExpressiveCard(shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().clickable { onGoPbf() }) {
                             Column(Modifier.padding(16.dp)) {
@@ -3980,8 +3980,8 @@ fun PbfScreen() {
                                     val (dueLabel, dueColor) = when {
                                         daysLeft < 0L -> "Lewat ${-daysLeft} hari" to ChiliRed
                                         daysLeft == 0L -> "Jatuh tempo hari ini" to ChiliRed
-                                        daysLeft == 1L -> "Besok jatuh tempo" to Color(0xFFFFB74D)
-                                        daysLeft <= 7L -> "$daysLeft hari lagi" to Color(0xFFFFB74D)
+                                        daysLeft == 1L -> "Besok jatuh tempo" to warningAmber()
+                                        daysLeft <= 7L -> "$daysLeft hari lagi" to warningAmber()
                                         else -> "$daysLeft hari lagi" to MaterialTheme.colorScheme.onSurfaceVariant
                                     }
                                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {

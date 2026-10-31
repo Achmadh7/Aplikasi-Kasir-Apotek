@@ -57,6 +57,13 @@ val LocalIsDarkTheme = staticCompositionLocalOf { true }
 @Composable
 fun profitGreen(): Color = if (LocalIsDarkTheme.current) ExpressiveGreen else Color(0xFF2E7D32)
 
+/** Amber peringatan (label hitung mundur jatuh tempo PBF "N hari lagi" /
+ *  "Besok jatuh tempo") — mode gelap #FFB74D (amber muda, jelas di latar
+ *  gelap); mode terang #B26A00 (amber pekat) karena #FFB74D nyaris tidak
+ *  terbaca di kartu terang (laporan Achmad 2026-10-31). */
+@Composable
+fun warningAmber(): Color = if (LocalIsDarkTheme.current) Color(0xFFFFB74D) else Color(0xFFB26A00)
+
 private val LightColors = lightColorScheme(
     primary = BluePrimary,
     onPrimary = Color.White,
