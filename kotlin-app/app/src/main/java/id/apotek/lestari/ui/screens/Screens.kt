@@ -156,7 +156,7 @@ private fun entranceDelay(index: Int) = (index * 40).coerceAtMost(400)
 
 /** Angka berhitung naik dari 0 (dipakai Pemasukan Hari Ini & Laba Kotor). */
 @Composable
-private fun AnimatedAmount(value: Int, style: TextStyle, color: Color) {
+private fun AnimatedAmount(value: Int, style: TextStyle, color: Color, format: (Int) -> String = { formatIDR(it) }) {
     var shown by remember { mutableStateOf(0) }
     val animated by animateIntAsState(
         targetValue = shown,
@@ -164,7 +164,7 @@ private fun AnimatedAmount(value: Int, style: TextStyle, color: Color) {
         label = "amount"
     )
     LaunchedEffect(value) { shown = value }
-    Text(formatIDR(animated), color = color, style = style, fontWeight = FontWeight.Bold)
+    Text(format(animated), color = color, style = style, fontWeight = FontWeight.Bold)
 }
 
 /** Skala pegas saat ditekan (tombol utama & stepper Kasir). */
@@ -2132,11 +2132,7 @@ fun KeuanganScreen() {
                         Text("SALDO KAS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(Modifier.height(SpaceS))
-                    Text(
-                        formatIDR(saldo),
-                        style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
-                        color = if (saldo < 0) ChiliRed else MaterialTheme.colorScheme.onSurface
-                    )
+                    AnimatedAmount(saldo, MaterialTheme.typography.headlineLarge, if (saldo < 0) ChiliRed else MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.height(SpaceS))
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(Modifier.height(SpaceS))
@@ -2703,12 +2699,12 @@ fun ObatTerlarisScreen() {
                             Column(Modifier.weight(1f)) {
                                 Text("ITEM TERJUAL", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(SpaceXS))
-                                Text("$totalQty item", color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                AnimatedAmount(totalQty, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onPrimaryContainer) { "$it item" }
                             }
                             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                                 Text("OMZET", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(SpaceXS))
-                                Text(formatIDR(totalRevenue), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                AnimatedAmount(totalRevenue, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onPrimaryContainer)
                             }
                         }
                     }
@@ -3910,13 +3906,13 @@ fun PbfScreen() {
                         Column(Modifier.weight(1f)) {
                             Text("BELANJA HARI INI", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceXS))
-                            Text(formatIDR(todayTotal), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            AnimatedAmount(todayTotal, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onPrimaryContainer)
                             Text("${todayPurchases.size} pembelian", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
                         }
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                             Text("BELANJA BULAN INI", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceXS))
-                            Text(formatIDR(monthTotal), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            AnimatedAmount(monthTotal, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onPrimaryContainer)
                         }
                     }
                 }
