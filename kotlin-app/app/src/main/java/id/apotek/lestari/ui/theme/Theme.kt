@@ -174,6 +174,15 @@ fun <T> expressiveSpring() = spring<T>(
 val AppCardShape: Shape = RoundedCornerShape(28.dp)
 val CardGap = 16.dp
 
+// Skala spasi internal resmi: XS 4, S 8, M 12, L 16, XL 24 (dp). Spasi
+// vertikal layar & isi kartu memakai tangga ini; nilai lama di luar skala
+// (2/6/10/20) diselaraskan ke anak tangga terdekat.
+val SpaceXS = 4.dp
+val SpaceS = 8.dp
+val SpaceM = 12.dp
+val SpaceL = 16.dp
+val SpaceXL = 24.dp
+
 // ---- Material 3 Expressive penuh (tanpa kaca) ----
 // Kartu memakai permukaan tonal solid (surfaceContainer) dari colorScheme,
 // tanpa tembus pandang dan tanpa garis tepi — sesuai Material 3 Expressive.
