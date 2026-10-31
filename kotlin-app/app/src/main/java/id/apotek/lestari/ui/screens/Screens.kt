@@ -43,6 +43,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
@@ -2232,6 +2233,13 @@ fun KeuanganScreen() {
                 }
             }
             Spacer(Modifier.height(SpaceL))
+            Button(
+                onClick = { formType = "in"; showForm = true },
+                colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp)
+            ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Catat Kas", style = MaterialTheme.typography.titleMedium) }
+            Spacer(Modifier.height(SpaceL))
             // Kartu Saldo Kas — warna gradasi biru di-revert ke kartu datar seperti semula;
             // bar proporsi + compact dipertahankan.
             ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
@@ -2372,21 +2380,6 @@ fun KeuanganScreen() {
                 }
             }
             Spacer(Modifier.height(SpaceL))
-            Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = { formType = "in"; showForm = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
-                    shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.weight(1f).height(52.dp)
-                ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Kas Masuk", style = MaterialTheme.typography.titleMedium) }
-                Button(
-                    onClick = { formType = "out"; showForm = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = ChiliRed, contentColor = Color.White),
-                    shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.weight(1f).height(52.dp)
-                ) { Icon(Icons.Default.Remove, null); Spacer(Modifier.width(8.dp)); Text("Kas Keluar", style = MaterialTheme.typography.titleMedium) }
-            }
-            Spacer(Modifier.height(SpaceL))
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                 listOf("all" to "Semua", "in" to "Masuk", "out" to "Keluar").forEach { (k, l) ->
                     FilterChip(selected = typeFilter == k, onClick = { typeFilter = k }, label = { Text(l) })
@@ -2435,7 +2428,10 @@ fun KeuanganScreen() {
 
 @Composable
 private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () -> Unit) {
-    val isIn = type == "in"
+    // Jenis bisa diganti dari dalam form lewat pil geser Masuk/Keluar (gaya
+    // pemilih metode pembayaran di Kasir); parameter type = pilihan awal.
+    var entryType by remember { mutableStateOf(type) }
+    val isIn = entryType == "in"
     var category by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf(TextFieldValue("")) }
@@ -2461,13 +2457,57 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (isIn) "Catat Kas Masuk" else "Catat Kas Keluar",
+                    "Catat Kas",
                     style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            // Pilihan Masuk/Keluar: pil meluncur seperti pemilih metode
+            // pembayaran di Kasir. Warna pil mengikuti jenis yang aktif —
+            // biru untuk Masuk, merah untuk Keluar (sama seperti tombol
+            // Simpan) — dan bergeser warna dengan halus.
+            val kasTypes = listOf(
+                Triple("in", "Kas Masuk", Icons.Default.SouthWest),
+                Triple("out", "Kas Keluar", Icons.Default.NorthEast)
+            )
+            val selectedKasIndex = kasTypes.indexOfFirst { it.first == entryType }.coerceAtLeast(0)
+            val kasPillColor by animateColorAsState(targetValue = if (isIn) BlueButton else ChiliRed, label = "kasPillColor")
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val tabWidth = maxWidth / 2
+                val pillOffset by animateDpAsState(
+                    targetValue = tabWidth * selectedKasIndex,
+                    animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+                    label = "kasTypePill"
+                )
+                Box(
+                    Modifier.fillMaxWidth().height(48.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(32.dp))
+                ) {
+                    Surface(
+                        color = kasPillColor,
+                        shape = RoundedCornerShape(32.dp),
+                        modifier = Modifier.width(tabWidth).height(48.dp).offset(x = pillOffset)
+                    ) {}
+                    Row(Modifier.fillMaxSize()) {
+                        kasTypes.forEach { (t, label, icon) ->
+                            val selected = entryType == t
+                            val contentColor = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
+                            Box(
+                                Modifier.weight(1f).fillMaxHeight().clickable { entryType = t },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(icon, null, tint = contentColor, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(label, maxLines = 1, color = contentColor)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             OutlinedTextField(category, { category = it }, label = { Text("Kategori") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(description, { description = it }, label = { Text("Keterangan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(amount, { amount = formatDecimalFieldValue(it) }, label = { Text("Jumlah (Rp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -2494,7 +2534,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                         scope.launch {
                             val result = repo.createCashEntry(
                                 CreateCashEntryArgs(
-                                    type,
+                                    entryType,
                                     category.ifBlank { "Lainnya" },
                                     description.ifBlank { if (isIn) "Kas masuk" else "Kas keluar" },
                                     parseDecimal(amount.text),
