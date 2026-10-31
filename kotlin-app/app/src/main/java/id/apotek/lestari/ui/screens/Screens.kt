@@ -4138,7 +4138,7 @@ fun PbfScreen() {
                         Text("${dayPurchases.size} pembelian • ${formatIDR(dayTotal)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                itemsIndexed(dayPurchases, key = { "pbf-${it.id}" }) { index, p ->
+                itemsIndexed(dayPurchases, key = { _, item -> "pbf-${item.id}" }) { index, p ->
                     AnimatedVisibility(
                         visible = listEntered,
                         enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
