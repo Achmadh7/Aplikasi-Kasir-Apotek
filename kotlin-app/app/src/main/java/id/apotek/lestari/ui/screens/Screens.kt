@@ -1064,6 +1064,7 @@ fun KasirScreen() {
                     Text(if (cart.isNotEmpty()) "Keranjang (${cart.sumOf { it.qty }})" else "Keranjang", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     IconButton(onClick = { showSheet = false }) { Icon(Icons.Default.Close, "Tutup") }
                 }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
                 if (cart.isNotEmpty()) {
                     cart.forEachIndexed { index, ci ->
                         // Dua baris per item: (nama | total baris), lalu
@@ -1287,7 +1288,7 @@ fun KasirScreen() {
                     interactionSource = bayarInteraction,
                     colors = ButtonDefaults.buttonColors(containerColor = BlueButton, contentColor = Color.White),
                     shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.fillMaxWidth().height(56.dp).graphicsLayer(scaleX = bayarScale, scaleY = bayarScale)
+                    modifier = Modifier.fillMaxWidth().height(52.dp).graphicsLayer(scaleX = bayarScale, scaleY = bayarScale)
                 ) { Text("Bayar (${formatIDR(total)})", style = MaterialTheme.typography.titleMedium) }
                 }
                 AnimatedVisibility(visible = payMsg.isNotEmpty()) {
@@ -1499,14 +1500,15 @@ fun StokScreen() {
                     Text("Stok Obat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     Text("${medicines.size} jenis obat tercatat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Button(
-                    onClick = { editing = null; showForm = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer),
-                    shape = RoundedCornerShape(32.dp)
-                ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("Tambah Obat") }
             }
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = { editing = null; showForm = true },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(28.dp)
+            ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Tambah Obat", style = MaterialTheme.typography.titleMedium) }
             Spacer(Modifier.height(16.dp))
             DemoBanner()
             SearchField(
@@ -1842,14 +1844,15 @@ private fun OptionPickerSheet(
             title,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 8.dp)
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)
         )
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 20.dp))
         LazyColumn(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             items(options) { opt ->
                 Column {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { onSelect(opt) }.padding(horizontal = 24.dp, vertical = 14.dp)
+                        modifier = Modifier.fillMaxWidth().clickable { onSelect(opt) }.padding(horizontal = 20.dp, vertical = 14.dp)
                     ) {
                         Text(opt, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         RadioButton(selected = opt == selected, onClick = { onSelect(opt) })
@@ -1906,6 +1909,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                 Text(if (editing == null) "Tambah Obat" else "Edit Obat", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             OutlinedTextField(name, { name = it }, label = { Text("Nama Obat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 value = category, onValueChange = {}, label = { Text("Kategori") },
@@ -2346,6 +2350,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                 )
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             OutlinedTextField(category, { category = it }, label = { Text("Kategori") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(description, { description = it }, label = { Text("Keterangan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(amount, { amount = formatDecimalFieldValue(it) }, label = { Text("Jumlah (Rp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -4161,6 +4166,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 Text("Catat Pembelian PBF", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             OutlinedTextField(pbfName, { pbfName = it }, label = { Text("Faktur PBF") }, placeholder = { Text("mis. nama distributornya") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(invoiceNo, { invoiceNo = it }, label = { Text("Nomor Faktur (boleh kosong)") }, placeholder = { Text("mis. nomor faktur dari PBF") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(

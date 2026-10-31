@@ -136,19 +136,26 @@ val Poppins = FontFamily(
 )
 
 // Tipografi ekspresif: judul & angka lebih besar dan lebih tebal.
+// Semua gaya memakai digit tabular ("tnum") supaya angka uang & jumlah
+// lebarnya sama dan kolom total tidak goyang (revamp Achmad 2026-10-31);
+// bodySmall/labelMedium/labelSmall kini dinyatakan eksplisit (nilai sama
+// dengan bawaan Material 3) hanya untuk menambahkan tnum.
 val ExpressiveTypography = Typography(
-    displayLarge = TextStyle(fontSize = 57.sp, lineHeight = 64.sp, fontWeight = FontWeight.Bold),
-    displayMedium = TextStyle(fontSize = 45.sp, lineHeight = 52.sp, fontWeight = FontWeight.Bold),
-    displaySmall = TextStyle(fontSize = 36.sp, lineHeight = 44.sp, fontWeight = FontWeight.Bold),
-    headlineLarge = TextStyle(fontSize = 32.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold),
-    headlineMedium = TextStyle(fontSize = 28.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold, fontFamily = Poppins),
-    headlineSmall = TextStyle(fontSize = 24.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold),
-    titleLarge = TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold),
-    titleMedium = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
-    titleSmall = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontSize = 17.sp, lineHeight = 26.sp, fontWeight = FontWeight.Normal),
-    bodyMedium = TextStyle(fontSize = 15.sp, lineHeight = 22.sp, fontWeight = FontWeight.Normal),
-    labelLarge = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold)
+    displayLarge = TextStyle(fontFeatureSettings = "tnum", fontSize = 57.sp, lineHeight = 64.sp, fontWeight = FontWeight.Bold),
+    displayMedium = TextStyle(fontFeatureSettings = "tnum", fontSize = 45.sp, lineHeight = 52.sp, fontWeight = FontWeight.Bold),
+    displaySmall = TextStyle(fontFeatureSettings = "tnum", fontSize = 36.sp, lineHeight = 44.sp, fontWeight = FontWeight.Bold),
+    headlineLarge = TextStyle(fontFeatureSettings = "tnum", fontSize = 32.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold),
+    headlineMedium = TextStyle(fontFeatureSettings = "tnum", fontSize = 28.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold, fontFamily = Poppins),
+    headlineSmall = TextStyle(fontFeatureSettings = "tnum", fontSize = 24.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold),
+    titleLarge = TextStyle(fontFeatureSettings = "tnum", fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold),
+    titleMedium = TextStyle(fontFeatureSettings = "tnum", fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
+    titleSmall = TextStyle(fontFeatureSettings = "tnum", fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    bodyLarge = TextStyle(fontFeatureSettings = "tnum", fontSize = 17.sp, lineHeight = 26.sp, fontWeight = FontWeight.Normal),
+    bodyMedium = TextStyle(fontFeatureSettings = "tnum", fontSize = 15.sp, lineHeight = 22.sp, fontWeight = FontWeight.Normal),
+    labelLarge = TextStyle(fontFeatureSettings = "tnum", fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold),
+    bodySmall = TextStyle(fontFeatureSettings = "tnum", fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.4.sp, fontWeight = FontWeight.Normal),
+    labelMedium = TextStyle(fontFeatureSettings = "tnum", fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.Medium),
+    labelSmall = TextStyle(fontFeatureSettings = "tnum", fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp, fontWeight = FontWeight.Medium)
 )
 
 /** Pegas ekspresif: lentur (dampingRatio ~0.7) untuk animateContentSize & transisi. */
