@@ -585,7 +585,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             item {
                 // Penjualan Hari Ini: Obat Terjual dan Transaksi dalam satu kartu bertab (compact).
                 ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
+                    Column(Modifier.padding(16.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf("Obat Terjual" to 0, "Transaksi" to 1).forEach { (label, idx) ->
                                 val selected = salesTab == idx
@@ -2173,7 +2173,7 @@ fun KeuanganScreen() {
             Spacer(Modifier.height(16.dp))
             // Grafik arus kas — judul + isi mengikuti periode yang dipilih.
             ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(20.dp)) {
+                Column(Modifier.padding(16.dp)) {
                     val chartTitle = when (period) {
                         "today" -> "Arus Kas 7 Hari Terakhir"
                         "month" -> "Arus Kas Bulan Ini"
@@ -2490,7 +2490,7 @@ fun LabaScreen() {
             }
             item {
                 ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         // Grid statistik adaptif: HP portrait 2 kolom, tablet/landscape 3 kolom,
                         // tablet lebar 4 kolom (satu baris).
                         val statsCols = adaptiveColumns(compact = 2, medium = 3, expanded = 4)
@@ -2514,7 +2514,7 @@ fun LabaScreen() {
             if (r.costMissingQty > 0) {
                 item {
                     ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.Top) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
                             Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
                             Text(
@@ -2527,7 +2527,7 @@ fun LabaScreen() {
             }
             item {
                 ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp)) {
+                    Column(Modifier.padding(16.dp)) {
                         // Judul grafik mengikuti periode; "Hari Ini" menampilkan
                         // 7 hari terakhir (judulnya pun demikian).
                         val chartTitle = when (period) {
@@ -2685,7 +2685,7 @@ fun ObatTerlarisScreen() {
             if (list.isEmpty()) {
                 item {
                     ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.Leaderboard, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
                             Spacer(Modifier.height(8.dp))
                             Text("Belum ada penjualan pada periode ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2714,7 +2714,7 @@ fun ObatTerlarisScreen() {
                 }
                 item {
                     ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.fillMaxWidth().padding(20.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp)) {
                             list.forEachIndexed { index, s ->
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                                     Surface(
@@ -3933,7 +3933,7 @@ fun PbfScreen() {
             if (purchases.isEmpty()) {
                 item {
                     ExpressiveCard(shape = AppCardShape, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
                             Spacer(Modifier.height(8.dp))
                             Text("Belum ada catatan pembelian. Catat belanja dari PBF lewat tombol + Catat Pembelian — ini murni catatan, tidak mengubah stok dan kas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
