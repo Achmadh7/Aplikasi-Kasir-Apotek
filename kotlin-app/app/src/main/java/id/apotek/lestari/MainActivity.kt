@@ -29,7 +29,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -153,15 +152,13 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     Scaffold(
         bottomBar = {
             // Bar bawah MELAYANG model dock: Surface membulat 28dp, berjarak
-            // 16dp dari kiri/kanan dan 12dp dari bawah layar, bayangan lembut,
-            // warna sama dengan latar halaman + bordir rambut outlineVariant.
-            // Bayangan digambar MANUAL via Modifier.shadow: parameter
-            // shadowElevation bawaan Surface dilaporkan Achmad (2026-10-31)
-            // terlihat kotor/berbintik dan terlalu pekat di mode gelap, jadi
-            // tidak dipakai lagi. Warna bayangan mengikuti BIRU tema
-            // (colorScheme.primary, alpha rendah) atas permintaan Achmad
-            // (2026-10-31) supaya menyatu dengan latar biru dan tidak
-            // terkesan nabrak seperti bayangan hitam.
+            // 16dp dari kiri/kanan dan 12dp dari bawah layar. TANPA BAYANGAN
+            // sama sekali (flat — pilihan Achmad 2026-10-31, mengikuti
+            // referensinya): bayangan bawaan Surface terbukti berbintik/
+            // kotor di HP-nya, dan bayangan manual bernuansa biru juga
+            // akhirnya tidak dipakai. Pembedanya dari latar halaman kini:
+            // isi bar surfaceContainer (satu tingkat lebih terang dari
+            // background) + bordir rambut outlineVariant.
             // Isi dock meniru referensi yang dikirim Achmad (2026-10-31):
             // indikator tab aktif berupa SQUIRCLE (kotak membulat 52x38dp,
             // sudut 13dp) di belakang ikon — bukan kapsul NavigationBarItem
@@ -176,15 +173,9 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
             ) {
                 Surface(
                     shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.background,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
-                        .shadow(
-                            elevation = 6.dp,
-                            shape = RoundedCornerShape(28.dp),
-                            ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
-                            spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
-                        )
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
