@@ -155,10 +155,13 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
             // Bar bawah MELAYANG model dock: Surface membulat 28dp, berjarak
             // 16dp dari kiri/kanan dan 12dp dari bawah layar, bayangan lembut,
             // warna sama dengan latar halaman + bordir rambut outlineVariant.
-            // Bayangan digambar MANUAL via Modifier.shadow (hitam lembut,
-            // alpha rendah): parameter shadowElevation bawaan Surface
-            // dilaporkan Achmad (2026-10-31) terlihat kotor/berbintik dan
-            // terlalu pekat di mode gelap, jadi tidak dipakai lagi.
+            // Bayangan digambar MANUAL via Modifier.shadow: parameter
+            // shadowElevation bawaan Surface dilaporkan Achmad (2026-10-31)
+            // terlihat kotor/berbintik dan terlalu pekat di mode gelap, jadi
+            // tidak dipakai lagi. Warna bayangan mengikuti BIRU tema
+            // (colorScheme.primary, alpha rendah) atas permintaan Achmad
+            // (2026-10-31) supaya menyatu dengan latar biru dan tidak
+            // terkesan nabrak seperti bayangan hitam.
             // Isi dock meniru referensi yang dikirim Achmad (2026-10-31):
             // indikator tab aktif berupa SQUIRCLE (kotak membulat 52x38dp,
             // sudut 13dp) di belakang ikon — bukan kapsul NavigationBarItem
@@ -179,8 +182,8 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                         .shadow(
                             elevation = 6.dp,
                             shape = RoundedCornerShape(28.dp),
-                            ambientColor = Color.Black.copy(alpha = 0.18f),
-                            spotColor = Color.Black.copy(alpha = 0.22f)
+                            ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
+                            spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
                         )
                 ) {
                     Row(
