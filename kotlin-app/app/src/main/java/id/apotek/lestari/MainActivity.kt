@@ -29,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -154,6 +155,10 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
             // Bar bawah MELAYANG model dock: Surface membulat 28dp, berjarak
             // 16dp dari kiri/kanan dan 12dp dari bawah layar, bayangan lembut,
             // warna sama dengan latar halaman + bordir rambut outlineVariant.
+            // Bayangan digambar MANUAL via Modifier.shadow (hitam lembut,
+            // alpha rendah): parameter shadowElevation bawaan Surface
+            // dilaporkan Achmad (2026-10-31) terlihat kotor/berbintik dan
+            // terlalu pekat di mode gelap, jadi tidak dipakai lagi.
             // Isi dock meniru referensi yang dikirim Achmad (2026-10-31):
             // indikator tab aktif berupa SQUIRCLE (kotak membulat 52x38dp,
             // sudut 13dp) di belakang ikon — bukan kapsul NavigationBarItem
@@ -169,9 +174,14 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                 Surface(
                     shape = RoundedCornerShape(28.dp),
                     color = MaterialTheme.colorScheme.background,
-                    shadowElevation = 8.dp,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
+                        .shadow(
+                            elevation = 6.dp,
+                            shape = RoundedCornerShape(28.dp),
+                            ambientColor = Color.Black.copy(alpha = 0.18f),
+                            spotColor = Color.Black.copy(alpha = 0.22f)
+                        )
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
