@@ -2020,7 +2020,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
 fun KeuanganScreen() {
     var entries by remember { mutableStateOf<List<CashEntry>>(emptyList()) }
     var cashBalance by remember { mutableStateOf<CashBalance?>(null) }
-    var period by remember { mutableStateOf("all") } // today | month | all
+    var period by remember { mutableStateOf("today") } // today | month | all — awalnya "Hari Ini" (permintaan Achmad 2026-10-31), bukan "Semua"
     var typeFilter by remember { mutableStateOf("all") } // all | in | out
     var showForm by remember { mutableStateOf(false) }
     var formType by remember { mutableStateOf("in") }
