@@ -407,6 +407,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     expandVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)),
                 exit = fadeOut()
             ) {
+            Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val logo = rememberLogoBitmap()
                 if (logo != null) {
@@ -430,6 +431,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
+            }
             }
         }
         dashboard?.let { d ->
@@ -2574,6 +2576,7 @@ fun LabaScreen() {
                     expandVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)),
                 exit = fadeOut()
             ) {
+            Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
                     Icon(Icons.Default.TrendingUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
@@ -2589,6 +2592,7 @@ fun LabaScreen() {
                 listOf("today" to "Hari Ini", "month" to "Bulan Ini", "last30" to "30 Hari", "all" to "Semua").forEach { (k, l) ->
                     FilterChip(selected = period == k, onClick = { period = k }, label = { Text(l) })
                 }
+            }
             }
             }
         }
@@ -2882,6 +2886,7 @@ fun ObatTerlarisScreen() {
                                         expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
                                     exit = fadeOut()
                                 ) {
+                                Column {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                                     Surface(
                                         color = if (index == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
@@ -2910,6 +2915,7 @@ fun ObatTerlarisScreen() {
                                 }
                                 if (index < list.lastIndex) {
                                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 12.dp))
+                                }
                                 }
                                 }
                             }
