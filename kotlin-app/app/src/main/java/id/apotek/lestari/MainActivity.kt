@@ -230,7 +230,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
             // dan Tentang Aplikasi) terpotong dan tidak bisa diketuk
             // (laporan Achmad 2026-10-29).
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 8.dp).padding(top = 8.dp, bottom = 24.dp)) {
-                Text("Menu Lainnya", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
+                Text("Menu Lainnya", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 16.dp))
                 listOf(
                     Triple("laba", "Laba", Icons.Default.TrendingUp),

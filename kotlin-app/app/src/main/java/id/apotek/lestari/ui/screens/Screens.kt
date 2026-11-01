@@ -481,7 +481,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     Spacer(Modifier.width(10.dp))
                 }
                 Column {
-                    Text("Apotek Lestari", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Apotek Lestari", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
@@ -490,7 +490,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 }
             }
             Spacer(Modifier.height(SpaceS))
-            Text("Penjualan Hari Ini", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text("Penjualan Hari Ini", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1)
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(SpaceL))
@@ -1023,7 +1023,7 @@ fun KasirScreen() {
                 Icon(Icons.Default.PointOfSale, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
             }
             Spacer(Modifier.width(12.dp))
-            Text("Kasir", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text("Kasir", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
         }
         Spacer(Modifier.height(SpaceL))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -1218,7 +1218,7 @@ fun KasirScreen() {
                         Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
                     }
                     Spacer(Modifier.width(10.dp))
-                    Text(if (cart.isNotEmpty()) "Keranjang (${cart.sumOf { it.qty }})" else "Keranjang", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text(if (cart.isNotEmpty()) "Keranjang (${cart.sumOf { it.qty }})" else "Keranjang", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
                     IconButton(onClick = closeSheet) { Icon(Icons.Default.Close, "Tutup") }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
@@ -1685,7 +1685,7 @@ fun StokScreen() {
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Stok Obat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text("Stok Obat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
                     Text("${medicines.size} jenis obat tercatat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -2110,7 +2110,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (editing == null) "Tambah Obat" else "Edit Obat", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(if (editing == null) "Tambah Obat" else "Edit Obat", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -2326,7 +2326,7 @@ fun KeuanganScreen() {
                     Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("Keuangan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("Keuangan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -2708,7 +2708,7 @@ fun LabaScreen() {
                     Icon(Icons.Default.TrendingUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("Laporan Laba", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("Laporan Laba", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -2958,7 +2958,7 @@ fun ObatTerlarisScreen() {
                     Icon(Icons.Default.Leaderboard, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("Obat Terlaris", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("Obat Terlaris", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -3111,7 +3111,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                     Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("Pengingat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("Pengingat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -3817,7 +3817,7 @@ fun RiwayatScreen() {
                 Icon(Icons.Default.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
             }
             Spacer(Modifier.width(12.dp))
-            Text("Riwayat Penjualan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text("Riwayat Penjualan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
         }
         Spacer(Modifier.height(SpaceL))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -3987,7 +3987,7 @@ fun BackupScreen() {
             }
             Spacer(Modifier.width(12.dp))
             Column {
-                Text("Backup & Restore", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("Backup & Restore", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
                 Text("Simpan dan pulihkan semua data apotek.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -4099,7 +4099,7 @@ fun TentangScreen() {
                     Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("Tentang Aplikasi", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text("Tentang Aplikasi", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -4114,7 +4114,7 @@ fun TentangScreen() {
                     }
                 }
                 Spacer(Modifier.height(SpaceM))
-                Text("Apotek Lestari", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("Apotek Lestari", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
                 Spacer(Modifier.height(SpaceXS))
                 Text("Versi $version", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -4212,7 +4212,7 @@ fun PbfScreen() {
                         Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                     }
                     Spacer(Modifier.width(12.dp))
-                    Text("Faktur PBF", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text("Faktur PBF", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
                 }
                 Spacer(Modifier.height(SpaceL))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -4487,7 +4487,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Catat Pembelian PBF", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("Catat Pembelian PBF", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
