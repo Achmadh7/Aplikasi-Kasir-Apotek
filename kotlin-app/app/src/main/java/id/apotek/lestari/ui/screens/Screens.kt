@@ -915,6 +915,16 @@ fun KasirScreen() {
     // Obat yang jumlahnya sedang diubah lewat dialog ketik angka (null = dialog tutup).
     var qtyEditTarget by remember { mutableStateOf<CartItem?>(null) }
     val scope = rememberCoroutineScope()
+    // Menutup sheet Kasir DENGAN animasi: sheetState.hide() menganimasikan
+    // sheet turun terlebih dahulu, baru sheet dilepas dari komposisi.
+    // Menyetel showSheet = false secara langsung membuat sheet hilang
+    // sekejap tanpa animasi (dilaporkan Achmad 2026-11-01 pada tombol
+    // Tutup setelah pembayaran selesai).
+    val closeSheet: () -> Unit = {
+        scope.launch { sheetState.hide() }.invokeOnCompletion {
+            if (!sheetState.isVisible) showSheet = false
+        }
+    }
     // Supaya field Uang Diterima otomatis tergulir ke atas keyboard saat diketuk.
     val amountBringIntoView = remember { BringIntoViewRequester() }
     // Animasi "terbang ke keranjang": saat obat ditambahkan, ikon obat melayang
@@ -1193,7 +1203,7 @@ fun KasirScreen() {
                     }
                     Spacer(Modifier.width(10.dp))
                     Text(if (cart.isNotEmpty()) "Keranjang (${cart.sumOf { it.qty }})" else "Keranjang", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { showSheet = false }) { Icon(Icons.Default.Close, "Tutup") }
+                    IconButton(onClick = closeSheet) { Icon(Icons.Default.Close, "Tutup") }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
                 if (cart.isNotEmpty()) {
@@ -1414,7 +1424,7 @@ fun KasirScreen() {
                             ReceiptActionsRow(graphicsLayer = receiptLayer, invoiceNo = it.invoiceNo, sale = it)
                             Spacer(Modifier.height(SpaceM))
                             OutlinedButton(
-                                onClick = { showSheet = false },
+                                onClick = closeSheet,
                                 shape = RoundedCornerShape(28.dp),
                                 modifier = Modifier.fillMaxWidth().height(52.dp)
                             ) { Text("Tutup") }
