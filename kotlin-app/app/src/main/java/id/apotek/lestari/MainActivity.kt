@@ -1,21 +1,27 @@
 package id.apotek.lestari
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Bundle
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -28,12 +34,20 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -47,6 +61,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import id.apotek.lestari.data.local.DatabaseProvider
+import kotlin.math.hypot
+import kotlinx.coroutines.launch
 import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
 
@@ -78,6 +94,19 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** Tangkapan bitmap tampilan saat ini, untuk animasi pergantian tema. */
+private fun captureScreen(view: View): Bitmap? = try {
+    if (view.width <= 0 || view.height <= 0) {
+        null
+    } else {
+        val bmp = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        view.draw(Canvas(bmp))
+        bmp
+    }
+} catch (e: Exception) {
+    null
+}
+
 data class TabDef(
     val route: String,
     val label: String,
@@ -103,6 +132,44 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     // Sheet "Lainnya": Laba, Pengingat, Riwayat, Backup & Restore — menu yang tidak lagi ada di bar bawah.
     var showMoreSheet by remember { mutableStateOf(false) }
     val moreSheetState = rememberModalBottomSheetState()
+    // Animasi lingkaran tema (dipilih Achmad 2026-11-01, opsi 1 — sama seperti
+    // di Image HD Upscale): tangkapan layar tema lama ditumpuk di atas tema
+    // baru, dilubangi lingkaran yang membesar, sehingga tema baru tersingkap
+    // mulai dari titik awalnya. Titik awalnya adalah ikon tab "Lainnya" di bar
+    // bawah (tombol yang membuka sheet berisi baris tema) — baris tema sendiri
+    // berada di jendela sheet yang terpisah, jadi posisinya tidak bisa dipakai
+    // sebagai titik ukur yang stabil; pola yang sama dipakai HD Upscale dari
+    // tombol gir pembuka Pengaturan. Bila tangkapan gagal, tema berganti
+    // seketika seperti sebelumnya.
+    val rootView = LocalView.current
+    val appScope = rememberCoroutineScope()
+    var lainnyaIconCenter by remember { mutableStateOf(Offset.Zero) }
+    var revealBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    val revealRadius = remember { Animatable(0f) }
+    fun toggleThemeWithReveal() {
+        val shot = if (revealBitmap == null) captureScreen(rootView) else null
+        if (shot != null && lainnyaIconCenter != Offset.Zero) {
+            revealBitmap = shot
+            onToggleTheme()
+            val center = lainnyaIconCenter
+            val w = rootView.width.toFloat()
+            val h = rootView.height.toFloat()
+            val maxR = hypot(
+                maxOf(center.x, w - center.x).toDouble(),
+                maxOf(center.y, h - center.y).toDouble()
+            ).toFloat() + 8f
+            appScope.launch {
+                revealRadius.snapTo(0f)
+                revealRadius.animateTo(
+                    maxR,
+                    tween(650, easing = FastOutSlowInEasing)
+                )
+                revealBitmap = null
+            }
+        } else {
+            onToggleTheme()
+        }
+    }
     // Urutan tab untuk swipe (kiri ke kanan): Beranda, Stok, Kasir, Keuangan,
     // Lainnya. "Lainnya" membuka sheet, bukan layar — geser ke kiri dari
     // Keuangan membuka sheet Lainnya (sama seperti mengetuk tab Lainnya).
@@ -151,6 +218,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     } else {
         Modifier
     }
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         bottomBar = {
             // Bar bawah memakai komponen RESMI Material 3 Expressive
@@ -180,7 +248,18 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                         icon = {
                             Icon(
                                 if (selected) tab.icon else tab.iconOutlined,
-                                contentDescription = tab.label
+                                contentDescription = tab.label,
+                                modifier = if (tab.route == "lainnya") {
+                                    Modifier.onGloballyPositioned { coords ->
+                                        val pos = coords.positionInRoot()
+                                        lainnyaIconCenter = Offset(
+                                            pos.x + coords.size.width / 2f,
+                                            pos.y + coords.size.height / 2f
+                                        )
+                                    }
+                                } else {
+                                    Modifier
+                                }
                             )
                         },
                         label = { Text(tab.label) }
@@ -217,6 +296,34 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                 composable("tentang") { TentangScreen() }
             }
         }
+    }
+    // Lapisan animasi lingkaran tema: tangkapan tema lama dengan lubang
+    // lingkaran yang membesar dari ikon tab Lainnya; di bawah lubang itu
+    // tema baru sudah tampil, jadi tema baru tampak mengembang keluar.
+    val shot = revealBitmap
+    if (shot != null) {
+        val center = lainnyaIconCenter
+        val r = revealRadius.value
+        Image(
+            bitmap = shot.asImageBitmap(),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(GenericShape { size, _ ->
+                    fillType = PathFillType.EvenOdd
+                    addRect(Rect(Offset.Zero, size))
+                    if (r > 0f) {
+                        addOval(
+                            Rect(
+                                Offset(center.x - r, center.y - r),
+                                Size(r * 2f, r * 2f)
+                            )
+                        )
+                    }
+                })
+        )
+    }
     }
     // Sheet "Lainnya": Laba, Pengingat, Riwayat, Backup & Restore.
     if (showMoreSheet) {
@@ -276,7 +383,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable {
-                        onToggleTheme()
+                        toggleThemeWithReveal()
                         showMoreSheet = false
                     }
                 )
