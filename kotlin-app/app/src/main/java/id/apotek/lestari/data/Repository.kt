@@ -341,11 +341,12 @@ class Repository {
         if (args.amountPaid < total) throw IllegalArgumentException("Uang dibayar kurang dari total")
         val change = args.amountPaid - total
         val now = Date()
-        // Format nomor invoice: "INV - " + tanggal (hari-bulan), tanpa nomor urut
+        // Format nomor invoice: "INV - Hari / Tanggal / Bulan" dengan nama
+        // hari dan bulan bahasa Indonesia, tanpa nomor urut
         // supaya pendek (permintaan Achmad 2026-11-01). Konsekuensi yang
         // disadari: semua penjualan di hari yang sama berbagi nomor invoice
         // yang sama; data penjualan sendiri tetap terpisah per ID internal.
-        val invoiceNo = "INV - " + SimpleDateFormat("ddMM", Locale.US).apply {
+        val invoiceNo = "INV - " + SimpleDateFormat("EEEE / dd / MMMM", Locale("id", "ID")).apply {
             timeZone = jakarta
         }.format(now)
         val createdAt = nowIso()
