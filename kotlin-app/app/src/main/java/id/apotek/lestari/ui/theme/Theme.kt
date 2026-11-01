@@ -36,33 +36,23 @@ import java.util.TimeZone
 // dihapus; warna di semua layar memakai peran colorScheme.
 // ---------------------------------------------------------------------------
 
-// Hijau & amber semantik (angka laba dan peringatan) yang DIHARMONISASI ke
-// warna primer skema memakai Blend.harmonize — cara resmi Material Color
-// Utilities menambahkan warna kustom ke dalam skema warna (pilihan Achmad
-// 2026-11-01, supaya warna semantik tidak nabrak dengan skema): rona kedua
-// warna ditarik mendekati biru biji #0061A4 sehingga satu keluarga dengan
-// seluruh skema. Nilai di bawah adalah keluaran harmonisasi resminya dari
-// warna dasar yang sebelumnya dipakai mentah.
-private val ProfitGreenLight = Color(0xFF007E4E) // harmonisasi #2E7D32
-private val ProfitGreenDark = Color(0xFF64DDB3) // harmonisasi #7EDC9A
-private val WarningAmberLight = Color(0xFFBB6324) // harmonisasi #B26A00
-private val WarningAmberDark = Color(0xFFFFB578) // harmonisasi #FFB74D
+// Hijau semantik untuk angka laba (tidak ada peran hijau di colorScheme).
+val ExpressiveGreen = Color(0xFF7EDC9A)
 
 // Apakah aplikasi sedang dalam mode gelap (pilihan user di pengaturan tema,
 // bukan pengaturan sistem HP). Dipakai warna yang harus beda per tema.
 val LocalIsDarkTheme = staticCompositionLocalOf { true }
 
-/** Hijau angka laba/untung — versi harmonis skema (lihat konstanta di atas):
- *  pekat di mode terang, terang di mode gelap supaya terbaca. */
+/** Hijau angka laba/untung — terang di mode gelap, pekat di mode terang supaya terbaca. */
 @Composable
-fun profitGreen(): Color = if (LocalIsDarkTheme.current) ProfitGreenDark else ProfitGreenLight
+fun profitGreen(): Color = if (LocalIsDarkTheme.current) ExpressiveGreen else Color(0xFF2E7D32)
 
 /** Amber peringatan (label hitung mundur jatuh tempo PBF "N hari lagi" /
  *  "Besok jatuh tempo") — mode gelap #FFB74D (amber muda, jelas di latar
  *  gelap); mode terang #B26A00 (amber pekat) karena #FFB74D nyaris tidak
  *  terbaca di kartu terang (laporan Achmad 2026-10-31). */
 @Composable
-fun warningAmber(): Color = if (LocalIsDarkTheme.current) WarningAmberDark else WarningAmberLight
+fun warningAmber(): Color = if (LocalIsDarkTheme.current) Color(0xFFFFB74D) else Color(0xFFB26A00)
 
 /** Pegas ekspresif: lentur (dampingRatio ~0.7) untuk animateContentSize & transisi. */
 fun <T> expressiveSpring() = spring<T>(
@@ -109,12 +99,7 @@ fun ExpressiveCard(
 // Tampilan mengikuti web app (mode gelap) apa pun pengaturan sistem HP.
 // Skema warna RESMI hasil generate algoritma Material Color Utilities
 // (spesifikasi warna 2025) dari warna biji biru medis #0061A4, gaya
-// Expressive — sempat diganti ke Tonal Spot pada 2026-11-01 (keluhan
-// warna nabrak), lalu DIKEMBALIKAN ke Expressive malam yang sama atas
-// permintaan Achmad karena biru Tonal Spot terlalu redup: biru kini
-// hidup lagi seperti semula. Penanganan warna nabrak kini ditanggung
-// dua langkah lain yang dipertahankan: warna semantik yang
-// diharmonisasi ke skema dan lencana/chip bergaya netral. Nilai di bawah ini keluaran
+// Expressive — dipilih Achmad 2026-11-01. Nilai di bawah ini keluaran
 // generator resminya (bukan racikan tangan); pustaka generator tidak
 // dipasang sebagai dependensi karena versi terkininya menuntut
 // Kotlin/Compose lebih baru daripada tumpukan aplikasi ini.
