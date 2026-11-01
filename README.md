@@ -54,7 +54,7 @@ Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58
 |---|---|
 | Language | Kotlin 2.2.20 |
 | UI | Jetpack Compose — Material 3 Expressive (`material3` 1.5.0-alpha08, Compose BOM 2025.10.00) |
-| Theme | `MaterialExpressiveTheme` + `MotionScheme.expressive()`; official components (`ShortNavigationBar`, `SegmentedButton`, chips, `ListItem`); color scheme generated with Google's Material Color Utilities algorithm (Tonal Spot style, seed `#0061A4`, 2025 color spec); the semantic profit/warning colors are harmonized to the scheme with the same library (`Blend.harmonize`), and status badges use a neutral surface with a small colored dot so colors never fight each other |
+| Theme | `MaterialExpressiveTheme` + `MotionScheme.expressive()`; official components (`ShortNavigationBar`, `SegmentedButton`, chips, `ListItem`); color scheme generated with Google's Material Color Utilities algorithm (Expressive style, seed `#0061A4`, 2025 color spec); the semantic profit/warning colors are harmonized to the scheme with the same library (`Blend.harmonize`), and status badges use a neutral surface with a small colored dot so colors never fight each other |
 | Database | Room 2.7.2 (SQLite), fully offline |
 | Excel | Apache POI 5.2.5 (`.xlsx` import/export/template) |
 | Build | AGP 8.11.1, Gradle 8.13, compileSdk 36, targetSdk 34, minSdk 26 |
