@@ -243,7 +243,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                     ListItem(
                         headlineContent = { Text(label, style = MaterialTheme.typography.titleMedium) },
                         leadingContent = {
-                            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
                                 Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                             }
                         },
@@ -265,7 +265,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                         )
                     },
                     leadingContent = {
-                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
                             Icon(
                                 if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
                                 null,
@@ -284,7 +284,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                 ListItem(
                     headlineContent = { Text("Tentang Aplikasi", style = MaterialTheme.typography.titleMedium) },
                     leadingContent = {
-                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
                             Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                         }
                     },
