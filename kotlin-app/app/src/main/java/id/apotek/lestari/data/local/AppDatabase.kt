@@ -14,6 +14,10 @@ import androidx.room.RoomDatabase
 import androidx.room.Update
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 // ---- Entities: data tersimpan di HP (SQLite via Room) ----
 
@@ -344,7 +348,46 @@ object DatabaseProvider {
     val db: AppDatabase
         get() = _db ?: throw IllegalStateException("DatabaseProvider belum diinisialisasi. Panggil init() terlebih dahulu.")
 
+    // Jaring pengaman update (permintaan Achmad 2026-11-01): setiap kali
+    // aplikasi terdeteksi baru diperbarui, berkas database disalin dulu
+    // SEBELUM Room membukanya (migrasi berjalan saat database pertama kali
+    // dibuka), jadi kalau suatu migrasi kelak bermasalah, data dari sebelum
+    // update masih utuh tersimpan dan bisa dipulihkan. Deteksi update
+    // memakai lastUpdateTime paket — BUKAN versionCode, karena versionCode
+    // build masih 1. Disimpan maksimal 3 salinan terakhir di penyimpanan
+    // internal aplikasi. Kegagalan menyalin tidak boleh menghalangi
+    // aplikasi berjalan, jadi semua dibungkus try-catch.
+    private fun snapshotDatabaseBeforeUpdate(context: Context) {
+        try {
+            val prefs = context.getSharedPreferences("apotek_prefs", Context.MODE_PRIVATE)
+            val lastUpdate = try {
+                context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
+            } catch (e: Exception) { 0L }
+            if (lastUpdate == 0L || prefs.getLong("last_update_time", -1L) == lastUpdate) return
+            val dbFile = context.getDatabasePath("apotek-lestari.db")
+            if (dbFile.exists()) {
+                val dir = File(context.filesDir, "db-snapshots").apply { mkdirs() }
+                val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
+                val target = File(dir, "apotek-lestari-$stamp.db")
+                dbFile.copyTo(target, overwrite = true)
+                // Berkas pendamping WAL ikut disalin supaya salinan lengkap.
+                for (suffix in listOf("-wal", "-shm")) {
+                    val side = File(dbFile.path + suffix)
+                    if (side.exists()) side.copyTo(File(target.path + suffix), overwrite = true)
+                }
+                dir.listFiles { f -> f.name.endsWith(".db") }
+                    ?.sortedByDescending { it.lastModified() }
+                    ?.drop(3)
+                    ?.forEach { f -> f.delete(); File(f.path + "-wal").delete(); File(f.path + "-shm").delete() }
+            }
+            prefs.edit().putLong("last_update_time", lastUpdate).apply()
+        } catch (e: Exception) {
+            // Abaikan: snapshot gagal tidak boleh menghalangi aplikasi.
+        }
+    }
+
     fun init(context: Context) {
+        snapshotDatabaseBeforeUpdate(context)
         if (_db == null) {
             synchronized(this) {
                 if (_db == null) {
