@@ -1175,7 +1175,7 @@ fun KasirScreen() {
     // Bottom sheet: keranjang + pembayaran (dan struk setelah bayar berhasil).
     if (showSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showSheet = false },
+            onDismissRequest = closeSheet,
             sheetState = sheetState,
             // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): selebar layar
             // di HP potret, 360dp di HP lanskap, 640dp di tablet.
@@ -1216,23 +1216,34 @@ fun KasirScreen() {
                                     Spacer(Modifier.width(12.dp))
                                 }
                                 StepperButton(Icons.Default.Remove, "Kurangi") { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
-                                key(ci.qty) {
-                                    val qtyPop = remember { Animatable(1.35f) }
-                                    LaunchedEffect(ci.qty) { qtyPop.animateTo(1f, expressiveSpring()) }
-                                    // Angka jumlah bisa diketuk untuk ketik jumlah langsung
-                                    // (pill abu-abu menandakan bisa diketuk).
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                        shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.height(40.dp).clickable { qtyEditTarget = ci }
-                                    ) {
-                                        Text(
-                                            "${ci.qty}",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            modifier = Modifier.width(44.dp).fillMaxHeight().wrapContentHeight(Alignment.CenterVertically).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value),
-                                            textAlign = TextAlign.Center
-                                        )
+                                // Animasi "pop" angka jumlah HANYA saat jumlah berubah
+                                // SETELAH komposisi pertama. Dulu key(ci.qty) +
+                                // Animatable(1.35f) membuat pop berjalan di semua
+                                // baris tepat saat animasi buka sheet berjalan —
+                                // salah satu sumber jitter saat membuka keranjang.
+                                val qtyPop = remember { Animatable(1f) }
+                                var qtyPopArmed by remember { mutableStateOf(false) }
+                                LaunchedEffect(ci.qty) {
+                                    if (qtyPopArmed) {
+                                        qtyPop.snapTo(1.35f)
+                                        qtyPop.animateTo(1f, expressiveSpring())
+                                    } else {
+                                        qtyPopArmed = true
                                     }
+                                }
+                                // Angka jumlah bisa diketuk untuk ketik jumlah langsung
+                                // (pill abu-abu menandakan bisa diketuk).
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(40.dp).clickable { qtyEditTarget = ci }
+                                ) {
+                                    Text(
+                                        "${ci.qty}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.width(44.dp).fillMaxHeight().wrapContentHeight(Alignment.CenterVertically).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value),
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
                                 StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
                                 Spacer(Modifier.width(8.dp))
@@ -1391,7 +1402,10 @@ fun KasirScreen() {
                     modifier = Modifier.fillMaxWidth().height(52.dp).graphicsLayer(scaleX = bayarScale, scaleY = bayarScale)
                 ) { Text("Bayar (${formatIDR(total)})", style = MaterialTheme.typography.titleMedium) }
                 }
-                AnimatedVisibility(visible = payMsg.isNotEmpty()) {
+                // Sengaja TANPA AnimatedVisibility: animasi mengembangnya
+                // bertabrakan dengan animasi tinggi sheet (pegas draggable)
+                // sehingga gerak sheet terasa jitter setelah pembayaran.
+                if (payMsg.isNotEmpty()) {
                     Column {
                         Spacer(Modifier.height(SpaceS))
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1401,7 +1415,11 @@ fun KasirScreen() {
                         }
                     }
                 }
-                AnimatedVisibility(visible = lastSale != null) {
+                // Sengaja TANPA AnimatedVisibility (alasan sama seperti blok
+                // pesan sukses di atas): blok struk ini tinggi — animasi
+                // mengembangnya membuat sheet jitter saat struk muncul dan
+                // saat sheet ditutup dari tampilan struk.
+                if (lastSale != null) {
                     Column {
                         Spacer(Modifier.height(SpaceL))
                         lastSale?.let {
