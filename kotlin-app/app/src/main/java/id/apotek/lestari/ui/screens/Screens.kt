@@ -216,10 +216,10 @@ private fun PurchasePaymentChip(paymentType: String) {
         colors = AssistChipDefaults.assistChipColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             labelColor = fg,
-            leadingIconColor = fg,
+            leadingIconContentColor = fg,
             disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             disabledLabelColor = fg,
-            disabledLeadingIconColor = fg
+            disabledLeadingIconContentColor = fg
         ),
         border = null
     )
@@ -253,10 +253,10 @@ private fun SalePaymentChip(paymentMethod: String) {
         colors = AssistChipDefaults.assistChipColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             labelColor = MaterialTheme.colorScheme.primary,
-            leadingIconColor = MaterialTheme.colorScheme.primary,
+            leadingIconContentColor = MaterialTheme.colorScheme.primary,
             disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             disabledLabelColor = MaterialTheme.colorScheme.primary,
-            disabledLeadingIconColor = MaterialTheme.colorScheme.primary
+            disabledLeadingIconContentColor = MaterialTheme.colorScheme.primary
         ),
         border = null
     )
@@ -399,10 +399,10 @@ private fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = f
         colors = AssistChipDefaults.assistChipColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             labelColor = fg,
-            leadingIconColor = fg,
+            leadingIconContentColor = fg,
             disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             disabledLabelColor = fg,
-            disabledLeadingIconColor = fg
+            disabledLeadingIconContentColor = fg
         ),
         border = null
     )
