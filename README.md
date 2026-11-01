@@ -85,16 +85,6 @@ Build notes:
   - `.../ui/` — also `BluetoothPrinter.kt` (ESC/POS printing), `ReceiptShare.kt` (receipt image sharing), `LogoData.kt` (the pharmacy logo shown on receipts).
   - `.../data/` — `Repository.kt` (business logic), `Models.kt`, `ExcelHelper.kt` (.xlsx import/export), `BackupHelper.kt` (JSON backup/restore), and `local/` (Room database, entities, DAOs, migrations).
 
-## Changelog
-
-**2026-11-01**
-- Full conversion to Google's official Material 3 Expressive: `MaterialExpressiveTheme` + expressive motion, official `ShortNavigationBar`, segmented buttons for payment/cash direction, official chips and list rows throughout.
-- Color scheme regenerated in the calmer **Tonal Spot** style (same medical-blue seed); profit/warning colors harmonized to the scheme; stock/payment badges restyled to a neutral surface with a semantic color dot.
-- Fixed receipt sharing failing on the new invoice format — the file name is now sanitized (`INV - 01/11/26` becomes `Struk-INV-01-11-26.png`).
-- Invoice numbers unified to `INV - dd/MM/yy`; a database index fix (v12) lets multiple same-day sales save correctly under the shared number.
-- Safety net added: the database is automatically snapshotted before an app update runs its migrations.
-- This README rewritten in English.
-
 ## FAQ
 
 - **Is any data uploaded to a server?** No. The app is fully offline; everything lives in the on-device database (see the notes below).
