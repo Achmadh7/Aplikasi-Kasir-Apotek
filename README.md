@@ -62,7 +62,7 @@ Catatan build:
 ## Isi repo
 
 - `kotlin-app/` — proyek Android (Kotlin + Jetpack Compose) yang menjadi aplikasi saat ini.
-- `.github/workflows/build-apk.yml` — workflow GitHub Actions untuk build APK debug + rilis.
+- `.github/workflows/main.yml` — workflow GitHub Actions untuk build APK debug + rilis.
 
 ## Catatan data & keamanan update
 
