@@ -1593,10 +1593,16 @@ fun StokScreen() {
                 lastScrollOffset = offset
             }
     }
+    // Muat awal + setiap kali layar kembali tampil (resumeKey): langsung
+    // tanpa menunggu. Dulu muat awal ikut antre di debounce pencarian di
+    // bawah, jadi menu Stok terasa delay saat dibuka (perbaikan 2026-11-01).
+    LaunchedEffect(resumeKey) { reload() }
     // Pencarian di-debounce: satu reload 300ms setelah ketikan terakhir,
     // supaya coroutine pencarian lama tidak saling mendahului hasil terbaru.
-    // LaunchedEffect(search) juga memuat daftar awal (search = "").
-    LaunchedEffect(search, resumeKey) {
+    // Jalan pertama dilewati karena muat awal sudah ditangani efek di atas.
+    var searchEffectReady by remember { mutableStateOf(false) }
+    LaunchedEffect(search) {
+        if (!searchEffectReady) { searchEffectReady = true; return@LaunchedEffect }
         delay(300)
         reload()
     }
