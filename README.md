@@ -1,71 +1,85 @@
-# Apotek Lestari — Aplikasi Kasir & Manajemen Stok Apotek
+# Apotek Lestari — Pharmacy Cashier & Inventory Management App
 
-Aplikasi Android untuk Apotek Lestari: kasir penjualan, stok obat, keuangan, laporan laba, pengingat kedaluwarsa/restock, dan catatan pembelian dari PBF — **sepenuhnya offline**, semua data tersimpan di HP.
+An Android app for Apotek Lestari: sales cashier, medicine stock, cash book, profit reports, expiry/restock reminders, and purchase records from distributors (PBF) — **fully offline**, with all data stored on the device.
 
-- **Teknologi:** Kotlin + Jetpack Compose (Material 3 Expressive), database lokal Room/SQLite
-- **Versi aplikasi:** 1.0.0 — minimum Android 8.0 (API 26)
-- **Zona waktu:** semua batas "hari ini / bulan ini" memakai Asia/Jakarta (WIB)
+- **Technology:** Kotlin + Jetpack Compose (Material 3 Expressive), local Room/SQLite database
+- **App version:** 1.0.0 — minimum Android 8.0 (API 26)
+- **Time zone:** all "today / this month" boundaries use Asia/Jakarta (WIB)
 
-## Screenshot
+## Screenshots
 
-| Beranda | Stok Obat |
+| Home | Medicine Stock |
 |:---:|:---:|
-| <img src="docs/screenshots/beranda.jpg" width="280" alt="Beranda"> | <img src="docs/screenshots/stok-obat.jpg" width="280" alt="Stok Obat"> |
+| <img src="docs/screenshots/beranda.jpg" width="280" alt="Home"> | <img src="docs/screenshots/stok-obat.jpg" width="280" alt="Medicine Stock"> |
 
-| Kasir | Keuangan |
+| Cashier | Finance |
 |:---:|:---:|
-| <img src="docs/screenshots/kasir.jpg" width="280" alt="Kasir"> | <img src="docs/screenshots/keuangan.jpg" width="280" alt="Keuangan"> |
+| <img src="docs/screenshots/kasir.jpg" width="280" alt="Cashier"> | <img src="docs/screenshots/keuangan.jpg" width="280" alt="Finance"> |
 
-| Menu Lainnya | Laporan Laba |
+| More Menu | Profit Report |
 |:---:|:---:|
-| <img src="docs/screenshots/menu-lainnya.jpg" width="280" alt="Menu Lainnya"> | <img src="docs/screenshots/laporan-laba.jpg" width="280" alt="Laporan Laba"> |
+| <img src="docs/screenshots/menu-lainnya.jpg" width="280" alt="More Menu"> | <img src="docs/screenshots/laporan-laba.jpg" width="280" alt="Profit Report"> |
 
-| Obat Terlaris | Pengingat |
+| Best-Selling Medicines | Reminders |
 |:---:|:---:|
-| <img src="docs/screenshots/obat-terlaris.jpg" width="280" alt="Obat Terlaris"> | <img src="docs/screenshots/pengingat.jpg" width="280" alt="Pengingat"> |
+| <img src="docs/screenshots/obat-terlaris.jpg" width="280" alt="Best-Selling Medicines"> | <img src="docs/screenshots/pengingat.jpg" width="280" alt="Reminders"> |
 
-| Riwayat Penjualan | Faktur PBF |
+| Sales History | Supplier Invoices (Faktur PBF) |
 |:---:|:---:|
-| <img src="docs/screenshots/riwayat-penjualan.jpg" width="280" alt="Riwayat Penjualan"> | <img src="docs/screenshots/faktur-pbf.jpg" width="280" alt="Faktur PBF"> |
+| <img src="docs/screenshots/riwayat-penjualan.jpg" width="280" alt="Sales History"> | <img src="docs/screenshots/faktur-pbf.jpg" width="280" alt="Supplier Invoices"> |
 
-## Menu & fitur utama
+*Note: the screenshots show an earlier interface. The app has since moved to the official Material 3 Expressive design and components.*
 
-- **Beranda** — ringkasan penjualan hari ini, kartu uang (masuk/keluar/selisih), dan pengingat gabungan.
-- **Kasir** — keranjang belanja, pembayaran Tunai/QRIS/Transfer, harga Ecer/Grosir per obat, struk dengan pesan "Semoga Cepat Sembuh".
-- **Stok Obat** — status stok Aman (16+) / Sedang (10–15) / Rendah (1–9) / Habis (0), pencarian & filter status, impor/ekspor/template Excel.
-- **Keuangan** — saldo kas, catat kas masuk/keluar, grafik arus kas 7 hari.
-- **Laporan Laba** — laba per periode dengan grafik.
-- **Obat Terlaris** — peringkat obat berdasarkan jumlah item terjual.
-- **Pengingat** — stok rendah/habis, obat mendekati kedaluwarsa, dan tagihan PBF mendekati jatuh tempo.
-- **Riwayat Penjualan** — riwayat per hari, detail invoice, bagikan/cetak struk.
-- **Faktur PBF** — catatan pembelian dari distributor (Cash/Kredit, PPN, tanggal jatuh tempo, tandai lunas). Murni catatan: tidak mengubah stok dan kas.
-- **Backup & Restore** — satu berkas JSON lewat pemilih berkas sistem (bisa disimpan ke Google Drive).
-- **Tentang Aplikasi** — info versi aplikasi.
+## Menus & main features
 
-Fitur pendukung: cetak struk ke printer thermal Bluetooth (ESC/POS, kertas 58mm), tema gelap/terang, dan nomor invoice format `INV - dd/MM/yy` (mis. `INV - 01/11/26`).
+- **Beranda (Home)** — today's sales summary with a "Pemasukan Hari Ini" (today's revenue) hero card, a money card (cash in / cash out / profit-loss), and combined reminders.
+- **Kasir (Cashier)** — shopping cart, Cash/QRIS/Transfer payments, per-medicine Retail/Wholesale (Ecer/Grosir) pricing, and receipts carrying the "Semoga Cepat Sembuh" (get well soon) message.
+- **Stok Obat (Medicine Stock)** — stock status Safe (16+) / Medium (10–15) / Low (1–9) / Out of stock (0), search & status filters, Excel import/export/template.
+- **Keuangan (Finance)** — cash balance, cash in/out entries (Catat Kas), and a 7-day cash-flow chart.
+- **Laporan Laba (Profit Report)** — profit per period with charts.
+- **Obat Terlaris (Best-Selling Medicines)** — medicine ranking by units sold.
+- **Pengingat (Reminders)** — low/out-of-stock medicines, medicines nearing expiry, and distributor bills nearing their due date.
+- **Riwayat Penjualan (Sales History)** — daily history, invoice details, receipt sharing/printing.
+- **Faktur PBF (Supplier Invoices)** — purchase records from distributors (Cash/Credit, VAT/PPN, due dates, mark-as-paid). Records only: they never change stock or cash.
+- **Backup & Restore** — a single JSON file through the system file picker (can be saved to Google Drive).
+- **Tentang Aplikasi (About)** — app version info.
 
-## Cara build APK
+Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58 mm paper), system printing/PDF via the Android print framework, dark/light themes, and invoice numbers in the `INV - dd/MM/yy` format (e.g. `INV - 01/11/26`).
 
-**Tanpa laptop (dipakai sehari-hari):**
+## Tech stack
 
-1. Buka tab **Actions** di repo ini → workflow **Build APK** → **Run workflow** di branch `main`.
-2. Unduh artifact **`app-debug-apk`** (untuk pemakaian langsung) atau **`app-release-apk`** (rilis bertanda tangan, R8) dari halaman run yang selesai.
-3. Pasang APK-nya di HP/tablet.
+| Area | Technology |
+|---|---|
+| Language | Kotlin 2.2.20 |
+| UI | Jetpack Compose — Material 3 Expressive (`material3` 1.5.0-alpha08, Compose BOM 2025.10.00) |
+| Theme | `MaterialExpressiveTheme` + `MotionScheme.expressive()`; official components (`ShortNavigationBar`, `SegmentedButton`, chips, `ListItem`); color scheme generated with Google's Material Color Utilities algorithm (Expressive style, seed `#0061A4`, 2025 color spec) |
+| Database | Room 2.7.2 (SQLite), fully offline |
+| Excel | Apache POI 5.2.5 (`.xlsx` import/export/template) |
+| Build | AGP 8.11.1, Gradle 8.13, compileSdk 36, targetSdk 34, minSdk 26 |
+| Printing | Android PrintManager + ESC/POS over Bluetooth |
 
-**Dengan Android Studio:** buka folder `kotlin-app/`, tunggu Gradle Sync, lalu Build APK.
+## How to build the APK
 
-Catatan build:
+**Without a computer (the everyday flow):**
 
-- Build membutuhkan internet — font Poppins diunduh saat build oleh task Gradle `downloadPoppinsFonts`.
-- Penandatanganan rilis memakai keystore dari repo privat terpisah (`Sigkey-Apotek-Lestari`) yang diambil lewat secrets GitHub Actions.
+1. Open the **Actions** tab in this repo → the **Build APK** workflow → **Run workflow** on the `main` branch.
+2. Download the **`app-release-apk`** artifact (signed release build, R8 — the one used day to day) or **`app-debug-apk`** (debug build) from the finished run page.
+3. Install the APK on the phone/tablet.
 
-## Isi repo
+**With Android Studio:** open the `kotlin-app/` folder, wait for Gradle Sync, then Build APK.
 
-- `kotlin-app/` — proyek Android (Kotlin + Jetpack Compose) yang menjadi aplikasi saat ini.
-- `.github/workflows/main.yml` — workflow GitHub Actions untuk build APK debug + rilis.
+Build notes:
 
-## Catatan data & keamanan update
+- Builds require internet access (Gradle dependency resolution).
+- Release signing uses a keystore from a separate private repository (`Sigkey-Apotek-Lestari`), supplied through GitHub Actions secrets.
 
-- Semua data asli (stok, penjualan, kas, pembelian) tersimpan **lokal di HP** dalam database `apotek-lestari.db` — bukan di repo ini dan bukan di server. Repo hanya berisi kode program: tidak ada database, data penjualan, maupun kredensial.
-- Sebagai jaring pengaman, setiap kali aplikasi terdeteksi baru diperbarui, berkas database **disalin otomatis sebelum migrasi berjalan** (maksimal 3 salinan terakhir di penyimpanan internal aplikasi), jadi data sebelum update tetap utuh bila suatu migrasi bermasalah.
-- Backup manual tetap disarankan sebelum update besar: menu **Lainnya → Backup & Restore → Backup**.
+## Repository contents
+
+- `kotlin-app/` — the Android project (Kotlin + Jetpack Compose) that is the current app.
+- `.github/workflows/main.yml` — the GitHub Actions workflow that builds the debug + release APKs.
+
+## Data & update safety notes
+
+- All real data (stock, sales, cash, purchases) lives **locally on the device** in the `apotek-lestari.db` database — not in this repo and not on any server. This repo contains program code only: no database, sales data, or credentials.
+- As a safety net, whenever the app detects it has just been updated, the database file is **automatically copied before migrations run** (up to the 3 most recent copies in the app's internal storage), so pre-update data stays intact if a migration ever goes wrong.
+- A manual backup is still recommended before major updates: **Lainnya (More) → Backup & Restore → Backup**.
