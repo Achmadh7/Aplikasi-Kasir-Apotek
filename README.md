@@ -6,6 +6,28 @@ Aplikasi Android untuk Apotek Lestari: kasir penjualan, stok obat, keuangan, lap
 - **Versi aplikasi:** 1.0.0 — minimum Android 8.0 (API 26)
 - **Zona waktu:** semua batas "hari ini / bulan ini" memakai Asia/Jakarta (WIB)
 
+## Screenshot
+
+| Beranda | Stok Obat |
+|:---:|:---:|
+| <img src="docs/screenshots/beranda.jpg" width="280" alt="Beranda"> | <img src="docs/screenshots/stok-obat.jpg" width="280" alt="Stok Obat"> |
+
+| Kasir | Keuangan |
+|:---:|:---:|
+| <img src="docs/screenshots/kasir.jpg" width="280" alt="Kasir"> | <img src="docs/screenshots/keuangan.jpg" width="280" alt="Keuangan"> |
+
+| Menu Lainnya | Laporan Laba |
+|:---:|:---:|
+| <img src="docs/screenshots/menu-lainnya.jpg" width="280" alt="Menu Lainnya"> | <img src="docs/screenshots/laporan-laba.jpg" width="280" alt="Laporan Laba"> |
+
+| Obat Terlaris | Pengingat |
+|:---:|:---:|
+| <img src="docs/screenshots/obat-terlaris.jpg" width="280" alt="Obat Terlaris"> | <img src="docs/screenshots/pengingat.jpg" width="280" alt="Pengingat"> |
+
+| Riwayat Penjualan | Faktur PBF |
+|:---:|:---:|
+| <img src="docs/screenshots/riwayat-penjualan.jpg" width="280" alt="Riwayat Penjualan"> | <img src="docs/screenshots/faktur-pbf.jpg" width="280" alt="Faktur PBF"> |
+
 ## Menu & fitur utama
 
 - **Beranda** — ringkasan penjualan hari ini, kartu uang (masuk/keluar/selisih), dan pengingat gabungan.
