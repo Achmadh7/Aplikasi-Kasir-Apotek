@@ -3875,12 +3875,15 @@ fun RiwayatScreen() {
                                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                Spacer(Modifier.width(8.dp))
                                 // Chip cara bayar di tengah antara nomor invoice
-                                // dan nominal, seperti Faktur PBF (permintaan
+                                // dan nominal, seperti Faktur PBF — hanya untuk
+                                // QRIS dan Transfer; Tunai tanpa chip (permintaan
                                 // Achmad 2026-11-01).
-                                SalePaymentChip(s.paymentMethod)
-                                Spacer(Modifier.width(10.dp))
+                                if (s.paymentMethod != "Tunai") {
+                                    Spacer(Modifier.width(8.dp))
+                                    SalePaymentChip(s.paymentMethod)
+                                    Spacer(Modifier.width(10.dp))
+                                }
                                 Text(formatIDR(s.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 Icon(
                                     if (isOpen) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null,
