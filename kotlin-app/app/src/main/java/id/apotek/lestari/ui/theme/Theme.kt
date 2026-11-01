@@ -11,7 +11,7 @@ import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.expressiveLightColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -29,8 +29,9 @@ import java.util.TimeZone
 // ---------------------------------------------------------------------------
 // Material 3 Expressive RESMI Google (Material3 1.5.0-alpha08). Sejak
 // 2026-11-01 (permintaan Achmad) aplikasi memakai bawaan resmi sepenuhnya:
-// skema warna expressiveLightColorScheme()/darkColorScheme(), tipografi
-// dan bentuk bawaan MaterialExpressiveTheme, MotionScheme expressive.
+// tipografi dan bentuk bawaan MaterialExpressiveTheme, MotionScheme
+// expressive, dan skema warna yang digenerate algoritma resmi Google
+// (Material Color Utilities) dari warna biji — lihat SeedLightColors.
 // Palet biru medis, tipografi Poppins, dan bentuk kustom sebelumnya sudah
 // dihapus; warna di semua layar memakai peran colorScheme.
 // ---------------------------------------------------------------------------
@@ -96,19 +97,126 @@ fun ExpressiveCard(
 }
 
 // Tampilan mengikuti web app (mode gelap) apa pun pengaturan sistem HP.
+// Skema warna RESMI hasil generate algoritma Material Color Utilities
+// (spesifikasi warna 2025) dari warna biji biru medis #0061A4, gaya
+// Expressive — dipilih Achmad 2026-11-01. Nilai di bawah ini keluaran
+// generator resminya (bukan racikan tangan); pustaka generator tidak
+// dipasang sebagai dependensi karena versi terkininya menuntut
+// Kotlin/Compose lebih baru daripada tumpukan aplikasi ini.
+private val SeedLightColors = lightColorScheme(
+    primary = Color(0xFF0662A4),
+    onPrimary = Color(0xFFF7F9FF),
+    primaryContainer = Color(0xFF94C5FF),
+    onPrimaryContainer = Color(0xFF003E6C),
+    inversePrimary = Color(0xFF6EAFF7),
+    secondary = Color(0xFF44674F),
+    onSecondary = Color(0xFFE7FFEB),
+    secondaryContainer = Color(0xFFD0F8D9),
+    onSecondaryContainer = Color(0xFF3D6049),
+    tertiary = Color(0xFF0E6E36),
+    onTertiary = Color(0xFFE8FFE7),
+    tertiaryContainer = Color(0xFFA6FFB8),
+    onTertiaryContainer = Color(0xFF00652F),
+    background = Color(0xFFF8F9FF),
+    onBackground = Color(0xFF133454),
+    surface = Color(0xFFF8F9FF),
+    onSurface = Color(0xFF133454),
+    surfaceVariant = Color(0xFFD1E4FF),
+    onSurfaceVariant = Color(0xFF446183),
+    surfaceTint = Color(0xFF0662A4),
+    inverseSurface = Color(0xFF010F1F),
+    inverseOnSurface = Color(0xFF8F9EB3),
+    error = Color(0xFFAC3434),
+    onError = Color(0xFFFFF7F6),
+    errorContainer = Color(0xFFF56965),
+    onErrorContainer = Color(0xFF65000B),
+    outline = Color(0xFF607DA1),
+    outlineVariant = Color(0xFF97B4DB),
+    scrim = Color(0xFF000000),
+    surfaceBright = Color(0xFFF8F9FF),
+    surfaceDim = Color(0xFFC3DCFF),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFEEF4FF),
+    surfaceContainer = Color(0xFFE5EEFF),
+    surfaceContainerHigh = Color(0xFFDBE9FF),
+    surfaceContainerHighest = Color(0xFFD1E4FF),
+    primaryFixed = Color(0xFF94C5FF),
+    primaryFixedDim = Color(0xFF77B7FF),
+    onPrimaryFixed = Color(0xFF00294A),
+    onPrimaryFixedVariant = Color(0xFF00477B),
+    secondaryFixed = Color(0xFFD0F8D9),
+    secondaryFixedDim = Color(0xFFC2E9CB),
+    onSecondaryFixed = Color(0xFF2B4D37),
+    onSecondaryFixedVariant = Color(0xFF476A52),
+    tertiaryFixed = Color(0xFFA6FFB8),
+    tertiaryFixedDim = Color(0xFF98F0AA),
+    onTertiaryFixed = Color(0xFF005024),
+    onTertiaryFixedVariant = Color(0xFF116F38),
+)
+
+private val SeedDarkColors = darkColorScheme(
+    primary = Color(0xFFB9D7FF),
+    onPrimary = Color(0xFF1D4B77),
+    primaryContainer = Color(0xFFA0CAFD),
+    onPrimaryContainer = Color(0xFF10426E),
+    inversePrimary = Color(0xFF37618F),
+    secondary = Color(0xFFB6CCB9),
+    onSecondary = Color(0xFF314537),
+    secondaryContainer = Color(0xFF172A1D),
+    onSecondaryContainer = Color(0xFF93A998),
+    tertiary = Color(0xFFEAFFE9),
+    onTertiary = Color(0xFF0D6E36),
+    tertiaryContainer = Color(0xFFA6FFB8),
+    onTertiaryContainer = Color(0xFF00652F),
+    background = Color(0xFF050F1A),
+    onBackground = Color(0xFFD6E7FF),
+    surface = Color(0xFF050F1A),
+    onSurface = Color(0xFFD6E7FF),
+    surfaceVariant = Color(0xFF11273D),
+    onSurfaceVariant = Color(0xFF98ADC9),
+    surfaceTint = Color(0xFFB9D7FF),
+    inverseSurface = Color(0xFFF8F9FF),
+    inverseOnSurface = Color(0xFF4C5664),
+    error = Color(0xFFFF716C),
+    onError = Color(0xFF490006),
+    errorContainer = Color(0xFF8A1A1E),
+    onErrorContainer = Color(0xFFFF9993),
+    outline = Color(0xFF637791),
+    outlineVariant = Color(0xFF354961),
+    scrim = Color(0xFF000000),
+    surfaceBright = Color(0xFF152D47),
+    surfaceDim = Color(0xFF050F1A),
+    surfaceContainerLowest = Color(0xFF000000),
+    surfaceContainerLow = Color(0xFF071422),
+    surfaceContainer = Color(0xFF0B1A2B),
+    surfaceContainerHigh = Color(0xFF0E2134),
+    surfaceContainerHighest = Color(0xFF11273D),
+    primaryFixed = Color(0xFFA0CAFD),
+    primaryFixedDim = Color(0xFF93BCEE),
+    onPrimaryFixed = Color(0xFF002E51),
+    onPrimaryFixedVariant = Color(0xFF1D4B77),
+    secondaryFixed = Color(0xFFDFF7E3),
+    secondaryFixedDim = Color(0xFFD1E8D5),
+    onSecondaryFixed = Color(0xFF394D3E),
+    onSecondaryFixedVariant = Color(0xFF55695A),
+    tertiaryFixed = Color(0xFFA6FFB8),
+    tertiaryFixedDim = Color(0xFF98F0AA),
+    onTertiaryFixed = Color(0xFF005024),
+    onTertiaryFixedVariant = Color(0xFF116F38),
+)
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ApotikLestariTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
         // Tema Expressive RESMI Google (Material3 1.5): MaterialExpressiveTheme
         // + MotionScheme.expressive() — skema gerak pegas resmi berlaku ke
-        // seluruh komponen. Warna memakai skema resmi Google:
-        // expressiveLightColorScheme() untuk terang dan darkColorScheme()
-        // untuk gelap (di library 1.5.0-alpha08 belum ada varian expressive
-        // khusus gelap). Tipografi & bentuk TIDAK diisi supaya memakai
-        // bawaan resmi MaterialExpressiveTheme.
+        // seluruh komponen. Warna memakai skema hasil generate algoritma
+        // resmi dari warna biji (SeedLightColors/SeedDarkColors).
+        // Tipografi & bentuk TIDAK diisi supaya memakai bawaan resmi
+        // MaterialExpressiveTheme.
         MaterialExpressiveTheme(
-            colorScheme = if (darkTheme) darkColorScheme() else expressiveLightColorScheme(),
+            colorScheme = if (darkTheme) SeedDarkColors else SeedLightColors,
             motionScheme = MotionScheme.expressive(),
             content = content
         )
