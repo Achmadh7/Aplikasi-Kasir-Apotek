@@ -94,7 +94,7 @@ val TABS = listOf(
     TabDef("lainnya", "Lainnya", Icons.Default.MoreHoriz, Icons.Outlined.MoreHoriz)
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     val nav = rememberNavController()
@@ -153,92 +153,38 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     }
     Scaffold(
         bottomBar = {
-            // Bar bawah MELAYANG model dock LIQUID GLASS (permintaan Achmad
-            // 2026-10-31, menggantikan versi flat): badan bar gradasi
-            // semi-transparan (lebih terang & berkilau di atas, seperti
-            // permukaan kaca), tepi bercahaya (rim light — bordir gradasi
-            // terang di atas, redup di bawah), TANPA bayangan (bayangan
-            // terbukti berbintik di HP-nya). Blur latar sungguhan tidak
-            // dipakai: konten tidak mengalir di bawah slot bottomBar
-            // Scaffold, jadi di belakang bar hanya ada warna latar —
-            // efek kaca dibuat dari transparansi + cahaya tepi + kilau.
-            // Indikator tab aktif: SQUIRCLE (kotak membulat 52x38dp, sudut
-            // 13dp) gradasi biru #64B5F6 -> #1E88E5 dengan ikon putih;
-            // LABEL TEKS tetap tampil di bawah ikon (pilihan Achmad),
-            // label aktif primary tebal. Ikon tidak aktif outlined, aktif
-            // filled. Tab dibuat manual (Row + Column) karena
-            // NavigationBarItem tidak bisa mengganti bentuk indikatornya.
-            val glassStops: Array<Pair<Float, Color>> = if (isDark) arrayOf(
-                0f to Color.White.copy(alpha = 0.14f),
-                0.45f to MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.80f),
-                1f to MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f)
-            ) else arrayOf(
-                0f to Color.White.copy(alpha = 0.88f),
-                0.45f to Color.White.copy(alpha = 0.62f),
-                1f to Color.White.copy(alpha = 0.50f)
-            )
-            val glassBrush = Brush.verticalGradient(*glassStops)
-            val glassRim = Brush.verticalGradient(
-                if (isDark) listOf(Color.White.copy(alpha = 0.38f), Color.White.copy(alpha = 0.08f))
-                else listOf(Color.White.copy(alpha = 0.95f), Color(0xFF90A4AE).copy(alpha = 0.35f))
-            )
-            val squircleBrush = Brush.linearGradient(listOf(Color(0xFF64B5F6), Color(0xFF1E88E5)))
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 12.dp)
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(glassBrush)
-                        .border(1.dp, glassRim, RoundedCornerShape(28.dp))
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TABS.forEach { tab ->
-                            val selected = when (tab.route) {
-                                "beranda" -> current == "beranda"
-                                "stok" -> current == "stok"
-                                "kasir" -> current == "kasir"
-                                "keuangan" -> current == "keuangan"
-                                else -> current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf")
-                            }
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.weight(1f)
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = ripple()
-                                    ) { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) }
-                                    .padding(vertical = 2.dp)
-                            ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier.size(width = 52.dp, height = 38.dp)
-                                        .then(
-                                            if (selected) Modifier.background(brush = squircleBrush, shape = RoundedCornerShape(13.dp))
-                                            else Modifier.background(Color.Transparent, RoundedCornerShape(13.dp))
-                                        )
-                                ) {
-                                    Icon(
-                                        if (selected) tab.icon else tab.iconOutlined,
-                                        contentDescription = tab.label,
-                                        tint = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                Spacer(Modifier.height(3.dp))
-                                Text(
-                                    tab.label,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+            // Bar bawah memakai komponen RESMI Material 3 Expressive
+            // (permintaan Achmad 2026-11-01, menggantikan dock liquid
+            // glass buatan tangan): ShortNavigationBar +
+            // ShortNavigationBarItem dari Material3 1.5.0-alpha08.
+            // Warna mengikuti bawaan komponen (wadah surfaceContainer,
+            // indikator primaryContainer) dan gerak indikator mengikuti
+            // MotionScheme expressive dari tema. Susunan EqualWeight
+            // sesuai anjuran dokumentasi untuk 3-5 tujuan di layar kecil.
+            // Label selalu tampil (bawaan komponen); ikon aktif filled,
+            // tidak aktif outlined. Tab "Lainnya" bukan tujuan: ketuknya
+            // membuka sheet, dan ia tampak terpilih hanya saat berada di
+            // salah satu sub-menunya (sama seperti perilaku dock lama).
+            ShortNavigationBar(arrangement = ShortNavigationBarArrangement.EqualWeight) {
+                TABS.forEach { tab ->
+                    val selected = when (tab.route) {
+                        "beranda" -> current == "beranda"
+                        "stok" -> current == "stok"
+                        "kasir" -> current == "kasir"
+                        "keuangan" -> current == "keuangan"
+                        else -> current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf")
                     }
+                    ShortNavigationBarItem(
+                        selected = selected,
+                        onClick = { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) },
+                        icon = {
+                            Icon(
+                                if (selected) tab.icon else tab.iconOutlined,
+                                contentDescription = tab.label
+                            )
+                        },
+                        label = { Text(tab.label) }
+                    )
                 }
             }
         }
