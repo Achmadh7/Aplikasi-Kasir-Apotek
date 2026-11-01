@@ -190,14 +190,16 @@ private fun StepperButton(icon: ImageVector, description: String, onClick: () ->
     }
 }
 
-/** Chip penanda cara bayar di kartu pembelian Faktur PBF: "Cash" memakai
- *  pasangan primaryContainer, "Kredit" pasangan tertiaryContainer supaya
- *  pembelian belum lunas langsung terlihat. */
+/** Chip penanda cara bayar di kartu pembelian Faktur PBF. Gaya lembut
+ *  (soft tonal) — pilihan Achmad 2026-11-01 dari gambar pratinjau chip:
+ *  wadah netral surfaceContainerHigh; "Cash" teks + ikon biru primer,
+ *  "Kredit" teks + ikon jam tertiary supaya pembelian belum lunas
+ *  langsung terlihat. */
 @Composable
 private fun PurchasePaymentChip(paymentType: String) {
     val kredit = paymentType == "KREDIT"
-    val container = if (kredit) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer
-    val content = if (kredit) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
+    val fg = if (kredit) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+    val icon = if (kredit) Icons.Default.Schedule else Icons.Default.Money
     AssistChip(
         onClick = {},
         enabled = false,
@@ -208,21 +210,33 @@ private fun PurchasePaymentChip(paymentType: String) {
                 fontWeight = FontWeight.Bold
             )
         },
+        leadingIcon = {
+            Icon(icon, null, modifier = Modifier.size(16.dp))
+        },
         colors = AssistChipDefaults.assistChipColors(
-            containerColor = container,
-            labelColor = content,
-            disabledContainerColor = container,
-            disabledLabelColor = content
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            labelColor = fg,
+            leadingIconColor = fg,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledLabelColor = fg,
+            disabledLeadingIconColor = fg
         ),
         border = null
     )
 }
 
-/** Chip penanda cara bayar di kartu Riwayat Penjualan (Tunai/QRIS/Transfer):
- *  AssistChip resmi, gaya sama seperti chip Cash Faktur PBF (pasangan
- *  primaryContainer). Semua penjualan sudah lunas, jadi satu warna. */
+/** Chip penanda cara bayar di kartu Riwayat Penjualan (QRIS/Transfer;
+ *  Tunai tidak memakai chip). Gaya lembut (soft tonal) — pilihan Achmad
+ *  2026-11-01 dari gambar pratinjau chip: wadah netral
+ *  surfaceContainerHigh, teks + ikon biru primer; ikon mengikuti metode
+ *  (QR untuk QRIS, bank untuk Transfer). */
 @Composable
 private fun SalePaymentChip(paymentMethod: String) {
+    val icon = when (paymentMethod) {
+        "QRIS" -> Icons.Default.QrCode
+        "Transfer" -> Icons.Default.AccountBalance
+        else -> Icons.Default.Money
+    }
     AssistChip(
         onClick = {},
         enabled = false,
@@ -233,11 +247,16 @@ private fun SalePaymentChip(paymentMethod: String) {
                 fontWeight = FontWeight.Bold
             )
         },
+        leadingIcon = {
+            Icon(icon, null, modifier = Modifier.size(16.dp))
+        },
         colors = AssistChipDefaults.assistChipColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            disabledContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            disabledLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            labelColor = MaterialTheme.colorScheme.primary,
+            leadingIconColor = MaterialTheme.colorScheme.primary,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledLabelColor = MaterialTheme.colorScheme.primary,
+            disabledLeadingIconColor = MaterialTheme.colorScheme.primary
         ),
         border = null
     )
@@ -347,15 +366,21 @@ fun DemoBanner() {
 @Composable
 private fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = false) {
     val label = stockLabel(stock)
-    val bg = when (label) {
-        "Aman" -> MaterialTheme.colorScheme.primaryContainer
-        "Sedang" -> MaterialTheme.colorScheme.tertiaryContainer
-        else -> MaterialTheme.colorScheme.errorContainer
-    }
+    // Gaya lembut (soft tonal) — pilihan Achmad 2026-11-01 dari gambar
+    // pratinjau chip: wadah netral surfaceContainerHigh untuk semua
+    // status; status dibaca dari warna teks + ikon kecil di depan.
+    // (Di skema Fidelity, wadah container berwarna tampil terlalu pekat.)
     val fg = when (label) {
-        "Aman" -> MaterialTheme.colorScheme.onPrimaryContainer
-        "Sedang" -> MaterialTheme.colorScheme.onTertiaryContainer
-        else -> MaterialTheme.colorScheme.onErrorContainer
+        "Aman" -> MaterialTheme.colorScheme.primary
+        "Sedang" -> MaterialTheme.colorScheme.tertiary
+        "Rendah" -> warningAmber()
+        else -> MaterialTheme.colorScheme.error
+    }
+    val statusIcon = when (label) {
+        "Aman" -> Icons.Default.CheckCircle
+        "Sedang" -> Icons.Default.Tonality
+        "Rendah" -> Icons.Default.Warning
+        else -> Icons.Default.Cancel
     }
     AssistChip(
         onClick = {},
@@ -368,11 +393,16 @@ private fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = f
                 fontWeight = FontWeight.Bold
             )
         },
+        leadingIcon = {
+            Icon(statusIcon, null, modifier = Modifier.size(16.dp))
+        },
         colors = AssistChipDefaults.assistChipColors(
-            containerColor = bg,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             labelColor = fg,
-            disabledContainerColor = bg,
-            disabledLabelColor = fg
+            leadingIconColor = fg,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledLabelColor = fg,
+            disabledLeadingIconColor = fg
         ),
         border = null
     )
