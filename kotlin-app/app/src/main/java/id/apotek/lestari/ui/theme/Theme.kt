@@ -7,7 +7,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -123,7 +126,7 @@ val ExpressiveShapes = Shapes(
     small = RoundedCornerShape(16.dp),
     medium = RoundedCornerShape(20.dp),
     large = RoundedCornerShape(24.dp),
-    extraLarge = RoundedCornerShape(32.dp)
+    extraLarge = RoundedCornerShape(36.dp)
 )
 
 // Font Poppins (OFL, gratis) untuk judul layar — file .ttf diunduh saat build
@@ -205,11 +208,16 @@ fun ExpressiveCard(
 }
 
 // Tampilan mengikuti web app (mode gelap) apa pun pengaturan sistem HP.
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ApotikLestariTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
-        MaterialTheme(
+        // Tema Expressive RESMI Google (Material3 1.5): MaterialExpressiveTheme
+        // + MotionScheme.expressive() — skema gerak pegas resmi berlaku ke
+        // seluruh komponen (tombol, chip, kartu, sheet, dock bawah).
+        MaterialExpressiveTheme(
             colorScheme = if (darkTheme) DarkColors else LightColors,
+            motionScheme = MotionScheme.expressive(),
             shapes = ExpressiveShapes,
             typography = ExpressiveTypography,
             content = content
