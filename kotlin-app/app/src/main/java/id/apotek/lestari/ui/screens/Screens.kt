@@ -190,14 +190,14 @@ private fun StepperButton(icon: ImageVector, description: String, onClick: () ->
     }
 }
 
-/** Chip penanda cara bayar di kartu pembelian Faktur PBF: "Cash" memakai
- *  pasangan primaryContainer, "Kredit" pasangan tertiaryContainer supaya
- *  pembelian belum lunas langsung terlihat. */
+/** Chip penanda cara bayar di kartu pembelian Faktur PBF. Gaya netral
+ *  (pilihan Achmad 2026-11-01, supaya warna tidak nabrak): wadah
+ *  surfaceContainerHigh dan label onSurfaceVariant; pembedanya titik
+ *  warna kecil — Cash biru primer, Kredit amber peringatan (belum lunas). */
 @Composable
 private fun PurchasePaymentChip(paymentType: String) {
     val kredit = paymentType == "KREDIT"
-    val container = if (kredit) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer
-    val content = if (kredit) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
+    val dot = if (kredit) warningAmber() else MaterialTheme.colorScheme.primary
     AssistChip(
         onClick = {},
         enabled = false,
@@ -208,19 +208,23 @@ private fun PurchasePaymentChip(paymentType: String) {
                 fontWeight = FontWeight.Bold
             )
         },
+        leadingIcon = {
+            Box(Modifier.size(8.dp).background(dot, CircleShape))
+        },
         colors = AssistChipDefaults.assistChipColors(
-            containerColor = container,
-            labelColor = content,
-            disabledContainerColor = container,
-            disabledLabelColor = content
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
         border = null
     )
 }
 
-/** Chip penanda cara bayar di kartu Riwayat Penjualan (Tunai/QRIS/Transfer):
- *  AssistChip resmi, gaya sama seperti chip Cash Faktur PBF (pasangan
- *  primaryContainer). Semua penjualan sudah lunas, jadi satu warna. */
+/** Chip penanda cara bayar di kartu Riwayat Penjualan (QRIS/Transfer;
+ *  Tunai tidak memakai chip). Gaya netral yang sama seperti chip Faktur
+ *  PBF: wadah surfaceContainerHigh, label onSurfaceVariant, titik biru
+ *  primer. Semua penjualan sudah lunas, jadi satu warna. */
 @Composable
 private fun SalePaymentChip(paymentMethod: String) {
     AssistChip(
@@ -233,11 +237,18 @@ private fun SalePaymentChip(paymentMethod: String) {
                 fontWeight = FontWeight.Bold
             )
         },
+        leadingIcon = {
+            Box(
+                Modifier
+                    .size(8.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+            )
+        },
         colors = AssistChipDefaults.assistChipColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            disabledContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            disabledLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
         border = null
     )
@@ -347,15 +358,15 @@ fun DemoBanner() {
 @Composable
 private fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = false) {
     val label = stockLabel(stock)
-    val bg = when (label) {
-        "Aman" -> MaterialTheme.colorScheme.primaryContainer
-        "Sedang" -> MaterialTheme.colorScheme.tertiaryContainer
-        else -> MaterialTheme.colorScheme.errorContainer
-    }
-    val fg = when (label) {
-        "Aman" -> MaterialTheme.colorScheme.onPrimaryContainer
-        "Sedang" -> MaterialTheme.colorScheme.onTertiaryContainer
-        else -> MaterialTheme.colorScheme.onErrorContainer
+    // Gaya netral (pilihan Achmad 2026-11-01, supaya warna tidak nabrak):
+    // wadah dan label sama untuk semua status; pembedanya titik warna
+    // kecil semantik yang selaras skema — Aman hijau laba, Sedang biru
+    // primer, Rendah amber peringatan, Habis merah error.
+    val dot = when (label) {
+        "Aman" -> profitGreen()
+        "Sedang" -> MaterialTheme.colorScheme.primary
+        "Rendah" -> warningAmber()
+        else -> MaterialTheme.colorScheme.error
     }
     AssistChip(
         onClick = {},
@@ -368,11 +379,14 @@ private fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = f
                 fontWeight = FontWeight.Bold
             )
         },
+        leadingIcon = {
+            Box(Modifier.size(8.dp).background(dot, CircleShape))
+        },
         colors = AssistChipDefaults.assistChipColors(
-            containerColor = bg,
-            labelColor = fg,
-            disabledContainerColor = bg,
-            disabledLabelColor = fg
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
         border = null
     )

@@ -36,23 +36,33 @@ import java.util.TimeZone
 // dihapus; warna di semua layar memakai peran colorScheme.
 // ---------------------------------------------------------------------------
 
-// Hijau semantik untuk angka laba (tidak ada peran hijau di colorScheme).
-val ExpressiveGreen = Color(0xFF7EDC9A)
+// Hijau & amber semantik (angka laba dan peringatan) yang DIHARMONISASI ke
+// warna primer skema memakai Blend.harmonize — cara resmi Material Color
+// Utilities menambahkan warna kustom ke dalam skema warna (pilihan Achmad
+// 2026-11-01, supaya warna semantik tidak nabrak dengan skema): rona kedua
+// warna ditarik mendekati biru biji #0061A4 sehingga satu keluarga dengan
+// seluruh skema. Nilai di bawah adalah keluaran harmonisasi resminya dari
+// warna dasar yang sebelumnya dipakai mentah.
+private val ProfitGreenLight = Color(0xFF007E4E) // harmonisasi #2E7D32
+private val ProfitGreenDark = Color(0xFF64DDB3) // harmonisasi #7EDC9A
+private val WarningAmberLight = Color(0xFFBB6324) // harmonisasi #B26A00
+private val WarningAmberDark = Color(0xFFFFB578) // harmonisasi #FFB74D
 
 // Apakah aplikasi sedang dalam mode gelap (pilihan user di pengaturan tema,
 // bukan pengaturan sistem HP). Dipakai warna yang harus beda per tema.
 val LocalIsDarkTheme = staticCompositionLocalOf { true }
 
-/** Hijau angka laba/untung — terang di mode gelap, pekat di mode terang supaya terbaca. */
+/** Hijau angka laba/untung — versi harmonis skema (lihat konstanta di atas):
+ *  pekat di mode terang, terang di mode gelap supaya terbaca. */
 @Composable
-fun profitGreen(): Color = if (LocalIsDarkTheme.current) ExpressiveGreen else Color(0xFF2E7D32)
+fun profitGreen(): Color = if (LocalIsDarkTheme.current) ProfitGreenDark else ProfitGreenLight
 
 /** Amber peringatan (label hitung mundur jatuh tempo PBF "N hari lagi" /
  *  "Besok jatuh tempo") — mode gelap #FFB74D (amber muda, jelas di latar
  *  gelap); mode terang #B26A00 (amber pekat) karena #FFB74D nyaris tidak
  *  terbaca di kartu terang (laporan Achmad 2026-10-31). */
 @Composable
-fun warningAmber(): Color = if (LocalIsDarkTheme.current) Color(0xFFFFB74D) else Color(0xFFB26A00)
+fun warningAmber(): Color = if (LocalIsDarkTheme.current) WarningAmberDark else WarningAmberLight
 
 /** Pegas ekspresif: lentur (dampingRatio ~0.7) untuk animateContentSize & transisi. */
 fun <T> expressiveSpring() = spring<T>(
@@ -99,110 +109,113 @@ fun ExpressiveCard(
 // Tampilan mengikuti web app (mode gelap) apa pun pengaturan sistem HP.
 // Skema warna RESMI hasil generate algoritma Material Color Utilities
 // (spesifikasi warna 2025) dari warna biji biru medis #0061A4, gaya
-// Expressive — dipilih Achmad 2026-11-01. Nilai di bawah ini keluaran
+// Tonal Spot — diganti dari gaya Expressive pada 2026-11-01 atas
+// permintaan Achmad karena gaya Expressive terasa terlalu jenuh dan
+// warnanya saling nabrak; Tonal Spot adalah gaya standar Material You
+// yang jauh lebih kalem dengan biji yang sama. Nilai di bawah ini keluaran
 // generator resminya (bukan racikan tangan); pustaka generator tidak
 // dipasang sebagai dependensi karena versi terkininya menuntut
 // Kotlin/Compose lebih baru daripada tumpukan aplikasi ini.
 private val SeedLightColors = lightColorScheme(
-    primary = Color(0xFF0662A4),
+    primary = Color(0xFF3F6188),
     onPrimary = Color(0xFFF7F9FF),
-    primaryContainer = Color(0xFF94C5FF),
-    onPrimaryContainer = Color(0xFF003E6C),
-    inversePrimary = Color(0xFF6EAFF7),
-    secondary = Color(0xFF44674F),
-    onSecondary = Color(0xFFE7FFEB),
-    secondaryContainer = Color(0xFFD0F8D9),
-    onSecondaryContainer = Color(0xFF3D6049),
-    tertiary = Color(0xFF0E6E36),
-    onTertiary = Color(0xFFE8FFE7),
-    tertiaryContainer = Color(0xFFA6FFB8),
-    onTertiaryContainer = Color(0xFF00652F),
-    background = Color(0xFFF8F9FF),
-    onBackground = Color(0xFF133454),
-    surface = Color(0xFFF8F9FF),
-    onSurface = Color(0xFF133454),
-    surfaceVariant = Color(0xFFD1E4FF),
-    onSurfaceVariant = Color(0xFF446183),
-    surfaceTint = Color(0xFF0662A4),
-    inverseSurface = Color(0xFF010F1F),
-    inverseOnSurface = Color(0xFF8F9EB3),
-    error = Color(0xFFAC3434),
+    primaryContainer = Color(0xFFACCFFC),
+    onPrimaryContainer = Color(0xFF21466B),
+    inversePrimary = Color(0xFFACCFFC),
+    secondary = Color(0xFF546071),
+    onSecondary = Color(0xFFF7F9FF),
+    secondaryContainer = Color(0xFFD7E3F8),
+    onSecondaryContainer = Color(0xFF465363),
+    tertiary = Color(0xFF615A84),
+    onTertiary = Color(0xFFFCF7FF),
+    tertiaryContainer = Color(0xFFD5CBFC),
+    onTertiaryContainer = Color(0xFF49426A),
+    background = Color(0xFFF9F9FE),
+    onBackground = Color(0xFF2E333A),
+    surface = Color(0xFFF9F9FE),
+    onSurface = Color(0xFF2E333A),
+    surfaceVariant = Color(0xFFDEE2EC),
+    onSurfaceVariant = Color(0xFF5A5F67),
+    surfaceTint = Color(0xFF3F6188),
+    inverseSurface = Color(0xFF0C0E12),
+    inverseOnSurface = Color(0xFF9B9DA1),
+    error = Color(0xFFA83836),
     onError = Color(0xFFFFF7F6),
-    errorContainer = Color(0xFFF56965),
-    onErrorContainer = Color(0xFF65000B),
-    outline = Color(0xFF607DA1),
-    outlineVariant = Color(0xFF97B4DB),
+    errorContainer = Color(0xFFFA746F),
+    onErrorContainer = Color(0xFF6E0A12),
+    outline = Color(0xFF767B83),
+    outlineVariant = Color(0xFFAEB2BB),
     scrim = Color(0xFF000000),
-    surfaceBright = Color(0xFFF8F9FF),
-    surfaceDim = Color(0xFFC3DCFF),
+    surfaceBright = Color(0xFFF9F9FE),
+    surfaceDim = Color(0xFFD6DAE3),
     surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFEEF4FF),
-    surfaceContainer = Color(0xFFE5EEFF),
-    surfaceContainerHigh = Color(0xFFDBE9FF),
-    surfaceContainerHighest = Color(0xFFD1E4FF),
-    primaryFixed = Color(0xFF94C5FF),
-    primaryFixedDim = Color(0xFF77B7FF),
-    onPrimaryFixed = Color(0xFF00294A),
-    onPrimaryFixedVariant = Color(0xFF00477B),
-    secondaryFixed = Color(0xFFD0F8D9),
-    secondaryFixedDim = Color(0xFFC2E9CB),
-    onSecondaryFixed = Color(0xFF2B4D37),
-    onSecondaryFixedVariant = Color(0xFF476A52),
-    tertiaryFixed = Color(0xFFA6FFB8),
-    tertiaryFixedDim = Color(0xFF98F0AA),
-    onTertiaryFixed = Color(0xFF005024),
-    onTertiaryFixedVariant = Color(0xFF116F38),
+    surfaceContainerLow = Color(0xFFF2F3FA),
+    surfaceContainer = Color(0xFFEBEEF5),
+    surfaceContainerHigh = Color(0xFFE5E8F0),
+    surfaceContainerHighest = Color(0xFFDEE2EC),
+    primaryFixed = Color(0xFFACCFFC),
+    primaryFixedDim = Color(0xFF9EC1ED),
+    onPrimaryFixed = Color(0xFF053256),
+    onPrimaryFixedVariant = Color(0xFF2B4F75),
+    secondaryFixed = Color(0xFFD7E3F8),
+    secondaryFixedDim = Color(0xFFC9D5E9),
+    onSecondaryFixed = Color(0xFF344050),
+    onSecondaryFixedVariant = Color(0xFF505C6D),
+    tertiaryFixed = Color(0xFFD5CBFC),
+    tertiaryFixedDim = Color(0xFFC7BEEE),
+    onTertiaryFixed = Color(0xFF352F56),
+    onTertiaryFixedVariant = Color(0xFF524B74),
 )
 
 private val SeedDarkColors = darkColorScheme(
-    primary = Color(0xFFB9D7FF),
-    onPrimary = Color(0xFF1D4B77),
-    primaryContainer = Color(0xFFA0CAFD),
-    onPrimaryContainer = Color(0xFF10426E),
-    inversePrimary = Color(0xFF37618F),
-    secondary = Color(0xFFB6CCB9),
-    onSecondary = Color(0xFF314537),
-    secondaryContainer = Color(0xFF172A1D),
-    onSecondaryContainer = Color(0xFF93A998),
-    tertiary = Color(0xFFEAFFE9),
-    onTertiary = Color(0xFF0D6E36),
-    tertiaryContainer = Color(0xFFA6FFB8),
-    onTertiaryContainer = Color(0xFF00652F),
-    background = Color(0xFF050F1A),
-    onBackground = Color(0xFFD6E7FF),
-    surface = Color(0xFF050F1A),
-    onSurface = Color(0xFFD6E7FF),
-    surfaceVariant = Color(0xFF11273D),
-    onSurfaceVariant = Color(0xFF98ADC9),
-    surfaceTint = Color(0xFFB9D7FF),
-    inverseSurface = Color(0xFFF8F9FF),
-    inverseOnSurface = Color(0xFF4C5664),
-    error = Color(0xFFFF716C),
+    primary = Color(0xFFAFC9EB),
+    onPrimary = Color(0xFF28425E),
+    primaryContainer = Color(0xFF3B5472),
+    onPrimaryContainer = Color(0xFFD3E5FF),
+    inversePrimary = Color(0xFF48617F),
+    secondary = Color(0xFFBBC7DB),
+    onSecondary = Color(0xFF354151),
+    secondaryContainer = Color(0xFF303C4C),
+    onSecondaryContainer = Color(0xFFB3C0D4),
+    tertiary = Color(0xFFE3DBFF),
+    onTertiary = Color(0xFF524B74),
+    tertiaryContainer = Color(0xFFD5CBFC),
+    onTertiaryContainer = Color(0xFF49426A),
+    background = Color(0xFF0C0E12),
+    onBackground = Color(0xFFE1E5EF),
+    surface = Color(0xFF0C0E12),
+    onSurface = Color(0xFFE1E5EF),
+    surfaceVariant = Color(0xFF21262D),
+    onSurfaceVariant = Color(0xFFA7ABB4),
+    surfaceTint = Color(0xFFAFC9EB),
+    inverseSurface = Color(0xFFF9F9FE),
+    inverseOnSurface = Color(0xFF535559),
+    error = Color(0xFFFA746F),
     onError = Color(0xFF490006),
-    errorContainer = Color(0xFF8A1A1E),
+    errorContainer = Color(0xFF871F21),
     onErrorContainer = Color(0xFFFF9993),
-    outline = Color(0xFF637791),
-    outlineVariant = Color(0xFF354961),
+    outline = Color(0xFF71767E),
+    outlineVariant = Color(0xFF434850),
     scrim = Color(0xFF000000),
-    surfaceBright = Color(0xFF152D47),
-    surfaceDim = Color(0xFF050F1A),
+    surfaceBright = Color(0xFF272C33),
+    surfaceDim = Color(0xFF0C0E12),
     surfaceContainerLowest = Color(0xFF000000),
-    surfaceContainerLow = Color(0xFF071422),
-    surfaceContainer = Color(0xFF0B1A2B),
-    surfaceContainerHigh = Color(0xFF0E2134),
-    surfaceContainerHighest = Color(0xFF11273D),
-    primaryFixed = Color(0xFFA0CAFD),
-    primaryFixedDim = Color(0xFF93BCEE),
-    onPrimaryFixed = Color(0xFF002E51),
-    onPrimaryFixedVariant = Color(0xFF1D4B77),
-    secondaryFixed = Color(0xFFDFF7E3),
-    secondaryFixedDim = Color(0xFFD1E8D5),
-    onSecondaryFixed = Color(0xFF394D3E),
-    onSecondaryFixedVariant = Color(0xFF55695A),
-    tertiaryFixed = Color(0xFFA6FFB8),
-    tertiaryFixedDim = Color(0xFF98F0AA),
-    onTertiaryFixed = Color(0xFF005024),
-    onTertiaryFixedVariant = Color(0xFF116F38),
+    surfaceContainerLow = Color(0xFF101418),
+    surfaceContainer = Color(0xFF161A1F),
+    surfaceContainerHigh = Color(0xFF1C2026),
+    surfaceContainerHighest = Color(0xFF21262D),
+    primaryFixed = Color(0xFFBFD9FD),
+    primaryFixedDim = Color(0xFFB2CBEE),
+    onPrimaryFixed = Color(0xFF1F3A56),
+    onPrimaryFixedVariant = Color(0xFF3D5674),
+    secondaryFixed = Color(0xFFD7E3F8),
+    secondaryFixedDim = Color(0xFFC9D5E9),
+    onSecondaryFixed = Color(0xFF344050),
+    onSecondaryFixedVariant = Color(0xFF505C6D),
+    tertiaryFixed = Color(0xFFD5CBFC),
+    tertiaryFixedDim = Color(0xFFC7BEEE),
+    onTertiaryFixed = Color(0xFF352F56),
+    onTertiaryFixedVariant = Color(0xFF524B74),
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
