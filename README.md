@@ -42,7 +42,7 @@ Aplikasi Android untuk Apotek Lestari: kasir penjualan, stok obat, keuangan, lap
 - **Backup & Restore** — satu berkas JSON lewat pemilih berkas sistem (bisa disimpan ke Google Drive).
 - **Tentang Aplikasi** — info versi aplikasi.
 
-Fitur pendukung: cetak struk ke printer thermal Bluetooth (ESC/POS, kertas 58mm), tema gelap/terang, dan nomor invoice format `INV - Hari / Tanggal / Bulan` (mis. `INV - Minggu / 01 / November`).
+Fitur pendukung: cetak struk ke printer thermal Bluetooth (ESC/POS, kertas 58mm), tema gelap/terang, dan nomor invoice format `INV - dd/MM/yy` (mis. `INV - 01/11/26`).
 
 ## Cara build APK
 
