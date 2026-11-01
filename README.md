@@ -2,6 +2,8 @@
 
 An Android app for Apotek Lestari: sales cashier, medicine stock, cash book, profit reports, expiry/restock reminders, and purchase records from distributors (PBF) — **fully offline**, with all data stored on the device.
 
+[![Build APK](https://github.com/Achmadh7/Apk-Apotik-Lestari/actions/workflows/main.yml/badge.svg)](https://github.com/Achmadh7/Apk-Apotik-Lestari/actions)
+
 - **Technology:** Kotlin + Jetpack Compose (Material 3 Expressive), local Room/SQLite database
 - **App version:** 1.0.0 — minimum Android 8.0 (API 26)
 - **Time zone:** all "today / this month" boundaries use Asia/Jakarta (WIB)
@@ -52,7 +54,7 @@ Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58
 |---|---|
 | Language | Kotlin 2.2.20 |
 | UI | Jetpack Compose — Material 3 Expressive (`material3` 1.5.0-alpha08, Compose BOM 2025.10.00) |
-| Theme | `MaterialExpressiveTheme` + `MotionScheme.expressive()`; official components (`ShortNavigationBar`, `SegmentedButton`, chips, `ListItem`); color scheme generated with Google's Material Color Utilities algorithm (Expressive style, seed `#0061A4`, 2025 color spec) |
+| Theme | `MaterialExpressiveTheme` + `MotionScheme.expressive()`; official components (`ShortNavigationBar`, `SegmentedButton`, chips, `ListItem`); color scheme generated with Google's Material Color Utilities algorithm (Tonal Spot style, seed `#0061A4`, 2025 color spec); the semantic profit/warning colors are harmonized to the scheme with the same library (`Blend.harmonize`), and status badges use a neutral surface with a small colored dot so colors never fight each other |
 | Database | Room 2.7.2 (SQLite), fully offline |
 | Excel | Apache POI 5.2.5 (`.xlsx` import/export/template) |
 | Build | AGP 8.11.1, Gradle 8.13, compileSdk 36, targetSdk 34, minSdk 26 |
@@ -73,10 +75,32 @@ Build notes:
 - Builds require internet access (Gradle dependency resolution).
 - Release signing uses a keystore from a separate private repository (`Sigkey-Apotek-Lestari`), supplied through GitHub Actions secrets.
 
-## Repository contents
+## Project structure
 
-- `kotlin-app/` — the Android project (Kotlin + Jetpack Compose) that is the current app.
 - `.github/workflows/main.yml` — the GitHub Actions workflow that builds the debug + release APKs.
+- `kotlin-app/` — the Android project (Kotlin + Jetpack Compose):
+  - `app/src/main/java/id/apotek/lestari/MainActivity.kt` — the app shell: tab navigation (official `ShortNavigationBar`), the Lainnya (More) sheet, screen routing.
+  - `.../ui/screens/Screens.kt` — every screen (Home, Cashier, Stock, Finance, Profit, Reminders, History, Supplier Invoices, Backup).
+  - `.../ui/theme/Theme.kt` — the Material Expressive theme, the generated color scheme, IDR/date formatting, and the stock-status scale.
+  - `.../ui/` — also `BluetoothPrinter.kt` (ESC/POS printing), `ReceiptShare.kt` (receipt image sharing), `LogoData.kt` (the pharmacy logo shown on receipts).
+  - `.../data/` — `Repository.kt` (business logic), `Models.kt`, `ExcelHelper.kt` (.xlsx import/export), `BackupHelper.kt` (JSON backup/restore), and `local/` (Room database, entities, DAOs, migrations).
+
+## Changelog
+
+**2026-11-01**
+- Full conversion to Google's official Material 3 Expressive: `MaterialExpressiveTheme` + expressive motion, official `ShortNavigationBar`, segmented buttons for payment/cash direction, official chips and list rows throughout.
+- Color scheme regenerated in the calmer **Tonal Spot** style (same medical-blue seed); profit/warning colors harmonized to the scheme; stock/payment badges restyled to a neutral surface with a semantic color dot.
+- Fixed receipt sharing failing on the new invoice format — the file name is now sanitized (`INV - 01/11/26` becomes `Struk-INV-01-11-26.png`).
+- Invoice numbers unified to `INV - dd/MM/yy`; a database index fix (v12) lets multiple same-day sales save correctly under the shared number.
+- Safety net added: the database is automatically snapshotted before an app update runs its migrations.
+- This README rewritten in English.
+
+## FAQ
+
+- **Is any data uploaded to a server?** No. The app is fully offline; everything lives in the on-device database (see the notes below).
+- **How do I move to a new phone?** On the old phone: **Lainnya → Backup & Restore → Backup** and save the JSON file (for example to Google Drive). On the new phone, install the app and choose **Restore** with that file — all data is replaced in one transaction.
+- **The Bluetooth printer does not appear — what do I check?** Pair the printer in Android's Bluetooth settings first; the app prints only to already-paired printers and remembers the one you pick.
+- **Which Excel format does stock import use?** Use the template the app provides in the Stock menu — imports match medicines by name + category + unit, so existing rows update instead of duplicating.
 
 ## Data & update safety notes
 
