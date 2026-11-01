@@ -319,8 +319,13 @@ private fun Modifier.pulseKritis(): Modifier {
     return this.graphicsLayer(alpha = alpha.value)
 }
 
-// Warna aksen layar kini seluruhnya memakai peran colorScheme resmi tema
-// (lihat Theme.kt) - tidak ada lagi warna merek hard-coded di berkas ini.
+// Warna aksen layar memakai peran colorScheme resmi tema (lihat Theme.kt).
+// Satu pengecualian atas permintaan Achmad (2026-11-01): pilihan Kas
+// Masuk/Keluar di sheet Catat Kas memakai biru tua & merah tua pekat
+// (peran skema terlalu pucat di mode gelap untuk penanda masuk/keluar),
+// dengan teks putih di atasnya.
+private val KasMasukBlue = Color(0xFF0061A4)
+private val KasKeluarRed = Color(0xFFD32F2F)
 
 @Composable
 fun DemoBanner() {
@@ -2538,14 +2543,14 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                 ) {
                     Box(
                         Modifier.width(tabWidth).height(48.dp).offset(x = pillOffset)
-                            .background(MaterialTheme.colorScheme.error, RoundedCornerShape(32.dp))
+                            .background(KasKeluarRed, RoundedCornerShape(32.dp))
                     ) {
-                        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary.copy(alpha = kasInFraction), RoundedCornerShape(32.dp)))
+                        Box(Modifier.fillMaxSize().background(KasMasukBlue.copy(alpha = kasInFraction), RoundedCornerShape(32.dp)))
                     }
                     Row(Modifier.fillMaxSize()) {
                         kasTypes.forEach { (t, label, icon) ->
                             val selected = entryType == t
-                            val contentColor = if (selected) { if (LocalIsDarkTheme.current) MaterialTheme.colorScheme.onError else Color.White } else MaterialTheme.colorScheme.onSurface
+                            val contentColor = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
                             Box(
                                 Modifier.weight(1f).fillMaxHeight().clickable { entryType = t },
                                 contentAlignment = Alignment.Center
@@ -2602,8 +2607,8 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                     },
                     enabled = parseDecimal(amount.text) > 0,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                        contentColor = if (isIn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onError
+                        containerColor = if (isIn) KasMasukBlue else KasKeluarRed,
+                        contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.weight(1f).height(52.dp)
