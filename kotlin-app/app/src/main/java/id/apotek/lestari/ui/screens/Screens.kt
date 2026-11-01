@@ -209,6 +209,25 @@ private fun PurchasePaymentChip(paymentType: String) {
     }
 }
 
+/** Chip penanda cara bayar di kartu Riwayat Penjualan (Tunai/QRIS/Transfer):
+ *  gaya labelnya sama seperti chip Cash Faktur PBF — pil biru muda 12dp,
+ *  teks labelMedium tebal. Semua penjualan sudah lunas, jadi satu warna. */
+@Composable
+private fun SalePaymentChip(paymentMethod: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Text(
+            paymentMethod,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
 /** Sisa hari menuju tanggal jatuh tempo (negatif = sudah lewat); null bila
  *  tanggalnya kosong/rusak. Dihitung dari kunci hari "yyyy-MM-dd" via tengah
  *  malam UTC supaya tidak bergeser zona waktu. */
@@ -3850,10 +3869,16 @@ fun RiwayatScreen() {
                                 Column(Modifier.weight(1f)) {
                                     Text(s.invoiceNo, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                                     Text(
-                                        "${formatDateTimeID(s.createdAt)} • ${s.paymentMethod} • ${s.items.size} item",
+                                        "${formatDateTimeID(s.createdAt)} • ${s.items.size} item",
                                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+                                Spacer(Modifier.width(8.dp))
+                                // Chip cara bayar di tengah antara nomor invoice
+                                // dan nominal, seperti Faktur PBF (permintaan
+                                // Achmad 2026-11-01).
+                                SalePaymentChip(s.paymentMethod)
+                                Spacer(Modifier.width(10.dp))
                                 Text(formatIDR(s.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 Icon(
                                     if (isOpen) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null,
