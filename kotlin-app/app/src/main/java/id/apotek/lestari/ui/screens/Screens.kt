@@ -2965,7 +2965,6 @@ fun ObatTerlarisScreen() {
                 }
             } else {
                 val totalQty = list.sumOf { it.qty }
-                val totalRevenue = list.sumOf { it.revenue }
                 val maxQty = list.maxOf { it.qty }.coerceAtLeast(1)
                 item {
                     ExpressiveCard(shape = AppCardShape, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
@@ -2974,11 +2973,6 @@ fun ObatTerlarisScreen() {
                                 Text("ITEM TERJUAL", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(SpaceXS))
                                 AnimatedAmount(totalQty, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onPrimaryContainer) { "$it item" }
-                            }
-                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                Text("OMZET", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(SpaceXS))
-                                AnimatedAmount(totalRevenue, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onPrimaryContainer)
                             }
                         }
                     }
@@ -3011,15 +3005,15 @@ fun ObatTerlarisScreen() {
                                     Spacer(Modifier.width(12.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text(s.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                        Spacer(Modifier.height(SpaceXS))
-                                        Text("${s.qty} item terjual", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         Spacer(Modifier.height(SpaceS))
                                         Box(Modifier.fillMaxWidth().height(6.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(3.dp))) {
                                             Box(Modifier.fillMaxWidth(s.qty.toFloat() / maxQty).height(6.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(3.dp)))
                                         }
                                     }
                                     Spacer(Modifier.width(12.dp))
-                                    Text(formatIDR(s.revenue), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    // Jumlah item terjual kini di kanan menggantikan
+                                    // nominal omzet (permintaan Achmad 2026-11-01).
+                                    Text("${s.qty} item terjual", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 }
                                 if (index < list.lastIndex) {
                                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 12.dp))
