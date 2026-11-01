@@ -240,60 +240,61 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                     Triple("pbf", "Faktur PBF", Icons.Default.LocalShipping),
                     Triple("backup", "Backup & Restore", Icons.Default.Backup)
                 ).forEach { (route, label, icon) ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable {
+                    ListItem(
+                        headlineContent = { Text(label, style = MaterialTheme.typography.titleMedium) },
+                        leadingContent = {
+                            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                                Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                            }
+                        },
+                        trailingContent = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable {
                             showMoreSheet = false
                             goToTab(route)
-                        }.padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
-                            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                         }
-                        Spacer(Modifier.width(12.dp))
-                        Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                        Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    )
                 }
                 // Ganti tema Gelap <-> Terang (pilihan tersimpan, dipakai lagi saat aplikasi dibuka).
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().clickable {
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            if (isDark) "Mode Terang" else "Mode Gelap",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    },
+                    leadingContent = {
+                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                            Icon(
+                                if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(10.dp).size(22.dp)
+                            )
+                        }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable {
                         onToggleTheme()
                         showMoreSheet = false
-                    }.padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
-                        Icon(
-                            if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(10.dp).size(22.dp)
-                        )
                     }
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        if (isDark) "Mode Terang" else "Mode Gelap",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                )
                 // Tentang Aplikasi, di bawah ganti tema.
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().clickable {
+                ListItem(
+                    headlineContent = { Text("Tentang Aplikasi", style = MaterialTheme.typography.titleMedium) },
+                    leadingContent = {
+                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                            Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                        }
+                    },
+                    trailingContent = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable {
                         showMoreSheet = false
                         goToTab("tentang")
-                    }.padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
-                        Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                     }
-                    Spacer(Modifier.width(12.dp))
-                    Text("Tentang Aplikasi", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                    Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                )
             }
         }
     }

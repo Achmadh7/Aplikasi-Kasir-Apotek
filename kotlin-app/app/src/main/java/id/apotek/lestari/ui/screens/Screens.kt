@@ -196,37 +196,51 @@ private fun StepperButton(icon: ImageVector, description: String, onClick: () ->
 @Composable
 private fun PurchasePaymentChip(paymentType: String) {
     val kredit = paymentType == "KREDIT"
-    Surface(
-        color = if (kredit) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Text(
-            if (kredit) "Kredit" else "Cash",
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = if (kredit) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-        )
-    }
+    val container = if (kredit) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer
+    val content = if (kredit) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
+    AssistChip(
+        onClick = {},
+        enabled = false,
+        label = {
+            Text(
+                if (kredit) "Kredit" else "Cash",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = container,
+            labelColor = content,
+            disabledContainerColor = container,
+            disabledLabelColor = content
+        ),
+        border = null
+    )
 }
 
 /** Chip penanda cara bayar di kartu Riwayat Penjualan (Tunai/QRIS/Transfer):
- *  gaya labelnya sama seperti chip Cash Faktur PBF — pil biru muda 12dp,
- *  teks labelMedium tebal. Semua penjualan sudah lunas, jadi satu warna. */
+ *  AssistChip resmi, gaya sama seperti chip Cash Faktur PBF (pasangan
+ *  primaryContainer). Semua penjualan sudah lunas, jadi satu warna. */
 @Composable
 private fun SalePaymentChip(paymentMethod: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.primaryContainer,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Text(
-            paymentMethod,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-        )
-    }
+    AssistChip(
+        onClick = {},
+        enabled = false,
+        label = {
+            Text(
+                paymentMethod,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            disabledContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            disabledLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ),
+        border = null
+    )
 }
 
 /** Sisa hari menuju tanggal jatuh tempo (negatif = sudah lewat); null bila
@@ -239,22 +253,20 @@ private fun dueDaysLeft(dueDate: String): Long? {
 }
 
 /** Pilihan harga satuan di keranjang Kasir: "Ecer" (harga jual biasa) atau
- *  "Grosir" (harga jual grosir). Chip terpilih biru solid. */
+ *  "Grosir" (harga jual grosir). FilterChip resmi Material 3. */
 @Composable
 private fun PriceModeChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    Surface(
-        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.clickable { onClick() }
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-        )
-    }
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+            )
+        }
+    )
 }
 
 /** Centang sukses pembayaran: lingkaran membesar dengan pegas, centang tergambar. */
@@ -345,13 +357,25 @@ private fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = f
         "Sedang" -> MaterialTheme.colorScheme.onTertiaryContainer
         else -> MaterialTheme.colorScheme.onErrorContainer
     }
-    Surface(color = bg, shape = RoundedCornerShape(16.dp), modifier = if (stock <= 0) Modifier.pulseKritis() else Modifier) {
-        Text(
-            if (showCount) "Stok $stock • $label" else label,
-            color = fg, style = if (large) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = if (large) 10.dp else 8.dp, vertical = if (large) 5.dp else 4.dp)
-        )
-    }
+    AssistChip(
+        onClick = {},
+        enabled = false,
+        modifier = if (stock <= 0) Modifier.pulseKritis() else Modifier,
+        label = {
+            Text(
+                if (showCount) "Stok $stock • $label" else label,
+                style = if (large) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = bg,
+            labelColor = fg,
+            disabledContainerColor = bg,
+            disabledLabelColor = fg
+        ),
+        border = null
+    )
 }
 
 // ---------- Beranda ----------
@@ -453,16 +477,12 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         expandVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)),
                     exit = fadeOut()
                 ) {
-                // Kartu Pemasukan Hari Ini — hero premium: gradasi biru + insight vs kemarin
+                // Kartu Pemasukan Hari Ini — hero: ExpressiveCard resmi
+                // (primaryContainer) + insight vs kemarin.
                 val diff = d.todayIn - d.yesterdayIn
-                Box(
+                ExpressiveCard(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier.fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.secondaryContainer)
-                            ),
-                            MaterialTheme.shapes.extraLarge
-                        )
                         .animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))
                 ) {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -1229,49 +1249,22 @@ fun KasirScreen() {
                 Spacer(Modifier.height(SpaceL))
                 Text("METODE BAYAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(SpaceS))
-                // Metode bayar tersegmentasi: pil biru meluncur halus antar metode.
+                // Metode bayar: SingleChoiceSegmentedButtonRow resmi Material 3
+                // (menggantikan pil meluncur rakitan manual).
                 val methods = listOf(
                     "Tunai" to Icons.Default.Money,
                     "QRIS" to Icons.Default.QrCode,
                     "Transfer" to Icons.Default.AccountBalance
                 )
-                val selectedMethodIndex = methods.indexOfFirst { it.first == method }.coerceAtLeast(0)
-                BoxWithConstraints(Modifier.fillMaxWidth()) {
-                    val tabWidth = maxWidth / 3
-                    val pillOffset by animateDpAsState(
-                        targetValue = tabWidth * selectedMethodIndex,
-                        animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
-                        label = "methodPill"
-                    )
-                    Box(
-                        Modifier.fillMaxWidth().height(48.dp)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(32.dp))
-                    ) {
-                        // Pil biru yang meluncur.
-                        Surface(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(32.dp),
-                            modifier = Modifier.width(tabWidth).height(48.dp).offset(x = pillOffset)
-                        ) {}
-                        // Tiga area ketuk (transparan) di atas pil.
-                        Row(Modifier.fillMaxSize()) {
-                            methods.forEach { (m, icon) ->
-                                val selected = method == m
-                                // Warna ikon/teks langsung mengikuti pilihan; pil yang
-                                // meluncur sudah memberi transisinya.
-                                val contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                                Box(
-                                    Modifier.weight(1f).fillMaxHeight().clickable { method = m },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(icon, null, tint = contentColor, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(m, maxLines = 1, color = contentColor)
-                                    }
-                                }
-                            }
-                        }
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    methods.forEachIndexed { index, (m, icon) ->
+                        SegmentedButton(
+                            selected = method == m,
+                            onClick = { method = m },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = methods.size),
+                            icon = { Icon(icon, null, modifier = Modifier.size(18.dp)) },
+                            modifier = Modifier.weight(1f)
+                        ) { Text(m, maxLines = 1) }
                     }
                 }
                 AnimatedContent(
@@ -2518,51 +2511,29 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            // Pilihan Masuk/Keluar: pil meluncur seperti pemilih metode
-            // pembayaran di Kasir. Warna pil mengikuti jenis yang aktif —
-            // biru untuk Masuk, merah untuk Keluar (sama seperti tombol
-            // Simpan) — dan bergeser warna dengan halus.
+            // Pilihan Masuk/Keluar: SingleChoiceSegmentedButtonRow resmi
+            // Material 3 (menggantikan pil meluncur rakitan manual). Warna
+            // aktif tetap biru tua (Masuk) / merah tua (Keluar) pilihan
+            // Achmad, dengan teks putih.
             val kasTypes = listOf(
                 Triple("in", "Kas Masuk", Icons.Default.SouthWest),
                 Triple("out", "Kas Keluar", Icons.Default.NorthEast)
             )
-            val selectedKasIndex = kasTypes.indexOfFirst { it.first == entryType }.coerceAtLeast(0)
-            // Warna pil dicampur dari fraksi animasi float (animateColorAsState
-            // tidak tersedia di classpath proyek ini): 1 = biru Masuk, 0 = merah Keluar.
-            val kasInFraction by animateFloatAsState(targetValue = if (isIn) 1f else 0f, animationSpec = tween(250), label = "kasPillColorFraction")
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val tabWidth = maxWidth / 2
-                val pillOffset by animateDpAsState(
-                    targetValue = tabWidth * selectedKasIndex,
-                    animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
-                    label = "kasTypePill"
-                )
-                Box(
-                    Modifier.fillMaxWidth().height(48.dp)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(32.dp))
-                ) {
-                    Box(
-                        Modifier.width(tabWidth).height(48.dp).offset(x = pillOffset)
-                            .background(KasKeluarRed, RoundedCornerShape(32.dp))
-                    ) {
-                        Box(Modifier.fillMaxSize().background(KasMasukBlue.copy(alpha = kasInFraction), RoundedCornerShape(32.dp)))
-                    }
-                    Row(Modifier.fillMaxSize()) {
-                        kasTypes.forEach { (t, label, icon) ->
-                            val selected = entryType == t
-                            val contentColor = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
-                            Box(
-                                Modifier.weight(1f).fillMaxHeight().clickable { entryType = t },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(icon, null, tint = contentColor, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(label, maxLines = 1, color = contentColor)
-                                }
-                            }
-                        }
-                    }
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                kasTypes.forEachIndexed { index, (t, label, icon) ->
+                    val activeColor = if (t == "in") KasMasukBlue else KasKeluarRed
+                    SegmentedButton(
+                        selected = entryType == t,
+                        onClick = { entryType = t },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = kasTypes.size),
+                        colors = SegmentedButtonDefaults.colors(
+                            activeContainerColor = activeColor,
+                            activeContentColor = Color.White,
+                            activeBorderColor = activeColor
+                        ),
+                        icon = { Icon(icon, null, modifier = Modifier.size(18.dp)) },
+                        modifier = Modifier.weight(1f)
+                    ) { Text(label, maxLines = 1) }
                 }
             }
             OutlinedTextField(category, { category = it }, label = { Text("Kategori") }, singleLine = true, modifier = Modifier.fillMaxWidth())
