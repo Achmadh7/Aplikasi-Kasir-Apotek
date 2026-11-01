@@ -34,7 +34,7 @@ data class MedicineEntity(
     val createdAt: String // ISO UTC, mis. "2026-10-26T00:15:00.000Z"
 )
 
-@Entity(tableName = "sales", indices = [Index(value = ["invoiceNo"], unique = true)])
+@Entity(tableName = "sales", indices = [Index(value = ["invoiceNo"])])
 data class SaleEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val invoiceNo: String,
@@ -313,9 +313,21 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
     }
 }
 
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Format invoice baru (2026-11-01) memakai satu nomor yang sama
+        // untuk semua penjualan di hari yang sama ("INV - Minggu / 01 /
+        // November"), jadi index invoiceNo tidak boleh unik lagi — dulu
+        // unik karena nomornya dibuat dari jam sampai milidetik. Index
+        // biasa dipertahankan untuk pencarian.
+        db.execSQL("DROP INDEX IF EXISTS `index_sales_invoiceNo`")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_sales_invoiceNo` ON `sales` (`invoiceNo`)")
+    }
+}
+
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -340,7 +352,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12).build()
                 }
             }
         }
