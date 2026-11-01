@@ -343,7 +343,7 @@ fun DemoBanner() {
 }
 
 @Composable
-private fun StockBadge(stock: Int, showCount: Boolean = true) {
+private fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = false) {
     val label = stockLabel(stock)
     val bg = when (label) {
         "Aman" -> AmanBg
@@ -358,8 +358,8 @@ private fun StockBadge(stock: Int, showCount: Boolean = true) {
     Surface(color = bg, shape = RoundedCornerShape(16.dp), modifier = if (stock <= 0) Modifier.pulseKritis() else Modifier) {
         Text(
             if (showCount) "Stok $stock • $label" else label,
-            color = fg, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            color = fg, style = if (large) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = if (large) 10.dp else 8.dp, vertical = if (large) 5.dp else 4.dp)
         )
     }
 }
@@ -1047,7 +1047,9 @@ fun KasirScreen() {
                             Spacer(Modifier.height(SpaceXS))
                             Text(formatIDR(m.sellPrice), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
-                        StockBadge(m.stock)
+                        // Keterangan stok di Kasir sedikit diperbesar
+                        // (permintaan Achmad 2026-11-01); di Stok tetap biasa.
+                        StockBadge(m.stock, large = true)
                     }
                 }
                 }
