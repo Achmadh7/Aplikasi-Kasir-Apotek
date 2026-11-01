@@ -45,7 +45,13 @@ fun shareReceiptBitmap(context: Context, bitmap: Bitmap, invoiceNo: String) {
         // Bersihkan PNG lama sebelum menulis yang baru (cache/receipts
         // menumpuk satu file per struk yang dibagikan).
         dir.listFiles()?.forEach { runCatching { it.delete() } }
-        val file = File(dir, "Struk-$invoiceNo.png")
+        // Nama berkas harus dibersihkan: format nomor invoice sejak
+        // 2026-11-01 adalah "INV - dd/MM/yy" yang mengandung garis miring;
+        // "/" di nama berkas dianggap pemisah folder sehingga penulisan
+        // PNG gagal total ("Gagal menyiapkan struk"). Karakter di luar
+        // huruf/angka/titik/strip diganti "-", strip beruntun dirapikan.
+        val safeName = invoiceNo.replace(Regex("[^A-Za-z0-9._-]"), "-").replace(Regex("-+"), "-")
+        val file = File(dir, "Struk-$safeName.png")
         FileOutputStream(file).use { out ->
             if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) {
                 throw IOException("Gagal menulis gambar struk")
