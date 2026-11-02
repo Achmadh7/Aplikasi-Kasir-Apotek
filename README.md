@@ -1,6 +1,6 @@
-# Apotek Lestari — Pharmacy Cashier & Inventory Management App
+# Aplikasi Kasir Apotek — Pharmacy Cashier & Inventory Management App
 
-An Android app for Apotek Lestari: sales cashier, medicine stock, cash book, profit reports, expiry/restock reminders, and purchase records from distributors (PBF) — **fully offline**, with all data stored on the device.
+An Android app for pharmacies: sales cashier, medicine stock, cash book, profit reports, expiry/restock reminders, and purchase records from distributors (PBF) — **fully offline**, with all data stored on the device.
 
 [![Build APK](https://github.com/Achmadh7/Aplikasi-Kasir-Apotek/actions/workflows/main.yml/badge.svg)](https://github.com/Achmadh7/Aplikasi-Kasir-Apotek/actions)
 
