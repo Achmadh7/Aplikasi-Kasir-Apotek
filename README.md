@@ -2,7 +2,7 @@
 
 An Android app for Apotek Lestari: sales cashier, medicine stock, cash book, profit reports, expiry/restock reminders, and purchase records from distributors (PBF) — **fully offline**, with all data stored on the device.
 
-[![Build APK](https://github.com/Achmadh7/Apk-Apotik-Lestari/actions/workflows/main.yml/badge.svg)](https://github.com/Achmadh7/Apk-Apotik-Lestari/actions)
+[![Build APK](https://github.com/Achmadh7/Aplikasi-Kasir-Apotek/actions/workflows/main.yml/badge.svg)](https://github.com/Achmadh7/Aplikasi-Kasir-Apotek/actions)
 
 - **Technology:** Kotlin + Jetpack Compose (Material 3 Expressive), local Room/SQLite database
 - **App version:** 1.1.0 — minimum Android 8.0 (API 26)
