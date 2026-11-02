@@ -13,6 +13,9 @@ import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -285,6 +288,22 @@ fun stockLabel(stock: Int): String = when {
     else -> "Aman"
 }
 
+// ---- Bahasa aplikasi (Indonesia / Inggris) ----
+// Pilihan bahasa dipilih dari sheet Lainnya (di bawah Mode Gelap/Terang),
+// tersimpan di SharedPreferences "apotek_prefs" kunci "app_language", dan
+// MainActivity menyalinnya ke AppLang.code saat aplikasi berjalan. Semua
+// teks tampilan mengambil string lewat tr() supaya ikut berubah seketika
+// saat bahasa diganti; format tanggal memakai appLocale().
+object AppLang {
+    var code by mutableStateOf("id")
+}
+
+/** Ambil string sesuai bahasa aktif: tr("Simpan", "Save"). */
+fun tr(id: String, en: String): String = if (AppLang.code == "en") en else id
+
+/** Locale format tanggal sesuai bahasa aktif. */
+private fun appLocale(): Locale = if (AppLang.code == "en") Locale.ENGLISH else ID_LOCALE
+
 // ---- Format tanggal Indonesia (Asia/Jakarta), seperti web app ----
 
 private val JAKARTA_TZ: TimeZone = TimeZone.getTimeZone("Asia/Jakarta")
@@ -292,7 +311,7 @@ private val ID_LOCALE: Locale = Locale("id", "ID")
 
 /** "Minggu, 25 Oktober 2026" — tanggal hari ini. */
 fun todayLabelID(): String =
-    SimpleDateFormat("EEEE, d MMMM yyyy", ID_LOCALE).apply { timeZone = JAKARTA_TZ }.format(Date())
+    SimpleDateFormat("EEEE, d MMMM yyyy", appLocale()).apply { timeZone = JAKARTA_TZ }.format(Date())
 
 /** Parse tanggal ISO dari server ("2026-10-25T23:53:00.000Z" atau "2026-10-25"). */
 fun parseISODate(s: String?): Date? {
@@ -320,7 +339,7 @@ fun parseISODate(s: String?): Date? {
 /** "25 Okt, 23.53" — seperti web app. */
 fun formatDateTimeID(s: String?): String {
     val d = parseISODate(s) ?: return s ?: "-"
-    return SimpleDateFormat("d MMM, HH.mm", ID_LOCALE).apply { timeZone = JAKARTA_TZ }.format(d)
+    return SimpleDateFormat("d MMM, HH.mm", appLocale()).apply { timeZone = JAKARTA_TZ }.format(d)
 }
 
 /** "14.30" — jam saja (untuk baris Transaksi: semua transaksi di kartu ini hari ini). */
@@ -332,13 +351,13 @@ fun formatTimeID(s: String?): String {
 /** "25 Okt 2030" — tanggal kadaluarsa. */
 fun formatDateID(s: String?): String {
     val d = parseISODate(s) ?: return s ?: "-"
-    return SimpleDateFormat("d MMM yyyy", ID_LOCALE).apply { timeZone = JAKARTA_TZ }.format(d)
+    return SimpleDateFormat("d MMM yyyy", appLocale()).apply { timeZone = JAKARTA_TZ }.format(d)
 }
 
 /** "Minggu, 25 Oktober 2026" — tanggal lengkap untuk invoice. */
 fun formatFullDateID(s: String?): String {
     val d = parseISODate(s) ?: return s ?: "-"
-    return SimpleDateFormat("EEEE, d MMMM yyyy", ID_LOCALE).apply { timeZone = JAKARTA_TZ }.format(d)
+    return SimpleDateFormat("EEEE, d MMMM yyyy", appLocale()).apply { timeZone = JAKARTA_TZ }.format(d)
 }
 
 /** Kunci "yyyy-MM-dd" sebuah tanggal di zona Asia/Jakarta. */

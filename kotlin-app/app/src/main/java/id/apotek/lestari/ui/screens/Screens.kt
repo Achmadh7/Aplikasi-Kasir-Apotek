@@ -366,6 +366,14 @@ fun DemoBanner() {
 @Composable
 private fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = false) {
     val label = stockLabel(stock)
+    // Teks badge mengikuti bahasa aktif; `label` sendiri tetap berbahasa
+    // Indonesia karena dipakai sebagai kunci logika warna/ikon di bawah.
+    val displayLabel = when (label) {
+        "Aman" -> tr("Aman", "Safe")
+        "Sedang" -> tr("Sedang", "Medium")
+        "Rendah" -> tr("Rendah", "Low")
+        else -> tr("Habis", "Out of stock")
+    }
     // Gaya lembut (soft tonal) — pilihan Achmad 2026-11-01 dari gambar
     // pratinjau chip: wadah netral surfaceContainerHigh untuk semua
     // status; status dibaca dari warna teks + ikon kecil di depan.
@@ -388,7 +396,7 @@ private fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = f
         modifier = if (stock <= 0) Modifier.pulseKritis() else Modifier,
         label = {
             Text(
-                if (showCount) "Stok $stock • $label" else label,
+                if (showCount) "${tr("Stok", "Stock")} $stock • $displayLabel" else displayLabel,
                 style = if (large) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -490,7 +498,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 }
             }
             Spacer(Modifier.height(SpaceS))
-            Text("Penjualan Hari Ini", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+            Text(tr("Penjualan Hari Ini", "Today's Sales"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1)
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(SpaceL))
@@ -517,7 +525,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 ) {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("PEMASUKAN HARI INI", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text(tr("PEMASUKAN HARI INI", "TODAY'S INCOME"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Surface(color = Color.White.copy(alpha = 0.25f), shape = CircleShape) {
                                 Icon(Icons.Default.TrendingUp, null, tint = Color.White, modifier = Modifier.padding(6.dp).size(18.dp))
                             }
@@ -528,7 +536,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Receipt, null, tint = Color.White, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("${d.totalSalesToday} transaksi penjualan", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                            Text(tr("${d.totalSalesToday} transaksi penjualan", "${d.totalSalesToday} sales transactions"), color = Color.White, style = MaterialTheme.typography.bodySmall)
                         }
                         Spacer(Modifier.height(SpaceS))
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -536,15 +544,15 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 diff > 0 -> {
                                     Icon(Icons.Default.TrendingUp, null, tint = Color.White, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Naik ${formatIDR(diff)} dari kemarin", color = Color.White, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                    Text(tr("Naik ${formatIDR(diff)} dari kemarin", "Up ${formatIDR(diff)} from yesterday"), color = Color.White, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
                                 }
                                 diff < 0 -> {
                                     Icon(Icons.Default.TrendingDown, null, tint = Color.White, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Turun ${formatIDR(-diff)} dari kemarin", color = Color.White, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                    Text(tr("Turun ${formatIDR(-diff)} dari kemarin", "Down ${formatIDR(-diff)} from yesterday"), color = Color.White, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
                                 }
                                 else -> {
-                                    Text("Sama seperti kemarin", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                    Text(tr("Sama seperti kemarin", "Same as yesterday"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
                                 }
                             }
                         }
@@ -562,9 +570,9 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 ) {
                 // Shortcut ke menu yang tidak lagi ada di bar bawah (Laba, Pengingat, Riwayat).
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
-                    ShortcutCard(label = "Laba", icon = Icons.Default.TrendingUp, modifier = Modifier.weight(1f), onClick = onGoLaba)
-                    ShortcutCard(label = "Pengingat", icon = Icons.Default.NotificationsActive, modifier = Modifier.weight(1f), onClick = onGoPengingat)
-                    ShortcutCard(label = "Riwayat", icon = Icons.Default.ReceiptLong, modifier = Modifier.weight(1f), onClick = onGoRiwayat)
+                    ShortcutCard(label = tr("Laba", "Profit"), icon = Icons.Default.TrendingUp, modifier = Modifier.weight(1f), onClick = onGoLaba)
+                    ShortcutCard(label = tr("Pengingat", "Reminders"), icon = Icons.Default.NotificationsActive, modifier = Modifier.weight(1f), onClick = onGoPengingat)
+                    ShortcutCard(label = tr("Riwayat", "History"), icon = Icons.Default.ReceiptLong, modifier = Modifier.weight(1f), onClick = onGoRiwayat)
                 }
                 }
             }
@@ -583,7 +591,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
                             }
                             Spacer(Modifier.width(10.dp))
-                            Text("Pengingat", style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
+                            Text(tr("Pengingat", "Reminders"), style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(SpaceS))
                         // Stok menipis: nama obat + sisa stok, ditulis sama seperti
@@ -594,10 +602,10 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                     Box(Modifier.size(6.dp).background(MaterialTheme.colorScheme.error, CircleShape))
                                     Spacer(Modifier.width(8.dp))
                                     Text(name, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text("Sisa: $stock", style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(tr("Sisa: $stock", "Left: $stock"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
-                            if (lowStockMeds.size > 5) Text("+${lowStockMeds.size - 5} lainnya", style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
+                            if (lowStockMeds.size > 5) Text(tr("+${lowStockMeds.size - 5} lainnya", "+${lowStockMeds.size - 5} more"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
                         }
                         // Stok habis: nama obat + keterangan "Habis".
                         if (outOfStockNames.isNotEmpty()) {
@@ -606,12 +614,12 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                     Box(Modifier.size(6.dp).background(MaterialTheme.colorScheme.error, CircleShape))
                                     Spacer(Modifier.width(8.dp))
                                     Text(name, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text("Habis", style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(tr("Habis", "Out of stock"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
-                            if (outOfStockNames.size > 5) Text("+${outOfStockNames.size - 5} lainnya", style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
+                            if (outOfStockNames.size > 5) Text(tr("+${outOfStockNames.size - 5} lainnya", "+${outOfStockNames.size - 5} more"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
                         }
-                        if (d.expiringCount > 0) Text("• ${d.expiringCount} obat dekat kadaluarsa", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp))
+                        if (d.expiringCount > 0) Text(tr("• ${d.expiringCount} obat dekat kadaluarsa", "• ${d.expiringCount} medicines expiring soon"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp))
                         if (expiringMeds.isNotEmpty()) {
                             expiringMeds.take(5).forEach { (name, exp) ->
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
@@ -621,20 +629,20 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                     Text(formatDateID(exp), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
-                            if (expiringMeds.size > 5) Text("+${expiringMeds.size - 5} lainnya", style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
+                            if (expiringMeds.size > 5) Text(tr("+${expiringMeds.size - 5} lainnya", "+${expiringMeds.size - 5} more"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
                         }
                         // Tagihan PBF mendekati jatuh tempo: nama PBF ditulis
                         // lengkap + sisa hari di kanan (permintaan Achmad
                         // 2026-10-30 supaya informasinya lengkap), maks. 3.
                         if (dueBills.isNotEmpty()) {
-                            Text("• ${dueBills.size} tagihan PBF mendekati jatuh tempo", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp))
+                            Text(tr("• ${dueBills.size} tagihan PBF mendekati jatuh tempo", "• ${dueBills.size} PBF bills nearing due date"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp))
                             dueBills.take(3).forEach { p ->
                                 val daysLeft = dueDaysLeft(p.dueDate) ?: 0L
                                 val (dueLabel, dueColor) = when {
-                                    daysLeft < 0L -> "Lewat ${-daysLeft} hari" to MaterialTheme.colorScheme.error
-                                    daysLeft == 0L -> "Jatuh tempo hari ini" to MaterialTheme.colorScheme.error
-                                    daysLeft == 1L -> "Besok jatuh tempo" to warningAmber()
-                                    else -> "$daysLeft hari lagi" to warningAmber()
+                                    daysLeft < 0L -> tr("Lewat ${-daysLeft} hari", "${-daysLeft} days overdue") to MaterialTheme.colorScheme.error
+                                    daysLeft == 0L -> tr("Jatuh tempo hari ini", "Due today") to MaterialTheme.colorScheme.error
+                                    daysLeft == 1L -> tr("Besok jatuh tempo", "Due tomorrow") to warningAmber()
+                                    else -> tr("$daysLeft hari lagi", "Due in $daysLeft days") to warningAmber()
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
                                     Box(Modifier.size(6.dp).background(dueColor, CircleShape))
@@ -643,17 +651,17 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                     Text(dueLabel, style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = dueColor)
                                 }
                             }
-                            if (dueBills.size > 3) Text("+${dueBills.size - 3} lainnya", style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
+                            if (dueBills.size > 3) Text(tr("+${dueBills.size - 3} lainnya", "+${dueBills.size - 3} more"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
                         }
-                        if (d.lowStockCount == 0 && d.expiringCount == 0 && dueBills.isEmpty()) Text("Semua stok dan kadaluarsa aman.", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp))
+                        if (d.lowStockCount == 0 && d.expiringCount == 0 && dueBills.isEmpty()) Text(tr("Semua stok dan kadaluarsa aman.", "All stock and expiry dates are safe."), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp))
                         if (d.lowStockCount > 0 || d.expiringCount > 0 || dueBills.isNotEmpty()) {
                             Spacer(Modifier.height(SpaceS))
-                            TextButton(onClick = onGoPengingat) { Text("Lihat Pengingat", style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp)) }
+                            TextButton(onClick = onGoPengingat) { Text(tr("Lihat Pengingat", "View Reminders"), style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp)) }
                         }
                         Spacer(Modifier.height(SpaceS))
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Spacer(Modifier.height(SpaceS))
-                        Text("${d.totalMedicines} jenis obat terdaftar di Stok", style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("${d.totalMedicines} jenis obat terdaftar di Stok", "${d.totalMedicines} medicines registered in Stock"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 }
@@ -674,13 +682,13 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Column {
-                            Text("Pengeluaran Hari Ini", style = MaterialTheme.typography.labelSmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(tr("Pengeluaran Hari Ini", "Today's Expenses"), style = MaterialTheme.typography.labelSmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Spacer(Modifier.height(SpaceXS))
                             Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         Spacer(Modifier.height(SpaceM))
                         Column {
-                            Text("Selisih Kas Hari Ini", style = MaterialTheme.typography.labelSmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(tr("Selisih Kas Hari Ini", "Today's Cash Difference"), style = MaterialTheme.typography.labelSmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Spacer(Modifier.height(SpaceXS))
                             Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold, color = if (d.todayProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
@@ -688,11 +696,11 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Spacer(Modifier.height(SpaceS))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("Selisih Kas Bulan Ini", style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Medium)
+                            Text(tr("Selisih Kas Bulan Ini", "This Month's Cash Difference"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Medium)
                             Text(formatIDR(d.monthProfit), style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold, color = if (d.monthProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error)
                         }
                         Spacer(Modifier.height(SpaceXS))
-                        Text("Masuk ${formatIDR(d.monthIn)} • Keluar ${formatIDR(d.monthOut)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("Masuk ${formatIDR(d.monthIn)} • Keluar ${formatIDR(d.monthOut)}", "In ${formatIDR(d.monthIn)} • Out ${formatIDR(d.monthOut)}"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 }
@@ -709,7 +717,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                            listOf("Obat Terjual" to 0, "Transaksi" to 1).forEach { (label, idx) ->
+                            listOf(tr("Obat Terjual", "Items Sold") to 0, tr("Transaksi", "Transactions") to 1).forEach { (label, idx) ->
                                 val selected = salesTab == idx
                                 Surface(
                                     onClick = { salesTab = idx },
@@ -732,7 +740,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         Spacer(Modifier.height(SpaceS))
                         if (salesTab == 0) {
                         if (d.bestSellers.isEmpty()) {
-                            Text("Belum ada obat terjual hari ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Belum ada obat terjual hari ini.", "No items sold today yet."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             d.bestSellers.forEachIndexed { index, b ->
                                 if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 4.dp))
@@ -745,7 +753,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         }
                         } else {
                         if (d.recentSales.isEmpty()) {
-                            Text("Belum ada penjualan hari ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Belum ada penjualan hari ini.", "No sales today yet."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             d.recentSales.forEachIndexed { index, s ->
                                 if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 4.dp))
@@ -1047,7 +1055,7 @@ fun KasirScreen() {
                 Icon(Icons.Default.PointOfSale, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
             }
             Spacer(Modifier.width(12.dp))
-            Text("Kasir", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+            Text(tr("Kasir", "Cashier"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
         }
         Spacer(Modifier.height(SpaceL))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -1709,7 +1717,7 @@ fun StokScreen() {
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Stok Obat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                    Text(tr("Stok Obat", "Medicine Stock"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
                     Text("${medicines.size} jenis obat tercatat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -2350,7 +2358,7 @@ fun KeuanganScreen() {
                     Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("Keuangan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                Text(tr("Keuangan", "Finance"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -2740,7 +2748,7 @@ fun LabaScreen() {
                     Icon(Icons.Default.TrendingUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("Laporan Laba", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                Text(tr("Laporan Laba", "Profit Report"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -3009,7 +3017,7 @@ fun ObatTerlarisScreen() {
                     Icon(Icons.Default.Leaderboard, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("Obat Terlaris", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                Text(tr("Obat Terlaris", "Best Sellers"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -3176,7 +3184,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                     Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("Pengingat", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                Text(tr("Pengingat", "Reminders"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -3882,7 +3890,7 @@ fun RiwayatScreen() {
                 Icon(Icons.Default.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
             }
             Spacer(Modifier.width(12.dp))
-            Text("Riwayat Penjualan", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+            Text(tr("Riwayat Penjualan", "Sales History"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
         }
         Spacer(Modifier.height(SpaceL))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -4164,7 +4172,7 @@ fun TentangScreen() {
                     Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("Tentang Aplikasi", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                Text(tr("Tentang Aplikasi", "About App"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -4277,7 +4285,7 @@ fun PbfScreen() {
                         Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                     }
                     Spacer(Modifier.width(12.dp))
-                    Text("Faktur PBF", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                    Text(tr("Faktur PBF", "PBF Invoices"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
                 }
                 Spacer(Modifier.height(SpaceL))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

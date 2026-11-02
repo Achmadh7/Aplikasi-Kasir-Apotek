@@ -65,6 +65,8 @@ import kotlin.math.hypot
 import kotlinx.coroutines.launch
 import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
+import id.apotek.lestari.ui.theme.AppLang
+import id.apotek.lestari.ui.theme.tr
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 class MainActivity : ComponentActivity() {
@@ -76,6 +78,10 @@ class MainActivity : ComponentActivity() {
             // dibaca sekali saat aplikasi dibuka.
             val prefs = remember { getSharedPreferences("apotek_prefs", Context.MODE_PRIVATE) }
             var isDark by remember { mutableStateOf(prefs.getBoolean("dark_theme", true)) }
+            // Bahasa aplikasi (id/en) — tersimpan seperti tema, dan disalin
+            // ke AppLang.code yang dibaca tr() di semua layar.
+            var appLang by remember { mutableStateOf(prefs.getString("app_language", "id") ?: "id") }
+            AppLang.code = appLang
             // Kelas lebar jendela (HP/tablet, portrait/landscape) untuk layout adaptif.
             val windowSizeClass = calculateWindowSizeClass(this)
             CompositionLocalProvider(LocalWindowWidthClass provides windowSizeClass.widthSizeClass) {
@@ -86,6 +92,11 @@ class MainActivity : ComponentActivity() {
                             val next = !isDark
                             isDark = next
                             prefs.edit().putBoolean("dark_theme", next).apply()
+                        },
+                        appLang = appLang,
+                        onLanguageChange = { next ->
+                            appLang = next
+                            prefs.edit().putString("app_language", next).apply()
                         }
                     )
                 }
@@ -125,7 +136,7 @@ val TABS = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
+fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLanguageChange: (String) -> Unit) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route ?: "beranda"
@@ -271,7 +282,17 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                                 }
                             )
                         },
-                        label = { Text(tab.label) }
+                        label = {
+                            Text(
+                                when (tab.route) {
+                                    "beranda" -> tr("Beranda", "Home")
+                                    "stok" -> tr("Stok", "Stock")
+                                    "kasir" -> tr("Kasir", "Cashier")
+                                    "keuangan" -> tr("Keuangan", "Finance")
+                                    else -> tr("Lainnya", "More")
+                                }
+                            )
+                        }
                     )
                 }
             }
@@ -346,15 +367,15 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
             // dan Tentang Aplikasi) terpotong dan tidak bisa diketuk
             // (laporan Achmad 2026-10-29).
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 8.dp).padding(top = 8.dp, bottom = 24.dp)) {
-                Text("Menu Lainnya", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
+                Text(tr("Menu Lainnya", "More Menu"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 16.dp))
                 listOf(
-                    Triple("laba", "Laba", Icons.Default.TrendingUp),
-                    Triple("terlaris", "Obat Terlaris", Icons.Default.Leaderboard),
-                    Triple("pengingat", "Pengingat", Icons.Default.NotificationsActive),
-                    Triple("riwayat", "Riwayat", Icons.Default.ReceiptLong),
-                    Triple("pbf", "Faktur PBF", Icons.Default.LocalShipping),
-                    Triple("backup", "Backup & Restore", Icons.Default.Backup)
+                    Triple("laba", tr("Laba", "Profit"), Icons.Default.TrendingUp),
+                    Triple("terlaris", tr("Obat Terlaris", "Best Sellers"), Icons.Default.Leaderboard),
+                    Triple("pengingat", tr("Pengingat", "Reminders"), Icons.Default.NotificationsActive),
+                    Triple("riwayat", tr("Riwayat", "History"), Icons.Default.ReceiptLong),
+                    Triple("pbf", tr("Faktur PBF", "PBF Invoices"), Icons.Default.LocalShipping),
+                    Triple("backup", tr("Backup & Restore", "Backup & Restore"), Icons.Default.Backup)
                 ).forEach { (route, label, icon) ->
                     ListItem(
                         headlineContent = { Text(label, style = MaterialTheme.typography.titleMedium) },
@@ -376,7 +397,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                 ListItem(
                     headlineContent = {
                         Text(
-                            if (isDark) "Mode Terang" else "Mode Gelap",
+                            if (isDark) tr("Mode Terang", "Light Mode") else tr("Mode Gelap", "Dark Mode"),
                             style = MaterialTheme.typography.titleMedium
                         )
                     },
@@ -396,9 +417,36 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
                         showMoreSheet = false
                     }
                 )
+                // Ganti bahasa Indonesia <-> Inggris, di bawah ganti tema
+                // (permintaan Achmad 2026-11-02). Pola sama seperti baris
+                // tema: ketuk langsung berganti ke bahasa satunya dan sheet
+                // menutup; pilihan tersimpan untuk kunjungan berikutnya.
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            if (appLang == "en") "Bahasa Indonesia" else "English",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    },
+                    leadingContent = {
+                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                            Icon(
+                                Icons.Default.Language,
+                                null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(10.dp).size(22.dp)
+                            )
+                        }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable {
+                        onLanguageChange(if (appLang == "en") "id" else "en")
+                        showMoreSheet = false
+                    }
+                )
                 // Tentang Aplikasi, di bawah ganti tema.
                 ListItem(
-                    headlineContent = { Text("Tentang Aplikasi", style = MaterialTheme.typography.titleMedium) },
+                    headlineContent = { Text(tr("Tentang Aplikasi", "About App"), style = MaterialTheme.typography.titleMedium) },
                     leadingContent = {
                         Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
                             Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
