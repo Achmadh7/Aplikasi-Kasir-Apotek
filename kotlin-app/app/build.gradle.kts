@@ -9,8 +9,10 @@ plugins {
 }
 
 // Signing — pola Auriya: file signing.properties (gitignored) di root
-// project (kotlin-app/) dibaca di sini. Tanpa file itu, build release
-// memakai debug signing supaya tetap bisa di-build untuk testing.
+// project (kotlin-app/) dibaca di sini. Tanpa file itu build release
+// GAGAL (penjaga verifyReleaseSigning di bawah; audit 2026-11-02, M4) —
+// dulu diam-diam fallback ke debug signing, jadi APK "release" bisa
+// terbit bertanda tangan debug tanpa peringatan apa pun.
 val signingPropertiesFile = rootProject.file("signing.properties")
 val signingProperties =
     Properties().apply {
@@ -88,12 +90,13 @@ android {
             // terpakai) supaya APK lebih kecil. Aturan keep ada di proguard-rules.pro.
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig =
-                if (signingProperties.isNotEmpty()) {
-                    signingConfigs.getByName("release")
-                } else {
-                    signingConfigs.getByName("debug")
-                }
+            // Tanpa fallback debug (audit 2026-11-02, M4): signing hanya
+            // dipasang bila signing.properties ada; ketiadaannya menggagalkan
+            // build release lewat verifyReleaseSigning, bukan menandatangani
+            // diam-diam dengan kunci debug.
+            if (signingProperties.isNotEmpty()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -109,6 +112,24 @@ android {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     }
 }
+
+// Penjaga signing rilis (audit 2026-11-02, M4): dijalankan hanya di jalur
+// build release (preReleaseBuild), jadi build debug — yang di CI berjalan
+// sebelum keystore disiapkan — tidak ikut terhalang. Bila signing.properties
+// tidak ada atau kurang lengkap, build release gagal dengan pesan jelas.
+val verifyReleaseSigning by tasks.registering {
+    doLast {
+        val required = listOf("KEYSTORE_PATH", "KEYSTORE_PASSWORD", "KEY_ALIAS", "KEY_PASSWORD")
+        val missing = required.filter { signingProperties.getProperty(it).isNullOrBlank() }
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "signing.properties tidak ada/kurang lengkap (kurang: ${missing.joinToString()}). " +
+                    "Build release dibatalkan supaya APK release tidak ter-sign kunci debug secara diam-diam."
+            )
+        }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(verifyReleaseSigning) }
 
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2025.10.00")
