@@ -205,7 +205,7 @@ private fun PurchasePaymentChip(paymentType: String) {
         enabled = false,
         label = {
             Text(
-                if (kredit) "Kredit" else "Cash",
+                if (kredit) tr("Kredit", "Credit") else "Cash",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -2157,7 +2157,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
             OutlinedTextField(
                 value = unit, onValueChange = {}, label = { Text(tr("Satuan", "Unit")) },
                 readOnly = true, singleLine = true,
-                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih satuan") },
+                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = tr("Pilih satuan", "Pick a unit")) },
                 interactionSource = unitInteraction,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -3190,11 +3190,11 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
-            Text("MASA KADALUARSA", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("MASA KADALUARSA", "EXPIRY WINDOW"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(SpaceS))
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                 listOf(30, 60, 90).forEach { w ->
-                    FilterChip(selected = window == w, onClick = { window = w }, label = { Text("$w Hari") })
+                    FilterChip(selected = window == w, onClick = { window = w }, label = { Text(tr("$w Hari", "$w Days")) })
                 }
             }
         }
@@ -3212,10 +3212,10 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM)) {
                     ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.weight(1f)) {
-                        ReminderCount(Icons.Default.Inventory, "RENDAH", "${low.size}", MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
+                        ReminderCount(Icons.Default.Inventory, tr("RENDAH", "LOW"), "${low.size}", MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
                     }
                     ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.weight(1f)) {
-                        ReminderCount(Icons.Default.PriorityHigh, "HABIS", "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.fillMaxWidth().padding(16.dp))
+                        ReminderCount(Icons.Default.PriorityHigh, tr("HABIS", "OUT"), "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.fillMaxWidth().padding(16.dp))
                     }
                 }
             }
@@ -3225,16 +3225,16 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                 // Seksi tagihan PBF: nama PBF ditulis lengkap + nominal +
                 // sisa hari (permintaan Achmad 2026-10-30 supaya informasinya
                 // lengkap). Kartu bisa diketuk untuk membuka Faktur PBF.
-                Text("TAGIHAN PBF JATUH TEMPO", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("TAGIHAN PBF JATUH TEMPO", "PBF BILLS DUE"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(SpaceS))
                 Column(verticalArrangement = Arrangement.spacedBy(SpaceM)) {
                     dueBills.forEach { p ->
                         val daysLeft = dueDaysLeft(p.dueDate) ?: 0L
                         val (dueLabel, dueColor) = when {
-                            daysLeft < 0L -> "Lewat ${-daysLeft} hari" to MaterialTheme.colorScheme.error
-                            daysLeft == 0L -> "Jatuh tempo hari ini" to MaterialTheme.colorScheme.error
-                            daysLeft == 1L -> "Besok jatuh tempo" to warningAmber()
-                            else -> "$daysLeft hari lagi" to warningAmber()
+                            daysLeft < 0L -> tr("Lewat ${-daysLeft} hari", "${-daysLeft} days overdue") to MaterialTheme.colorScheme.error
+                            daysLeft == 0L -> tr("Jatuh tempo hari ini", "Due today") to MaterialTheme.colorScheme.error
+                            daysLeft == 1L -> tr("Besok jatuh tempo", "Due tomorrow") to warningAmber()
+                            else -> tr("$daysLeft hari lagi", "Due in $daysLeft days") to warningAmber()
                         }
                         ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth().clickable { onGoPbf() }) {
                             Column(Modifier.padding(16.dp)) {
@@ -3250,7 +3250,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Schedule, null, tint = dueColor, modifier = Modifier.size(14.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Jatuh tempo ${formatDateID(p.dueDate)} • $dueLabel", style = MaterialTheme.typography.bodySmall, color = dueColor)
+                                    Text(tr("Jatuh tempo ${formatDateID(p.dueDate)} • $dueLabel", "Due ${formatDateID(p.dueDate)} • $dueLabel"), style = MaterialTheme.typography.bodySmall, color = dueColor)
                                 }
                             }
                         }
@@ -3266,7 +3266,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
             // filter muat satu baris tanpa terpotong; scroll horizontal
             // dipertahankan sebagai cadangan untuk layar yang sangat sempit.
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                listOf("all" to "Semua", "expiry" to "Kadaluwarsa", "low" to "Rendah", "critical" to "Habis").forEach { (k, l) ->
+                listOf("all" to tr("Semua", "All"), "expiry" to tr("Kadaluwarsa", "Expiry"), "low" to tr("Rendah", "Low"), "critical" to tr("Habis", "Out")).forEach { (k, l) ->
                     FilterChip(selected = filter == k, onClick = { filter = k }, label = { Text(l) })
                 }
             }
@@ -3283,13 +3283,13 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
             // informasinya jelas (sebelumnya hanya satu yang tampil karena
             // rantai if/else berhenti di kondisi pertama yang cocok).
             val stockNote = when {
-                isCritical -> if (showSuggest) "Stok habis — restock segera, disarankan $suggest ${m.unit} (target stok Aman 16)." else "Stok habis — restock segera."
-                m.stock in 1..9 -> if (showSuggest) "Stok rendah — disarankan restock $suggest ${m.unit} (target stok Aman 16)." else "Stok rendah — restock segera."
+                isCritical -> if (showSuggest) tr("Stok habis — restock segera, disarankan $suggest ${m.unit} (target stok Aman 16).", "Out of stock — restock soon, suggested $suggest ${m.unit} (Safe stock target 16).") else tr("Stok habis — restock segera.", "Out of stock — restock soon.")
+                m.stock in 1..9 -> if (showSuggest) tr("Stok rendah — disarankan restock $suggest ${m.unit} (target stok Aman 16).", "Low stock — suggested restock $suggest ${m.unit} (Safe stock target 16).") else tr("Stok rendah — restock segera.", "Low stock — restock soon.")
                 else -> null
             }
             val expiryNote = when {
-                d != null && d < 0 -> "Sudah kadaluarsa — jangan dijual, segera pisahkan dari stok."
-                d != null -> "Kedaluwarsa dalam $d hari — prioritaskan penjualan."
+                d != null && d < 0 -> tr("Sudah kadaluarsa — jangan dijual, segera pisahkan dari stok.", "Expired — do not sell it, separate it from stock right away.")
+                d != null -> tr("Kedaluwarsa dalam $d hari — prioritaskan penjualan.", "Expires in $d days — prioritize selling it.")
                 else -> null
             }
             val advice = listOfNotNull(stockNote, expiryNote).joinToString(" ")
@@ -3318,7 +3318,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                                 Spacer(Modifier.width(8.dp))
                                 Surface(color = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(16.dp), modifier = if (isCritical) Modifier.pulseKritis() else Modifier) {
                                     Text(
-                                        if (isCritical) "HABIS" else "PANTAU",
+                                        if (isCritical) tr("HABIS", "OUT") else tr("PANTAU", "WATCH"),
                                         color = if (isCritical) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary,
                                         style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -3329,7 +3329,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                                 "${m.category} • Stok ${m.stock} ${m.unit} • ${stockLabel(m.stock)}" +
                                     if (m.expiryDate != null) {
                                         " • Exp ${formatDateID(m.expiryDate)}" + if (d != null) {
-                                            if (d < 0) " • Lewat ${-d} hari" else " • Sisa $d hari"
+                                            if (d < 0) tr(" • Lewat ${-d} hari", " • ${-d} days overdue") else tr(" • Sisa $d hari", " • $d days left")
                                         } else ""
                                     } else " • Tanpa tanggal kadaluarsa",
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -3338,7 +3338,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                         OutlinedButton(onClick = onGoStok, shape = RoundedCornerShape(20.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)) {
                             Icon(Icons.Default.Inventory, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Stok")
+                            Text(tr("Stok", "Stock"))
                         }
                     }
                     Spacer(Modifier.height(SpaceS))
@@ -3360,11 +3360,11 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
             }
         }
         if (shown.isEmpty()) {
-            item { Text("Tidak ada pengingat — semua stok dan kadaluarsa aman.", style = MaterialTheme.typography.bodyMedium) }
+            item { Text(tr("Tidak ada pengingat — semua stok dan kadaluarsa aman.", "No reminders — all stock and expiry dates are safe."), style = MaterialTheme.typography.bodyMedium) }
         }
         item {
             Text(
-                "Jumlah restock adalah saran otomatis (target stok Aman, 16). Untuk mengubah stok atau tanggal kadaluarsa, buka obatnya di menu Stok.",
+                tr("Jumlah restock adalah saran otomatis (target stok Aman, 16). Untuk mengubah stok atau tanggal kadaluarsa, buka obatnya di menu Stok.", "Restock amounts are automatic suggestions (Safe stock target, 16). To change stock or an expiry date, open the medicine in the Stock menu."),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -3896,7 +3896,7 @@ fun RiwayatScreen() {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Spacer(Modifier.height(SpaceL))
         DemoBanner()
-        if (sales.isEmpty()) Text("Belum ada penjualan tercatat.")
+        if (sales.isEmpty()) Text(tr("Belum ada penjualan tercatat.", "No sales recorded yet."))
         // Kelompokkan penjualan per hari (WIB): header tanggal + total omzet
         // harian, supaya riwayat lebih mudah dipindai daripada daftar datar.
         // dayKeyID/parseISODate sudah dipakai layar Keuangan untuk batas WIB.
@@ -3921,11 +3921,11 @@ fun RiwayatScreen() {
                 item(key = "header-$dayKey") {
                     val dayDate = daySales.firstNotNullOfOrNull { parseISODate(it.createdAt) }
                     val label = when (dayKey) {
-                        todayKey -> "Hari ini"
-                        yesterdayKey -> "Kemarin"
+                        todayKey -> tr("Hari ini", "Today")
+                        yesterdayKey -> tr("Kemarin", "Yesterday")
                         else -> dayDate?.let {
-                            SimpleDateFormat("d MMM yyyy", Locale("id", "ID")).apply { timeZone = jakartaTz }.format(it)
-                        } ?: "Tanpa tanggal"
+                            SimpleDateFormat("d MMM yyyy", if (AppLang.code == "en") Locale.ENGLISH else Locale("id", "ID")).apply { timeZone = jakartaTz }.format(it)
+                        } ?: tr("Tanpa tanggal", "No date")
                     }
                     val dayTotal = daySales.sumOf { it.total }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
@@ -3999,7 +3999,7 @@ fun RiwayatScreen() {
                 onClick = { salesLimit += 50 },
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.fillMaxWidth().height(52.dp)
-            ) { Text("Tampilkan lebih banyak") }
+            ) { Text(tr("Tampilkan lebih banyak", "Show more")) }
         }
     }
 }
@@ -4296,13 +4296,13 @@ fun PbfScreen() {
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Column(Modifier.weight(1f)) {
-                            Text("BELANJA HARI INI", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text(tr("BELANJA HARI INI", "TODAY'S PURCHASES"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceXS))
                             AnimatedAmount(todayTotal, MaterialTheme.typography.titleLarge, Color.White)
-                            Text("${todayPurchases.size} pembelian", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
+                            Text(tr("${todayPurchases.size} pembelian", "${todayPurchases.size} purchases"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
                         }
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                            Text("BELANJA BULAN INI", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text(tr("BELANJA BULAN INI", "THIS MONTH'S PURCHASES"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceXS))
                             AnimatedAmount(monthTotal, MaterialTheme.typography.titleLarge, Color.White)
                         }
@@ -4316,7 +4316,7 @@ fun PbfScreen() {
                 ) {
                     Icon(Icons.Default.Add, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Catat Pembelian")
+                    Text(tr("Catat Pembelian", "Record Purchase"))
                 }
             }
             if (purchases.isEmpty()) {
@@ -4325,7 +4325,7 @@ fun PbfScreen() {
                         Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
                             Spacer(Modifier.height(SpaceS))
-                            Text("Belum ada catatan pembelian. Catat belanja dari PBF lewat tombol + Catat Pembelian — ini murni catatan, tidak mengubah stok dan kas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Belum ada catatan pembelian. Catat belanja dari PBF lewat tombol + Catat Pembelian — ini murni catatan, tidak mengubah stok dan kas.", "No purchase records yet. Record PBF purchases with the + Record Purchase button — these are records only and do not change stock or cash."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -4333,8 +4333,8 @@ fun PbfScreen() {
             sortedGroups.forEach { (day, dayPurchases) ->
                 item(key = "pbf-header-$day") {
                     val label = when (day) {
-                        todayKey -> "Hari ini"
-                        yesterdayKey -> "Kemarin"
+                        todayKey -> tr("Hari ini", "Today")
+                        yesterdayKey -> tr("Kemarin", "Yesterday")
                         else -> formatDateID(day)
                     }
                     val dayTotal = dayPurchases.sumOf { it.total }
@@ -4343,7 +4343,7 @@ fun PbfScreen() {
                         Spacer(Modifier.width(8.dp))
                         HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
                         Spacer(Modifier.width(8.dp))
-                        Text("${dayPurchases.size} pembelian • ${formatIDR(dayTotal)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("${dayPurchases.size} pembelian • ${formatIDR(dayTotal)}", "${dayPurchases.size} purchases • ${formatIDR(dayTotal)}"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 itemsIndexed(dayPurchases, key = { _, item -> "pbf-${item.id}" }) { index, p ->
@@ -4365,7 +4365,7 @@ fun PbfScreen() {
                                     Text(p.pbfName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                     val namesPreview = p.items.take(3).joinToString(", ") { it.medicineName }
                                     val suffix = if (p.items.size > 3) " +${p.items.size - 3} lagi" else ""
-                                    Text("${p.items.size} obat • $namesPreview$suffix", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(tr("${p.items.size} obat • $namesPreview$suffix", "${p.items.size} medicines • $namesPreview$suffix"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                                 Spacer(Modifier.width(8.dp))
                                 // Chip penanda cara bayar, di tengah antara nama
@@ -4385,16 +4385,16 @@ fun PbfScreen() {
                                 val daysLeft = dueDaysLeft(p.dueDate)
                                 if (daysLeft != null) {
                                     val (dueLabel, dueColor) = when {
-                                        daysLeft < 0L -> "Lewat ${-daysLeft} hari" to MaterialTheme.colorScheme.error
-                                        daysLeft == 0L -> "Jatuh tempo hari ini" to MaterialTheme.colorScheme.error
-                                        daysLeft == 1L -> "Besok jatuh tempo" to warningAmber()
-                                        daysLeft <= 7L -> "$daysLeft hari lagi" to warningAmber()
+                                        daysLeft < 0L -> tr("Lewat ${-daysLeft} hari", "${-daysLeft} days overdue") to MaterialTheme.colorScheme.error
+                                        daysLeft == 0L -> tr("Jatuh tempo hari ini", "Due today") to MaterialTheme.colorScheme.error
+                                        daysLeft == 1L -> tr("Besok jatuh tempo", "Due tomorrow") to warningAmber()
+                                        daysLeft <= 7L -> tr("$daysLeft hari lagi", "Due in $daysLeft days") to warningAmber()
                                         else -> "$daysLeft hari lagi" to MaterialTheme.colorScheme.onSurfaceVariant
                                     }
                                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                                         Icon(Icons.Default.Schedule, null, tint = dueColor, modifier = Modifier.size(14.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Jatuh tempo ${formatDateID(p.dueDate)} • $dueLabel", style = MaterialTheme.typography.bodySmall, color = dueColor)
+                                        Text(tr("Jatuh tempo ${formatDateID(p.dueDate)} • $dueLabel", "Due ${formatDateID(p.dueDate)} • $dueLabel"), style = MaterialTheme.typography.bodySmall, color = dueColor)
                                     }
                                 }
                             }
@@ -4403,7 +4403,7 @@ fun PbfScreen() {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                 Spacer(Modifier.height(SpaceM))
                                 if (p.invoiceNo.isNotBlank()) {
-                                    Text("No. Faktur: ${p.invoiceNo}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(tr("No. Faktur: ${p.invoiceNo}", "Invoice No.: ${p.invoiceNo}"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(Modifier.height(SpaceS))
                                 }
                                 p.items.forEach { pItem ->
@@ -4429,13 +4429,13 @@ fun PbfScreen() {
                                         TextButton(onClick = { paidTarget = p }) {
                                             Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                             Spacer(Modifier.width(4.dp))
-                                            Text("Tandai Lunas", color = MaterialTheme.colorScheme.primary)
+                                            Text(tr("Tandai Lunas", "Mark as Paid"), color = MaterialTheme.colorScheme.primary)
                                         }
                                     }
                                     TextButton(onClick = { deleteTarget = p }) {
                                         Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(4.dp))
-                                        Text("Hapus", color = MaterialTheme.colorScheme.error)
+                                        Text(tr("Hapus", "Delete"), color = MaterialTheme.colorScheme.error)
                                     }
                                 }
                             }
@@ -4454,7 +4454,7 @@ fun PbfScreen() {
             onSaved = {
                 showForm = false
                 resumeKey++
-                scope.launch { snackbarHostState.showSnackbar("Pembelian tercatat.") }
+                scope.launch { snackbarHostState.showSnackbar(tr("Pembelian tercatat.", "Purchase recorded.")) }
             }
         )
     }
@@ -4462,8 +4462,8 @@ fun PbfScreen() {
     deleteTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("Hapus Catatan Pembelian?") },
-            text = { Text("Catatan belanja dari ${target.pbfName} (${formatDateID(target.date)}) sebesar ${formatIDR(target.total)} akan dihapus. Ini hanya menghapus catatan — stok dan kas tidak berubah.") },
+            title = { Text(tr("Hapus Catatan Pembelian?", "Delete Purchase Record?")) },
+            text = { Text(tr("Catatan belanja dari ${target.pbfName} (${formatDateID(target.date)}) sebesar ${formatIDR(target.total)} akan dihapus. Ini hanya menghapus catatan — stok dan kas tidak berubah.", "The purchase record from ${target.pbfName} (${formatDateID(target.date)}) of ${formatIDR(target.total)} will be deleted. This only deletes the record — stock and cash are unchanged.")) },
             confirmButton = {
                 TextButton(onClick = {
                     deleteTarget = null
@@ -4472,12 +4472,12 @@ fun PbfScreen() {
                         if (res is ApiResult.Success) {
                             if (expanded == target.id) expanded = null
                             resumeKey++
-                            snackbarHostState.showSnackbar("Catatan pembelian dihapus.")
+                            snackbarHostState.showSnackbar(tr("Catatan pembelian dihapus.", "Purchase record deleted."))
                         } else {
-                            snackbarHostState.showSnackbar((res as? ApiResult.Error)?.message ?: "Gagal menghapus")
+                            snackbarHostState.showSnackbar((res as? ApiResult.Error)?.message ?: tr("Gagal menghapus", "Failed to delete"))
                         }
                     }
-                }) { Text("Hapus", color = MaterialTheme.colorScheme.error) }
+                }) { Text(tr("Hapus", "Delete"), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text(tr("Batal", "Cancel")) } }
         )
@@ -4486,8 +4486,8 @@ fun PbfScreen() {
     paidTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { paidTarget = null },
-            title = { Text("Tandai Lunas?") },
-            text = { Text("Pembelian dari ${target.pbfName} (${formatDateID(target.date)}) sebesar ${formatIDR(target.total)} akan diubah jadi Cash. Nominalnya masuk ke ringkasan Belanja Hari Ini/Bulan Ini mengikuti tanggal belinya.") },
+            title = { Text(tr("Tandai Lunas?", "Mark as Paid?")) },
+            text = { Text(tr("Pembelian dari ${target.pbfName} (${formatDateID(target.date)}) sebesar ${formatIDR(target.total)} akan diubah jadi Cash. Nominalnya masuk ke ringkasan Belanja Hari Ini/Bulan Ini mengikuti tanggal belinya.", "The purchase from ${target.pbfName} (${formatDateID(target.date)}) of ${formatIDR(target.total)} will be changed to Cash. Its amount joins the Today/This Month Purchases summary following its purchase date.")) },
             confirmButton = {
                 TextButton(onClick = {
                     paidTarget = null
@@ -4495,14 +4495,14 @@ fun PbfScreen() {
                         val res = repo.markPurchasePaid(target.id)
                         if (res is ApiResult.Success) {
                             resumeKey++
-                            snackbarHostState.showSnackbar("Pembelian ditandai lunas.")
+                            snackbarHostState.showSnackbar(tr("Pembelian ditandai lunas.", "Purchase marked as paid."))
                         } else {
-                            snackbarHostState.showSnackbar((res as? ApiResult.Error)?.message ?: "Gagal menandai lunas")
+                            snackbarHostState.showSnackbar((res as? ApiResult.Error)?.message ?: tr("Gagal menandai lunas", "Failed to mark as paid"))
                         }
                     }
-                }) { Text("Tandai Lunas", fontWeight = FontWeight.Bold) }
+                }) { Text(tr("Tandai Lunas", "Mark as Paid"), fontWeight = FontWeight.Bold) }
             },
-            dismissButton = { TextButton(onClick = { paidTarget = null }) { Text("Batal") } }
+            dismissButton = { TextButton(onClick = { paidTarget = null }) { Text(tr("Batal", "Cancel")) } }
         )
     }
 }
@@ -4560,50 +4560,50 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Catat Pembelian PBF", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                Text(tr("Catat Pembelian PBF", "Record PBF Purchase"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            OutlinedTextField(pbfName, { pbfName = it }, label = { Text("Faktur PBF") }, placeholder = { Text("mis. nama distributornya") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(invoiceNo, { invoiceNo = it }, label = { Text("Nomor Faktur (boleh kosong)") }, placeholder = { Text("mis. nomor faktur dari PBF") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(pbfName, { pbfName = it }, label = { Text(tr("Faktur PBF", "PBF / Distributor")) }, placeholder = { Text(tr("mis. nama distributornya", "e.g. the distributor's name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(invoiceNo, { invoiceNo = it }, label = { Text(tr("Nomor Faktur (boleh kosong)", "Invoice Number (optional)")) }, placeholder = { Text(tr("mis. nomor faktur dari PBF", "e.g. the invoice number from the PBF")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
-                value = formatDateID(date), onValueChange = {}, label = { Text("Tanggal Beli") },
+                value = formatDateID(date), onValueChange = {}, label = { Text(tr("Tanggal Beli", "Purchase Date")) },
                 readOnly = true, singleLine = true,
                 trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = tr("Pilih tanggal", "Pick a date")) },
                 interactionSource = dateInteraction,
                 modifier = Modifier.fillMaxWidth()
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Pembayaran", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(tr("Pembayaran", "Payment"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 PriceModeChip("Cash", selected = paymentType == "CASH") { paymentType = "CASH" }
                 Spacer(Modifier.width(6.dp))
-                PriceModeChip("Kredit", selected = paymentType == "KREDIT") { paymentType = "KREDIT" }
+                PriceModeChip(tr("Kredit", "Credit"), selected = paymentType == "KREDIT") { paymentType = "KREDIT" }
             }
             // Tanggal jatuh tempo hanya untuk pembelian Kredit (permintaan
             // Achmad 2026-10-30); boleh kosong — tanpa tanggal, kartu tidak
             // menampilkan hitung mundur. Untuk Cash field ini tidak tampil.
             if (paymentType == "KREDIT") {
                 OutlinedTextField(
-                    value = if (dueDate.isBlank()) "" else formatDateID(dueDate), onValueChange = {}, label = { Text("Tanggal Jatuh Tempo (boleh kosong)") },
-                    placeholder = { Text("Pilih tanggal") },
+                    value = if (dueDate.isBlank()) "" else formatDateID(dueDate), onValueChange = {}, label = { Text(tr("Tanggal Jatuh Tempo (boleh kosong)", "Due Date (optional)")) },
+                    placeholder = { Text(tr("Pilih tanggal", "Pick a date")) },
                     readOnly = true, singleLine = true,
-                    trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = "Pilih tanggal jatuh tempo") },
+                    trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = tr("Pilih tanggal jatuh tempo", "Pick the due date")) },
                     interactionSource = dueInteraction,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
             Spacer(Modifier.height(SpaceXS))
-            Text("Obat yang Dibeli", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(tr("Obat yang Dibeli", "Purchased Medicines"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             rows.forEachIndexed { index, row ->
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Obat ${index + 1}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        Text(tr("Obat ${index + 1}", "Medicine ${index + 1}"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                         if (rows.size > 1) {
                             IconButton(
                                 onClick = { rows = rows - row; if (activeRow == row) activeRow = null },
                                 modifier = Modifier.size(32.dp)
                             ) {
-                                Icon(Icons.Default.Delete, "Hapus obat ini", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Delete, tr("Hapus obat ini", "Delete this item"), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                             }
                         }
                     }
@@ -4629,7 +4629,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                         OutlinedTextField(
                             value = row.unit, onValueChange = {}, label = { Text(tr("Satuan", "Unit")) },
                             readOnly = true, singleLine = true,
-                            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih satuan") },
+                            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = tr("Pilih satuan", "Pick a unit")) },
                             interactionSource = unitInteraction,
                             modifier = Modifier.width(118.dp)
                         )
@@ -4659,7 +4659,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                         OutlinedTextField(
                             value = row.price,
                             onValueChange = { row.price = formatDecimalFieldValue(it) },
-                            label = { Text("Harga Satuan") },
+                            label = { Text(tr("Harga Satuan", "Unit Price")) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.weight(2f)
@@ -4678,12 +4678,12 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
             ) {
                 Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Tambah Obat")
+                Text(tr("Tambah Obat", "Add Item"))
             }
             Spacer(Modifier.height(SpaceXS))
-            OutlinedTextField(ppn, { ppn = formatDecimalFieldValue(it) }, label = { Text("Jumlah PPN (Rp)") }, placeholder = { Text("0") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(ppn, { ppn = formatDecimalFieldValue(it) }, label = { Text(tr("Jumlah PPN (Rp)", "PPN/VAT Amount (Rp)")) }, placeholder = { Text("0") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Total Belanja", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(tr("Total Belanja", "Total Purchases"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 Text(formatIDR(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
             if (formError.isNotEmpty()) Text(formError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
@@ -4703,13 +4703,13 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                             )
                         )
                         if (res is ApiResult.Success) onSaved()
-                        else formError = (res as? ApiResult.Error)?.message ?: "Gagal menyimpan"
+                        else formError = (res as? ApiResult.Error)?.message ?: tr("Gagal menyimpan", "Failed to save")
                     }
                 },
                 enabled = valid,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(52.dp),
                 shape = RoundedCornerShape(28.dp),
-            ) { Text("Simpan") }
+            ) { Text(tr("Simpan", "Save")) }
         }
     }
     if (showDatePicker) {
@@ -4747,8 +4747,8 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
             },
             dismissButton = {
                 Row {
-                    TextButton(onClick = { dueDate = ""; showDuePicker = false }) { Text("Hapus") }
-                    TextButton(onClick = { showDuePicker = false }) { Text("Batal") }
+                    TextButton(onClick = { dueDate = ""; showDuePicker = false }) { Text(tr("Hapus", "Clear")) }
+                    TextButton(onClick = { showDuePicker = false }) { Text(tr("Batal", "Cancel")) }
                 }
             }
         ) {
