@@ -1,4 +1,3 @@
-import java.net.URL
 import java.util.Properties
 
 plugins {
@@ -21,47 +20,10 @@ val signingProperties =
         }
     }
 
-// Font Poppins (OFL, gratis) — diunduh saat build dari google/fonts, karena
-// file .ttf biner tidak bisa di-push lewat API teks. Disimpan di direktori
-// generated (build/generated/poppins/res/font) supaya repo tetap bersih.
-// Dipakai build/generated/poppins/res (bukan generated/res) agar tidak
-// bertabrakan dengan output resource AGP sendiri di build/generated/res.
-val poppinsResDir = layout.buildDirectory.dir("generated/poppins/res")
-val poppinsFontDir = poppinsResDir.map { it.dir("font") }
-val downloadPoppinsFonts = tasks.register("downloadPoppinsFonts") {
-    val outDir = poppinsFontDir.get().asFile
-    outputs.dir(outDir)
-    doLast {
-        outDir.mkdirs()
-        val base = "https://raw.githubusercontent.com/google/fonts/main/ofl/poppins"
-        listOf("Regular", "Medium", "SemiBold", "Bold").forEach { weight ->
-            val out = outDir.resolve("poppins_${weight.lowercase()}.ttf")
-            if (!out.exists() || out.length() == 0L) {
-                try {
-                    URL("$base/Poppins-$weight.ttf").openStream().use { input ->
-                        out.outputStream().use { output -> input.copyTo(output) }
-                    }
-                } catch (e: Exception) {
-                    throw GradleException(
-                        "Gagal mengunduh font Poppins-$weight.ttf: ${e.message}. Pastikan build punya akses internet.",
-                        e
-                    )
-                }
-            }
-        }
-    }
-}
-tasks.named("preBuild") { dependsOn(downloadPoppinsFonts) }
 
 android {
     namespace = "id.apotek.lestari"
     compileSdk = 36
-
-    sourceSets {
-        getByName("main") {
-            res.srcDirs("src/main/res", poppinsResDir)
-        }
-    }
 
     defaultConfig {
         applicationId = "id.apotek.lestari"

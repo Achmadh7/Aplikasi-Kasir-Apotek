@@ -36,7 +36,8 @@ import java.io.IOException
 /**
  * Simpan bitmap struk sebagai PNG di cache lalu bagikan lewat share sheet.
  * Bitmap yang belum siap (recycle/kosong) ditolak dengan pesan jelas;
- * file PNG lama di cache dibersihkan dulu supaya tidak menumpuk.
+ * PNG struk lama dibersihkan setelah file baru tertulis supaya cache
+ * tidak menumpuk tanpa menghapus file yang sedang dibagikan.
  */
 fun shareReceiptBitmap(context: Context, bitmap: Bitmap, invoiceNo: String) {
     if (bitmap.isRecycled || bitmap.width <= 0 || bitmap.height <= 0) {
@@ -44,21 +45,25 @@ fun shareReceiptBitmap(context: Context, bitmap: Bitmap, invoiceNo: String) {
     }
     try {
         val dir = File(context.cacheDir, "receipts").apply { mkdirs() }
-        // Bersihkan PNG lama sebelum menulis yang baru (cache/receipts
-        // menumpuk satu file per struk yang dibagikan).
-        dir.listFiles()?.forEach { runCatching { it.delete() } }
         // Nama berkas harus dibersihkan: format nomor invoice sejak
         // 2026-11-01 adalah "INV - dd/MM/yy" yang mengandung garis miring;
         // "/" di nama berkas dianggap pemisah folder sehingga penulisan
         // PNG gagal total ("Gagal menyiapkan struk"). Karakter di luar
         // huruf/angka/titik/strip diganti "-", strip beruntun dirapikan.
         val safeName = invoiceNo.replace(Regex("[^A-Za-z0-9._-]"), "-").replace(Regex("-+"), "-")
-        val file = File(dir, "Struk-$safeName.png")
+        // Nama unik per bagikan (cap waktu milidetik) dan urutan dibalik
+        // dari sebelumnya (audit LOW): file baru ditulis DULU, PNG lama
+        // dibersihkan SESUDAHNYA. Dulu semua PNG lama dihapus sebelum
+        // menulis, jadi struk yang URI-nya masih dipegang aplikasi tujuan
+        // bisa terhapus saat struk berikutnya dibagikan.
+        val file = File(dir, "Struk-$safeName-${System.currentTimeMillis()}.png")
         FileOutputStream(file).use { out ->
             if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) {
                 throw IOException("Gagal menulis gambar struk")
             }
         }
+        // Bersihkan PNG struk lama selain file yang baru ditulis ini.
+        dir.listFiles()?.filter { it != file }?.forEach { runCatching { it.delete() } }
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "image/png"

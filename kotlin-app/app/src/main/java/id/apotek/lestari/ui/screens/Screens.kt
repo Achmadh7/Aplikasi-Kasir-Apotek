@@ -3973,8 +3973,10 @@ fun RiwayatScreen() {
                                 // Chip cara bayar di tengah antara nomor invoice
                                 // dan nominal, seperti Faktur PBF — hanya untuk
                                 // QRIS dan Transfer; Tunai tanpa chip (permintaan
-                                // Achmad 2026-11-01).
-                                if (s.paymentMethod != "Tunai") {
+                                // Achmad 2026-11-01). Perbandingan tidak peka
+                                // huruf besar/kecil (audit LOW): "tunai" kecil
+                                // pun tetap tanpa chip.
+                                if (!s.paymentMethod.equals("Tunai", ignoreCase = true)) {
                                     Spacer(Modifier.width(8.dp))
                                     SalePaymentChip(s.paymentMethod)
                                     Spacer(Modifier.width(10.dp))
