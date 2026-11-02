@@ -1,5 +1,7 @@
 package id.apotek.lestari.data
 
+import id.apotek.lestari.ui.theme.tr
+
 import id.apotek.lestari.data.local.CashEntryEntity
 import id.apotek.lestari.data.local.MedicineEntity
 import id.apotek.lestari.data.local.PurchaseEntity
@@ -142,11 +144,11 @@ object BackupHelper {
         val root = try {
             JSONObject(json)
         } catch (e: Exception) {
-            throw IllegalArgumentException("File bukan backup yang sah (bukan JSON)")
+            throw IllegalArgumentException(tr("File bukan backup yang sah (bukan JSON)", "Not a valid backup file (not JSON)"))
         }
         val version = root.optInt("version", 0)
-        if (version != VERSION) throw IllegalArgumentException("Versi backup tidak dikenali (versi $version)")
-        if (root.optString("app", "") != "apotek-lestari") throw IllegalArgumentException("File bukan backup Apotek Lestari")
+        if (version != VERSION) throw IllegalArgumentException(tr("Versi backup tidak dikenali (versi $version)", "Unrecognized backup version (version $version)"))
+        if (root.optString("app", "") != "apotek-lestari") throw IllegalArgumentException(tr("File bukan backup Apotek Lestari", "Not an Apotek Lestari backup file"))
 
         // A3: keempat array wajib ada — file tanpa array bukan backup kosong,
         // melainkan backup tidak lengkap dan harus ditolak.
@@ -157,7 +159,7 @@ object BackupHelper {
 
         val medicines = mutableListOf<MedicineEntity>()
         for (i in 0 until medArr.length()) {
-            val label = "Baris obat ke-${i + 1}"
+            val label = tr("Baris obat ke-${i + 1}", "Medicine row ${i + 1}")
             val o = rowObject(medArr, i, label)
             try {
                 medicines.add(
@@ -176,13 +178,13 @@ object BackupHelper {
                     )
                 )
             } catch (e: JSONException) {
-                throw IllegalArgumentException("$label rusak: ${e.message}")
+                throw IllegalArgumentException(tr("$label rusak: ${e.message}", "$label is invalid: ${e.message}"))
             }
         }
 
         val sales = mutableListOf<SaleEntity>()
         for (i in 0 until saleArr.length()) {
-            val label = "Baris penjualan ke-${i + 1}"
+            val label = tr("Baris penjualan ke-${i + 1}", "Sale row ${i + 1}")
             val o = rowObject(saleArr, i, label)
             try {
                 sales.add(
@@ -197,13 +199,13 @@ object BackupHelper {
                     )
                 )
             } catch (e: JSONException) {
-                throw IllegalArgumentException("$label rusak: ${e.message}")
+                throw IllegalArgumentException(tr("$label rusak: ${e.message}", "$label is invalid: ${e.message}"))
             }
         }
 
         val items = mutableListOf<SaleItemEntity>()
         for (i in 0 until itemArr.length()) {
-            val label = "Baris item penjualan ke-${i + 1}"
+            val label = tr("Baris item penjualan ke-${i + 1}", "Sale item row ${i + 1}")
             val o = rowObject(itemArr, i, label)
             try {
                 val qty = reqInt(o, "qty", label)
@@ -212,7 +214,7 @@ object BackupHelper {
                 // A4: subtotal harus konsisten dengan qty * price (data uang).
                 if (subtotal.toLong() != qty.toLong() * price.toLong()) {
                     throw IllegalArgumentException(
-                        "$label rusak: subtotal $subtotal tidak sama dengan qty $qty x harga $price"
+                        tr("$label rusak: subtotal $subtotal tidak sama dengan qty $qty x harga $price", "$label is invalid: subtotal $subtotal does not equal qty $qty x price $price")
                     )
                 }
                 items.add(
@@ -231,13 +233,13 @@ object BackupHelper {
                     )
                 )
             } catch (e: JSONException) {
-                throw IllegalArgumentException("$label rusak: ${e.message}")
+                throw IllegalArgumentException(tr("$label rusak: ${e.message}", "$label is invalid: ${e.message}"))
             }
         }
 
         val entries = mutableListOf<CashEntryEntity>()
         for (i in 0 until entryArr.length()) {
-            val label = "Baris kas ke-${i + 1}"
+            val label = tr("Baris kas ke-${i + 1}", "Cash row ${i + 1}")
             val o = rowObject(entryArr, i, label)
             try {
                 // A4: type wajib "in"/"out" — jangan default ke "in" karena
@@ -245,7 +247,7 @@ object BackupHelper {
                 val type = o.optString("type", "")
                 if (type != "in" && type != "out") {
                     throw IllegalArgumentException(
-                        "$label rusak: type \"$type\" tidak valid (harus \"in\" atau \"out\")"
+                        tr("$label rusak: type \"$type\" tidak valid (harus \"in\" atau \"out\")", "$label is invalid: type \"$type\" is invalid (must be \"in\" or \"out\")")
                     )
                 }
                 entries.add(
@@ -260,7 +262,7 @@ object BackupHelper {
                     )
                 )
             } catch (e: JSONException) {
-                throw IllegalArgumentException("$label rusak: ${e.message}")
+                throw IllegalArgumentException(tr("$label rusak: ${e.message}", "$label is invalid: ${e.message}"))
             }
         }
 
@@ -269,8 +271,8 @@ object BackupHelper {
         for ((index, item) in items.withIndex()) {
             if (item.saleId !in saleIds) {
                 throw IllegalArgumentException(
-                    "Baris item penjualan ke-${index + 1} rusak: saleId ${item.saleId} " +
-                        "tidak ditemukan di daftar sales"
+                    tr("Baris item penjualan ke-${index + 1} rusak: saleId ${item.saleId} ", "Sale item row ${index + 1} is invalid: saleId ${item.saleId} ") +
+                        tr("tidak ditemukan di daftar sales", "was not found in the sales list")
                 )
             }
         }
@@ -281,7 +283,7 @@ object BackupHelper {
         val purchaseArr = root.optJSONArray("purchases")
         if (purchaseArr != null) {
             for (i in 0 until purchaseArr.length()) {
-                val label = "Baris pembelian ke-${i + 1}"
+                val label = tr("Baris pembelian ke-${i + 1}", "Purchase row ${i + 1}")
                 val o = rowObject(purchaseArr, i, label)
                 try {
                     purchases.add(
@@ -298,7 +300,7 @@ object BackupHelper {
                         )
                     )
                 } catch (e: JSONException) {
-                    throw IllegalArgumentException("$label rusak: ${e.message}")
+                    throw IllegalArgumentException(tr("$label rusak: ${e.message}", "$label is invalid: ${e.message}"))
                 }
             }
         }
@@ -307,7 +309,7 @@ object BackupHelper {
         val purchaseItemArr = root.optJSONArray("purchaseItems")
         if (purchaseItemArr != null) {
             for (i in 0 until purchaseItemArr.length()) {
-                val label = "Baris item pembelian ke-${i + 1}"
+                val label = tr("Baris item pembelian ke-${i + 1}", "Purchase item row ${i + 1}")
                 val o = rowObject(purchaseItemArr, i, label)
                 try {
                     val qty = reqInt(o, "qty", label)
@@ -316,7 +318,7 @@ object BackupHelper {
                     // A4: subtotal harus konsisten dengan qty * harga beli.
                     if (subtotal.toLong() != qty.toLong() * buyPrice.toLong()) {
                         throw IllegalArgumentException(
-                            "$label rusak: subtotal $subtotal tidak sama dengan qty $qty x harga $buyPrice"
+                            tr("$label rusak: subtotal $subtotal tidak sama dengan qty $qty x harga $buyPrice", "$label is invalid: subtotal $subtotal does not equal qty $qty x buy price $buyPrice")
                         )
                     }
                     purchaseItems.add(
@@ -331,7 +333,7 @@ object BackupHelper {
                         )
                     )
                 } catch (e: JSONException) {
-                    throw IllegalArgumentException("$label rusak: ${e.message}")
+                    throw IllegalArgumentException(tr("$label rusak: ${e.message}", "$label is invalid: ${e.message}"))
                 }
             }
         }
@@ -341,8 +343,8 @@ object BackupHelper {
         for ((index, pItem) in purchaseItems.withIndex()) {
             if (pItem.purchaseId !in purchaseIds) {
                 throw IllegalArgumentException(
-                    "Baris item pembelian ke-${index + 1} rusak: purchaseId ${pItem.purchaseId} " +
-                        "tidak ditemukan di daftar purchases"
+                    tr("Baris item pembelian ke-${index + 1} rusak: purchaseId ${pItem.purchaseId} ", "Purchase item row ${index + 1} is invalid: purchaseId ${pItem.purchaseId} ") +
+                        tr("tidak ditemukan di daftar purchases", "was not found in the purchases list")
                 )
             }
         }
@@ -357,23 +359,23 @@ object BackupHelper {
         val seenBarcodes = HashSet<String>()
         for (med in medicines) {
             if (!seenMedIds.add(med.id)) {
-                throw IllegalArgumentException("ID obat duplikat di file backup: ${med.id} (${med.name})")
+                throw IllegalArgumentException(tr("ID obat duplikat di file backup: ${med.id} (${med.name})", "Duplicate medicine ID in the backup file: ${med.id} (${med.name})"))
             }
             val bc = med.barcode?.trim().orEmpty()
             if (bc.isNotEmpty() && !seenBarcodes.add(bc)) {
-                throw IllegalArgumentException("Barcode duplikat di file backup: $bc (${med.name})")
+                throw IllegalArgumentException(tr("Barcode duplikat di file backup: $bc (${med.name})", "Duplicate barcode in the backup file: $bc (${med.name})"))
             }
         }
         val seenSaleIds = HashSet<Int>()
         for (sale in sales) {
             if (!seenSaleIds.add(sale.id)) {
-                throw IllegalArgumentException("ID penjualan duplikat di file backup: ${sale.id} (${sale.invoiceNo})")
+                throw IllegalArgumentException(tr("ID penjualan duplikat di file backup: ${sale.id} (${sale.invoiceNo})", "Duplicate sale ID in the backup file: ${sale.id} (${sale.invoiceNo})"))
             }
         }
         val seenPurchaseIds = HashSet<Int>()
         for (purchase in purchases) {
             if (!seenPurchaseIds.add(purchase.id)) {
-                throw IllegalArgumentException("ID pembelian duplikat di file backup: ${purchase.id} (${purchase.pbfName})")
+                throw IllegalArgumentException(tr("ID pembelian duplikat di file backup: ${purchase.id} (${purchase.pbfName})", "Duplicate purchase ID in the backup file: ${purchase.id} (${purchase.pbfName})"))
             }
         }
 
@@ -383,7 +385,7 @@ object BackupHelper {
     /** A3: array wajib ada dan benar-benar JSONArray; kalau tidak, backup ditolak. */
     private fun requireArray(root: JSONObject, key: String): JSONArray {
         if (!root.has(key) || root.optJSONArray(key) == null) {
-            throw IllegalArgumentException("Backup tidak lengkap: array \"$key\" tidak ditemukan")
+            throw IllegalArgumentException(tr("Backup tidak lengkap: array \"$key\" tidak ditemukan", "Incomplete backup: the \"$key\" array was not found"))
         }
         return root.getJSONArray(key)
     }
@@ -393,7 +395,7 @@ object BackupHelper {
         return try {
             arr.getJSONObject(index)
         } catch (e: JSONException) {
-            throw IllegalArgumentException("$label rusak: ${e.message}")
+            throw IllegalArgumentException(tr("$label rusak: ${e.message}", "$label is invalid: ${e.message}"))
         }
     }
 
@@ -405,24 +407,24 @@ object BackupHelper {
      */
     private fun reqInt(o: JSONObject, key: String, label: String): Int {
         if (!o.has(key) || o.isNull(key)) {
-            throw IllegalArgumentException("$label rusak: field \"$key\" hilang")
+            throw IllegalArgumentException(tr("$label rusak: field \"$key\" hilang", "$label is invalid: field \"$key\" is missing"))
         }
         return try {
             o.getInt(key)
         } catch (e: JSONException) {
-            throw IllegalArgumentException("$label rusak: field \"$key\" tidak valid (${e.message})")
+            throw IllegalArgumentException(tr("$label rusak: field \"$key\" tidak valid (${e.message})", "$label is invalid: field \"$key\" is invalid (${e.message})"))
         }
     }
 
     /** A4: field wajib bertipe String (field kunci/relasi seperti name dan invoiceNo). */
     private fun reqString(o: JSONObject, key: String, label: String): String {
         if (!o.has(key) || o.isNull(key)) {
-            throw IllegalArgumentException("$label rusak: field \"$key\" hilang")
+            throw IllegalArgumentException(tr("$label rusak: field \"$key\" hilang", "$label is invalid: field \"$key\" is missing"))
         }
         return try {
             o.getString(key)
         } catch (e: JSONException) {
-            throw IllegalArgumentException("$label rusak: field \"$key\" tidak valid (${e.message})")
+            throw IllegalArgumentException(tr("$label rusak: field \"$key\" tidak valid (${e.message})", "$label is invalid: field \"$key\" is invalid (${e.message})"))
         }
     }
 }

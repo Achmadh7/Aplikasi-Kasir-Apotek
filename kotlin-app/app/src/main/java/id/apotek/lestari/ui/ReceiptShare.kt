@@ -1,5 +1,7 @@
 package id.apotek.lestari.ui
 
+import id.apotek.lestari.ui.theme.tr
+
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -38,7 +40,7 @@ import java.io.IOException
  */
 fun shareReceiptBitmap(context: Context, bitmap: Bitmap, invoiceNo: String) {
     if (bitmap.isRecycled || bitmap.width <= 0 || bitmap.height <= 0) {
-        throw IllegalStateException("Struk belum siap dibagikan")
+        throw IllegalStateException(tr("Struk belum siap dibagikan", "The receipt is not ready to share"))
     }
     try {
         val dir = File(context.cacheDir, "receipts").apply { mkdirs() }

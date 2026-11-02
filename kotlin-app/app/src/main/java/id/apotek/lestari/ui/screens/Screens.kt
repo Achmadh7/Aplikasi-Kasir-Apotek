@@ -3447,7 +3447,7 @@ private fun ReceiptPreviewCard(
             )
             Spacer(Modifier.height(SpaceXS))
             Text(
-                "Pratinjau Struk", color = InvoiceMuted,
+                tr("Pratinjau Struk", "Receipt Preview"), color = InvoiceMuted,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
             )
@@ -3455,7 +3455,7 @@ private fun ReceiptPreviewCard(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 Surface(color = InvoiceBoxBg, shape = RoundedCornerShape(16.dp)) {
                     Text(
-                        "PRATINJAU", color = InvoiceMuted,
+                        tr("PRATINJAU", "PREVIEW"), color = InvoiceMuted,
                         style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
@@ -3464,7 +3464,7 @@ private fun ReceiptPreviewCard(
             Spacer(Modifier.height(SpaceL))
             DashedDivider()
             Spacer(Modifier.height(SpaceL))
-            Text("RINCIAN OBAT", color = InvoiceMuted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text(tr("RINCIAN OBAT", "MEDICINE DETAILS"), color = InvoiceMuted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Spacer(Modifier.height(SpaceS))
             items.forEachIndexed { index, ci ->
                 if (index > 0) DashedDivider(modifier = Modifier.padding(vertical = 10.dp))
@@ -3480,7 +3480,7 @@ private fun ReceiptPreviewCard(
                         if (ci.medicine.category.isNotBlank() || ci.medicine.unit.isNotBlank()) {
                             Text("${ci.medicine.category} • ${ci.medicine.unit}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
                         }
-                        Text("${ci.qty} × ${formatIDR(ci.unitPrice)} • ${if (ci.useWholesale && ci.medicine.wholesalePrice > 0) "Grosir" else "Ecer"}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
+                        Text("${ci.qty} × ${formatIDR(ci.unitPrice)} • ${if (ci.useWholesale && ci.medicine.wholesalePrice > 0) tr("Grosir", "Wholesale") else tr("Ecer", "Retail")}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(formatIDR(ci.unitPrice * ci.qty), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
@@ -3490,24 +3490,24 @@ private fun ReceiptPreviewCard(
             Surface(color = InvoiceBoxBg, shape = RoundedCornerShape(16.dp)) {
                 Column(Modifier.padding(16.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Total (${items.size} item)", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                        Text(tr("Total (${items.size} item)", "Total (${items.size} items)"), color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
                         Text(formatIDR(total), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                     }
                     Spacer(Modifier.height(SpaceS))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Metode Bayar", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                        Text(tr("Metode Bayar", "Payment Method"), color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
                         Text(method, color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                     }
                     if (method == "Tunai") {
                         Spacer(Modifier.height(SpaceS))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Dibayar", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                            Text(tr("Dibayar", "Paid"), color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
                             Text(formatIDR(paid), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium)
                         }
                         if (change > 0) {
                             Spacer(Modifier.height(SpaceS))
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Kembalian", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                                Text(tr("Kembalian", "Change"), color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
                                 Text(formatIDR(change), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
@@ -3516,25 +3516,25 @@ private fun ReceiptPreviewCard(
                     HorizontalDivider(color = InvoiceDash)
                     Spacer(Modifier.height(SpaceS))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Total Bayar", color = InvoiceInk, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(tr("Total Bayar", "Total to Pay"), color = InvoiceInk, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(formatIDR(total), color = InvoiceBlue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     }
                 }
             }
             Spacer(Modifier.height(SpaceL))
             Text(
-                "Semoga Cepat Sembuh",
+                tr("Semoga Cepat Sembuh", "Get Well Soon"),
                 color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
             )
             Text(
-                "Terima Kasih Atas Kunjungan Anda",
+                tr("Terima Kasih Atas Kunjungan Anda", "Thank You for Your Visit"),
                 color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(SpaceM))
             Text(
-                "Pratinjau — struk resmi dibuat setelah pembayaran berhasil.",
+                tr("Pratinjau — struk resmi dibuat setelah pembayaran berhasil.", "Preview — the official receipt is created after a successful payment."),
                 color = InvoiceMuted, style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
             )
@@ -3573,7 +3573,7 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
             )
             Spacer(Modifier.height(SpaceXS))
             Text(
-                "Invoice Penjualan", color = InvoiceMuted,
+                tr("Invoice Penjualan", "Sales Invoice"), color = InvoiceMuted,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
             )
@@ -3583,23 +3583,23 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
                     Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.CheckCircle, null, tint = InvoicePaidFg, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("LUNAS", color = InvoicePaidFg, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        Text(tr("LUNAS", "PAID"), color = InvoicePaidFg, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                     }
                 }
             }
             Spacer(Modifier.height(SpaceL))
             DashedDivider()
             Spacer(Modifier.height(SpaceL))
-            InvoiceInfoBox("NO. INVOICE", sale.invoiceNo, Modifier.fillMaxWidth())
+            InvoiceInfoBox(tr("NO. INVOICE", "INVOICE NO."), sale.invoiceNo, Modifier.fillMaxWidth())
             Spacer(Modifier.height(SpaceS))
-            InvoiceInfoBox("TANGGAL", formatFullDateID(sale.createdAt), Modifier.fillMaxWidth())
+            InvoiceInfoBox(tr("TANGGAL", "DATE"), formatFullDateID(sale.createdAt), Modifier.fillMaxWidth())
             Spacer(Modifier.height(SpaceS))
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.fillMaxWidth()) {
-                InvoiceInfoBox("METODE BAYAR", sale.paymentMethod, Modifier.weight(1f))
-                InvoiceInfoBox("ISI INVOICE", "${sale.items.size} item", Modifier.weight(1f))
+                InvoiceInfoBox(tr("METODE BAYAR", "PAYMENT METHOD"), if (sale.paymentMethod == "Tunai") tr("Tunai", "Cash") else sale.paymentMethod, Modifier.weight(1f))
+                InvoiceInfoBox(tr("ISI INVOICE", "ITEMS"), tr("${sale.items.size} item", "${sale.items.size} items"), Modifier.weight(1f))
             }
             Spacer(Modifier.height(SpaceL))
-            Text("RINCIAN OBAT", color = InvoiceMuted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text(tr("RINCIAN OBAT", "MEDICINE DETAILS"), color = InvoiceMuted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Spacer(Modifier.height(SpaceS))
             sale.items.forEachIndexed { index, it ->
                 if (index > 0) DashedDivider(modifier = Modifier.padding(vertical = 10.dp))
@@ -3615,7 +3615,7 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
                         if (it.category.isNotBlank() || it.unit.isNotBlank()) {
                             Text("${it.category} • ${it.unit}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
                         }
-                        Text("${it.qty} × ${formatIDR(it.price)} • ${if (it.priceType == "GROSIR") "Grosir" else "Ecer"}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
+                        Text("${it.qty} × ${formatIDR(it.price)} • ${if (it.priceType == "GROSIR") tr("Grosir", "Wholesale") else tr("Ecer", "Retail")}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(formatIDR(it.subtotal), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
@@ -3625,19 +3625,19 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
             Surface(color = InvoiceBoxBg, shape = RoundedCornerShape(16.dp)) {
                 Column(Modifier.padding(16.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Subtotal (${sale.items.size} item)", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                        Text(tr("Subtotal (${sale.items.size} item)", "Subtotal (${sale.items.size} items)"), color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
                         Text(formatIDR(sale.total), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                     }
                     if (sale.paymentMethod == "Tunai") {
                         Spacer(Modifier.height(SpaceS))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Dibayar", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                            Text(tr("Dibayar", "Paid"), color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
                             Text(formatIDR(sale.amountPaid), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium)
                         }
                         if (sale.changeAmount > 0) {
                             Spacer(Modifier.height(SpaceS))
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Kembalian", color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
+                                Text(tr("Kembalian", "Change"), color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium)
                                 Text(formatIDR(sale.changeAmount), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
@@ -3646,19 +3646,19 @@ private fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphic
                     HorizontalDivider(color = InvoiceDash)
                     Spacer(Modifier.height(SpaceS))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Total Bayar", color = InvoiceInk, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(tr("Total Bayar", "Total to Pay"), color = InvoiceInk, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(formatIDR(sale.total), color = InvoiceBlue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     }
                 }
             }
             Spacer(Modifier.height(SpaceL))
             Text(
-                "Semoga Cepat Sembuh",
+                tr("Semoga Cepat Sembuh", "Get Well Soon"),
                 color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
             )
             Text(
-                "Terima Kasih Atas Kunjungan Anda",
+                tr("Terima Kasih Atas Kunjungan Anda", "Thank You for Your Visit"),
                 color = InvoiceMuted, style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
             )
@@ -3681,9 +3681,9 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, s
         scope.launch {
             val result = printReceiptToPrinter(context, printer.address, buildReceiptBytes(sale))
             result.onSuccess {
-                Toast.makeText(context, "Struk terkirim ke ${printer.name}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, tr("Struk terkirim ke ${printer.name}", "Receipt sent to ${printer.name}"), Toast.LENGTH_SHORT).show()
             }.onFailure { e ->
-                Toast.makeText(context, "Gagal mencetak: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, tr("Gagal mencetak: ${e.message}", "Printing failed: ${e.message}"), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -3692,7 +3692,7 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, s
         if (granted) {
             // Izin diberikan — ulangi alur cetak dari awal.
             if (!isBluetoothEnabled(context)) {
-                Toast.makeText(context, "Nyalakan Bluetooth dulu", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, tr("Nyalakan Bluetooth dulu", "Turn on Bluetooth first"), Toast.LENGTH_SHORT).show()
                 return@rememberLauncherForActivityResult
             }
             val saved = loadSavedPrinter(context)
@@ -3701,14 +3701,14 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, s
             } else {
                 val paired = getPairedPrinters(context)
                 if (paired.isEmpty()) {
-                    Toast.makeText(context, "Tidak ada printer Bluetooth yang terpasang. Pasangkan printer di Pengaturan Bluetooth HP dulu.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, tr("Tidak ada printer Bluetooth yang terpasang. Pasangkan printer di Pengaturan Bluetooth HP dulu.", "No Bluetooth printer is paired. Pair the printer in the phone's Bluetooth settings first."), Toast.LENGTH_LONG).show()
                 } else {
                     pairedPrinters = paired
                     showPrinterPicker = true
                 }
             }
         } else {
-            Toast.makeText(context, "Izin Bluetooth ditolak — aktifkan di Pengaturan HP", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, tr("Izin Bluetooth ditolak — aktifkan di Pengaturan HP", "Bluetooth permission denied — enable it in the phone's Settings"), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -3719,7 +3719,7 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, s
             return
         }
         if (!isBluetoothEnabled(context)) {
-            Toast.makeText(context, "Nyalakan Bluetooth dulu", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, tr("Nyalakan Bluetooth dulu", "Turn on Bluetooth first"), Toast.LENGTH_SHORT).show()
             return
         }
         // Printer sudah pernah dipilih: langsung cetak ke printer itu.
@@ -3731,7 +3731,7 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, s
         // Belum ada printer tersimpan: tampilkan daftar perangkat terpasang.
         val paired = getPairedPrinters(context)
         if (paired.isEmpty()) {
-            Toast.makeText(context, "Tidak ada printer Bluetooth yang terpasang. Pasangkan printer di Pengaturan Bluetooth HP dulu.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, tr("Tidak ada printer Bluetooth yang terpasang. Pasangkan printer di Pengaturan Bluetooth HP dulu.", "No Bluetooth printer is paired. Pair the printer in the phone's Bluetooth settings first."), Toast.LENGTH_LONG).show()
             return
         }
         pairedPrinters = paired
@@ -3746,7 +3746,7 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, s
                         try {
                             shareReceiptBitmap(context, graphicsLayer.toImageBitmap().asAndroidBitmap(), invoiceNo)
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Gagal menyiapkan struk", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, tr("Gagal menyiapkan struk", "Failed to prepare the receipt"), Toast.LENGTH_SHORT).show()
                         }
                     }
                 },
@@ -3754,7 +3754,7 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, s
             ) {
                 Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Bagikan")
+                Text(tr("Bagikan", "Share"))
             }
             OutlinedButton(
                 onClick = {
@@ -3762,7 +3762,7 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, s
                         try {
                             printReceiptBitmap(context, graphicsLayer.toImageBitmap().asAndroidBitmap(), invoiceNo)
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Gagal mencetak struk", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, tr("Gagal mencetak struk", "Failed to print the receipt"), Toast.LENGTH_SHORT).show()
                         }
                     }
                 },
@@ -3781,7 +3781,7 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, s
         ) {
             Icon(Icons.Default.Bluetooth, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Cetak Struk Bluetooth")
+            Text(tr("Cetak Struk Bluetooth", "Print Bluetooth Receipt"))
         }
         // Printer yang tersimpan + opsi ganti (supaya bisa pindah printer).
         savedPrinter?.let { sp ->
@@ -3799,12 +3799,12 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, s
                 TextButton(onClick = {
                     val paired = getPairedPrinters(context)
                     if (paired.isEmpty()) {
-                        Toast.makeText(context, "Tidak ada printer Bluetooth yang terpasang.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, tr("Tidak ada printer Bluetooth yang terpasang.", "No Bluetooth printer is paired."), Toast.LENGTH_SHORT).show()
                     } else {
                         pairedPrinters = paired
                         showPrinterPicker = true
                     }
-                }) { Text("Ganti") }
+                }) { Text(tr("Ganti", "Change")) }
             }
         }
     }
@@ -3812,7 +3812,7 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, s
     if (showPrinterPicker) {
         AlertDialog(
             onDismissRequest = { showPrinterPicker = false },
-            title = { Text("Pilih Printer Bluetooth") },
+            title = { Text(tr("Pilih Printer Bluetooth", "Choose a Bluetooth Printer")) },
             text = {
                 Column {
                     pairedPrinters.forEachIndexed { index, printer ->
@@ -3846,7 +3846,7 @@ private fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, s
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showPrinterPicker = false }) { Text("Batal") }
+                TextButton(onClick = { showPrinterPicker = false }) { Text(tr("Batal", "Cancel")) }
             }
         )
     }
@@ -4030,9 +4030,9 @@ fun BackupScreen() {
                             ?: throw IllegalStateException("Tidak bisa membuka file tujuan")
                     }.isSuccess
                 }
-                msg = if (ok) "Backup berhasil disimpan." else "Gagal menyimpan backup."
+                msg = if (ok) tr("Backup berhasil disimpan.", "Backup saved successfully.") else tr("Gagal menyimpan backup.", "Failed to save the backup.")
             } else {
-                msg = "Backup gagal: ${(result as? ApiResult.Error)?.message ?: "tidak diketahui"}"
+                msg = tr("Backup gagal: ", "Backup failed: ") + ((result as? ApiResult.Error)?.message ?: tr("tidak diketahui", "unknown"))
             }
         }
     }
@@ -4046,9 +4046,9 @@ fun BackupScreen() {
                         ?: throw IllegalStateException("Tidak bisa membaca file")
                 }
                 val result = repo.importBackup(json)
-                msg = if (result is ApiResult.Success) "Restore berhasil. ${result.data}" else "Restore gagal: ${(result as? ApiResult.Error)?.message ?: "tidak diketahui"}"
+                msg = if (result is ApiResult.Success) tr("Restore berhasil. ${result.data}", "Restore successful. ${result.data}") else tr("Restore gagal: ", "Restore failed: ") + ((result as? ApiResult.Error)?.message ?: tr("tidak diketahui", "unknown"))
             } catch (e: Exception) {
-                msg = "Restore gagal: ${e.message}"
+                msg = tr("Restore gagal: ", "Restore failed: ") + (e.message ?: "")
             }
         }
     }
@@ -4061,7 +4061,7 @@ fun BackupScreen() {
             Spacer(Modifier.width(12.dp))
             Column {
                 Text("Backup & Restore", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
-                Text("Simpan dan pulihkan semua data apotek.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Simpan dan pulihkan semua data apotek.", "Save and restore all of the pharmacy's data."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Spacer(Modifier.height(SpaceL))
@@ -4074,11 +4074,11 @@ fun BackupScreen() {
                         Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
                     }
                     Spacer(Modifier.width(10.dp))
-                    Text("Kenapa backup itu penting?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(tr("Kenapa backup itu penting?", "Why does backup matter?"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(SpaceS))
                 Text(
-                    "Semua data (obat, penjualan, kas) hanya tersimpan di HP ini. Kalau HP hilang, rusak, atau aplikasi terhapus, data tidak bisa dikembalikan. Simpan file backup di tempat aman (mis. Google Drive atau laptop) secara berkala.",
+                    tr("Semua data (obat, penjualan, kas) hanya tersimpan di HP ini. Kalau HP hilang, rusak, atau aplikasi terhapus, data tidak bisa dikembalikan. Simpan file backup di tempat aman (mis. Google Drive atau laptop) secara berkala.", "All data (medicines, sales, cash) is stored only on this phone. If the phone is lost, damaged, or the app is uninstalled, the data cannot be recovered. Keep backup files somewhere safe (e.g. Google Drive or a laptop) regularly."),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -4093,7 +4093,7 @@ fun BackupScreen() {
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Backup Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("Simpan salinan semua data ke file .json", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("Simpan salinan semua data ke file .json", "Save a copy of all data to a .json file"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 Spacer(Modifier.height(SpaceM))
@@ -4118,12 +4118,12 @@ fun BackupScreen() {
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Restore Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("Pulihkan data dari file backup .json", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("Pulihkan data dari file backup .json", "Restore data from a .json backup file"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 Spacer(Modifier.height(SpaceS))
                 Text(
-                    "Perhatian: restore akan MENGGANTI semua data saat ini dengan isi file backup.",
+                    tr("Perhatian: restore akan MENGGANTI semua data saat ini dengan isi file backup.", "Warning: restoring will REPLACE all current data with the backup file's contents."),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Medium
                 )
                 Spacer(Modifier.height(SpaceM))
@@ -4142,15 +4142,15 @@ fun BackupScreen() {
     if (showRestoreConfirm) {
         AlertDialog(
             onDismissRequest = { showRestoreConfirm = false },
-            title = { Text("Pulihkan data dari backup?") },
-            text = { Text("Semua data saat ini (obat, penjualan, kas) akan diganti dengan isi file backup. Pastikan kamu memilih file backup yang benar.") },
+            title = { Text(tr("Pulihkan data dari backup?", "Restore data from backup?")) },
+            text = { Text(tr("Semua data saat ini (obat, penjualan, kas) akan diganti dengan isi file backup. Pastikan kamu memilih file backup yang benar.", "All current data (medicines, sales, cash) will be replaced with the backup file's contents. Make sure you choose the right backup file.")) },
             confirmButton = {
                 TextButton(onClick = {
                     showRestoreConfirm = false
                     restoreLauncher.launch(arrayOf("application/json"))
-                }) { Text("Pilih File") }
+                }) { Text(tr("Pilih File", "Choose File")) }
             },
-            dismissButton = { TextButton(onClick = { showRestoreConfirm = false }) { Text("Batal") } }
+            dismissButton = { TextButton(onClick = { showRestoreConfirm = false }) { Text(tr("Batal", "Cancel")) } }
         )
     }
 }
@@ -4189,14 +4189,14 @@ fun TentangScreen() {
                 Spacer(Modifier.height(SpaceM))
                 Text("Apotek Lestari", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
                 Spacer(Modifier.height(SpaceXS))
-                Text("Versi $version", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Versi $version", "Version $version"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         item {
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
                     Text(
-                        "Aplikasi kasir dan manajemen stok obat untuk Apotek Lestari. Data obat, penjualan, dan kas tersimpan di perangkat.",
+                        tr("Aplikasi kasir dan manajemen stok obat untuk Apotek Lestari. Data obat, penjualan, dan kas tersimpan di perangkat.", "A cashier and medicine stock management app for Apotek Lestari. Medicine, sales and cash data are stored on the device."),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -4206,12 +4206,12 @@ fun TentangScreen() {
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceM)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Versi", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("Versi", "Version"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(version, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Dikembangkan untuk", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("Dikembangkan untuk", "Developed for"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("Apotek Lestari", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                     }
                 }

@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import id.apotek.lestari.data.Sale
 import id.apotek.lestari.ui.theme.formatDateTimeID
 import id.apotek.lestari.ui.theme.formatIDR
+import id.apotek.lestari.ui.theme.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -129,39 +130,39 @@ fun buildReceiptBytes(sale: Sale): ByteArray {
     line(centerDouble("APOTEK LESTARI"))
     raw(DOUBLE_OFF)
     raw(BOLD_OFF)
-    line(center("Invoice Penjualan"))
+    line(center(tr("Invoice Penjualan", "Sales Invoice")))
     raw(ALIGN_LEFT)
     line("-".repeat(LINE_WIDTH))
     line("No: ${sale.invoiceNo}".take(LINE_WIDTH))
-    line("Tgl: ${formatDateTimeID(sale.createdAt)}".take(LINE_WIDTH))
-    line("Metode: ${sale.paymentMethod}".take(LINE_WIDTH))
+    line(tr("Tgl: ${formatDateTimeID(sale.createdAt)}", "Date: ${formatDateTimeID(sale.createdAt)}").take(LINE_WIDTH))
+    line(tr("Metode: ${sale.paymentMethod}", "Method: ${if (sale.paymentMethod.trim().equals("Tunai", ignoreCase = true)) "Cash" else sale.paymentMethod}").take(LINE_WIDTH))
     line("-".repeat(LINE_WIDTH))
     sale.items.forEach { item ->
         // Jenis harga (Ecer/Grosir) ditempel di belakang nama obat — baris
         // qty x harga tidak cukup lebar untuk label di kertas 32 karakter.
-        line((item.medicineName + if (item.priceType == "GROSIR") " (Grosir)" else " (Ecer)").take(LINE_WIDTH))
+        line((item.medicineName + if (item.priceType == "GROSIR") tr(" (Grosir)", " (Wholesale)") else tr(" (Ecer)", " (Retail)")).take(LINE_WIDTH))
         line(leftRight("  ${item.qty} x ${formatIDR(item.price)}", formatIDR(item.subtotal)))
     }
     line("-".repeat(LINE_WIDTH))
-    line(leftRight("Total", formatIDR(sale.total)))
+    line(leftRight(tr("Total", "Total"), formatIDR(sale.total)))
     // Metode dicocokkan case-insensitive ("tunai"/"Cash" tidak lagi
     // menghilangkan baris Dibayar/Kembalian).
     if (sale.paymentMethod.trim().equals("Tunai", ignoreCase = true)) {
-        line(leftRight("Dibayar", formatIDR(sale.amountPaid)))
+        line(leftRight(tr("Dibayar", "Paid"), formatIDR(sale.amountPaid)))
         if (sale.changeAmount > 0) {
-            line(leftRight("Kembalian", formatIDR(sale.changeAmount)))
+            line(leftRight(tr("Kembalian", "Change"), formatIDR(sale.changeAmount)))
         } else if (sale.amountPaid < sale.total) {
             // Kurang bayar: tampilkan kekurangannya supaya struk tidak
             // terlihat lunas padahal belum.
-            line(leftRight("Kurang", formatIDR(sale.total - sale.amountPaid)))
+            line(leftRight(tr("Kurang", "Short"), formatIDR(sale.total - sale.amountPaid)))
         }
     }
     line("-".repeat(LINE_WIDTH))
     raw(ALIGN_CENTER)
-    line(center("Semoga Cepat Sembuh"))
-    line(center("Terima Kasih Atas Kunjungan Anda"))
-    line(center("Barang yang sudah dibeli"))
-    line(center("tidak dapat ditukar"))
+    line(center(tr("Semoga Cepat Sembuh", "Get Well Soon")))
+    line(center(tr("Terima Kasih Atas Kunjungan Anda", "Thank You for Your Visit")))
+    line(center(tr("Barang yang sudah dibeli", "Goods that have been purchased")))
+    line(center(tr("tidak dapat ditukar", "cannot be exchanged")))
     raw(ALIGN_LEFT)
     // Jeda sebelum potong supaya struk tidak terpotong mepet.
     line()

@@ -10,6 +10,7 @@ import id.apotek.lestari.data.local.SaleItemEntity
 import androidx.room.withTransaction
 import kotlinx.coroutines.CancellationException
 import id.apotek.lestari.ui.theme.dayKeyID
+import id.apotek.lestari.ui.theme.tr
 import id.apotek.lestari.ui.theme.parseISODate
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -188,9 +189,9 @@ class Repository {
     }
 
     suspend fun createMedicine(args: MedicineArgs): ApiResult<IdResponse> = call {
-        if (args.name.isBlank()) throw IllegalArgumentException("Nama obat tidak boleh kosong")
-        if (args.buyPrice <= 0) throw IllegalArgumentException("Harga beli harus lebih dari 0")
-        if (args.sellPrice <= 0) throw IllegalArgumentException("Harga jual harus lebih dari 0")
+        if (args.name.isBlank()) throw IllegalArgumentException(tr("Nama obat tidak boleh kosong", "Medicine name must not be empty"))
+        if (args.buyPrice <= 0) throw IllegalArgumentException(tr("Harga beli harus lebih dari 0", "Buy price must be more than 0"))
+        if (args.sellPrice <= 0) throw IllegalArgumentException(tr("Harga jual harus lebih dari 0", "Sell price must be more than 0"))
         val dao = DatabaseProvider.db.medicineDao()
         val barcode = args.barcode?.trim().orEmpty().ifBlank { null }
         if (barcode != null) {
@@ -210,9 +211,9 @@ class Repository {
     }
 
     suspend fun updateMedicine(args: UpdateMedicineArgs): ApiResult<OkResponse> = call {
-        if (args.name.isBlank()) throw IllegalArgumentException("Nama obat tidak boleh kosong")
-        if (args.buyPrice <= 0) throw IllegalArgumentException("Harga beli harus lebih dari 0")
-        if (args.sellPrice <= 0) throw IllegalArgumentException("Harga jual harus lebih dari 0")
+        if (args.name.isBlank()) throw IllegalArgumentException(tr("Nama obat tidak boleh kosong", "Medicine name must not be empty"))
+        if (args.buyPrice <= 0) throw IllegalArgumentException(tr("Harga beli harus lebih dari 0", "Buy price must be more than 0"))
+        if (args.sellPrice <= 0) throw IllegalArgumentException(tr("Harga jual harus lebih dari 0", "Sell price must be more than 0"))
         val dao = DatabaseProvider.db.medicineDao()
         val barcode = args.barcode?.trim().orEmpty().ifBlank { null }
         if (barcode != null) {
@@ -315,9 +316,9 @@ class Repository {
 
     suspend fun createSale(args: CreateSaleArgs): ApiResult<CreateSaleResponse> = call {
         val db = DatabaseProvider.db
-        if (args.items.isEmpty()) throw IllegalArgumentException("Keranjang kosong")
+        if (args.items.isEmpty()) throw IllegalArgumentException(tr("Keranjang kosong", "The cart is empty"))
         for (item in args.items) {
-            if (item.qty <= 0) throw IllegalArgumentException("Jumlah obat harus lebih dari 0")
+            if (item.qty <= 0) throw IllegalArgumentException(tr("Jumlah obat harus lebih dari 0", "Quantity must be more than 0"))
         }
         // Agregasi qty per obat dulu (D19): keranjang bisa berisi obat yang
         // sama dua kali, jadi cek stok harus atas total qty gabungan.
@@ -338,7 +339,7 @@ class Repository {
             Line(med, item.qty, unitPrice, if (wholesale) "GROSIR" else "ECER", subtotal)
         }
         // Kurang bayar ditolak sebagai Error (bukan lunas dengan kembalian 0).
-        if (args.amountPaid < total) throw IllegalArgumentException("Uang dibayar kurang dari total")
+        if (args.amountPaid < total) throw IllegalArgumentException(tr("Uang dibayar kurang dari total", "The amount paid is less than the total"))
         val change = args.amountPaid - total
         val now = Date()
         // Format nomor invoice: "INV - dd/MM/yy" (mis. "INV - 01/11/26"),
@@ -355,7 +356,7 @@ class Repository {
             // Kurangi stok secara atomik; decrementStock return 0 = stok tidak cukup.
             for ((medicineId, qty) in qtyById) {
                 val changed = db.medicineDao().decrementStock(medicineId, qty)
-                if (changed == 0) throw IllegalStateException("Stok ${nameById[medicineId] ?: "obat"} tidak cukup")
+                if (changed == 0) throw IllegalStateException(tr("Stok ${nameById[medicineId] ?: "obat"} tidak cukup", "Not enough stock of ${nameById[medicineId] ?: "the medicine"}"))
             }
             val saleId = db.saleDao().insert(
                 SaleEntity(
@@ -452,7 +453,7 @@ class Repository {
             "month" -> startMonth
             "last30" -> startLast30
             "all" -> 0L
-            else -> throw IllegalArgumentException("Periode tidak dikenal: $period")
+            else -> throw IllegalArgumentException(tr("Periode tidak dikenal: $period", "Unknown period: $period"))
         }
         val end = if (period == "all") Long.MAX_VALUE else endToday
         fun inPeriod(iso: String): Boolean {
@@ -575,7 +576,7 @@ class Repository {
             "month" -> startMonth
             "last30" -> startLast30
             "all" -> 0L
-            else -> throw IllegalArgumentException("Periode tidak dikenal: $period")
+            else -> throw IllegalArgumentException(tr("Periode tidak dikenal: $period", "Unknown period: $period"))
         }
         val end = if (period == "all") Long.MAX_VALUE else endToday
         fun inPeriod(iso: String): Boolean {
@@ -626,16 +627,16 @@ class Repository {
     }
 
     suspend fun createPurchase(args: CreatePurchaseArgs): ApiResult<IdResponse> = call {
-        if (args.pbfName.isBlank()) throw IllegalArgumentException("Faktur PBF tidak boleh kosong")
-        if (args.items.isEmpty()) throw IllegalArgumentException("Isi minimal satu obat yang dibeli")
+        if (args.pbfName.isBlank()) throw IllegalArgumentException(tr("Faktur PBF tidak boleh kosong", "The PBF name must not be empty"))
+        if (args.items.isEmpty()) throw IllegalArgumentException(tr("Isi minimal satu obat yang dibeli", "Add at least one purchased medicine"))
         args.items.forEach {
-            if (it.medicineName.isBlank()) throw IllegalArgumentException("Nama obat tidak boleh kosong")
-            if (it.qty <= 0) throw IllegalArgumentException("Jumlah obat harus lebih dari 0")
-            if (it.buyPrice <= 0) throw IllegalArgumentException("Harga beli harus lebih dari 0")
+            if (it.medicineName.isBlank()) throw IllegalArgumentException(tr("Nama obat tidak boleh kosong", "Medicine name must not be empty"))
+            if (it.qty <= 0) throw IllegalArgumentException(tr("Jumlah obat harus lebih dari 0", "Quantity must be more than 0"))
+            if (it.buyPrice <= 0) throw IllegalArgumentException(tr("Harga beli harus lebih dari 0", "Buy price must be more than 0"))
         }
         // PPN ikut divalidasi (audit 2026-11-02, M5): PPN negatif menggerus
         // total pembelian sampai di bawah jumlah subtotal itemnya.
-        if (args.ppn < 0) throw IllegalArgumentException("PPN tidak boleh negatif")
+        if (args.ppn < 0) throw IllegalArgumentException(tr("PPN tidak boleh negatif", "PPN/VAT must not be negative"))
         val db = DatabaseProvider.db
         val dao = db.purchaseDao()
         var newId = 0
@@ -727,7 +728,7 @@ class Repository {
             data.purchases.forEach { db.purchaseDao().insert(it) }
             if (data.purchaseItems.isNotEmpty()) db.purchaseDao().insertItems(data.purchaseItems)
         }
-        "Dipulihkan: ${data.medicines.size} obat, ${data.sales.size} penjualan, ${data.saleItems.size} item, ${data.cashEntries.size} kas, ${data.purchases.size} pembelian PBF."
+        tr("Dipulihkan: ${data.medicines.size} obat, ${data.sales.size} penjualan, ${data.saleItems.size} item, ${data.cashEntries.size} kas, ${data.purchases.size} pembelian PBF.", "Restored: ${data.medicines.size} medicines, ${data.sales.size} sales, ${data.saleItems.size} items, ${data.cashEntries.size} cash entries, ${data.purchases.size} PBF purchases.")
     }
 }
 
