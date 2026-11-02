@@ -809,6 +809,18 @@ private fun utcMidnightMillis(dateKey: String): Long? {
     }
 }
 
+/** Pemilih tanggal maksimum hari ini — untuk tanggal yang tidak boleh dari
+ * masa depan (tanggal entri Catat Kas & Tanggal Beli PBF; audit 2026-11-02,
+ * M3: entri bertanggal depan terhitung di Saldo Kas tapi tak terlihat di
+ * filter Hari Ini/Bulan Ini). Tanggal kedaluwarsa & jatuh tempo TIDAK
+ * memakai ini karena memang berada di masa depan. */
+private object NoFutureDates : SelectableDates {
+    override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+        val todayMillis = utcMidnightMillis(dayKeyID(Date())) ?: return true
+        return utcTimeMillis <= todayMillis
+    }
+}
+
 /** "yyyy-MM-dd" (WIB) -> string ISO UTC ("2026-10-27T00:00:00.000Z") untuk createdAt entri kas. */
 private fun dayKeyToIsoUtc(dayKey: String): String? {
     val millis = utcMidnightMillis(dayKey) ?: return null
@@ -2658,7 +2670,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
         }
     }
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = utcMidnightMillis(entryDate))
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = utcMidnightMillis(entryDate), selectableDates = NoFutureDates)
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
@@ -2684,6 +2696,9 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
 @Composable
 fun LabaScreen() {
     var report by remember { mutableStateOf<ProfitReport?>(null) }
+    // Pesan kegagalan muat (audit 2026-11-02, M2): tanpa ini, kegagalan
+    // laporan membuat LoadingIndicator berputar selamanya.
+    var loadError by remember { mutableStateOf<String?>(null) }
     var listEntered by remember { mutableStateOf(false) }
     LaunchedEffect(report) { if (report != null && !listEntered) listEntered = true }
     var period by remember { mutableStateOf("month") }
@@ -2700,7 +2715,12 @@ fun LabaScreen() {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(period, resumeKey) { (repo.getProfitReport(period) as? ApiResult.Success)?.let { report = it.data } }
+    LaunchedEffect(period, resumeKey) {
+        when (val r = repo.getProfitReport(period)) {
+            is ApiResult.Success -> { report = r.data; loadError = null }
+            is ApiResult.Error -> loadError = r.message
+        }
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 20.dp),
@@ -2921,7 +2941,18 @@ fun LabaScreen() {
                 }
             }
         } ?: item {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
+            val err = loadError
+            if (err != null) {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Gagal memuat laporan laba.", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(SpaceS))
+                    Text(err, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(SpaceS))
+                    Text("Keluar dan buka lagi menu ini untuk mencoba kembali.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
+            }
         }
     }
 }
@@ -2944,6 +2975,9 @@ private fun LabaStat(icon: ImageVector, label: String, value: String, valueColor
 @Composable
 fun ObatTerlarisScreen() {
     var sellers by remember { mutableStateOf<List<BestSeller>?>(null) }
+    // Pesan kegagalan muat (audit 2026-11-02, M2): tanpa ini, kegagalan
+    // tampil sebagai daftar kosong tanpa penjelasan.
+    var loadError by remember { mutableStateOf<String?>(null) }
     var listEntered by remember { mutableStateOf(false) }
     LaunchedEffect(sellers) { if (!sellers.isNullOrEmpty() && !listEntered) listEntered = true }
     var period by remember { mutableStateOf("month") }
@@ -2958,7 +2992,12 @@ fun ObatTerlarisScreen() {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(period, resumeKey) { (repo.getBestSellers(period) as? ApiResult.Success)?.let { sellers = it.data } }
+    LaunchedEffect(period, resumeKey) {
+        when (val r = repo.getBestSellers(period)) {
+            is ApiResult.Success -> { sellers = r.data; loadError = null }
+            is ApiResult.Error -> loadError = r.message
+        }
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 20.dp),
@@ -2979,6 +3018,20 @@ fun ObatTerlarisScreen() {
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 listOf("today" to "Hari Ini", "month" to "Bulan Ini", "last30" to "30 Hari", "all" to "Semua").forEach { (k, l) ->
                     FilterChip(selected = period == k, onClick = { period = k }, label = { Text(l) })
+                }
+            }
+        }
+        val sellersError = loadError
+        if (sellers == null && sellersError != null) {
+            item {
+                ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Gagal memuat data terlaris.", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.height(SpaceS))
+                        Text(sellersError, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(SpaceS))
+                        Text("Keluar dan buka lagi menu ini untuk mencoba kembali.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
@@ -4654,7 +4707,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     if (showDatePicker) {
         // Sama seperti pemilih tanggal kadaluwarsa: normalisasi ke tengah
         // malam UTC supaya tanggal tidak bergeser 1 hari.
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = utcMidnightMillis(date))
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = utcMidnightMillis(date), selectableDates = NoFutureDates)
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {

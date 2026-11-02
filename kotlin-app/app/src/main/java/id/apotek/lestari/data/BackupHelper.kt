@@ -347,6 +347,36 @@ object BackupHelper {
             }
         }
 
+        // A5 (audit 2026-11-02, M7): tolak duplikat sejak di sini. ID/barcode
+        // kembar pasti menabrak indeks unik saat restore dan menggagalkan
+        // seluruh proses dengan pesan SQLite yang tidak menjelaskan baris
+        // bermasalah — lebih baik gagal di validasi dengan pesan yang jelas.
+        // (File yang dibuat aplikasi sendiri tidak pernah duplikat; ini
+        // untuk file yang diedit manual atau warisan data lama.)
+        val seenMedIds = HashSet<Int>()
+        val seenBarcodes = HashSet<String>()
+        for (med in medicines) {
+            if (!seenMedIds.add(med.id)) {
+                throw IllegalArgumentException("ID obat duplikat di file backup: ${med.id} (${med.name})")
+            }
+            val bc = med.barcode?.trim().orEmpty()
+            if (bc.isNotEmpty() && !seenBarcodes.add(bc)) {
+                throw IllegalArgumentException("Barcode duplikat di file backup: $bc (${med.name})")
+            }
+        }
+        val seenSaleIds = HashSet<Int>()
+        for (sale in sales) {
+            if (!seenSaleIds.add(sale.id)) {
+                throw IllegalArgumentException("ID penjualan duplikat di file backup: ${sale.id} (${sale.invoiceNo})")
+            }
+        }
+        val seenPurchaseIds = HashSet<Int>()
+        for (purchase in purchases) {
+            if (!seenPurchaseIds.add(purchase.id)) {
+                throw IllegalArgumentException("ID pembelian duplikat di file backup: ${purchase.id} (${purchase.pbfName})")
+            }
+        }
+
         return BackupData(medicines, sales, items, entries, purchases, purchaseItems)
     }
 

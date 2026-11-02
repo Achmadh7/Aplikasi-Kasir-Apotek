@@ -383,7 +383,11 @@ class Repository {
         }
     }
 
-    suspend fun listSales(limit: Int = 200): ApiResult<ListSalesResponse> = call {
+    // Tanpa batas bawaan (audit 2026-11-02, M6): getAll() memang sudah
+    // memuat semua baris, jadi take(200) sebelumnya hanya memotong
+    // tampilan Riwayat secara diam-diam — penjualan lama seolah hilang
+    // padahal Laba tetap menghitungnya.
+    suspend fun listSales(limit: Int = Int.MAX_VALUE): ApiResult<ListSalesResponse> = call {
         val db = DatabaseProvider.db
         val sales = db.saleDao().getAll().take(limit).map { s ->
             val items = db.saleDao().getItemsForSale(s.id).map {
@@ -629,6 +633,9 @@ class Repository {
             if (it.qty <= 0) throw IllegalArgumentException("Jumlah obat harus lebih dari 0")
             if (it.buyPrice <= 0) throw IllegalArgumentException("Harga beli harus lebih dari 0")
         }
+        // PPN ikut divalidasi (audit 2026-11-02, M5): PPN negatif menggerus
+        // total pembelian sampai di bawah jumlah subtotal itemnya.
+        if (args.ppn < 0) throw IllegalArgumentException("PPN tidak boleh negatif")
         val db = DatabaseProvider.db
         val dao = db.purchaseDao()
         var newId = 0
