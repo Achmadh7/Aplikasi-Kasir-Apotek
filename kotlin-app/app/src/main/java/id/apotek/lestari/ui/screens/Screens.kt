@@ -891,7 +891,7 @@ private fun SearchField(
                     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                         if (value.isEmpty()) {
                             Text(
-                                "Cari obat…",
+                                tr("Cari obat…", "Search medicines…"),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1
@@ -1071,7 +1071,7 @@ fun KasirScreen() {
         }
         Spacer(Modifier.height(SpaceL))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("${filtered.size} obat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("${filtered.size} obat", "${filtered.size} medicines"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             SortToggle(sortAz = sortAz, onToggle = { sortAz = !sortAz })
         }
         Spacer(Modifier.height(SpaceS))
@@ -1092,7 +1092,7 @@ fun KasirScreen() {
                         .clickable(enabled = !out) {
                         val ex = cart.firstOrNull { it.medicine.id == m.id }
                         if (ex != null && ex.qty >= m.stock) {
-                            cartMsg = "Stok ${m.name} hanya ${m.stock} — tidak bisa ditambah lagi"
+                            cartMsg = tr("Stok ${m.name} hanya ${m.stock} — tidak bisa ditambah lagi", "Only ${m.stock} of ${m.name} in stock — can't add more")
                         } else {
                             lastSale = null
                             lastSaleId = 0
@@ -1175,7 +1175,7 @@ fun KasirScreen() {
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                         shape = RoundedCornerShape(28.dp),
                         modifier = Modifier.height(48.dp)
-                    ) { Text("Bayar", style = MaterialTheme.typography.titleMedium) }
+                    ) { Text(tr("Bayar", "Pay"), style = MaterialTheme.typography.titleMedium) }
                 }
             }
         }
@@ -1250,8 +1250,8 @@ fun KasirScreen() {
                         Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
                     }
                     Spacer(Modifier.width(10.dp))
-                    Text(if (cart.isNotEmpty()) "Keranjang (${cart.sumOf { it.qty }})" else "Keranjang", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
-                    IconButton(onClick = closeSheet) { Icon(Icons.Default.Close, "Tutup") }
+                    Text(if (cart.isNotEmpty()) tr("Keranjang (${cart.sumOf { it.qty }})", "Cart (${cart.sumOf { it.qty }})") else tr("Keranjang", "Cart"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                    IconButton(onClick = closeSheet) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
                 if (cart.isNotEmpty()) {
@@ -1272,12 +1272,12 @@ fun KasirScreen() {
                                 // Pilihan harga hanya muncul bila harga grosir
                                 // obat ini sudah diatur (> 0) di data obat.
                                 if (ci.medicine.wholesalePrice > 0) {
-                                    PriceModeChip("Ecer", selected = !ci.useWholesale) { ci.useWholesale = false }
+                                    PriceModeChip(tr("Ecer", "Retail"), selected = !ci.useWholesale) { ci.useWholesale = false }
                                     Spacer(Modifier.width(6.dp))
-                                    PriceModeChip("Grosir", selected = ci.useWholesale) { ci.useWholesale = true }
+                                    PriceModeChip(tr("Grosir", "Wholesale"), selected = ci.useWholesale) { ci.useWholesale = true }
                                     Spacer(Modifier.width(12.dp))
                                 }
-                                StepperButton(Icons.Default.Remove, "Kurangi") { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
+                                StepperButton(Icons.Default.Remove, tr("Kurangi", "Decrease")) { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
                                 // Animasi "pop" angka jumlah HANYA saat jumlah berubah
                                 // SETELAH komposisi pertama. Dulu key(ci.qty) +
                                 // Animatable(1.35f) membuat pop berjalan di semua
@@ -1307,12 +1307,12 @@ fun KasirScreen() {
                                         textAlign = TextAlign.Center
                                     )
                                 }
-                                StepperButton(Icons.Default.Add, "Tambah") { if (ci.qty < ci.medicine.stock) ci.qty++ }
+                                StepperButton(Icons.Default.Add, tr("Tambah", "Increase")) { if (ci.qty < ci.medicine.stock) ci.qty++ }
                                 Spacer(Modifier.width(8.dp))
                                 // Hapus: keluarkan obat dari keranjang (di kanan
                                 // tombol + jumlah).
                                 IconButton(onClick = { cart.remove(ci) }, modifier = Modifier.size(48.dp)) {
-                                    Icon(Icons.Default.Delete, "Hapus", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Default.Delete, tr("Hapus", "Delete"), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                                 }
                                 Spacer(Modifier.weight(1f))
                                 Text("@ ${formatIDR(ci.unitPrice)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1325,12 +1325,12 @@ fun KasirScreen() {
                 Spacer(Modifier.height(SpaceS))
                 Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Total bayar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(tr("Total bayar", "Total to pay"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
                         Text(formatIDR(total), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
                 Spacer(Modifier.height(SpaceL))
-                Text("METODE BAYAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("METODE BAYAR", "PAYMENT METHOD"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(SpaceS))
                 // Metode bayar: SingleChoiceSegmentedButtonRow resmi Material 3
                 // (menggantikan pil meluncur rakitan manual).
@@ -1347,7 +1347,7 @@ fun KasirScreen() {
                             shape = SegmentedButtonDefaults.itemShape(index = index, count = methods.size),
                             icon = { Icon(icon, null, modifier = Modifier.size(18.dp)) },
                             modifier = Modifier.weight(1f)
-                        ) { Text(m, maxLines = 1) }
+                        ) { Text(if (m == "Tunai") tr("Tunai", "Cash") else m, maxLines = 1) }
                     }
                 }
                 AnimatedContent(
@@ -1361,7 +1361,7 @@ fun KasirScreen() {
                     if (targetMethod == "Tunai") {
                         Column {
                             Spacer(Modifier.height(SpaceL))
-                            Text("UANG DITERIMA", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("UANG DITERIMA", "CASH RECEIVED"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceS))
                             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.fillMaxWidth()) {
                                 listOf(20000 to "Rp20.000", 50000 to "Rp50.000", 100000 to "Rp100.000").forEach { (nominal, label) ->
@@ -1382,15 +1382,15 @@ fun KasirScreen() {
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                                     shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f),
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                                ) { Text("Uang Pas", maxLines = 1) }
+                                ) { Text(tr("Uang Pas", "Exact Amount"), maxLines = 1) }
                             }
                             Spacer(Modifier.height(SpaceS))
-                            Text("Ketuk nominal untuk menambah, atau Uang Pas untuk jumlah persis.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Ketuk nominal untuk menambah, atau Uang Pas untuk jumlah persis.", "Tap an amount to add, or Exact Amount for the precise total."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceS))
                             OutlinedTextField(
                                 value = uangDiterima,
                                 onValueChange = { uangDiterima = formatDecimalFieldValue(it) },
-                                label = { Text("cth: 50.000") },
+                                label = { Text(tr("cth: 50.000", "e.g. 50.000")) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
@@ -1402,7 +1402,7 @@ fun KasirScreen() {
                                     Spacer(Modifier.height(SpaceS))
                                     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
                                         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                            Text("Kembalian", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                                            Text(tr("Kembalian", "Change"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
                                             Text(formatIDR(change), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
                                         }
                                     }
@@ -1412,7 +1412,7 @@ fun KasirScreen() {
                     } else {
                         Column {
                             Spacer(Modifier.height(SpaceS))
-                            Text("Dibayar penuh via $targetMethod sebesar ${formatIDR(total)}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Dibayar penuh via $targetMethod sebesar ${formatIDR(total)}.", "Paid in full via $targetMethod, ${formatIDR(total)}."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -1421,7 +1421,7 @@ fun KasirScreen() {
                 // metode, atau uang diterima diubah.
                 if (cart.isNotEmpty()) {
                     Spacer(Modifier.height(SpaceL))
-                    Text("PRATINJAU STRUK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("PRATINJAU STRUK", "RECEIPT PREVIEW"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(SpaceS))
                     ReceiptPreviewCard(
                         items = cart,
@@ -1440,7 +1440,7 @@ fun KasirScreen() {
                             val amt = if (method == "Tunai") paid else total
                             val result = repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty, it.useWholesale) }, method, amt))
                             if (result is ApiResult.Success) {
-                                payMsg = "Pembayaran $method berhasil. Total ${formatIDR(total)}" + if (method == "Tunai") " • Kembalian ${formatIDR(change)}" else ""
+                                payMsg = tr("Pembayaran $method berhasil. Total ${formatIDR(total)}", "Payment successful. Total ${formatIDR(total)}") + if (method == "Tunai") tr(" • Kembalian ${formatIDR(change)}", " • Change ${formatIDR(change)}") else ""
                                 payCount++
                                 cart.clear()
                                 savedCart = emptyList()
@@ -1453,7 +1453,7 @@ fun KasirScreen() {
                             } else {
                                 // Gagal: keranjang & uang diterima dibiarkan utuh supaya
                                 // kasir bisa mencoba lagi tanpa mengulang input.
-                                payMsg = "Pembayaran gagal: ${(result as? ApiResult.Error)?.message ?: "tidak diketahui"}"
+                                payMsg = tr("Pembayaran gagal: ", "Payment failed: ") + ((result as? ApiResult.Error)?.message ?: tr("tidak diketahui", "unknown"))
                             }
                         }
                     },
@@ -1462,7 +1462,7 @@ fun KasirScreen() {
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.fillMaxWidth().height(52.dp).graphicsLayer(scaleX = bayarScale, scaleY = bayarScale)
-                ) { Text("Bayar (${formatIDR(total)})", style = MaterialTheme.typography.titleMedium) }
+                ) { Text(tr("Bayar (${formatIDR(total)})", "Pay (${formatIDR(total)})"), style = MaterialTheme.typography.titleMedium) }
                 }
                 // Sengaja TANPA AnimatedVisibility: animasi mengembangnya
                 // bertabrakan dengan animasi tinggi sheet (pegas draggable)
@@ -1493,7 +1493,7 @@ fun KasirScreen() {
                                 onClick = closeSheet,
                                 shape = RoundedCornerShape(28.dp),
                                 modifier = Modifier.fillMaxWidth().height(52.dp)
-                            ) { Text("Tutup") }
+                            ) { Text(tr("Tutup", "Close")) }
                         }
                     }
                 }
@@ -1510,17 +1510,17 @@ fun KasirScreen() {
         var qtyError by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { qtyEditTarget = null },
-            title = { Text("Ubah Jumlah") },
+            title = { Text(tr("Ubah Jumlah", "Change Quantity")) },
             text = {
                 Column {
                     Text(target.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(SpaceXS))
-                    Text("Stok tersedia: ${target.medicine.stock} ${target.medicine.unit}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("Stok tersedia: ${target.medicine.stock} ${target.medicine.unit}", "Stock available: ${target.medicine.stock} ${target.medicine.unit}"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(SpaceM))
                     OutlinedTextField(
                         value = qtyText,
                         onValueChange = { qtyText = it.filter { ch -> ch.isDigit() }; qtyError = "" },
-                        label = { Text("Jumlah") },
+                        label = { Text(tr("Jumlah", "Quantity")) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
@@ -1536,16 +1536,16 @@ fun KasirScreen() {
                     onClick = {
                         val v = qtyText.toIntOrNull()
                         if (v == null) {
-                            qtyError = "Masukkan angka yang valid."
+                            qtyError = tr("Masukkan angka yang valid.", "Enter a valid number.")
                         } else {
                             val clamped = minOf(v, target.medicine.stock)
                             if (clamped <= 0) cart.remove(target) else target.qty = clamped
                             qtyEditTarget = null
                         }
                     }
-                ) { Text("Simpan", fontWeight = FontWeight.Bold) }
+                ) { Text(tr("Simpan", "Save"), fontWeight = FontWeight.Bold) }
             },
-            dismissButton = { TextButton(onClick = { qtyEditTarget = null }) { Text("Batal") } }
+            dismissButton = { TextButton(onClick = { qtyEditTarget = null }) { Text(tr("Batal", "Cancel")) } }
         )
     }
 }
@@ -1587,8 +1587,8 @@ fun StokScreen() {
                         ?: throw IllegalStateException("Tidak bisa membuka file tujuan")
                 }
             }
-            msg = if (result.isSuccess) "Template Excel berhasil disimpan (${if (current.isEmpty()) 3 else current.size} obat)."
-            else "Gagal menyimpan template Excel: ${result.exceptionOrNull()?.message}"
+            msg = if (result.isSuccess) tr("Template Excel berhasil disimpan (${if (current.isEmpty()) 3 else current.size} obat).", "Excel template saved (${if (current.isEmpty()) 3 else current.size} medicines).")
+            else tr("Gagal menyimpan template Excel: ", "Failed to save the Excel template: ") + (result.exceptionOrNull()?.message ?: "")
         }
     }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(ExcelHelper.MIME_XLSX)) { uri ->
@@ -1601,7 +1601,7 @@ fun StokScreen() {
                         ?: throw IllegalStateException("Tidak bisa membuka file tujuan")
                 }.isSuccess
             }
-            msg = if (ok) "Export Excel berhasil: ${current.size} obat." else "Gagal menyimpan export Excel."
+            msg = if (ok) tr("Export Excel berhasil: ${current.size} obat.", "Excel export saved: ${current.size} medicines.") else tr("Gagal menyimpan export Excel.", "Failed to save the Excel export.")
         }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -1617,18 +1617,18 @@ fun StokScreen() {
                 if (response is ApiResult.Success) {
                     val r = response.data
                     importSummary = buildString {
-                        append("${r.inserted} obat baru ditambahkan, ${r.updated} diperbarui")
-                        if (r.skipped > 0) append(", ${r.skipped} baris dilewati (nama kosong)")
-                        if (parsed.skippedRows.isNotEmpty()) append("\nBaris dilewati: ${parsed.skippedRows.joinToString(", ")}")
-                        append("\nTotal baris diproses: ${r.total}")
+                        append(tr("${r.inserted} obat baru ditambahkan, ${r.updated} diperbarui", "${r.inserted} new medicines added, ${r.updated} updated"))
+                        if (r.skipped > 0) append(tr(", ${r.skipped} baris dilewati (nama kosong)", ", ${r.skipped} rows skipped (empty name)"))
+                        if (parsed.skippedRows.isNotEmpty()) append(tr("\nBaris dilewati: ${parsed.skippedRows.joinToString(", ")}", "\nRows skipped: ${parsed.skippedRows.joinToString(", ")}"))
+                        append(tr("\nTotal baris diproses: ${r.total}", "\nTotal rows processed: ${r.total}"))
                     }
                     showImportDialog = true
                     reload()
                 } else {
-                    msg = "Import gagal: ${(response as? ApiResult.Error)?.message ?: "tidak diketahui"}"
+                    msg = tr("Import gagal: ", "Import failed: ") + ((response as? ApiResult.Error)?.message ?: tr("tidak diketahui", "unknown"))
                 }
             } catch (e: Exception) {
-                msg = "Import gagal: ${e.message}"
+                msg = tr("Import gagal: ", "Import failed: ") + (e.message ?: "")
             }
         }
     }
@@ -1718,7 +1718,7 @@ fun StokScreen() {
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(tr("Stok Obat", "Medicine Stock"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
-                    Text("${medicines.size} jenis obat tercatat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("${medicines.size} jenis obat tercatat", "${medicines.size} medicines recorded"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Spacer(Modifier.height(SpaceL))
@@ -1744,7 +1744,7 @@ fun StokScreen() {
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text("Import / Export Excel", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("Isi banyak obat sekaligus lewat file .xlsx", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Isi banyak obat sekaligus lewat file .xlsx", "Add many medicines at once via an .xlsx file"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Spacer(Modifier.height(SpaceM))
@@ -1783,13 +1783,13 @@ fun StokScreen() {
             // Ringkasan stok: total jenis, menipis (Rendah), habis.
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text("${medicines.size}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                Text(" jenis obat", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr(" jenis obat", " medicines"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("  •  ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("$countRendah", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
-                Text(" menipis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr(" menipis", " low"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("  •  ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("$countHabis", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                Text(" habis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr(" habis", " out"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
                 // Tombol Pilih/Batal (mode pilih banyak) + tombol urut 3 mode
                 // (A-Z -> Z-A -> Terendah -> kembali ke A-Z).
@@ -1804,7 +1804,7 @@ fun StokScreen() {
                 ) {
                     Icon(if (selectMode) Icons.Default.Close else Icons.Default.Checklist, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(if (selectMode) "Batal" else "Pilih", style = MaterialTheme.typography.bodyMedium)
+                    Text(if (selectMode) tr("Batal", "Cancel") else tr("Pilih", "Select"), style = MaterialTheme.typography.bodyMedium)
                 }
                 Spacer(Modifier.width(8.dp))
                 OutlinedButton(
@@ -1824,7 +1824,7 @@ fun StokScreen() {
                     Text(
                         when (sortMode) {
                             "za" -> "Z-A"
-                            "low" -> "Terendah"
+                            "low" -> tr("Terendah", "Lowest")
                             else -> "A-Z"
                         },
                         style = MaterialTheme.typography.bodyMedium
@@ -1835,11 +1835,11 @@ fun StokScreen() {
             // Filter status stok (menggantikan legenda; jumlah per status terlihat di chip).
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 listOf(
-                    "all" to "Semua (${medicines.size})",
-                    "aman" to "Aman ($countAman)",
-                    "sedang" to "Sedang ($countSedang)",
-                    "rendah" to "Rendah ($countRendah)",
-                    "habis" to "Habis ($countHabis)"
+                    "all" to tr("Semua (${medicines.size})", "All (${medicines.size})"),
+                    "aman" to tr("Aman ($countAman)", "Safe ($countAman)"),
+                    "sedang" to tr("Sedang ($countSedang)", "Medium ($countSedang)"),
+                    "rendah" to tr("Rendah ($countRendah)", "Low ($countRendah)"),
+                    "habis" to tr("Habis ($countHabis)", "Out ($countHabis)")
                 ).forEach { (k, l) ->
                     FilterChip(selected = statusFilter == k, onClick = { statusFilter = k }, label = { Text(l) })
                 }
@@ -1849,8 +1849,8 @@ fun StokScreen() {
                 Spacer(Modifier.height(SpaceS))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        if (selectedMeds.isEmpty()) "Ketuk kartu obat untuk memilih."
-                        else "${selectedMeds.size} obat dipilih",
+                        if (selectedMeds.isEmpty()) tr("Ketuk kartu obat untuk memilih.", "Tap a medicine card to select.")
+                        else tr("${selectedMeds.size} obat dipilih", "${selectedMeds.size} medicines selected"),
                         style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.weight(1f))
@@ -1864,7 +1864,7 @@ fun StokScreen() {
                     ) {
                         Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Hapus (${selectedMeds.size})", style = MaterialTheme.typography.bodyMedium)
+                        Text(tr("Hapus (${selectedMeds.size})", "Delete (${selectedMeds.size})"), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -1875,12 +1875,12 @@ fun StokScreen() {
             item {
                 Text(
                     when {
-                        medicines.isEmpty() -> "Belum ada obat. Ketuk \"Tambah Obat\" atau Import Excel untuk mengisi stok."
-                        statusFilter == "habis" -> "Tidak ada obat yang habis."
-                        statusFilter == "rendah" -> "Tidak ada obat yang stoknya rendah."
-                        statusFilter == "sedang" -> "Tidak ada obat yang stoknya sedang."
-                        statusFilter == "aman" -> "Tidak ada obat yang stoknya aman."
-                        else -> "Tidak ada obat yang cocok."
+                        medicines.isEmpty() -> tr("Belum ada obat. Ketuk \"Tambah Obat\" atau Import Excel untuk mengisi stok.", "No medicines yet. Tap \"Add Medicine\" or Import Excel to fill the stock.")
+                        statusFilter == "habis" -> tr("Tidak ada obat yang habis.", "No medicines are out of stock.")
+                        statusFilter == "rendah" -> tr("Tidak ada obat yang stoknya rendah.", "No medicines have low stock.")
+                        statusFilter == "sedang" -> tr("Tidak ada obat yang stoknya sedang.", "No medicines have medium stock.")
+                        statusFilter == "aman" -> tr("Tidak ada obat yang stoknya aman.", "No medicines have safe stock.")
+                        else -> tr("Tidak ada obat yang cocok.", "No matching medicines.")
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1925,7 +1925,7 @@ fun StokScreen() {
                         }
                         Spacer(Modifier.height(SpaceXS))
                         Text(
-                            "${m.category} • ${m.unit} • Jual ${formatIDR(m.sellPrice)} • Beli ${formatIDR(m.buyPrice)}" +
+                            tr("${m.category} • ${m.unit} • Jual ${formatIDR(m.sellPrice)} • Beli ${formatIDR(m.buyPrice)}", "${m.category} • ${m.unit} • Sell ${formatIDR(m.sellPrice)} • Buy ${formatIDR(m.buyPrice)}") +
                                 if (m.expiryDate != null) " • Exp ${formatDateID(m.expiryDate)}" else "",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1935,9 +1935,9 @@ fun StokScreen() {
                         Text(m.unit, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (!selectMode) {
-                        IconButton(onClick = { editing = m; showForm = true }) { Icon(Icons.Default.Edit, "Edit obat") }
+                        IconButton(onClick = { editing = m; showForm = true }) { Icon(Icons.Default.Edit, tr("Edit obat", "Edit medicine")) }
                         IconButton(onClick = { deleteTarget = m }) {
-                            Icon(Icons.Default.Delete, "Hapus obat", tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Default.Delete, tr("Hapus obat", "Delete medicine"), tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -1964,7 +1964,7 @@ fun StokScreen() {
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = RoundedCornerShape(28.dp),
                 icon = { Icon(Icons.Default.Add, null) },
-                text = { Text("Tambah Obat", style = MaterialTheme.typography.titleMedium) }
+                text = { Text(tr("Tambah Obat", "Add Medicine"), style = MaterialTheme.typography.titleMedium) }
             )
         }
         SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
@@ -1973,7 +1973,7 @@ fun StokScreen() {
     if (showImportDialog && importSummary != null) {
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
-            title = { Text("Import Excel Selesai") },
+            title = { Text(tr("Import Excel Selesai", "Excel Import Complete")) },
             text = { Text(importSummary!!) },
             confirmButton = { TextButton(onClick = { showImportDialog = false }) { Text("OK") } }
         )
@@ -1982,8 +1982,8 @@ fun StokScreen() {
         val target = deleteTarget!!
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("Hapus Obat?") },
-            text = { Text("Hapus ${target.name} dari stok?") },
+            title = { Text(tr("Hapus Obat?", "Delete Medicine?")) },
+            text = { Text(tr("Hapus ${target.name} dari stok?", "Remove ${target.name} from stock?")) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -1992,8 +1992,8 @@ fun StokScreen() {
                             repo.deleteMedicine(target.id)
                             reload()
                             val result = snackbarHostState.showSnackbar(
-                                message = "Obat ${target.name} dihapus.",
-                                actionLabel = "Urungkan",
+                                message = tr("Obat ${target.name} dihapus.", "${target.name} deleted."),
+                                actionLabel = tr("Urungkan", "Undo"),
                                 duration = SnackbarDuration.Long
                             )
                             if (result == SnackbarResult.ActionPerformed) {
@@ -2010,9 +2010,9 @@ fun StokScreen() {
                             }
                         }
                     }
-                ) { Text("Hapus", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
+                ) { Text(tr("Hapus", "Delete"), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
             },
-            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Batal") } }
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text(tr("Batal", "Cancel")) } }
         )
     }
     // Konfirmasi hapus massal: hapus semua yang terpilih, lalu Snackbar
@@ -2021,8 +2021,8 @@ fun StokScreen() {
         val count = selectedMeds.size
         AlertDialog(
             onDismissRequest = { showBulkDeleteConfirm = false },
-            title = { Text("Hapus $count Obat?") },
-            text = { Text("Hapus $count obat yang dipilih dari stok?") },
+            title = { Text(tr("Hapus $count Obat?", "Delete $count Medicines?")) },
+            text = { Text(tr("Hapus $count obat yang dipilih dari stok?", "Remove the $count selected medicines from stock?")) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -2034,8 +2034,8 @@ fun StokScreen() {
                             toDelete.forEach { repo.deleteMedicine(it.id) }
                             reload()
                             val result = snackbarHostState.showSnackbar(
-                                message = "${toDelete.size} obat dihapus.",
-                                actionLabel = "Urungkan",
+                                message = tr("${toDelete.size} obat dihapus.", "${toDelete.size} medicines deleted."),
+                                actionLabel = tr("Urungkan", "Undo"),
                                 duration = SnackbarDuration.Long
                             )
                             if (result == SnackbarResult.ActionPerformed) {
@@ -2054,9 +2054,9 @@ fun StokScreen() {
                             }
                         }
                     }
-                ) { Text("Hapus", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
+                ) { Text(tr("Hapus", "Delete"), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
             },
-            dismissButton = { TextButton(onClick = { showBulkDeleteConfirm = false }) { Text("Batal") } }
+            dismissButton = { TextButton(onClick = { showBulkDeleteConfirm = false }) { Text(tr("Batal", "Cancel")) } }
         )
     }
 }
@@ -2142,33 +2142,33 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (editing == null) "Tambah Obat" else "Edit Obat", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
-                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
+                Text(if (editing == null) tr("Tambah Obat", "Add Medicine") else tr("Edit Obat", "Edit Medicine"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            OutlinedTextField(name, { name = it }, label = { Text("Nama Obat") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(name, { name = it }, label = { Text(tr("Nama Obat", "Medicine Name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
-                value = category, onValueChange = {}, label = { Text("Kategori") },
+                value = category, onValueChange = {}, label = { Text(tr("Kategori", "Category")) },
                 readOnly = true, singleLine = true,
                 trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih kategori") },
                 interactionSource = categoryInteraction,
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
-                value = unit, onValueChange = {}, label = { Text("Satuan") },
+                value = unit, onValueChange = {}, label = { Text(tr("Satuan", "Unit")) },
                 readOnly = true, singleLine = true,
                 trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih satuan") },
                 interactionSource = unitInteraction,
                 modifier = Modifier.fillMaxWidth()
             )
-            OutlinedTextField(buy, { buy = formatDecimalFieldValue(it) }, label = { Text("Harga Beli") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(sell, { sell = formatDecimalFieldValue(it) }, label = { Text("Harga Jual") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(grosir, { grosir = formatDecimalFieldValue(it) }, label = { Text("Harga Jual Grosir (boleh kosong)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() } }, label = { Text("Stok") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(buy, { buy = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Beli", "Buy Price")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(sell, { sell = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Jual", "Sell Price")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(grosir, { grosir = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Jual Grosir (boleh kosong)", "Wholesale Sell Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() } }, label = { Text(tr("Stok", "Stock")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 value = if (expiry.isBlank()) "" else formatDateID(expiry),
                 onValueChange = {},
-                label = { Text("Tanggal Kadaluarsa (boleh kosong)") },
+                label = { Text(tr("Tanggal Kadaluarsa (boleh kosong)", "Expiry Date (optional)")) },
                 readOnly = true, singleLine = true,
                 trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = "Pilih tanggal") },
                 interactionSource = expiryInteraction,
@@ -2179,7 +2179,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                 Text(formError, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = onDismiss, shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f).height(52.dp)) { Text("Batal") }
+                OutlinedButton(onClick = onDismiss, shape = RoundedCornerShape(28.dp), modifier = Modifier.weight(1f).height(52.dp)) { Text(tr("Batal", "Cancel")) }
                 Button(
                     onClick = {
                         scope.launch {
@@ -2202,7 +2202,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                             if (result is ApiResult.Success) {
                                 onSaved()
                             } else {
-                                formError = (result as? ApiResult.Error)?.message ?: "Gagal menyimpan obat."
+                                formError = (result as? ApiResult.Error)?.message ?: tr("Gagal menyimpan obat.", "Failed to save the medicine.")
                             }
                         }
                     },
@@ -2210,7 +2210,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.weight(1f).height(52.dp)
-                ) { Text("Simpan") }
+                ) { Text(tr("Simpan", "Save")) }
             }
         }
     }
@@ -2227,8 +2227,8 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                 }) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { expiry = ""; showDatePicker = false }) { Text("Hapus") }
-                TextButton(onClick = { showDatePicker = false }) { Text("Batal") }
+                TextButton(onClick = { expiry = ""; showDatePicker = false }) { Text(tr("Hapus", "Clear")) }
+                TextButton(onClick = { showDatePicker = false }) { Text(tr("Batal", "Cancel")) }
             }
         ) {
             // DatePicker bertumpuk kalau tinggi layar terbatas (lanskap):
@@ -2242,11 +2242,11 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
     if (showCategorySheet) {
         // Nilai lama yang tidak ada di daftar tetap ditampilkan di atas agar tidak hilang.
         val options = if (category in CATEGORIES) CATEGORIES else listOf(category) + CATEGORIES
-        OptionPickerSheet(title = "Kategori", options = options, selected = category, onSelect = { category = it; showCategorySheet = false }, onDismiss = { showCategorySheet = false })
+        OptionPickerSheet(title = tr("Kategori", "Category"), options = options, selected = category, onSelect = { category = it; showCategorySheet = false }, onDismiss = { showCategorySheet = false })
     }
     if (showUnitSheet) {
         val options = if (unit in UNITS) UNITS else listOf(unit) + UNITS
-        OptionPickerSheet(title = "Satuan", options = options, selected = unit, onSelect = { unit = it; showUnitSheet = false }, onDismiss = { showUnitSheet = false })
+        OptionPickerSheet(title = tr("Satuan", "Unit"), options = options, selected = unit, onSelect = { unit = it; showUnitSheet = false }, onDismiss = { showUnitSheet = false })
     }
 }
 
@@ -2598,7 +2598,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                     style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             // Pilihan Masuk/Keluar: SingleChoiceSegmentedButtonRow resmi
@@ -2626,7 +2626,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                     ) { Text(label, maxLines = 1) }
                 }
             }
-            OutlinedTextField(category, { category = it }, label = { Text("Kategori") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(category, { category = it }, label = { Text(tr("Kategori", "Category")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(description, { description = it }, label = { Text("Keterangan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(amount, { amount = formatDecimalFieldValue(it) }, label = { Text("Jumlah (Rp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
@@ -2690,7 +2690,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                     showDatePicker = false
                 }) { Text("OK") }
             },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Batal") } }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text(tr("Batal", "Cancel")) } }
         ) {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 DatePicker(state = datePickerState)
@@ -4479,7 +4479,7 @@ fun PbfScreen() {
                     }
                 }) { Text("Hapus", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Batal") } }
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text(tr("Batal", "Cancel")) } }
         )
     }
 
@@ -4561,7 +4561,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Catat Pembelian PBF", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
-                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Tutup") }
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             OutlinedTextField(pbfName, { pbfName = it }, label = { Text("Faktur PBF") }, placeholder = { Text("mis. nama distributornya") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -4622,12 +4622,12 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                         OutlinedTextField(
                             value = row.name,
                             onValueChange = { row.name = it; activeRow = row },
-                            label = { Text("Nama Obat") },
+                            label = { Text(tr("Nama Obat", "Medicine Name")) },
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
-                            value = row.unit, onValueChange = {}, label = { Text("Satuan") },
+                            value = row.unit, onValueChange = {}, label = { Text(tr("Satuan", "Unit")) },
                             readOnly = true, singleLine = true,
                             trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih satuan") },
                             interactionSource = unitInteraction,
@@ -4651,7 +4651,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                         OutlinedTextField(
                             value = row.qty,
                             onValueChange = { row.qty = it.filter { c -> c.isDigit() } },
-                            label = { Text("Jumlah") },
+                            label = { Text(tr("Jumlah", "Quantity")) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.weight(1f)
@@ -4725,7 +4725,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 }) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Batal") }
+                TextButton(onClick = { showDatePicker = false }) { Text(tr("Batal", "Cancel")) }
             }
         ) {
             Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -4762,6 +4762,6 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     // disamakan dengan Stok; sebelumnya sempat hanya Botol/Box).
     unitPickerRow?.let { target ->
         val options = if (target.unit in UNITS) UNITS else listOf(target.unit) + UNITS
-        OptionPickerSheet(title = "Satuan", options = options, selected = target.unit, onSelect = { target.unit = it; unitPickerRow = null }, onDismiss = { unitPickerRow = null })
+        OptionPickerSheet(title = tr("Satuan", "Unit"), options = options, selected = target.unit, onSelect = { target.unit = it; unitPickerRow = null }, onDismiss = { unitPickerRow = null })
     }
 }
