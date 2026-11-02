@@ -186,7 +186,16 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit) {
     }
     fun goToTab(route: String) {
         navDirection = if (tabPosition(route) >= tabPosition(current)) 1 else -1
-        nav.navigate(route) { popUpTo("beranda"); launchSingleTop = true }
+        // saveState + restoreState (audit 2026-11-02, H1): state saveable
+        // tiap layar (keranjang Kasir, pencarian, metode bayar, dst.)
+        // disimpan saat tab ditinggalkan dan dipulihkan saat kembali —
+        // tanpa ini, popUpTo membuang SavedStateRegistry layar yang di-pop
+        // sehingga keranjang Kasir hilang setiap pindah tab.
+        nav.navigate(route) {
+            popUpTo("beranda") { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
     }
     // Geser kiri/kanan di konten untuk pindah tab (hanya di tab utama;
     // dimatikan di sub-menu Lainnya supaya tidak bentrok dengan gulir horizontal).

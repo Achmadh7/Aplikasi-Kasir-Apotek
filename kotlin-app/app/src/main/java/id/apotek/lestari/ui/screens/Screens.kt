@@ -928,6 +928,10 @@ fun KasirScreen() {
     // cart sendiri dibangun ulang dari daftar obat begitu tersedia.
     var savedCart by rememberSaveable { mutableStateOf<List<Int>>(emptyList()) }
     val cart = remember { mutableStateListOf<CartItem>() }
+    // Penanda pemulihan awal keranjang sudah selesai (daftar obat pertama
+    // kali tersedia). Selama false, penulisan savedCart ditahan supaya data
+    // tersimpan tidak tertimpa keranjang kosong sebelum sempat dipulihkan.
+    var cartInitialized by remember { mutableStateOf(false) }
     // Obat yang jumlahnya sedang diubah lewat dialog ketik angka (null = dialog tutup).
     var qtyEditTarget by remember { mutableStateOf<CartItem?>(null) }
     val scope = rememberCoroutineScope()
@@ -970,29 +974,37 @@ fun KasirScreen() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(resumeKey) { (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines } }
-    // Simpan isi keranjang (id + qty + pilihan grosir) setiap kali berubah —
-    // kecuali saat kosong, supaya hasil restore tidak tertimpa sebelum daftar
-    // obat dimuat. Pilihan grosir ikut disimpan (audit N2, 2026-10-30): tanpa
-    // itu, item yang dipulihkan diam-diam kembali ke harga Ecer dan total
-    // berubah sementara isian Uang Diterima tetap.
-    val cartSnapshot = cart.map { Triple(it.medicine.id, it.qty, it.useWholesale) }
-    LaunchedEffect(cartSnapshot) {
-        if (cart.isNotEmpty()) savedCart = cartSnapshot.flatMap { listOf(it.first, it.second, if (it.third) 1 else 0) }
-    }
-    // Pulihkan keranjang dari data tersimpan begitu daftar obat dimuat.
+    // Pulihkan keranjang dari data tersimpan, sekali saja, begitu daftar
+    // obat pertama kali tersedia. Sesudah itu cartInitialized menyala dan
+    // penulisan savedCart di bawah mengambil alih.
     LaunchedEffect(medicines) {
-        if (cart.isEmpty() && savedCart.isNotEmpty() && medicines.isNotEmpty()) {
-            // Format lama (berpasangan id+qty) tidak berkelipatan 3 — buang
-            // saja daripada memulihkan keranjang yang salah tafsir.
-            if (savedCart.size % 3 == 0) {
-                val byId = medicines.associateBy { it.id }
-                savedCart.chunked(3).forEach { triple ->
-                    if (triple.size == 3) byId[triple[0]]?.let { med ->
-                        cart.add(CartItem(med, triple[1]).also { ci -> ci.useWholesale = triple[2] == 1 })
+        if (medicines.isNotEmpty() && !cartInitialized) {
+            if (cart.isEmpty() && savedCart.isNotEmpty()) {
+                // Format lama (berpasangan id+qty) tidak berkelipatan 3 —
+                // buang saja daripada memulihkan keranjang yang salah tafsir.
+                if (savedCart.size % 3 == 0) {
+                    val byId = medicines.associateBy { it.id }
+                    savedCart.chunked(3).forEach { triple ->
+                        if (triple.size == 3) byId[triple[0]]?.let { med ->
+                            cart.add(CartItem(med, triple[1]).also { ci -> ci.useWholesale = triple[2] == 1 })
+                        }
                     }
                 }
             }
-            savedCart = emptyList()
+            cartInitialized = true
+        }
+    }
+    // Simpan isi keranjang (id + qty + pilihan grosir) setiap kali berubah —
+    // TERMASUK saat kosong, supaya keranjang yang dikosongkan manual tidak
+    // bangkit lagi setelah rotasi atau pindah tab (audit 2026-11-02, M1:
+    // sebelumnya penulisan diskip saat kosong, jadi isi lama bertahan di
+    // savedCart dan dipulihkan lagi). Pilihan grosir ikut disimpan (audit
+    // N2, 2026-10-30): tanpa itu, item yang dipulihkan diam-diam kembali ke
+    // harga Ecer dan total berubah sementara isian Uang Diterima tetap.
+    val cartSnapshot = cart.map { Triple(it.medicine.id, it.qty, it.useWholesale) }
+    LaunchedEffect(cartSnapshot, cartInitialized) {
+        if (cartInitialized) {
+            savedCart = cartSnapshot.flatMap { listOf(it.first, it.second, if (it.third) 1 else 0) }
         }
     }
     // Muat ulang struk terakhir dari id tersimpan (untuk restore setelah rotasi).
