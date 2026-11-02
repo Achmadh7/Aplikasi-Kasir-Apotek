@@ -5,7 +5,7 @@ An Android app for Apotek Lestari: sales cashier, medicine stock, cash book, pro
 [![Build APK](https://github.com/Achmadh7/Apk-Apotik-Lestari/actions/workflows/main.yml/badge.svg)](https://github.com/Achmadh7/Apk-Apotik-Lestari/actions)
 
 - **Technology:** Kotlin + Jetpack Compose (Material 3 Expressive), local Room/SQLite database
-- **App version:** 1.0.0 — minimum Android 8.0 (API 26)
+- **App version:** 1.1.0 — minimum Android 8.0 (API 26)
 - **Time zone:** all "today / this month" boundaries use Asia/Jakarta (WIB)
 
 ## Screenshots
