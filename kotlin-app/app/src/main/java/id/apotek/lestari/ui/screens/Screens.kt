@@ -2170,7 +2170,7 @@ private fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSave
                 onValueChange = {},
                 label = { Text(tr("Tanggal Kadaluarsa (boleh kosong)", "Expiry Date (optional)")) },
                 readOnly = true, singleLine = true,
-                trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = "Pilih tanggal") },
+                trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = tr("Pilih tanggal", "Pick a date")) },
                 interactionSource = expiryInteraction,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -2333,9 +2333,9 @@ fun KeuanganScreen() {
         // Label: nama hari ("Sen") bila grafik pendek (<= 7 batang, tiap hari
         // muncul sekali); tanggal ("27 Okt") bila grafik panjang supaya tidak ambigu.
         val label = if (dayCount <= 7) {
-            SimpleDateFormat("EEE", Locale("id", "ID")).apply { timeZone = jakartaTz }.format(c.time)
+            SimpleDateFormat("EEE", if (AppLang.code == "en") Locale.ENGLISH else Locale("id", "ID")).apply { timeZone = jakartaTz }.format(c.time)
         } else {
-            SimpleDateFormat("d MMM", Locale("id", "ID")).apply { timeZone = jakartaTz }.format(c.time)
+            SimpleDateFormat("d MMM", if (AppLang.code == "en") Locale.ENGLISH else Locale("id", "ID")).apply { timeZone = jakartaTz }.format(c.time)
         }
         val dayEntries = entries.filter { e -> parseISODate(e.createdAt)?.let { dayKeyID(it) == key } == true }
         Triple(label, dayEntries.filter { it.type == "in" }.sumOf { it.amount }, dayEntries.filter { it.type == "out" }.sumOf { it.amount })
@@ -2365,7 +2365,7 @@ fun KeuanganScreen() {
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                listOf("today" to "Hari Ini", "month" to "Bulan Ini", "all" to "Semua").forEach { (k, l) ->
+                listOf("today" to tr("Hari Ini", "Today"), "month" to tr("Bulan Ini", "This Month"), "all" to tr("Semua", "All")).forEach { (k, l) ->
                     FilterChip(selected = period == k, onClick = { period = k }, label = { Text(l) })
                 }
             }
@@ -2375,7 +2375,7 @@ fun KeuanganScreen() {
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.fillMaxWidth().height(52.dp)
-            ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Catat Kas", style = MaterialTheme.typography.titleMedium) }
+            ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text(tr("Catat Kas", "Record Cash"), style = MaterialTheme.typography.titleMedium) }
             Spacer(Modifier.height(SpaceL))
             // Kartu Saldo Kas — warna gradasi biru di-revert ke kartu datar seperti semula;
             // bar proporsi + compact dipertahankan.
@@ -2386,7 +2386,7 @@ fun KeuanganScreen() {
                             Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
                         }
                         Spacer(Modifier.width(10.dp))
-                        Text("SALDO KAS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("SALDO KAS", "CASH BALANCE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(Modifier.height(SpaceS))
                     AnimatedAmount(saldo, MaterialTheme.typography.headlineLarge, if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
@@ -2398,7 +2398,7 @@ fun KeuanganScreen() {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.SouthWest, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("MASUK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(tr("MASUK", "IN"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Text(formatIDR(saldoIn), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
@@ -2407,7 +2407,7 @@ fun KeuanganScreen() {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.NorthEast, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("KELUAR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(tr("KELUAR", "OUT"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Text(formatIDR(saldoOut), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                         }
@@ -2428,23 +2428,23 @@ fun KeuanganScreen() {
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     val chartTitle = when (period) {
-                        "today" -> "Arus Kas 7 Hari Terakhir"
-                        "month" -> "Arus Kas Bulan Ini"
-                        else -> "Arus Kas Semua"
+                        "today" -> tr("Arus Kas 7 Hari Terakhir", "Cash Flow - Last 7 Days")
+                        "month" -> tr("Arus Kas Bulan Ini", "Cash Flow - This Month")
+                        else -> tr("Arus Kas Semua", "Cash Flow - All Time")
                     }
                     Text(chartTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(SpaceS))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(8.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
                         Spacer(Modifier.width(4.dp))
-                        Text("Masuk", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("Masuk", "In"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.width(12.dp))
                         Box(Modifier.size(8.dp).background(MaterialTheme.colorScheme.error, CircleShape))
                         Spacer(Modifier.width(4.dp))
-                        Text("Keluar", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("Keluar", "Out"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.weight(1f))
                         Text(
-                            "Masuk Rp ${formatCompactIDR(periodIn)} • Keluar Rp ${formatCompactIDR(periodOut)}",
+                            tr("Masuk Rp ${formatCompactIDR(periodIn)} • Keluar Rp ${formatCompactIDR(periodOut)}", "In Rp ${formatCompactIDR(periodIn)} • Out Rp ${formatCompactIDR(periodOut)}"),
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
@@ -2453,9 +2453,9 @@ fun KeuanganScreen() {
                     if (periodIn + periodOut == 0) {
                         Text(
                             when (period) {
-                                "today" -> "Belum ada arus kas 7 hari terakhir."
-                                "month" -> "Belum ada arus kas bulan ini."
-                                else -> "Belum ada arus kas."
+                                "today" -> tr("Belum ada arus kas 7 hari terakhir.", "No cash flow in the last 7 days.")
+                                "month" -> tr("Belum ada arus kas bulan ini.", "No cash flow this month.")
+                                else -> tr("Belum ada arus kas.", "No cash flow yet.")
                             },
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -2509,8 +2509,8 @@ fun KeuanganScreen() {
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Spacer(Modifier.height(SpaceS))
                         Text(
-                            if (scrollable) "Geser untuk melihat hari lain • Biru = masuk • Merah = keluar • Label hari ini ditebalkan"
-                            else "Biru = masuk • Merah = keluar • Label hari ini ditebalkan",
+                            if (scrollable) tr("Geser untuk melihat hari lain • Biru = masuk • Merah = keluar • Label hari ini ditebalkan", "Scroll to see other days • Blue = in • Red = out • Today's label is bold")
+                            else tr("Biru = masuk • Merah = keluar • Label hari ini ditebalkan", "Blue = in • Red = out • Today's label is bold"),
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -2518,7 +2518,7 @@ fun KeuanganScreen() {
             }
             Spacer(Modifier.height(SpaceL))
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                listOf("all" to "Semua", "in" to "Masuk", "out" to "Keluar").forEach { (k, l) ->
+                listOf("all" to tr("Semua", "All"), "in" to tr("Masuk", "In"), "out" to tr("Keluar", "Out")).forEach { (k, l) ->
                     FilterChip(selected = typeFilter == k, onClick = { typeFilter = k }, label = { Text(l) })
                 }
             }
@@ -2546,7 +2546,7 @@ fun KeuanganScreen() {
                     Column(Modifier.weight(1f)) {
                         Text(e.description, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
-                            "${e.category} • ${formatDateTimeID(e.createdAt)} • ${if (e.source == "sale") "Otomatis" else "Manual"}",
+                            "${e.category} • ${formatDateTimeID(e.createdAt)} • ${if (e.source == "sale") tr("Otomatis", "Automatic") else "Manual"}",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -2594,7 +2594,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "Catat Kas",
+                    tr("Catat Kas", "Record Cash"),
                     style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
@@ -2606,8 +2606,8 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
             // aktif tetap biru tua (Masuk) / merah tua (Keluar) pilihan
             // Achmad, dengan teks putih.
             val kasTypes = listOf(
-                Triple("in", "Kas Masuk", Icons.Default.SouthWest),
-                Triple("out", "Kas Keluar", Icons.Default.NorthEast)
+                Triple("in", tr("Kas Masuk", "Cash In"), Icons.Default.SouthWest),
+                Triple("out", tr("Kas Keluar", "Cash Out"), Icons.Default.NorthEast)
             )
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 kasTypes.forEachIndexed { index, (t, label, icon) ->
@@ -2627,14 +2627,14 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                 }
             }
             OutlinedTextField(category, { category = it }, label = { Text(tr("Kategori", "Category")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(description, { description = it }, label = { Text("Keterangan") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(amount, { amount = formatDecimalFieldValue(it) }, label = { Text("Jumlah (Rp)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(description, { description = it }, label = { Text(tr("Keterangan", "Description")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(amount, { amount = formatDecimalFieldValue(it) }, label = { Text(tr("Jumlah (Rp)", "Amount (Rp)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 value = formatDateID(entryDate),
                 onValueChange = {},
-                label = { Text("Tanggal") },
+                label = { Text(tr("Tanggal", "Date")) },
                 readOnly = true, singleLine = true,
-                trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = "Pilih tanggal") },
+                trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = tr("Pilih tanggal", "Pick a date")) },
                 interactionSource = dateInteraction,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -2646,7 +2646,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                     onClick = onDismiss,
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.weight(1f).height(52.dp)
-                ) { Text("Batal") }
+                ) { Text(tr("Batal", "Cancel")) }
                 Button(
                     onClick = {
                         scope.launch {
@@ -2662,7 +2662,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                             if (result is ApiResult.Success) {
                                 onSaved()
                             } else {
-                                formError = (result as? ApiResult.Error)?.message ?: "Gagal menyimpan entri kas."
+                                formError = (result as? ApiResult.Error)?.message ?: tr("Gagal menyimpan entri kas.", "Failed to save the cash entry.")
                             }
                         }
                     },
@@ -2673,7 +2673,7 @@ private fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () 
                     ),
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.weight(1f).height(52.dp)
-                ) { Text("Simpan") }
+                ) { Text(tr("Simpan", "Save")) }
             }
         }
     }
@@ -2755,7 +2755,7 @@ fun LabaScreen() {
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                listOf("today" to "Hari Ini", "month" to "Bulan Ini", "last30" to "30 Hari", "all" to "Semua").forEach { (k, l) ->
+                listOf("today" to tr("Hari Ini", "Today"), "month" to tr("Bulan Ini", "This Month"), "last30" to tr("30 Hari", "Last 30 Days"), "all" to tr("Semua", "All")).forEach { (k, l) ->
                     FilterChip(selected = period == k, onClick = { period = k }, label = { Text(l) })
                 }
             }
@@ -2774,7 +2774,7 @@ fun LabaScreen() {
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("LABA KOTOR", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text(tr("LABA KOTOR", "GROSS PROFIT"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Surface(color = Color.White.copy(alpha = 0.25f), shape = RoundedCornerShape(16.dp)) {
                                 Text(
                                     "Margin ${marginTextID(r.marginPct)}%", color = Color.White,
@@ -2786,7 +2786,7 @@ fun LabaScreen() {
                         Spacer(Modifier.height(SpaceS))
                         AnimatedAmount(r.grossProfit, MaterialTheme.typography.headlineLarge, Color.White)
                         Spacer(Modifier.height(SpaceXS))
-                        Text("${r.transactionCount} transaksi • ${r.itemsSold} item terjual", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                        Text(tr("${r.transactionCount} transaksi • ${r.itemsSold} item terjual", "${r.transactionCount} transactions • ${r.itemsSold} items sold"), color = Color.White, style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 }
@@ -2805,15 +2805,15 @@ fun LabaScreen() {
                         // tablet lebar 4 kolom (satu baris).
                         val statsCols = adaptiveColumns(compact = 2, medium = 3, expanded = 4)
                         val stats = listOf(
-                            Triple(Icons.Default.Receipt, "PENJUALAN", formatIDR(r.revenue)),
-                            Triple(Icons.Default.Inventory, "MODAL (HPP)", formatIDR(r.hpp)),
-                            Triple(Icons.Default.NorthEast, "BIAYA OPERASIONAL", formatIDR(r.operationalExpense)),
-                            Triple(Icons.Default.Savings, "ESTIMASI LABA BERSIH", formatIDR(r.netProfit))
+                            Triple(Icons.Default.Receipt, tr("PENJUALAN", "REVENUE"), formatIDR(r.revenue)),
+                            Triple(Icons.Default.Inventory, tr("MODAL (HPP)", "COST (COGS)"), formatIDR(r.hpp)),
+                            Triple(Icons.Default.NorthEast, tr("BIAYA OPERASIONAL", "OPERATING COSTS"), formatIDR(r.operationalExpense)),
+                            Triple(Icons.Default.Savings, tr("ESTIMASI LABA BERSIH", "ESTIMATED NET PROFIT"), formatIDR(r.netProfit))
                         )
                         stats.chunked(statsCols).forEach { rowStats ->
                             Row(Modifier.fillMaxWidth()) {
                                 rowStats.forEach { (icon, label, value) ->
-                                    LabaStat(icon, label, value, if (label == "ESTIMASI LABA BERSIH") (if (r.netProfit < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary) else null, Modifier.weight(1f))
+                                    LabaStat(icon, label, value, if (label == tr("ESTIMASI LABA BERSIH", "ESTIMATED NET PROFIT")) (if (r.netProfit < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary) else null, Modifier.weight(1f))
                                 }
                                 repeat(statsCols - rowStats.size) { Spacer(Modifier.weight(1f)) }
                             }
@@ -2836,7 +2836,7 @@ fun LabaScreen() {
                             Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
                             Text(
-                                "Ada ${r.costMissingQty} item terjual yang harga belinya tidak diketahui (obat sudah dihapus dari stok), jadi laba untuk item tersebut terhitung lebih besar dari seharusnya.",
+                                tr("Ada ${r.costMissingQty} item terjual yang harga belinya tidak diketahui (obat sudah dihapus dari stok), jadi laba untuk item tersebut terhitung lebih besar dari seharusnya.", "${r.costMissingQty} sold items have an unknown buy price (the medicine was deleted from stock), so their profit is counted higher than it should be."),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -2857,16 +2857,16 @@ fun LabaScreen() {
                         // Judul grafik mengikuti periode; "Hari Ini" menampilkan
                         // 7 hari terakhir (judulnya pun demikian).
                         val chartTitle = when (period) {
-                            "today" -> "Laba Kotor 7 Hari Terakhir"
-                            "month" -> "Laba Kotor Bulan Ini"
-                            "last30" -> "Laba Kotor 30 Hari Terakhir"
-                            else -> "Laba Kotor Semua"
+                            "today" -> tr("Laba Kotor 7 Hari Terakhir", "Gross Profit - Last 7 Days")
+                            "month" -> tr("Laba Kotor Bulan Ini", "Gross Profit - This Month")
+                            "last30" -> tr("Laba Kotor 30 Hari Terakhir", "Gross Profit - Last 30 Days")
+                            else -> tr("Laba Kotor Semua", "Gross Profit - All Time")
                         }
                         Text(chartTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(SpaceL))
                         val daily = r.daily
                         if (daily.isEmpty()) {
-                            Text("Belum ada data laba harian.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Belum ada data laba harian.", "No daily profit data yet."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             val maxProfit = daily.maxOf { it.profit }.coerceAtLeast(1)
                             val todayIndex = daily.lastIndex
@@ -2938,8 +2938,8 @@ fun LabaScreen() {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                 Spacer(Modifier.height(SpaceS))
                                 Text(
-                                    if (scrollable) "Geser untuk melihat hari lain • Batang biru pekat = laba tertinggi • Label hari ini ditebalkan"
-                                    else "Batang biru pekat = laba tertinggi • Label hari ini ditebalkan",
+                                    if (scrollable) tr("Geser untuk melihat hari lain • Batang biru pekat = laba tertinggi • Label hari ini ditebalkan", "Scroll to see other days • Dark blue bar = highest profit • Today's label is bold")
+                                    else tr("Batang biru pekat = laba tertinggi • Label hari ini ditebalkan", "Dark blue bar = highest profit • Today's label is bold"),
                                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -2952,11 +2952,11 @@ fun LabaScreen() {
             val err = loadError
             if (err != null) {
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Gagal memuat laporan laba.", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                    Text(tr("Gagal memuat laporan laba.", "Failed to load the profit report."), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
                     Spacer(Modifier.height(SpaceS))
                     Text(err, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(SpaceS))
-                    Text("Keluar dan buka lagi menu ini untuk mencoba kembali.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("Keluar dan buka lagi menu ini untuk mencoba kembali.", "Leave and reopen this menu to try again."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
@@ -3024,7 +3024,7 @@ fun ObatTerlarisScreen() {
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                listOf("today" to "Hari Ini", "month" to "Bulan Ini", "last30" to "30 Hari", "all" to "Semua").forEach { (k, l) ->
+                listOf("today" to tr("Hari Ini", "Today"), "month" to tr("Bulan Ini", "This Month"), "last30" to tr("30 Hari", "Last 30 Days"), "all" to tr("Semua", "All")).forEach { (k, l) ->
                     FilterChip(selected = period == k, onClick = { period = k }, label = { Text(l) })
                 }
             }
@@ -3034,11 +3034,11 @@ fun ObatTerlarisScreen() {
             item {
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Gagal memuat data terlaris.", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                        Text(tr("Gagal memuat data terlaris.", "Failed to load best-seller data."), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
                         Spacer(Modifier.height(SpaceS))
                         Text(sellersError, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(SpaceS))
-                        Text("Keluar dan buka lagi menu ini untuk mencoba kembali.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("Keluar dan buka lagi menu ini untuk mencoba kembali.", "Leave and reopen this menu to try again."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -3050,7 +3050,7 @@ fun ObatTerlarisScreen() {
                         Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.Leaderboard, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
                             Spacer(Modifier.height(SpaceS))
-                            Text("Belum ada penjualan pada periode ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Belum ada penjualan pada periode ini.", "No sales in this period yet."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -3061,7 +3061,7 @@ fun ObatTerlarisScreen() {
                     ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Column(Modifier.weight(1f)) {
-                                Text("ITEM TERJUAL", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                                Text(tr("ITEM TERJUAL", "ITEMS SOLD"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(SpaceXS))
                                 AnimatedAmount(totalQty, MaterialTheme.typography.titleLarge, Color.White) { "$it item" }
                             }
@@ -3104,7 +3104,7 @@ fun ObatTerlarisScreen() {
                                     Spacer(Modifier.width(12.dp))
                                     // Jumlah item terjual kini di kanan menggantikan
                                     // nominal omzet (permintaan Achmad 2026-11-01).
-                                    Text("${s.qty} item terjual", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    Text(tr("${s.qty} item terjual", "${s.qty} items sold"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 }
                                 if (index < list.lastIndex) {
                                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 12.dp))
@@ -4569,7 +4569,7 @@ private fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
             OutlinedTextField(
                 value = formatDateID(date), onValueChange = {}, label = { Text("Tanggal Beli") },
                 readOnly = true, singleLine = true,
-                trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = "Pilih tanggal") },
+                trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = tr("Pilih tanggal", "Pick a date")) },
                 interactionSource = dateInteraction,
                 modifier = Modifier.fillMaxWidth()
             )

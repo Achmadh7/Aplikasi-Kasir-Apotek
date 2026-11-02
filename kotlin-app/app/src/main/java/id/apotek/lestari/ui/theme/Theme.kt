@@ -383,7 +383,7 @@ fun daysUntilExpiry(expiry: String?): Int? {
 }
 
 /** "40,9" — margin persen dengan koma desimal Indonesia. */
-fun marginTextID(pct: Double): String = String.format(ID_LOCALE, "%,.1f", pct)
+fun marginTextID(pct: Double): String = String.format(appLocale(), "%,.1f", pct)
 
 
 
