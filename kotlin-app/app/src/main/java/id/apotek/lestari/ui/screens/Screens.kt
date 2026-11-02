@@ -2727,6 +2727,9 @@ fun LabaScreen() {
         when (val r = repo.getProfitReport(period)) {
             is ApiResult.Success -> { report = r.data; loadError = null }
             is ApiResult.Error -> loadError = r.message
+            // Loading tidak pernah dihasilkan repo (call() hanya Success/
+            // Error); cabang ini hanya untuk memenuhi exhaustive 'when'.
+            is ApiResult.Loading -> Unit
         }
     }
     LazyColumn(
@@ -3004,6 +3007,7 @@ fun ObatTerlarisScreen() {
         when (val r = repo.getBestSellers(period)) {
             is ApiResult.Success -> { sellers = r.data; loadError = null }
             is ApiResult.Error -> loadError = r.message
+            is ApiResult.Loading -> Unit
         }
     }
     LazyColumn(
