@@ -46,7 +46,7 @@ An Android app for Apotek Lestari: sales cashier, medicine stock, cash book, pro
 - **Backup & Restore** — a single JSON file through the system file picker (can be saved to Google Drive).
 - **Tentang Aplikasi (About)** — app version info.
 
-Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58 mm paper), system printing/PDF via the Android print framework, dark/light themes, and invoice numbers in the `INV - dd/MM/yy` format (e.g. `INV - 01/11/26`).
+Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58 mm paper), system printing/PDF via the Android print framework, dark/light themes with a circular-reveal transition, a full **Indonesian/English interface switch** (in the Lainnya sheet — every screen, receipt, and message follows the chosen language; stored data values are never translated), and invoice numbers in the `INV - dd/MM/yy` format (e.g. `INV - 01/11/26`).
 
 ## Tech stack
 
@@ -80,7 +80,7 @@ Build notes:
 - `.github/workflows/main.yml` — the GitHub Actions workflow that builds the debug + release APKs.
 - `kotlin-app/` — the Android project (Kotlin + Jetpack Compose):
   - `app/src/main/java/id/apotek/lestari/MainActivity.kt` — the app shell: tab navigation (official `ShortNavigationBar`), the Lainnya (More) sheet, screen routing.
-  - `.../ui/screens/Screens.kt` — every screen (Home, Cashier, Stock, Finance, Profit, Reminders, History, Supplier Invoices, Backup).
+  - `.../ui/screens/` — the screens, one file per area: `Screens.kt` (shared constants, helpers, and small components), `BerandaScreen.kt` (Home), `KasirScreen.kt` (Cashier), `StokScreen.kt` (Stock + medicine form), `KeuanganScreen.kt` (Finance + cash entry), `LabaScreen.kt` (Profit + Best Sellers), `PengingatScreen.kt` (Reminders), `RiwayatScreen.kt` (Sales History + invoice/receipt cards), `BackupScreen.kt` (Backup & Restore + About), `PbfScreen.kt` (Supplier Invoices).
   - `.../ui/theme/Theme.kt` — the Material Expressive theme, the generated color scheme, IDR/date formatting, and the stock-status scale.
   - `.../ui/` — also `BluetoothPrinter.kt` (ESC/POS printing), `ReceiptShare.kt` (receipt image sharing), `LogoData.kt` (the pharmacy logo shown on receipts).
   - `.../data/` — `Repository.kt` (business logic), `Models.kt`, `ExcelHelper.kt` (.xlsx import/export), `BackupHelper.kt` (JSON backup/restore), and `local/` (Room database, entities, DAOs, migrations).
@@ -94,6 +94,7 @@ Build notes:
 
 ## Data & update safety notes
 
+- The `app-source/` folder holds the original web version of this app (client/server/PWA), kept frozen as a reference. The Android app in `kotlin-app/` is the active product; the two do not share data. The older `README-APK.md` and `kotlin-app/README-KOTLIN.md` guides were consolidated into this README on 2026-11-02 (their texts described the original handover package and no longer matched the app).
 - All real data (stock, sales, cash, purchases) lives **locally on the device** in the `apotek-lestari.db` database — not in this repo and not on any server. This repo contains program code only: no database, sales data, or credentials.
 - As a safety net, whenever the app detects it has just been updated, the database file is **automatically copied before migrations run** (up to the 3 most recent copies in the app's internal storage), so pre-update data stays intact if a migration ever goes wrong.
 - A manual backup is still recommended before major updates: **Lainnya (More) → Backup & Restore → Backup**.
