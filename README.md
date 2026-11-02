@@ -1,4 +1,4 @@
-# Aplikasi Kasir Apotek — Pharmacy Cashier & Inventory Management App
+# Pharmacy Cashier App — Cashier & Inventory Management for Pharmacies
 
 An Android app for pharmacies: sales cashier, medicine stock, cash book, profit reports, expiry/restock reminders, and purchase records from distributors (PBF) — **fully offline**, with all data stored on the device.
 
