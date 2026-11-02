@@ -94,7 +94,7 @@ Build notes:
 
 ## Data & update safety notes
 
-- The `app-source/` folder holds the original web version of this app (client/server/PWA), kept frozen as a reference. The Android app in `kotlin-app/` is the active product; the two do not share data. The older `README-APK.md` and `kotlin-app/README-KOTLIN.md` guides were consolidated into this README on 2026-11-02 (their texts described the original handover package and no longer matched the app).
+- The original web version of this app (client/server/PWA) used to live in an `app-source/` folder; it was archived out of the repository tree on 2026-11-02 and remains fully available in git history (for example at commit `849c545e`). The Android app in `kotlin-app/` is the active product. The older `README-APK.md` and `kotlin-app/README-KOTLIN.md` guides were consolidated into this README on 2026-11-02 (their texts described the original handover package and no longer matched the app).
 - All real data (stock, sales, cash, purchases) lives **locally on the device** in the `apotek-lestari.db` database — not in this repo and not on any server. This repo contains program code only: no database, sales data, or credentials.
 - As a safety net, whenever the app detects it has just been updated, the database file is **automatically copied before migrations run** (up to the 3 most recent copies in the app's internal storage), so pre-update data stays intact if a migration ever goes wrong.
 - A manual backup is still recommended before major updates: **Lainnya (More) → Backup & Restore → Backup**.
