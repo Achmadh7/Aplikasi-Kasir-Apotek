@@ -1,112 +1,115 @@
-# Arsitektur — Apotek Lestari
+# Architecture — Apotek Lestari
 
-Dokumen singkat peta proyek: struktur kode, database, dan aliran data utama.
-Ditulis berdasarkan kode di head saat ini (versi aplikasi 1.1.0).
+A short map of the project: code structure, database, and the main data
+flows. Written from the code at the current head (app version 1.1.0).
 
-## Gambaran umum
+## Overview
 
-Apotek Lestari adalah aplikasi kasir + inventaris apotek **sepenuhnya offline**:
-semua data tersimpan lokal di HP (Room/SQLite), tanpa server dan tanpa akun.
-Satu modul aplikasi (`kotlin-app/app`), satu Activity, navigasi antar-layar
-diatur di `MainActivity.kt` dengan bottom bar Material 3 Expressive
-(ShortNavigationBar): **Beranda, Kasir, Stok, Keuangan**, dan sheet **Lainnya**
-(Laba, Pengingat, Riwayat, Faktur PBF, Obat Terlaris, Backup & Restore,
-Tentang). Aplikasi dwibahasa ID/EN (fungsi `tr(id, en)` di tema) dan punya
-mode gelap/terang.
+Apotek Lestari is a **fully offline** pharmacy cashier and inventory app:
+all data lives locally on the phone (Room/SQLite), with no server and no
+accounts. A single app module (`kotlin-app/app`) and a single Activity host
+the whole app; `MainActivity.kt` handles navigation with a Material 3
+Expressive bottom bar (ShortNavigationBar): **Beranda (Home), Kasir (POS),
+Stok (Stock), Keuangan (Finance)**, plus a **Lainnya (More)** sheet (Profit,
+Reminders, Sales History, PBF Invoices, Best Sellers, Backup & Restore,
+About). The app is bilingual ID/EN (the `tr(id, en)` function in the theme)
+and supports dark/light mode.
 
-## Teknologi
+## Tech stack
 
 - Kotlin 2.2.20, Jetpack Compose, Material 3 Expressive (material3 1.5.0-alpha08)
-- Skema warna Fidelity dari seed `#0061A4`
-- Room (database lokal, versi 12) — tanpa jaringan sama sekali
-- Apache POI 5.2.5 untuk impor/ekspor Excel (.xlsx)
+- Fidelity colour scheme from seed `#0061A4`
+- Room (local database, version 12) — no networking at all
+- Apache POI 5.2.5 for Excel (.xlsx) import/export
 - Android Gradle Plugin 8.11.1, Gradle 8.13, JDK 17
 - minSdk 26, targetSdk 34, compileSdk 36
 
-## Struktur proyek
+## Project structure
 
 ```
 kotlin-app/
-  build.gradle.kts            konfigurasi plugin tingkat proyek (versi saja)
+  build.gradle.kts            top-level plugin versions only
   app/
-    build.gradle.kts          konfigurasi aplikasi + signing release + penjaga signing
+    build.gradle.kts          app config + release signing + signing guard
     src/main/java/id/apotek/lestari/
-      MainActivity.kt         satu-satunya Activity: tema, navigasi, bottom bar
+      MainActivity.kt         the only Activity: theme, navigation, bottom bar
       data/
-        Models.kt             model data (Medicine, Sale, CashEntry, Purchase, ...)
-        Repository.kt         satu-satunya pintu logika bisnis & query
-        ExcelHelper.kt        template/impor/ekspor Excel stok
-        BackupHelper.kt       backup/restore JSON
-        local/AppDatabase.kt  entity Room, DAO, migrasi, DatabaseProvider
+        Models.kt             data models (Medicine, Sale, CashEntry, Purchase, ...)
+        Repository.kt         the single entry point for business logic & queries
+        ExcelHelper.kt        stock Excel template/import/export
+        BackupHelper.kt       JSON backup/restore
+        local/AppDatabase.kt  Room entities, DAOs, migrations, DatabaseProvider
       ui/
-        theme/                Theme.kt — skema warna, tr() ID/EN, stockLabel()
-        screens/              satu berkas per layar (BerandaScreen, KasirScreen,
+        theme/                Theme.kt — colour scheme, tr() ID/EN, stockLabel()
+        screens/              one file per screen (BerandaScreen, KasirScreen,
                               StokScreen, KeuanganScreen, LabaScreen, PbfScreen,
                               PengingatScreen, RiwayatScreen, BackupScreen)
-                              + Screens.kt (komponen bersama & layar kecil)
-        BluetoothPrinter.kt   cetak struk ESC/POS ke printer thermal terpasang
-        ReceiptShare.kt       struk sebagai gambar untuk dibagikan
-        LogoData.kt           logo apotek (Base64) untuk header & struk
+                              + Screens.kt (shared components & small screens)
+        BluetoothPrinter.kt   ESC/POS receipt printing to a paired thermal printer
+        ReceiptShare.kt       receipt rendered as an image for sharing
+        LogoData.kt           pharmacy logo (Base64) for the header & receipts
 ```
 
-Layar tidak menyentuh DAO langsung — semua lewat `Repository`, jadi aturan
-bisnis (batas stok, snapshot harga, sumber kas) konsisten di semua layar.
+Screens never touch the DAOs directly — everything goes through
+`Repository`, so business rules (stock limits, price snapshots, cash
+sources) stay consistent across screens.
 
-## Database (Room, versi 12)
+## Database (Room, version 12)
 
-| Tabel | Isi |
+| Table | Contents |
 |---|---|
-| `medicines` | Obat: nama, kategori, satuan, harga beli/jual/grosir, stok, kedaluwarsa, barcode (indeks unik) |
-| `sales` | Penjualan: nomor invoice `INV - dd/MM/yy` (indeks TIDAK unik — penjualan seharian berbagi nomor tampil), total, metode bayar, bayar/kembalian |
-| `sale_items` | Baris penjualan: nama, qty, harga snapshot, subtotal, `priceType` ECER/GROSIR |
-| `cash_entries` | Kas masuk/keluar: `type` in/out, `source` (`sale` = dari penjualan, `manual` = catat kas) |
-| `purchases` | Faktur PBF: nama PBF, nomor faktur, total termasuk PPN, CASH/KREDIT, jatuh tempo |
-| `purchase_items` | Baris item faktur PBF |
+| `medicines` | Medicines: name, category, unit, buy/sell/wholesale price, stock, expiry date, barcode (unique index) |
+| `sales` | Sales: invoice number `INV - dd/MM/yy` (NON-unique index — same-day sales share the displayed number), total, payment method, paid/change |
+| `sale_items` | Sale lines: name, qty, price snapshot, subtotal, `priceType` ECER (retail) / GROSIR (wholesale) |
+| `cash_entries` | Cash in/out: `type` in/out, `source` (`sale` = from a sale, `manual` = recorded by hand) |
+| `purchases` | PBF invoices: supplier name, invoice number, total including VAT (PPN), CASH/KREDIT, due date |
+| `purchase_items` | PBF invoice line items |
 
-- Migrasi berurutan 1 → 12 terdaftar di `AppDatabase.kt`; jangan pernah
-  mengubah skema tanpa migrasi baru.
-- Jaring pengaman update: `DatabaseProvider` menyalin berkas database ke
-  `filesDir/db-snapshots/` (maks. 3 terbaru) sebelum Room dibuka, bila waktu
-  update paket berubah — salinan hilang bila aplikasi di-uninstall, jadi
-  Backup JSON tetap pelindung utama.
-- DAO: `MedicineDao`, `SaleDao`, `CashDao`, `PurchaseDao`.
+- Sequential migrations 1 → 12 are registered in `AppDatabase.kt`; never
+  change the schema without adding a new migration.
+- Update safety net: `DatabaseProvider` copies the database file to
+  `filesDir/db-snapshots/` (newest 3 kept) before Room opens, whenever the
+  package update time changed — the copies vanish on uninstall, so the JSON
+  backup remains the primary protection.
+- DAOs: `MedicineDao`, `SaleDao`, `CashDao`, `PurchaseDao`.
 
-## Aliran data utama
+## Main data flows
 
-**Penjualan (Kasir).** Keranjang menahan qty per obat (tidak bisa melewati
-stok; `Repository.createSale` juga menolak penjualan melebihi stok, sehingga
-stok tidak pernah negatif) → harga yang dipakai di-snapshot ke
-`sale_items.price` (ecer atau grosir per baris) → stok obat berkurang → satu
-`cash_entries` bertipe `in` dengan `source = "sale"` dibuat → invoice &
-struk (gambar, bagikan, atau cetak thermal Bluetooth).
+**Sales (Kasir).** The cart holds a qty per medicine (it cannot exceed
+stock; `Repository.createSale` also rejects over-stock sales, so stock can
+never go negative) → the charged price is snapshotted into
+`sale_items.price` (retail or wholesale per line) → medicine stock is
+decremented → one `cash_entries` row of type `in` with `source = "sale"` is
+created → invoice and receipt (image, share, or Bluetooth thermal print).
 
-**Stok.** Tambah/edit lewat formulir, atau impor Excel (dicocokkan per
-Nama+Kategori+Satuan; templat & ekspor 8 kolom termasuk Harga Grosir).
-Status stok murni dari jumlah: 0 = Habis, 1–9 = Rendah, 10–15 = Sedang,
-16+ = Aman (`stockLabel()` di Theme.kt juga kunci logika internal).
+**Stock.** Add/edit via the form, or Excel import (matched on
+Name+Category+Unit; the template and export use 8 columns including
+Wholesale Price). Stock status is purely count-based: 0 = Out, 1–9 = Low,
+10–15 = Medium, 16+ = Safe (`stockLabel()` in Theme.kt doubles as the
+internal logic key).
 
-**Keuangan & Laba.** Saldo Kas = semua kas masuk − keluar. Khusus
-"Pemasukan Hari Ini" di Beranda hanya menghitung penjualan (`source = "sale"`);
-kas manual hanya memengaruhi Saldo Kas. Laba dihitung berbasis penjualan:
-omzet − HPP dari harga beli saat ini per obat terjual.
+**Finance & profit.** Cash Balance = all cash in − all cash out. The Home
+screen's "Income Today" counts only sales (`source = "sale"`); manual cash
+entries affect only the Cash Balance. Profit is sales-based: revenue − cost
+of goods at the current buy price per medicine sold.
 
-**Faktur PBF.** Murni catatan pembelian: **tidak** mengubah stok, kas, harga
-beli, laba, maupun Saldo Kas. Pembelian Kredit punya tanggal jatuh tempo,
-bisa ditandai lunas (berubah jadi CASH), dan tagihan yang jatuh tempo ≤ 7
-hari muncul di Pengingat serta kartu Pengingat Beranda. Ringkasan belanja
-hanya menghitung CASH.
+**PBF invoices.** Purchase records only: they do **not** change stock,
+cash, buy prices, profit, or the Cash Balance. Credit (KREDIT) purchases
+carry a due date, can be marked paid (becoming CASH), and bills due within
+7 days surface in Reminders and on the Home reminder card. Spending
+summaries count CASH only.
 
-**Backup & Restore.** Satu berkas JSON `{version, app, medicines, sales,
-saleItems, cashEntries, purchases, purchaseItems}` lewat Storage Access
-Framework (bisa disimpan ke Drive). Restore menimpa seluruh data dalam satu
-transaksi Room, setelah konfirmasi.
+**Backup & restore.** A single JSON file `{version, app, medicines, sales,
+saleItems, cashEntries, purchases, purchaseItems}` via the Storage Access
+Framework (can be saved to Drive). Restore replaces all data inside one
+Room transaction, after confirmation.
 
-## Build & rilis
+## Build & release
 
-CI (`.github/workflows/main.yml`, dijalankan manual) membangun APK debug,
-lalu mengambil keystore dari repo privat Sigkey, menulis `signing.properties`
-dari GitHub Secrets, dan membangun APK release (`app-release-apk`).
-`app/build.gradle.kts` membaca `signing.properties` itu; penjaga
-`verifyReleaseSigning` menggagalkan build release bila signing tidak
-lengkap — APK release tidak akan pernah terbit bertanda tangan kunci debug
-secara diam-diam.
+CI (`.github/workflows/main.yml`, run manually) builds the debug APK, then
+checks out the keystore from the private Sigkey repo, writes
+`signing.properties` from GitHub Secrets, and builds the release APK
+(`app-release-apk`). `app/build.gradle.kts` reads that `signing.properties`;
+the `verifyReleaseSigning` guard fails the release build when signing is
+incomplete — a release APK can never silently ship signed with the debug
+key.
