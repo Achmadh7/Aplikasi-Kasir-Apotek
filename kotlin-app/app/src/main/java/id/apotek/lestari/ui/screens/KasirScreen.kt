@@ -579,21 +579,25 @@ fun KasirScreen() {
                         }
                     }
                 } else if (cart.isNotEmpty()) {
-                    // Panel hero KR4 (pilihan Achmad 2026-11-04): total
-                    // besar + jumlah item/jenis + pilihan metode bayar
-                    // menyatu di SATU panel biru di atas daftar item —
-                    // menggantikan bar Total bayar dan baris METODE BAYAR
-                    // yang dulu di bawah item. Segmen terpilih putih dengan
-                    // teks primer (terbalik dari panelnya) supaya terbaca
-                    // jelas di atas biru.
-                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                    // Panel hero: total besar + jumlah item/jenis +
+                    // pilihan metode bayar menyatu di SATU panel di atas
+                    // daftar item (tata letak KR4, pilihan Achmad
+                    // 2026-11-04). Gaya visualnya HP3 (pilihan Achmad
+                    // 2026-11-05): panel NETRAL (surfaceContainer) dengan
+                    // garis aksen primer tipis di tepi kiri, teks warna
+                    // permukaan biasa, dan segmen metode memakai warna
+                    // bawaan komponen — bukan lagi panel biru pekat
+                    // dengan segmen putih terbalik ala KR4.
+                    Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.height(IntrinsicSize.Min)) {
+                            Spacer(Modifier.width(6.dp).fillMaxHeight().background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)))
+                            Column(Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 14.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(tr("TOTAL BAYAR", "TOTAL TO PAY"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.weight(1f))
-                                Text(tr("${cart.sumOf { it.qty }} item \u2022 ${cart.size} jenis", "${cart.sumOf { it.qty }} items \u2022 ${cart.size} kinds"), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.85f))
+                                Text(tr("TOTAL BAYAR", "TOTAL TO PAY"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                                Text(tr("${cart.sumOf { it.qty }} item \u2022 ${cart.size} jenis", "${cart.sumOf { it.qty }} items \u2022 ${cart.size} kinds"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Spacer(Modifier.height(SpaceXS))
-                            Text(formatIDR(total), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                            Text(formatIDR(total), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
                             Spacer(Modifier.height(SpaceM))
                             val methods = listOf(
                                 "Tunai" to Icons.Default.Money,
@@ -607,18 +611,11 @@ fun KasirScreen() {
                                         onClick = { method = m },
                                         shape = SegmentedButtonDefaults.itemShape(index = index, count = methods.size),
                                         icon = { Icon(icon, null, modifier = Modifier.size(18.dp)) },
-                                        colors = SegmentedButtonDefaults.colors(
-                                            activeContainerColor = Color.White,
-                                            activeContentColor = MaterialTheme.colorScheme.primary,
-                                            activeBorderColor = Color.White,
-                                            inactiveContainerColor = Color.Transparent,
-                                            inactiveContentColor = Color.White,
-                                            inactiveBorderColor = Color.White.copy(alpha = 0.55f)
-                                        ),
                                         modifier = Modifier.weight(1f)
                                     ) { Text(if (m == "Tunai") tr("Tunai", "Cash") else m, maxLines = 1) }
                                 }
                             }
+                        }
                         }
                     }
                     Spacer(Modifier.height(SpaceS))
