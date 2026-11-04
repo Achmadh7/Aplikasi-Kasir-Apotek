@@ -196,6 +196,9 @@ fun KasirScreen() {
     var successMethod by remember { mutableStateOf("") }
     var successTotal by remember { mutableIntStateOf(0) }
     var successChange by remember { mutableIntStateOf(0) }
+    // Pratinjau struk di sheet dilipat secara bawaan (desain K1, pilihan
+    // Achmad 2026-11-04) supaya tombol Bayar selalu terlihat tanpa gulir.
+    var showReceiptPreview by remember { mutableStateOf(false) }
     // Struk terakhir disimpan sebagai id saja, lalu dimuat ulang dari repo.
     var lastSaleId by rememberSaveable { mutableIntStateOf(0) }
     var lastSale by remember { mutableStateOf<Sale?>(null) }
@@ -546,7 +549,7 @@ fun KasirScreen() {
                         // satuan). Pilihan harga ditaruh persis di samping tombol
                         // -/+ jumlah, dan ikon hapus di sebelah kanan tombol +
                         // (keduanya sesuai permintaan Achmad 2026-10-29).
-                        Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                                 Spacer(Modifier.width(8.dp))
@@ -583,7 +586,7 @@ fun KasirScreen() {
                                 Surface(
                                     color = MaterialTheme.colorScheme.surfaceContainerHighest,
                                     shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.height(40.dp).clickable { qtyEditTarget = ci }
+                                    modifier = Modifier.height(36.dp).clickable { qtyEditTarget = ci }
                                 ) {
                                     Text(
                                         "${ci.qty}",
@@ -596,7 +599,7 @@ fun KasirScreen() {
                                 Spacer(Modifier.width(8.dp))
                                 // Hapus: keluarkan obat dari keranjang (di kanan
                                 // tombol + jumlah).
-                                IconButton(onClick = { cart.remove(ci) }, modifier = Modifier.size(48.dp)) {
+                                IconButton(onClick = { cart.remove(ci) }, modifier = Modifier.size(40.dp)) {
                                     Icon(Icons.Default.Delete, tr("Hapus", "Delete"), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                                 }
                                 Spacer(Modifier.weight(1f))
@@ -646,31 +649,16 @@ fun KasirScreen() {
                     if (targetMethod == "Tunai") {
                         Column {
                             Spacer(Modifier.height(SpaceL))
-                            Text(tr("UANG DITERIMA", "CASH RECEIVED"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.height(SpaceS))
-                            Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.fillMaxWidth()) {
-                                listOf(20000 to "Rp20.000", 50000 to "Rp50.000", 100000 to "Rp100.000").forEach { (nominal, label) ->
-                                    OutlinedButton(
-                                        onClick = {
-                                            val formatted = formatDecimal((parseDecimal(uangDiterima.text) + nominal).toString())
-                                            uangDiterima = TextFieldValue(formatted, TextRange(formatted.length))
-                                        },
-                                        shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                                    ) { Text(label, maxLines = 1) }
-                                }
-                                Button(
-                                    onClick = {
-                                        val formatted = formatDecimal(total.toString())
-                                        uangDiterima = TextFieldValue(formatted, TextRange(formatted.length))
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
-                                    shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f),
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                                ) { Text(tr("Uang Pas", "Exact Amount"), maxLines = 1) }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(tr("UANG DITERIMA", "CASH RECEIVED"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                                // Desain K1: chip nominal cepat dihapus;
+                                // "Uang Pas" menjadi aksi teks di kanan label
+                                // dan mengisi kolom dengan total persis.
+                                TextButton(onClick = {
+                                    val formatted = formatDecimal(total.toString())
+                                    uangDiterima = TextFieldValue(formatted, TextRange(formatted.length))
+                                }) { Text(tr("Uang Pas", "Exact Amount"), maxLines = 1) }
                             }
-                            Spacer(Modifier.height(SpaceS))
-                            Text(tr("Ketuk nominal untuk menambah, atau Uang Pas untuk jumlah persis.", "Tap an amount to add, or Exact Amount for the precise total."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceS))
                             OutlinedTextField(
                                 value = uangDiterima,
@@ -706,15 +694,26 @@ fun KasirScreen() {
                 // metode, atau uang diterima diubah.
                 if (cart.isNotEmpty()) {
                     Spacer(Modifier.height(SpaceL))
-                    Text(tr("PRATINJAU STRUK", "RECEIPT PREVIEW"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(SpaceS))
-                    ReceiptPreviewCard(
-                        items = cart,
-                        total = total,
-                        method = method,
-                        paid = paid,
-                        change = change
-                    )
+                    // Desain K1: pratinjau dilipat di balik tombol Lihat —
+                    // dibuka hanya saat kasir mau memeriksa isi struk.
+                    // Tanpa AnimatedVisibility (aturan anti-jitter sheet).
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr("PRATINJAU STRUK", "RECEIPT PREVIEW"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { showReceiptPreview = !showReceiptPreview }) {
+                            Text(if (showReceiptPreview) tr("Sembunyikan", "Hide") else tr("Lihat", "View"))
+                            Icon(if (showReceiptPreview) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    if (showReceiptPreview) {
+                        Spacer(Modifier.height(SpaceS))
+                        ReceiptPreviewCard(
+                            items = cart,
+                            total = total,
+                            method = method,
+                            paid = paid,
+                            change = change
+                        )
+                    }
                 }
                 Spacer(Modifier.height(SpaceL))
                 val bayarInteraction = remember { MutableInteractionSource() }
