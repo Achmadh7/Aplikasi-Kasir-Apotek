@@ -590,127 +590,141 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            OutlinedTextField(pbfName, { pbfName = it }, label = { Text(tr("Faktur PBF", "PBF / Distributor")) }, placeholder = { Text(tr("mis. nama distributornya", "e.g. the distributor's name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(invoiceNo, { invoiceNo = it }, label = { Text(tr("Nomor Faktur (boleh kosong)", "Invoice Number (optional)")) }, placeholder = { Text(tr("mis. nomor faktur dari PBF", "e.g. the invoice number from the PBF")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(
-                value = formatDateID(date), onValueChange = {}, label = { Text(tr("Tanggal Beli", "Purchase Date")) },
-                readOnly = true, singleLine = true,
-                trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = tr("Pilih tanggal", "Pick a date")) },
-                interactionSource = dateInteraction,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Pembayaran", "Payment"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                PriceModeChip("Cash", selected = paymentType == "CASH") { paymentType = "CASH" }
-                Spacer(Modifier.width(6.dp))
-                PriceModeChip(tr("Kredit", "Credit"), selected = paymentType == "KREDIT") { paymentType = "KREDIT" }
-            }
-            // Tanggal jatuh tempo hanya untuk pembelian Kredit (permintaan
-            // Achmad 2026-10-30); boleh kosong — tanpa tanggal, kartu tidak
-            // menampilkan hitung mundur. Untuk Cash field ini tidak tampil.
-            if (paymentType == "KREDIT") {
+            // Formulir berbagian kartu (desain F1, pilihan Achmad
+            // 2026-11-04): FAKTUR, ITEM BELANJA, RINGKASAN.
+            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
+                    Text(tr("FAKTUR", "INVOICE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                OutlinedTextField(pbfName, { pbfName = it }, label = { Text(tr("Nama PBF", "PBF Name")) }, placeholder = { Text(tr("cth: Kimia Farma", "e.g. Kimia Farma")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(invoiceNo, { invoiceNo = it }, label = { Text(tr("Nomor Faktur (boleh kosong)", "Invoice Number (optional)")) }, placeholder = { Text(tr("mis. nomor faktur dari PBF", "e.g. the invoice number from the PBF")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(
-                    value = if (dueDate.isBlank()) "" else formatDateID(dueDate), onValueChange = {}, label = { Text(tr("Tanggal Jatuh Tempo (boleh kosong)", "Due Date (optional)")) },
-                    placeholder = { Text(tr("Pilih tanggal", "Pick a date")) },
+                    value = formatDateID(date), onValueChange = {}, label = { Text(tr("Tanggal Beli", "Purchase Date")) },
                     readOnly = true, singleLine = true,
-                    trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = tr("Pilih tanggal jatuh tempo", "Pick the due date")) },
-                    interactionSource = dueInteraction,
+                    trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = tr("Pilih tanggal", "Pick a date")) },
+                    interactionSource = dateInteraction,
                     modifier = Modifier.fillMaxWidth()
                 )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Pembayaran", "Payment"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    PriceModeChip("Cash", selected = paymentType == "CASH") { paymentType = "CASH" }
+                    Spacer(Modifier.width(6.dp))
+                    PriceModeChip(tr("Kredit", "Credit"), selected = paymentType == "KREDIT") { paymentType = "KREDIT" }
+                }
+                // Tanggal jatuh tempo hanya untuk pembelian Kredit (permintaan
+                // Achmad 2026-10-30); boleh kosong — tanpa tanggal, kartu tidak
+                // menampilkan hitung mundur. Untuk Cash field ini tidak tampil.
+                if (paymentType == "KREDIT") {
+                    OutlinedTextField(
+                        value = if (dueDate.isBlank()) "" else formatDateID(dueDate), onValueChange = {}, label = { Text(tr("Tanggal Jatuh Tempo (boleh kosong)", "Due Date (optional)")) },
+                        placeholder = { Text(tr("Pilih tanggal", "Pick a date")) },
+                        readOnly = true, singleLine = true,
+                        trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = tr("Pilih tanggal jatuh tempo", "Pick the due date")) },
+                        interactionSource = dueInteraction,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                }
             }
-            Spacer(Modifier.height(SpaceXS))
-            Text(tr("Obat yang Dibeli", "Purchased Medicines"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            rows.forEachIndexed { index, row ->
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(tr("Obat ${index + 1}", "Medicine ${index + 1}"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                        if (rows.size > 1) {
-                            IconButton(
-                                onClick = { rows = rows - row; if (activeRow == row) activeRow = null },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(Icons.Default.Delete, tr("Hapus obat ini", "Delete this item"), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                            }
-                        }
-                    }
-                    // Pemilih satuan per baris: ketukan ditangkap lewat
-                    // interactionSource baris ini (pola field read-only yang
-                    // sama seperti Tanggal Beli), membuka OptionPickerSheet
-                    // untuk baris yang bersangkutan. Sumber + efek DIKUNCI ke
-                    // objek baris (audit N3, 2026-10-30): tanpa kunci, slot
-                    // remember bergeser setelah baris lain dihapus dan
-                    // ketukan bisa membuka pemilih untuk baris yang salah.
-                    val unitInteraction = remember(row) { MutableInteractionSource() }
-                    LaunchedEffect(row, unitInteraction) {
-                        unitInteraction.interactions.collect { if (it is PressInteraction.Press) unitPickerRow = row }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                        OutlinedTextField(
-                            value = row.name,
-                            onValueChange = { row.name = it; activeRow = row },
-                            label = { Text(tr("Nama Obat", "Medicine Name")) },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = row.unit, onValueChange = {}, label = { Text(tr("Satuan", "Unit")) },
-                            readOnly = true, singleLine = true,
-                            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = tr("Pilih satuan", "Pick a unit")) },
-                            interactionSource = unitInteraction,
-                            modifier = Modifier.width(118.dp)
-                        )
-                    }
-                    if (activeRow == row && row.name.isNotBlank()) {
-                        val suggestions = meds.filter {
-                            it.name.contains(row.name.trim(), ignoreCase = true) && !it.name.equals(row.name.trim(), ignoreCase = true)
-                        }.take(5)
-                        if (suggestions.isNotEmpty()) {
-                            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                                suggestions.forEach { s ->
-                                    AssistChip(onClick = { row.name = s.name; row.unit = s.unit }, label = { Text(s.name) })
+            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
+                    Text(tr("ITEM BELANJA", "PURCHASED ITEMS"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                rows.forEachIndexed { index, row ->
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(tr("Obat ${index + 1}", "Medicine ${index + 1}"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                            if (rows.size > 1) {
+                                IconButton(
+                                    onClick = { rows = rows - row; if (activeRow == row) activeRow = null },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Delete, tr("Hapus obat ini", "Delete this item"), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
-                    }
-                    Spacer(Modifier.height(SpaceS))
-                    Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                        OutlinedTextField(
-                            value = row.qty,
-                            onValueChange = { row.qty = it.filter { c -> c.isDigit() } },
-                            label = { Text(tr("Jumlah", "Quantity")) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = row.price,
-                            onValueChange = { row.price = formatDecimalFieldValue(it) },
-                            label = { Text(tr("Harga Satuan", "Unit Price")) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.weight(2f)
-                        )
-                    }
-                    val rowSubtotal = (row.qty.toIntOrNull() ?: 0) * parseDecimal(row.price.text)
-                    if (rowSubtotal > 0) {
-                        Text("Subtotal: ${formatIDR(rowSubtotal)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = TextAlign.End)
+                        // Pemilih satuan per baris: ketukan ditangkap lewat
+                        // interactionSource baris ini (pola field read-only yang
+                        // sama seperti Tanggal Beli), membuka OptionPickerSheet
+                        // untuk baris yang bersangkutan. Sumber + efek DIKUNCI ke
+                        // objek baris (audit N3, 2026-10-30): tanpa kunci, slot
+                        // remember bergeser setelah baris lain dihapus dan
+                        // ketukan bisa membuka pemilih untuk baris yang salah.
+                        val unitInteraction = remember(row) { MutableInteractionSource() }
+                        LaunchedEffect(row, unitInteraction) {
+                            unitInteraction.interactions.collect { if (it is PressInteraction.Press) unitPickerRow = row }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
+                            OutlinedTextField(
+                                value = row.name,
+                                onValueChange = { row.name = it; activeRow = row },
+                                label = { Text(tr("Nama Obat", "Medicine Name")) },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = row.unit, onValueChange = {}, label = { Text(tr("Satuan", "Unit")) },
+                                readOnly = true, singleLine = true,
+                                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = tr("Pilih satuan", "Pick a unit")) },
+                                interactionSource = unitInteraction,
+                                modifier = Modifier.width(118.dp)
+                            )
+                        }
+                        if (activeRow == row && row.name.isNotBlank()) {
+                            val suggestions = meds.filter {
+                                it.name.contains(row.name.trim(), ignoreCase = true) && !it.name.equals(row.name.trim(), ignoreCase = true)
+                            }.take(5)
+                            if (suggestions.isNotEmpty()) {
+                                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
+                                    suggestions.forEach { s ->
+                                        AssistChip(onClick = { row.name = s.name; row.unit = s.unit }, label = { Text(s.name) })
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(SpaceS))
+                        Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
+                            OutlinedTextField(
+                                value = row.qty,
+                                onValueChange = { row.qty = it.filter { c -> c.isDigit() } },
+                                label = { Text(tr("Jumlah", "Quantity")) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = row.price,
+                                onValueChange = { row.price = formatDecimalFieldValue(it) },
+                                label = { Text(tr("Harga Satuan", "Unit Price")) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.weight(2f)
+                            )
+                        }
+                        val rowSubtotal = (row.qty.toIntOrNull() ?: 0) * parseDecimal(row.price.text)
+                        if (rowSubtotal > 0) {
+                            Text("Subtotal: ${formatIDR(rowSubtotal)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = TextAlign.End)
+                        }
                     }
                 }
+                OutlinedButton(
+                    onClick = { rows = rows + PurchaseItemRow(); activeRow = null },
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(tr("Tambah Obat", "Add Item"))
+                }
+                }
             }
-            OutlinedButton(
-                onClick = { rows = rows + PurchaseItemRow(); activeRow = null },
-                shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(tr("Tambah Obat", "Add Item"))
-            }
-            Spacer(Modifier.height(SpaceXS))
-            OutlinedTextField(ppn, { ppn = formatDecimalFieldValue(it) }, label = { Text(tr("Jumlah PPN (Rp)", "PPN/VAT Amount (Rp)")) }, placeholder = { Text("0") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Total Belanja", "Total Purchases"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text(formatIDR(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
+                    Text(tr("RINGKASAN", "SUMMARY"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                OutlinedTextField(ppn, { ppn = formatDecimalFieldValue(it) }, label = { Text(tr("Jumlah PPN (Rp)", "PPN/VAT Amount (Rp)")) }, placeholder = { Text("0") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Total Belanja", "Total Purchases"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text(formatIDR(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+                }
             }
             if (formError.isNotEmpty()) Text(formError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             Button(
