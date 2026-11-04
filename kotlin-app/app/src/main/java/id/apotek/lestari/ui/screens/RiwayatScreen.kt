@@ -736,6 +736,33 @@ fun RiwayatScreen() {
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+                            if (!isOpen && s.items.isNotEmpty()) {
+                                // Pratinjau isi (desain R2, pilihan Achmad
+                                // 2026-11-04): dua item pertama tampil tanpa
+                                // membuka kartu, sejajar kolom invoice; item
+                                // selebihnya diringkas "+N lainnya". Saat
+                                // kartu terbuka pratinjau hilang — rincian
+                                // lengkap sudah ditampilkan InvoiceDetailCard.
+                                Spacer(Modifier.height(SpaceS))
+                                Column(Modifier.padding(start = 52.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    s.items.take(2).forEach { item ->
+                                        Text(
+                                            "${item.medicineName} ×${item.qty}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    if (s.items.size > 2) {
+                                        Text(
+                                            tr("+${s.items.size - 2} lainnya", "+${s.items.size - 2} more"),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
                             if (isOpen) {
                                 Spacer(Modifier.height(SpaceL))
                                 InvoiceDetailCard(sale = s, graphicsLayer = receiptLayer)
