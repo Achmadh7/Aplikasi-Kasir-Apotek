@@ -124,4 +124,8 @@ dependencies {
     // Unit test JVM untuk logika murni (src/test) — dijalankan langkah
     // "Unit tests" di workflow sebelum APK dibangun.
     testImplementation("junit:junit:4.13.2")
+    // org.json asli untuk tes JVM BackupHelper: bawaan android.jar di unit
+    // test hanya stub yang melempar "not mocked", jadi perlu dependensi ini
+    // supaya buildJson/parseJson bisa diuji di CI (audit 2026-11-04, S1).
+    testImplementation("org.json:json:20240303")
 }
