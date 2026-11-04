@@ -718,6 +718,25 @@ class Repository {
     }
 
     /**
+     * Pratinjau restore (Paket 1+2, 2026-11-04): baca + validasi file backup
+     * dan muat data saat ini untuk dibandingkan, TANPA mengubah apa pun.
+     * Mengembalikan pasangan (isi file, data sekarang).
+     */
+    suspend fun previewBackup(json: String): ApiResult<Pair<BackupData, BackupData>> = call {
+        val fileData = BackupHelper.parseJson(json) // melempar kalau format bukan backup
+        val db = DatabaseProvider.db
+        val current = BackupData(
+            medicines = db.medicineDao().getAll(),
+            sales = db.saleDao().getAll(),
+            saleItems = db.saleDao().getAllItems(),
+            cashEntries = db.cashDao().getAll(),
+            purchases = db.purchaseDao().getAll(),
+            purchaseItems = db.purchaseDao().getAllItems()
+        )
+        fileData to current
+    }
+
+    /**
      * Pulihkan data dari file backup JSON. MENGGANTI seluruh data saat ini
      * dengan isi backup (ID dipertahankan supaya relasi penjualan-item utuh).
      * Dijalankan dalam satu transaksi — kalau ada yang gagal, tidak ada

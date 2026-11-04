@@ -2,6 +2,7 @@
 
 package id.apotek.lestari.ui.screens
 
+import android.content.Context
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -122,9 +123,16 @@ import java.util.TimeZone
 @Composable
 fun BackupScreen() {
     var msg by remember { mutableStateOf("") }
-    var showRestoreConfirm by remember { mutableStateOf(false) }
+    var preview by remember { mutableStateOf<Pair<BackupData, BackupData>?>(null) }
+    var pendingJson by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    // Catatan cadangan terakhir (Paket 1+2, 2026-11-04): waktu + nama file
+    // backup sukses terakhir, disimpan di apotek_prefs.
+    val prefs = remember { context.getSharedPreferences("apotek_prefs", Context.MODE_PRIVATE) }
+    var lastBackupAt by remember { mutableStateOf(prefs.getLong("last_backup_at", 0L)) }
+    var lastBackupName by remember { mutableStateOf(prefs.getString("last_backup_name", "") ?: "") }
+    var suggestedBackupName by remember { mutableStateOf("") }
 
     // Backup: pilih lokasi simpan, lalu tulis JSON hasil export.
     val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -138,13 +146,24 @@ fun BackupScreen() {
                             ?: throw IllegalStateException("Tidak bisa membuka file tujuan")
                     }.isSuccess
                 }
+                if (ok) {
+                    val stamp = System.currentTimeMillis()
+                    val displayName = runCatching {
+                        context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+                    }.getOrNull()?.takeIf { it.isNotBlank() } ?: suggestedBackupName
+                    prefs.edit().putLong("last_backup_at", stamp).putString("last_backup_name", displayName).apply()
+                    lastBackupAt = stamp
+                    lastBackupName = displayName
+                }
                 msg = if (ok) tr("Backup berhasil disimpan.", "Backup saved successfully.") else tr("Gagal menyimpan backup.", "Failed to save the backup.")
             } else {
                 msg = tr("Backup gagal: ", "Backup failed: ") + ((result as? ApiResult.Error)?.message ?: tr("tidak diketahui", "unknown"))
             }
         }
     }
-    // Restore: pilih file backup JSON, lalu ganti seluruh data dengan isinya.
+    // Restore (Paket 1+2): pilih file, lalu BACA + VALIDASI dulu untuk
+    // pratinjau — data belum berubah sampai pengguna menekan Pulihkan Data
+    // di dialog pratinjau.
     val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
@@ -153,8 +172,13 @@ fun BackupScreen() {
                     context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
                         ?: throw IllegalStateException("Tidak bisa membaca file")
                 }
-                val result = repo.importBackup(json)
-                msg = if (result is ApiResult.Success) tr("Restore berhasil. ${result.data}", "Restore successful. ${result.data}") else tr("Restore gagal: ", "Restore failed: ") + ((result as? ApiResult.Error)?.message ?: tr("tidak diketahui", "unknown"))
+                val result = repo.previewBackup(json)
+                if (result is ApiResult.Success) {
+                    pendingJson = json
+                    preview = result.data
+                } else {
+                    msg = tr("Restore gagal: ", "Restore failed: ") + ((result as? ApiResult.Error)?.message ?: tr("tidak diketahui", "unknown"))
+                }
             } catch (e: Exception) {
                 msg = tr("Restore gagal: ", "Restore failed: ") + (e.message ?: "")
             }
@@ -204,11 +228,24 @@ fun BackupScreen() {
                         Text(tr("Simpan salinan semua data ke file .json", "Save a copy of all data to a .json file"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                Spacer(Modifier.height(SpaceS))
+                if (lastBackupAt > 0) {
+                    Text(
+                        tr("Terakhir dicadangkan: ", "Last backed up: ") + formatBackupStamp(lastBackupAt) + if (lastBackupName.isNotBlank()) " • $lastBackupName" else "",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        tr("Belum pernah dicadangkan", "Never backed up"),
+                        style = MaterialTheme.typography.bodySmall, color = warningAmber(), fontWeight = FontWeight.Medium
+                    )
+                }
                 Spacer(Modifier.height(SpaceM))
                 Button(
                     onClick = {
                         val stamp = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).format(Date())
-                        backupLauncher.launch("backup-apotek-lestari-$stamp.json")
+                        suggestedBackupName = "backup-apotek-lestari-$stamp.json"
+                        backupLauncher.launch(suggestedBackupName)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                     shape = RoundedCornerShape(28.dp),
@@ -236,7 +273,7 @@ fun BackupScreen() {
                 )
                 Spacer(Modifier.height(SpaceM))
                 OutlinedButton(
-                    onClick = { showRestoreConfirm = true },
+                    onClick = { restoreLauncher.launch(arrayOf("application/json")) },
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.fillMaxWidth().height(52.dp)
                 ) { Text("Restore Data") }
@@ -247,21 +284,51 @@ fun BackupScreen() {
             Text(msg, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
         }
     }
-    if (showRestoreConfirm) {
+    preview?.let { (fileData, current) ->
         AlertDialog(
-            onDismissRequest = { showRestoreConfirm = false },
-            title = { Text(tr("Pulihkan data dari backup?", "Restore data from backup?")) },
-            text = { Text(tr("Semua data saat ini (obat, penjualan, kas) akan diganti dengan isi file backup. Pastikan kamu memilih file backup yang benar.", "All current data (medicines, sales, cash) will be replaced with the backup file's contents. Make sure you choose the right backup file.")) },
+            onDismissRequest = { preview = null },
+            title = { Text(tr("Pratinjau Backup", "Backup Preview")) },
+            text = {
+                Column {
+                    Text(
+                        if (fileData.exportedAtMillis > 0) tr("Dibuat: ", "Created: ") + formatBackupStamp(fileData.exportedAtMillis)
+                        else tr("Dibuat: tanggal tidak tercatat (file lama)", "Created: date not recorded (older file)"),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(SpaceS))
+                    Text(
+                        tr("Isi file: ${fileData.medicines.size} obat • ${fileData.sales.size} penjualan • ${fileData.cashEntries.size} kas • ${fileData.purchases.size} pembelian PBF", "File contents: ${fileData.medicines.size} medicines • ${fileData.sales.size} sales • ${fileData.cashEntries.size} cash entries • ${fileData.purchases.size} PBF purchases"),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        tr("Data sekarang: ${current.medicines.size} obat • ${current.sales.size} penjualan • ${current.cashEntries.size} kas • ${current.purchases.size} pembelian PBF", "Current data: ${current.medicines.size} medicines • ${current.sales.size} sales • ${current.cashEntries.size} cash entries • ${current.purchases.size} PBF purchases"),
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(SpaceS))
+                    Text(
+                        tr("Restore akan MENGGANTI semua data sekarang dengan isi file ini.", "Restoring will REPLACE all current data with this file's contents."),
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Medium
+                    )
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    showRestoreConfirm = false
-                    restoreLauncher.launch(arrayOf("application/json"))
-                }) { Text(tr("Pilih File", "Choose File")) }
+                    val json = pendingJson
+                    preview = null
+                    scope.launch {
+                        val result = repo.importBackup(json)
+                        msg = if (result is ApiResult.Success) tr("Restore berhasil. ${result.data}", "Restore successful. ${result.data}") else tr("Restore gagal: ", "Restore failed: ") + ((result as? ApiResult.Error)?.message ?: tr("tidak diketahui", "unknown"))
+                    }
+                }) { Text(tr("Pulihkan Data", "Restore Data")) }
             },
-            dismissButton = { TextButton(onClick = { showRestoreConfirm = false }) { Text(tr("Batal", "Cancel")) } }
+            dismissButton = { TextButton(onClick = { preview = null }) { Text(tr("Batal", "Cancel")) } }
         )
     }
 }
+
+/** Cap waktu backup ("4 Nov 2026, 13.05") dalam bahasa aplikasi aktif. */
+private fun formatBackupStamp(millis: Long): String =
+    SimpleDateFormat("d MMM yyyy, HH.mm", appLocale()).format(Date(millis))
 
 /** Teks lengkap lisensi MIT (sama dengan file LICENSE di repo). */
 private const val MIT_LICENSE_TEXT = """MIT License

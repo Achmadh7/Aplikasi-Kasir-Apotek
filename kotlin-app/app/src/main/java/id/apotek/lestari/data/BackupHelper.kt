@@ -16,7 +16,7 @@ import org.json.JSONObject
  * Backup & Restore — salinan seluruh isi database lokal (obat, penjualan,
  * item penjualan, kas) dalam satu file JSON.
  *
- * Format file: {"version":1, "app":"apotek-lestari",
+ * Format file: {"version":1, "app":"apotek-lestari", "exportedAtMillis":<ms epoch>,
  *   "medicines":[...], "sales":[...], "saleItems":[...], "cashEntries":[...],
  *   "purchases":[...], "purchaseItems":[...]}
  * Array purchases/purchaseItems (fitur PBF) bersifat OPSIONAL saat dibaca:
@@ -31,7 +31,9 @@ data class BackupData(
     val saleItems: List<SaleItemEntity> = emptyList(),
     val cashEntries: List<CashEntryEntity> = emptyList(),
     val purchases: List<PurchaseEntity> = emptyList(),
-    val purchaseItems: List<PurchaseItemEntity> = emptyList()
+    val purchaseItems: List<PurchaseItemEntity> = emptyList(),
+    // Cap waktu pembuatan file (ms epoch); 0 = file lama tanpa cap waktu.
+    val exportedAtMillis: Long = 0
 )
 
 object BackupHelper {
@@ -41,6 +43,7 @@ object BackupHelper {
         val root = JSONObject()
         root.put("version", VERSION)
         root.put("app", "apotek-lestari")
+        root.put("exportedAtMillis", System.currentTimeMillis())
 
         val meds = JSONArray()
         for (m in data.medicines) {
@@ -149,6 +152,7 @@ object BackupHelper {
         val version = root.optInt("version", 0)
         if (version != VERSION) throw IllegalArgumentException(tr("Versi backup tidak dikenali (versi $version)", "Unrecognized backup version (version $version)"))
         if (root.optString("app", "") != "apotek-lestari") throw IllegalArgumentException(tr("File bukan backup Apotek Lestari", "Not an Apotek Lestari backup file"))
+        val exportedAtMillis = root.optLong("exportedAtMillis", 0)
 
         // A3: keempat array wajib ada — file tanpa array bukan backup kosong,
         // melainkan backup tidak lengkap dan harus ditolak.
@@ -379,7 +383,7 @@ object BackupHelper {
             }
         }
 
-        return BackupData(medicines, sales, items, entries, purchases, purchaseItems)
+        return BackupData(medicines, sales, items, entries, purchases, purchaseItems, exportedAtMillis)
     }
 
     /** A3: array wajib ada dan benar-benar JSONArray; kalau tidak, backup ditolak. */
