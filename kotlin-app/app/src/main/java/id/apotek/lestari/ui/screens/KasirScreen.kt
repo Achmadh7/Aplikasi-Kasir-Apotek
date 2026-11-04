@@ -356,7 +356,7 @@ fun KasirScreen() {
             SortToggle(sortAz = sortAz, onToggle = { sortAz = !sortAz })
         }
         Spacer(Modifier.height(SpaceS))
-        Column(verticalArrangement = Arrangement.spacedBy(SpaceM)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             sorted.forEachIndexed { index, m ->
                 AnimatedVisibility(
                     visible = listEntered,
@@ -367,7 +367,7 @@ fun KasirScreen() {
                 ) {
                 val out = m.stock <= 0
                 ExpressiveCard(
-                    shape = MaterialTheme.shapes.extraLarge,
+                    shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth()
                         .onGloballyPositioned { cardCenters[m.id] = it.boundsInWindow().center }
                         .clickable(enabled = !out) {
@@ -397,21 +397,41 @@ fun KasirScreen() {
                         }
                     }
                 ) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
+                    // Baris sangat padat KS6 (pilihan Achmad 2026-11-04):
+                    // dua baris saja — nama + harga, lalu kategori + stok
+                    // sebagai teks berwarna tanpa kotak lencana — supaya
+                    // 6-8 obat muat dalam satu layar saat stok bertambah
+                    // banyak. Ketuk kartu & animasi terbang tidak berubah.
+                    val stockKey = stockLabel(m.stock)
+                    val stockText = when (stockKey) {
+                        "Aman" -> tr("Stok ${m.stock} • Aman", "Stock ${m.stock} • Safe")
+                        "Sedang" -> tr("Stok ${m.stock} • Sedang", "Stock ${m.stock} • Medium")
+                        "Rendah" -> tr("Stok ${m.stock} • Rendah", "Stock ${m.stock} • Low")
+                        else -> tr("Stok ${m.stock} • Habis", "Stock ${m.stock} • Out of stock")
+                    }
+                    val stockColor = when (stockKey) {
+                        "Aman" -> MaterialTheme.colorScheme.primary
+                        "Sedang" -> MaterialTheme.colorScheme.tertiary
+                        "Rendah" -> warningAmber()
+                        else -> MaterialTheme.colorScheme.error
+                    }
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                                m.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                color = if (out) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface
+                                color = if (out) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
                             )
-                            Spacer(Modifier.height(SpaceXS))
-                            Text("${m.category} • ${m.unit}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.height(SpaceXS))
-                            Text(formatIDR(m.sellPrice), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(12.dp))
+                            Text(formatIDR(m.sellPrice), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, textAlign = TextAlign.End)
                         }
-                        // Keterangan stok di Kasir sedikit diperbesar
-                        // (permintaan Achmad 2026-11-01); di Stok tetap biasa.
-                        StockBadge(m.stock, large = true)
+                        Spacer(Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("${m.category} • ${m.unit}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            Spacer(Modifier.width(12.dp))
+                            Text(stockText, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = stockColor, textAlign = TextAlign.End)
+                        }
                     }
                 }
                 }
