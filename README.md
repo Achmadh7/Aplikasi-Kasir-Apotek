@@ -5,7 +5,7 @@ An Android app for pharmacies: sales cashier, medicine stock, cash book, profit 
 [![Build APK](https://github.com/Achmadh7/Aplikasi-Kasir-Apotek/actions/workflows/main.yml/badge.svg)](https://github.com/Achmadh7/Aplikasi-Kasir-Apotek/actions)
 
 - **Technology:** Kotlin + Jetpack Compose (Material 3 Expressive), local Room/SQLite database
-- **App version:** 1.1.0 — minimum Android 8.0 (API 26)
+- **App version:** 1.2.0 — minimum Android 8.0 (API 26)
 - **Time zone:** all "today / this month" boundaries use Asia/Jakarta (WIB)
 
 ## Screenshots

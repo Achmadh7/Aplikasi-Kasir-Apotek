@@ -1,7 +1,7 @@
 # Architecture — Apotek Lestari
 
 A short map of the project: code structure, database, and the main data
-flows. Written from the code at the current head (app version 1.1.0).
+flows. Written from the code at the current head (app version 1.2.0).
 
 ## Overview
 

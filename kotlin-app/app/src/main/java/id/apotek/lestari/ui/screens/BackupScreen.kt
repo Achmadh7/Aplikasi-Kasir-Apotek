@@ -269,7 +269,7 @@ fun BackupScreen() {
 fun TentangScreen() {
     // Versi hardcoded — samakan dengan versionName di build.gradle.kts.
     // (BuildConfig tidak digenerate di setup AGP proyek ini, jadi jangan pakai BuildConfig.VERSION_NAME.)
-    val version = "1.1.0"
+    val version = "1.2.0"
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 20.dp),
