@@ -116,7 +116,7 @@ dependencies {
     ksp("androidx.room:room-compiler:2.7.2")
 
     // Excel (.xlsx) untuk Import / Export / Template Stok — Apache POI
-    implementation("org.apache.poi:poi-ooxml:5.2.5")
+    implementation("org.apache.poi:poi-ooxml:5.5.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
