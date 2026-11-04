@@ -33,11 +33,6 @@
 -dontwarn org.apache.commons.collections4.**
 -dontwarn org.apache.commons.math3.**
 
-# ML Kit Barcode Scanning & CameraX membawa consumer rules sendiri;
-# redam peringatan yang tidak relevan supaya build tidak berisik.
--dontwarn com.google.mlkit.**
--dontwarn androidx.camera.**
-
 # R8 gagal (minifyReleaseWithR8 FAILED) karena POI/Log4j mereferensikan
 # class yang tidak ada di Android dan tidak pernah dipakai di HP:
 # - java.awt.* (dipakai com.graphbuilder, pustaka gambar POI — desktop only)

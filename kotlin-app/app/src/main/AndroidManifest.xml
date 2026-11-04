@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Cetak struk ke printer thermal Bluetooth (ESC/POS): hanya perangkat yang
          sudah terpasang yang dipakai, jadi tidak butuh BLUETOOTH_SCAN / lokasi.
          BLUETOOTH_CONNECT adalah izin runtime di Android 12+. -->
