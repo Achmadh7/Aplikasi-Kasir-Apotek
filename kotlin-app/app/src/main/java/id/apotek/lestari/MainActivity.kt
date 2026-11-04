@@ -58,6 +58,10 @@ import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
 import id.apotek.lestari.ui.theme.AppLang
 import id.apotek.lestari.ui.theme.tr
+import id.apotek.lestari.ui.theme.ExpressiveCard
+import id.apotek.lestari.ui.theme.SpaceL
+import id.apotek.lestari.ui.theme.SpaceM
+import id.apotek.lestari.ui.theme.SpaceS
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 class MainActivity : ComponentActivity() {
@@ -131,16 +135,14 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route ?: "beranda"
-    // Sheet "Lainnya": Laba, Pengingat, Riwayat, Backup & Restore — menu yang tidak lagi ada di bar bawah.
-    var showMoreSheet by remember { mutableStateOf(false) }
-    val moreSheetState = rememberModalBottomSheetState()
+    // Halaman "Lainnya" (redesain A2, pilihan Achmad 2026-11-04): dulu sheet
+    // bawah, kini layar penuh berisi petak besar menu + baris pengaturan.
     // Animasi lingkaran tema (dipilih Achmad 2026-11-01, opsi 1 — sama seperti
     // di Image HD Upscale): tangkapan layar tema lama ditumpuk di atas tema
     // baru, dilubangi lingkaran yang membesar, sehingga tema baru tersingkap
     // mulai dari titik awalnya. Titik awalnya adalah ikon tab "Lainnya" di bar
-    // bawah (tombol yang membuka sheet berisi baris tema) — baris tema sendiri
-    // berada di jendela sheet yang terpisah, jadi posisinya tidak bisa dipakai
-    // sebagai titik ukur yang stabil; pola yang sama dipakai HD Upscale dari
+    // bawah — baris tema sendiri berada di halaman Lainnya, jadi posisinya
+    // tidak bisa dipakai sebagai titik ukur yang stabil; pola yang sama dipakai HD Upscale dari
     // tombol gir pembuka Pengaturan. Bila tangkapan gagal, tema berganti
     // seketika seperti sebelumnya.
     val rootView = LocalView.current
@@ -173,8 +175,8 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
         }
     }
     // Urutan tab untuk swipe (kiri ke kanan): Beranda, Stok, Kasir, Keuangan,
-    // Lainnya. "Lainnya" membuka sheet, bukan layar — geser ke kiri dari
-    // Keuangan membuka sheet Lainnya (sama seperti mengetuk tab Lainnya).
+    // Lainnya. Geser ke kiri dari Keuangan membuka halaman Lainnya (sama
+    // seperti mengetuk tab Lainnya).
     val swipeableTabs = listOf("beranda", "stok", "kasir", "keuangan", "lainnya")
     // Arah navigasi antar tab (1 = maju/ke kanan, -1 = mundur/ke kiri) —
     // dipakai transisi NavHost supaya layar mengikuti arah geser/ketukan.
@@ -210,12 +212,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 onDragEnd = {
                     val currentIndex = swipeableTabs.indexOf(current)
                     if (swipeOffset < -swipeThresholdPx && currentIndex < swipeableTabs.lastIndex) {
-                        val next = swipeableTabs[currentIndex + 1]
-                        if (next == "lainnya") {
-                            showMoreSheet = true // Geser ke kiri dari Keuangan -> buka sheet Lainnya
-                        } else {
-                            goToTab(next) // Geser ke kiri -> tab berikutnya
-                        }
+                        goToTab(swipeableTabs[currentIndex + 1]) // Geser ke kiri -> tab berikutnya
                     } else if (swipeOffset > swipeThresholdPx && currentIndex > 0) {
                         goToTab(swipeableTabs[currentIndex - 1]) // Geser ke kanan -> tab sebelumnya
                     }
@@ -241,9 +238,9 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             // MotionScheme expressive dari tema. Susunan EqualWeight
             // sesuai anjuran dokumentasi untuk 3-5 tujuan di layar kecil.
             // Label selalu tampil (bawaan komponen); ikon aktif filled,
-            // tidak aktif outlined. Tab "Lainnya" bukan tujuan: ketuknya
-            // membuka sheet, dan ia tampak terpilih hanya saat berada di
-            // salah satu sub-menunya (sama seperti perilaku dock lama).
+            // tidak aktif outlined. Tab "Lainnya" kini tujuan sungguhan
+            // (halaman petak besar A2) dan tampak terpilih di halamannya
+            // sendiri maupun di salah satu sub-menunya.
             ShortNavigationBar(arrangement = ShortNavigationBarArrangement.EqualWeight) {
                 TABS.forEach { tab ->
                     val selected = when (tab.route) {
@@ -251,11 +248,11 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                         "stok" -> current == "stok"
                         "kasir" -> current == "kasir"
                         "keuangan" -> current == "keuangan"
-                        else -> current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf")
+                        else -> current == "lainnya" || current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf")
                     }
                     ShortNavigationBarItem(
                         selected = selected,
-                        onClick = { if (tab.route == "lainnya") showMoreSheet = true else goToTab(tab.route) },
+                        onClick = { goToTab(tab.route) },
                         icon = {
                             Icon(
                                 if (selected) tab.icon else tab.iconOutlined,
@@ -308,6 +305,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 composable("kasir") { KasirScreen() }
                 composable("stok") { StokScreen() }
                 composable("keuangan") { KeuanganScreen() }
+                composable("lainnya") { LainnyaScreen(onGo = { route -> goToTab(route) }, isDark = isDark, onToggleTheme = { toggleThemeWithReveal() }, appLang = appLang, onLanguageChange = onLanguageChange) }
                 composable("laba") { LabaScreen() }
                 composable("pengingat") { PengingatScreen(onGoStok = { goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
                 composable("riwayat") { RiwayatScreen() }
@@ -346,111 +344,122 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
         )
     }
     }
-    // Sheet "Lainnya": Laba, Pengingat, Riwayat, Backup & Restore.
-    if (showMoreSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showMoreSheet = false },
-            sheetState = moreSheetState,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        ) {
-            // Isi sheet bisa DIGULIR: di mode lanskap (HP/tablet) tinggi layar
-            // pendek sehingga tanpa gulir baris terbawah (Mode Terang/Gelap
-            // dan Tentang Aplikasi) terpotong dan tidak bisa diketuk
-            // (laporan Achmad 2026-10-29).
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 8.dp).padding(top = 8.dp, bottom = 24.dp)) {
-                Text(tr("Menu Lainnya", "More Menu"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 16.dp))
-                listOf(
-                    Triple("laba", tr("Laba", "Profit"), Icons.Default.TrendingUp),
-                    Triple("terlaris", tr("Obat Terlaris", "Best Sellers"), Icons.Default.Leaderboard),
-                    Triple("pengingat", tr("Pengingat", "Reminders"), Icons.Default.NotificationsActive),
-                    Triple("riwayat", tr("Riwayat", "History"), Icons.Default.ReceiptLong),
-                    Triple("pbf", tr("Faktur PBF", "PBF Invoices"), Icons.Default.LocalShipping),
-                    Triple("backup", tr("Backup & Restore", "Backup & Restore"), Icons.Default.Backup)
-                ).forEach { (route, label, icon) ->
-                    ListItem(
-                        headlineContent = { Text(label, style = MaterialTheme.typography.titleMedium) },
-                        leadingContent = {
+}
+
+private data class LainnyaTile(
+    val route: String,
+    val label: String,
+    val sub: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
+)
+
+// Halaman "Lainnya" — redesain A2 "Halaman Petak Besar" (pilihan Achmad
+// 2026-11-04, menggantikan sheet bawah): enam menu utama sebagai petak
+// besar dua kolom dengan subjudul penjelas; di bawahnya baris pengaturan
+// (tema, bahasa, tentang) berperilaku sama seperti dulu di sheet. Halaman
+// bisa digulir supaya tetap utuh di mode lanskap.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LainnyaScreen(
+    onGo: (String) -> Unit,
+    isDark: Boolean,
+    onToggleTheme: () -> Unit,
+    appLang: String,
+    onLanguageChange: (String) -> Unit
+) {
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                Icon(Icons.Default.MoreHoriz, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(tr("Lainnya", "More"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+        }
+        Spacer(Modifier.height(SpaceL))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Spacer(Modifier.height(SpaceL))
+        val tiles = listOf(
+            LainnyaTile("laba", tr("Laba", "Profit"), tr("Laba & margin", "Profit & margins"), Icons.Default.TrendingUp),
+            LainnyaTile("terlaris", tr("Obat Terlaris", "Best Sellers"), tr("Peringkat penjualan", "Sales ranking"), Icons.Default.Leaderboard),
+            LainnyaTile("pengingat", tr("Pengingat", "Reminders"), tr("Stok & tagihan", "Stock & bills"), Icons.Default.NotificationsActive),
+            LainnyaTile("riwayat", tr("Riwayat", "History"), tr("Semua penjualan", "All sales"), Icons.Default.ReceiptLong),
+            LainnyaTile("pbf", tr("Faktur PBF", "PBF Invoices"), tr("Pembelian distributor", "Distributor purchases"), Icons.Default.LocalShipping),
+            LainnyaTile("backup", tr("Backup & Restore", "Backup & Restore"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
+        )
+        tiles.chunked(2).forEach { rowTiles ->
+            Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
+                rowTiles.forEach { tile ->
+                    ExpressiveCard(modifier = Modifier.weight(1f).height(128.dp).clickable { onGo(tile.route) }) {
+                        Column(Modifier.padding(16.dp)) {
                             Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                                Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                                Icon(tile.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                             }
-                        },
-                        trailingContent = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable {
-                            showMoreSheet = false
-                            goToTab(route)
+                            Spacer(Modifier.height(SpaceM))
+                            Text(tile.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
+                            Text(tile.sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                         }
+                    }
+                }
+                if (rowTiles.size == 1) Spacer(Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(SpaceM))
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = SpaceS))
+        // Ganti tema Gelap <-> Terang (pilihan tersimpan, dipakai lagi saat aplikasi dibuka).
+        ListItem(
+            headlineContent = {
+                Text(
+                    if (isDark) tr("Mode Terang", "Light Mode") else tr("Mode Gelap", "Dark Mode"),
+                    style = MaterialTheme.typography.titleMedium
+                )
+            },
+            leadingContent = {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                    Icon(
+                        if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                        null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(10.dp).size(22.dp)
                     )
                 }
-                // Ganti tema Gelap <-> Terang (pilihan tersimpan, dipakai lagi saat aplikasi dibuka).
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
-                ListItem(
-                    headlineContent = {
-                        Text(
-                            if (isDark) tr("Mode Terang", "Light Mode") else tr("Mode Gelap", "Dark Mode"),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    },
-                    leadingContent = {
-                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                            Icon(
-                                if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
-                                null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(10.dp).size(22.dp)
-                            )
-                        }
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    modifier = Modifier.clickable {
-                        toggleThemeWithReveal()
-                        showMoreSheet = false
-                    }
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            modifier = Modifier.clickable { onToggleTheme() }
+        )
+        // Ganti bahasa Indonesia <-> Inggris, di bawah ganti tema
+        // (permintaan Achmad 2026-11-02). Ketuk langsung berganti ke bahasa
+        // satunya; pilihan tersimpan untuk kunjungan berikutnya.
+        ListItem(
+            headlineContent = {
+                Text(
+                    if (appLang == "en") "Bahasa Indonesia" else "English",
+                    style = MaterialTheme.typography.titleMedium
                 )
-                // Ganti bahasa Indonesia <-> Inggris, di bawah ganti tema
-                // (permintaan Achmad 2026-11-02). Pola sama seperti baris
-                // tema: ketuk langsung berganti ke bahasa satunya dan sheet
-                // menutup; pilihan tersimpan untuk kunjungan berikutnya.
-                ListItem(
-                    headlineContent = {
-                        Text(
-                            if (appLang == "en") "Bahasa Indonesia" else "English",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    },
-                    leadingContent = {
-                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                            Icon(
-                                Icons.Default.Language,
-                                null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(10.dp).size(22.dp)
-                            )
-                        }
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    modifier = Modifier.clickable {
-                        onLanguageChange(if (appLang == "en") "id" else "en")
-                        showMoreSheet = false
-                    }
-                )
-                // Tentang Aplikasi, di bawah ganti tema.
-                ListItem(
-                    headlineContent = { Text(tr("Tentang Aplikasi", "About App"), style = MaterialTheme.typography.titleMedium) },
-                    leadingContent = {
-                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                            Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-                        }
-                    },
-                    trailingContent = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    modifier = Modifier.clickable {
-                        showMoreSheet = false
-                        goToTab("tentang")
-                    }
-                )
-            }
-        }
+            },
+            leadingContent = {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                    Icon(
+                        Icons.Default.Language,
+                        null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(10.dp).size(22.dp)
+                    )
+                }
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            modifier = Modifier.clickable { onLanguageChange(if (appLang == "en") "id" else "en") }
+        )
+        // Tentang Aplikasi, di bawah ganti bahasa.
+        ListItem(
+            headlineContent = { Text(tr("Tentang Aplikasi", "About App"), style = MaterialTheme.typography.titleMedium) },
+            leadingContent = {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                    Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                }
+            },
+            trailingContent = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            modifier = Modifier.clickable { onGo("tentang") }
+        )
     }
 }
