@@ -160,6 +160,7 @@ fun PbfScreen() {
     val todayKey = dayKeyID(Date())
     val yesterdayKey = dayKeyID(Date(System.currentTimeMillis() - 86_400_000L))
     val monthPrefix = todayKey.substring(0, 7)
+    val monthLabel = SimpleDateFormat("MMMM yyyy", appLocale()).format(Date())
     // Ringkasan belanja hanya menghitung pembelian CASH (permintaan Achmad
     // 2026-10-30): pembelian Kredit belum masuk total Hari Ini/Bulan Ini.
     // Daftar riwayat di bawah tetap menampilkan semuanya.
@@ -186,20 +187,25 @@ fun PbfScreen() {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Spacer(Modifier.height(SpaceL))
                 DemoBanner()
-                // Ringkasan belanja hari ini + bulan ini (kartu biru muda,
-                // pola yang sama seperti ringkasan Obat Terlaris).
-                ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Column(Modifier.weight(1f)) {
-                            Text(tr("BELANJA HARI INI", "TODAY'S PURCHASES"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                // Ringkasan belanja (desain PF1, pilihan Achmad 2026-11-04):
+                // dua kartu netral sejajar menggantikan blok biru lebar —
+                // Hari Ini dengan jumlah pembelian, Bulan Ini dengan nama
+                // bulan berjalan. Tetap hanya menghitung pembelian CASH.
+                Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.weight(1f)) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(tr("BELANJA HARI INI", "TODAY'S PURCHASES"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceXS))
-                            AnimatedAmount(todayTotal, MaterialTheme.typography.titleLarge, Color.White)
-                            Text(tr("${todayPurchases.size} pembelian", "${todayPurchases.size} purchases"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
+                            AnimatedAmount(todayTotal, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface)
+                            Text(tr("${todayPurchases.size} pembelian", "${todayPurchases.size} purchases"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                            Text(tr("BELANJA BULAN INI", "THIS MONTH'S PURCHASES"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    }
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.weight(1f)) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(tr("BELANJA BULAN INI", "THIS MONTH'S PURCHASES"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceXS))
-                            AnimatedAmount(monthTotal, MaterialTheme.typography.titleLarge, Color.White)
+                            AnimatedAmount(monthTotal, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface)
+                            Text(monthLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -259,9 +265,20 @@ fun PbfScreen() {
                 item {
                     ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
-                            Spacer(Modifier.height(SpaceS))
-                            Text(tr("Belum ada catatan pembelian. Catat belanja dari PBF lewat tombol + di kanan bawah — ini murni catatan, tidak mengubah stok dan kas.", "No purchase records yet. Record PBF purchases with the + button at the bottom right — these are records only and do not change stock or cash."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            // Desain PF1: ikon truk di lingkaran biru, judul,
+                            // lalu tombol aksi yang membuka formulir yang
+                            // sama dengan FAB.
+                            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                                Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(14.dp).size(28.dp))
+                            }
+                            Spacer(Modifier.height(SpaceM))
+                            Text(tr("Belum ada catatan pembelian", "No purchase records yet"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(SpaceXS))
+                            Text(tr("Catat belanja dari PBF lewat tombol di bawah atau tombol + di kanan bawah — ini murni catatan, tidak mengubah stok dan kas.", "Record PBF purchases with the button below or the + button at the bottom right — these are records only and do not change stock or cash."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                            Spacer(Modifier.height(SpaceM))
+                            Button(onClick = { showForm = true }, shape = RoundedCornerShape(24.dp)) {
+                                Text(tr("Catat Pembelian Pertama", "Record First Purchase"))
+                            }
                         }
                     }
                 }
