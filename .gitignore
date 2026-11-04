@@ -3,7 +3,6 @@ build/
 *.apk
 *.aab
 local.properties
-app.db
 
 # Signing (NEVER commit)
 signing.properties

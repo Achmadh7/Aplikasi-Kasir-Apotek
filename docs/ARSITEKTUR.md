@@ -10,19 +10,19 @@ all data lives locally on the phone (Room/SQLite), with no server and no
 accounts. A single app module (`kotlin-app/app`) and a single Activity host
 the whole app; `MainActivity.kt` handles navigation with a Material 3
 Expressive bottom bar (ShortNavigationBar): **Beranda (Home), Kasir (POS),
-Stok (Stock), Keuangan (Finance)**, plus a **Lainnya (More)** sheet (Profit,
+Stok (Stock), Keuangan (Finance)**, plus a **Lainnya (More)** page (Profit,
 Reminders, Sales History, PBF Invoices, Best Sellers, Backup & Restore,
 About). The app is bilingual ID/EN (the `tr(id, en)` function in the theme)
 and supports dark/light mode.
 
 ## Tech stack
 
-- Kotlin 2.2.20, Jetpack Compose, Material 3 Expressive (material3 1.5.0-alpha08)
+- Kotlin 2.4.10, Jetpack Compose, Material 3 Expressive (material3 1.5.0-beta02)
 - Fidelity colour scheme from seed `#0061A4`
 - Room (local database, version 12) — no networking at all
-- Apache POI 5.2.5 for Excel (.xlsx) import/export
-- Android Gradle Plugin 8.11.1, Gradle 8.13, JDK 17
-- minSdk 26, targetSdk 34, compileSdk 36
+- Apache POI 5.5.1 for Excel (.xlsx) import/export
+- Android Gradle Plugin 9.1.1, Gradle 9.3.1, JDK 17
+- minSdk 26, targetSdk 36, compileSdk 37
 
 ## Project structure
 
@@ -102,14 +102,16 @@ summaries count CASH only.
 **Backup & restore.** A single JSON file `{version, app, medicines, sales,
 saleItems, cashEntries, purchases, purchaseItems}` via the Storage Access
 Framework (can be saved to Drive). Restore replaces all data inside one
-Room transaction, after confirmation.
+Room transaction, after a preview (file date and record counts) and
+confirmation.
 
 ## Build & release
 
-CI (`.github/workflows/main.yml`, run manually) builds the debug APK, then
-checks out the keystore from the private Sigkey repo, writes
-`signing.properties` from GitHub Secrets, and builds the release APK
-(`app-release-apk`). `app/build.gradle.kts` reads that `signing.properties`;
+CI (`.github/workflows/main.yml`, run manually) runs the unit tests and
+Android Lint (report-only), builds the debug APK, then checks out the
+keystore from the private Sigkey repo, writes `signing.properties` from
+GitHub Secrets, and builds the release APK (uploaded as the
+`Apotek Lestari-<version>-Release` artifact). `app/build.gradle.kts` reads that `signing.properties`;
 the `verifyReleaseSigning` guard fails the release build when signing is
 incomplete — a release APK can never silently ship signed with the debug
 key.
