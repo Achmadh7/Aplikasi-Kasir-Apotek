@@ -332,8 +332,10 @@ fun AnimatedCheckmark(size: Dp = 56.dp) {
         modifier = Modifier.size(size).graphicsLayer(scaleX = circleScale, scaleY = circleScale)
     ) {
         Canvas(Modifier.fillMaxSize().padding((14 * scaleF).dp)) {
-            val w = size.width
-            val h = size.height
+            // this.size = ukuran kanvas (DrawScope); parameter `size: Dp`
+            // menaungi nama itu, jadi harus ditulis eksplisit lewat this.
+            val w = this.size.width
+            val h = this.size.height
             val stroke = (7 * scaleF).dp.toPx()
             val t1 = (trim * 2f).coerceIn(0f, 1f)
             val t2 = (trim * 2f - 1f).coerceIn(0f, 1f)
