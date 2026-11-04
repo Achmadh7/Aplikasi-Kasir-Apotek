@@ -63,13 +63,15 @@ class ThemeLogicTest {
 
     @Test
     fun formatCompactIDR_shortensForChartLabels() {
+        // Format aplikasi memang TANPA spasi ("150rb" / "2,5jt" seperti
+        // KDoc fungsinya) — beda dari formatRupiahShort di aplikasi Kasir.
         assertEquals("0", formatCompactIDR(0))
         assertEquals("999", formatCompactIDR(999))
-        assertEquals("96 rb", formatCompactIDR(96_000))
-        assertEquals("1,5 rb", formatCompactIDR(1_500))
-        assertEquals("1,5 jt", formatCompactIDR(1_500_000))
-        assertEquals("2 jt", formatCompactIDR(2_000_000))
-        assertEquals("-1,5 rb", formatCompactIDR(-1_500))
+        assertEquals("96rb", formatCompactIDR(96_000))
+        assertEquals("1,5rb", formatCompactIDR(1_500))
+        assertEquals("1,5jt", formatCompactIDR(1_500_000))
+        assertEquals("2jt", formatCompactIDR(2_000_000))
+        assertEquals("-1,5rb", formatCompactIDR(-1_500))
     }
 
     @Test
