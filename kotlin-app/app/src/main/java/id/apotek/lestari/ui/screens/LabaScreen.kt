@@ -192,22 +192,35 @@ fun LabaScreen() {
                         expandVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)),
                     exit = fadeOut()
                 ) {
-                ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
-                    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                // Desain LP4 (pilihan Achmad 2026-11-04): Laba Kotor dan
+                // Laba Bersih jadi DUA kartu hero sejajar \u2014 biru primer dan
+                // hijau \u2014 menggantikan hero tunggal + grid statistik 2x2.
+                // Angka tetap formatIDR penuh lewat AnimatedAmount
+                // (headlineSmall supaya muat di kartu setengah lebar).
+                val netMarginPct = if (r.revenue > 0) r.netProfit * 100.0 / r.revenue else 0.0
+                val bersihDark = LocalIsDarkTheme.current
+                val bersihBg = if (bersihDark) Color(0xFF163428) else Color(0xFFDFF2E4)
+                val bersihOn = if (bersihDark) Color(0xFFF0FAF3) else Color(0xFF1B4332)
+                val bersihLabel = if (bersihDark) Color(0xFFA0DCC0) else Color(0xFF2E7D32)
+                val bersihAmount = if (r.netProfit < 0) MaterialTheme.colorScheme.error else bersihOn
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.weight(1f).animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
+                        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Text(tr("LABA KOTOR", "GROSS PROFIT"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                            Surface(color = Color.White.copy(alpha = 0.25f), shape = RoundedCornerShape(16.dp)) {
-                                Text(
-                                    "Margin ${marginTextID(r.marginPct)}%", color = Color.White,
-                                    style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                )
-                            }
+                            Spacer(Modifier.height(SpaceS))
+                            AnimatedAmount(r.grossProfit, MaterialTheme.typography.headlineSmall, Color.White)
+                            Spacer(Modifier.height(SpaceXS))
+                            Text("Margin ${marginTextID(r.marginPct)}%", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
                         }
-                        Spacer(Modifier.height(SpaceS))
-                        AnimatedAmount(r.grossProfit, MaterialTheme.typography.headlineLarge, Color.White)
-                        Spacer(Modifier.height(SpaceXS))
-                        Text(tr("${r.transactionCount} transaksi • ${r.itemsSold} item terjual", "${r.transactionCount} transactions • ${r.itemsSold} items sold"), color = Color.White, style = MaterialTheme.typography.bodySmall)
+                    }
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = bersihBg, modifier = Modifier.weight(1f).animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
+                        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                            Text(tr("LABA BERSIH", "NET PROFIT"), color = bersihLabel, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(SpaceS))
+                            AnimatedAmount(r.netProfit, MaterialTheme.typography.headlineSmall, bersihAmount)
+                            Spacer(Modifier.height(SpaceXS))
+                            Text("Margin ${marginTextID(netMarginPct)}%", color = bersihLabel, style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
                 }
@@ -221,24 +234,26 @@ fun LabaScreen() {
                     exit = fadeOut()
                 ) {
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceL)) {
-                        // Grid statistik adaptif: HP portrait 2 kolom, tablet/landscape 3 kolom,
-                        // tablet lebar 4 kolom (satu baris).
-                        val statsCols = adaptiveColumns(compact = 2, medium = 3, expanded = 4)
-                        val stats = listOf(
-                            Triple(Icons.Default.Receipt, tr("PENJUALAN", "REVENUE"), formatIDR(r.revenue)),
-                            Triple(Icons.Default.Inventory, tr("MODAL (HPP)", "COST (COGS)"), formatIDR(r.hpp)),
-                            Triple(Icons.Default.NorthEast, tr("BIAYA OPERASIONAL", "OPERATING COSTS"), formatIDR(r.operationalExpense)),
-                            Triple(Icons.Default.Savings, tr("ESTIMASI LABA BERSIH", "ESTIMATED NET PROFIT"), formatIDR(r.netProfit))
+                    Column(Modifier.padding(16.dp)) {
+                        // Rincian LP4: tiga baris label-nilai (Penjualan,
+                        // Modal, Biaya Operasional). Laba Bersih tidak
+                        // diulang di sini \u2014 sudah naik ke kartu hero hijau.
+                        val detailRows = listOf(
+                            tr("Penjualan", "Revenue") to formatIDR(r.revenue),
+                            tr("Modal (HPP)", "Cost (COGS)") to formatIDR(r.hpp),
+                            tr("Biaya Operasional", "Operating Costs") to formatIDR(r.operationalExpense)
                         )
-                        stats.chunked(statsCols).forEach { rowStats ->
-                            Row(Modifier.fillMaxWidth()) {
-                                rowStats.forEach { (icon, label, value) ->
-                                    LabaStat(icon, label, value, if (label == tr("ESTIMASI LABA BERSIH", "ESTIMATED NET PROFIT")) (if (r.netProfit < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary) else null, Modifier.weight(1f))
-                                }
-                                repeat(statsCols - rowStats.size) { Spacer(Modifier.weight(1f)) }
+                        detailRows.forEachIndexed { index, (label, value) ->
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                                Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            }
+                            if (index < detailRows.lastIndex) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 12.dp))
                             }
                         }
+                        Spacer(Modifier.height(SpaceM))
+                        Text(tr("${r.transactionCount} transaksi \u2022 ${r.itemsSold} item terjual", "${r.transactionCount} transactions \u2022 ${r.itemsSold} items sold"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 }
@@ -386,19 +401,6 @@ fun LabaScreen() {
     }
 }
 
-
-@Composable
-fun LabaStat(icon: ImageVector, label: String, value: String, valueColor: Color?, modifier: Modifier = Modifier) {
-    Column(modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Spacer(Modifier.height(SpaceXS))
-        Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = valueColor ?: MaterialTheme.colorScheme.onSurface)
-    }
-}
 
 // ---------- Obat Terlaris ----------
 
