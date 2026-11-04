@@ -141,21 +141,32 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     // di Image HD Upscale): tangkapan layar tema lama ditumpuk di atas tema
     // baru, dilubangi lingkaran yang membesar, sehingga tema baru tersingkap
     // mulai dari titik awalnya. Titik awalnya adalah ikon tab "Lainnya" di bar
-    // bawah — baris tema sendiri berada di halaman Lainnya, jadi posisinya
-    // tidak bisa dipakai sebagai titik ukur yang stabil; pola yang sama dipakai HD Upscale dari
-    // tombol gir pembuka Pengaturan. Bila tangkapan gagal, tema berganti
-    // seketika seperti sebelumnya.
+    // bawah, karena saat itu baris tema masih di dalam sheet bawah yang
+    // posisinya tidak stabil. Sejak A2 baris tema tinggal di halaman penuh,
+    // jadi AN3 (pilihan Achmad 2026-11-04) memindahkan titik awalnya ke
+    // tengah baris tema itu sendiri — lingkaran membesar dari persis yang
+    // diketuk; ikon tab tetap jadi cadangan bila baris belum terukur.
+    // Bila tangkapan gagal, tema berganti seketika seperti sebelumnya.
     val rootView = LocalView.current
     val appScope = rememberCoroutineScope()
     var lainnyaIconCenter by remember { mutableStateOf(Offset.Zero) }
+    // Titik awal lingkaran versi AN3: tengah baris tema di halaman Lainnya
+    // (diukur baris itu sendiri lewat onGloballyPositioned), dan titik beku
+    // yang dipakai lapisan animasi selama lingkaran membesar.
+    var themeRowCenter by remember { mutableStateOf(Offset.Zero) }
+    var revealCenter by remember { mutableStateOf(Offset.Zero) }
     var revealBitmap by remember { mutableStateOf<Bitmap?>(null) }
     val revealRadius = remember { Animatable(0f) }
     fun toggleThemeWithReveal() {
         val shot = if (revealBitmap == null) captureScreen(rootView) else null
-        if (shot != null && lainnyaIconCenter != Offset.Zero) {
+        // AN3: asal lingkaran = tengah baris tema; ikon tab Lainnya hanya
+        // cadangan bila baris tema belum sempat terukur.
+        val origin = if (themeRowCenter != Offset.Zero) themeRowCenter else lainnyaIconCenter
+        if (shot != null && origin != Offset.Zero) {
             revealBitmap = shot
+            revealCenter = origin
             onToggleTheme()
-            val center = lainnyaIconCenter
+            val center = origin
             val w = rootView.width.toFloat()
             val h = rootView.height.toFloat()
             val maxR = hypot(
@@ -311,7 +322,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 // mendarat di Beranda, bukan di Lainnya (laporan Achmad
                 // 2026-11-04). Dengan tumpukan biasa, Kembali dari
                 // Laba/Pengingat/dll. kembali ke halaman Lainnya.
-                composable("lainnya") { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = { toggleThemeWithReveal() }, appLang = appLang, onLanguageChange = onLanguageChange) }
+                composable("lainnya") { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = { toggleThemeWithReveal() }, appLang = appLang, onLanguageChange = onLanguageChange, onThemeRowPositioned = { themeRowCenter = it }) }
                 composable("laba") { LabaScreen() }
                 composable("pengingat") { PengingatScreen(onGoStok = { goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
                 composable("riwayat") { RiwayatScreen() }
@@ -323,11 +334,12 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
         }
     }
     // Lapisan animasi lingkaran tema: tangkapan tema lama dengan lubang
-    // lingkaran yang membesar dari ikon tab Lainnya; di bawah lubang itu
-    // tema baru sudah tampil, jadi tema baru tampak mengembang keluar.
+    // lingkaran yang membesar dari tengah baris tema (AN3); di bawah
+    // lubang itu tema baru sudah tampil, jadi tema baru tampak
+    // mengembang keluar dari titik yang diketuk.
     val shot = revealBitmap
     if (shot != null) {
-        val center = lainnyaIconCenter
+        val center = revealCenter
         val r = revealRadius.value
         Image(
             bitmap = shot.asImageBitmap(),
@@ -371,7 +383,8 @@ fun LainnyaScreen(
     isDark: Boolean,
     onToggleTheme: () -> Unit,
     appLang: String,
-    onLanguageChange: (String) -> Unit
+    onLanguageChange: (String) -> Unit,
+    onThemeRowPositioned: (Offset) -> Unit
 ) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -412,6 +425,7 @@ fun LainnyaScreen(
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = SpaceS))
         // Ganti tema Gelap <-> Terang (pilihan tersimpan, dipakai lagi saat aplikasi dibuka).
+        // Baris ini juga melaporkan titik tengahnya untuk asal animasi AN3.
         ListItem(
             headlineContent = {
                 Text(
@@ -430,7 +444,12 @@ fun LainnyaScreen(
                 }
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            modifier = Modifier.clickable { onToggleTheme() }
+            modifier = Modifier
+                .onGloballyPositioned { coords ->
+                    val pos = coords.positionInRoot()
+                    onThemeRowPositioned(Offset(pos.x + coords.size.width / 2f, pos.y + coords.size.height / 2f))
+                }
+                .clickable { onToggleTheme() }
         )
         // Ganti bahasa Indonesia <-> Inggris, di bawah ganti tema
         // (permintaan Achmad 2026-11-02). Ketuk langsung berganti ke bahasa
