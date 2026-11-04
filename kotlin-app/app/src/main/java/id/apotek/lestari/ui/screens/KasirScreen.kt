@@ -579,6 +579,101 @@ fun KasirScreen() {
                         }
                     }
                 } else if (cart.isNotEmpty()) {
+                    // Panel hero KR4 (pilihan Achmad 2026-11-04): total
+                    // besar + jumlah item/jenis + pilihan metode bayar
+                    // menyatu di SATU panel biru di atas daftar item —
+                    // menggantikan bar Total bayar dan baris METODE BAYAR
+                    // yang dulu di bawah item. Segmen terpilih putih dengan
+                    // teks primer (terbalik dari panelnya) supaya terbaca
+                    // jelas di atas biru.
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(tr("TOTAL BAYAR", "TOTAL TO PAY"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.weight(1f))
+                                Text(tr("${cart.sumOf { it.qty }} item \u2022 ${cart.size} jenis", "${cart.sumOf { it.qty }} items \u2022 ${cart.size} kinds"), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.85f))
+                            }
+                            Spacer(Modifier.height(SpaceXS))
+                            Text(formatIDR(total), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                            Spacer(Modifier.height(SpaceM))
+                            val methods = listOf(
+                                "Tunai" to Icons.Default.Money,
+                                "QRIS" to Icons.Default.QrCode,
+                                "Transfer" to Icons.Default.AccountBalance
+                            )
+                            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                                methods.forEachIndexed { index, (m, icon) ->
+                                    SegmentedButton(
+                                        selected = method == m,
+                                        onClick = { method = m },
+                                        shape = SegmentedButtonDefaults.itemShape(index = index, count = methods.size),
+                                        icon = { Icon(icon, null, modifier = Modifier.size(18.dp)) },
+                                        colors = SegmentedButtonDefaults.colors(
+                                            activeContainerColor = Color.White,
+                                            activeContentColor = MaterialTheme.colorScheme.primary,
+                                            activeBorderColor = Color.White,
+                                            inactiveContainerColor = Color.Transparent,
+                                            inactiveContentColor = Color.White,
+                                            inactiveBorderColor = Color.White.copy(alpha = 0.55f)
+                                        ),
+                                        modifier = Modifier.weight(1f)
+                                    ) { Text(if (m == "Tunai") tr("Tunai", "Cash") else m, maxLines = 1) }
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(SpaceS))
+                AnimatedContent(
+                    targetState = method,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(250)) + slideInVertically(animationSpec = tween(250)) { it / 4 }) togetherWith
+                        (fadeOut(animationSpec = tween(200)) + slideOutVertically(animationSpec = tween(200)) { -it / 4 })
+                    },
+                    label = "methodContent"
+                ) { targetMethod ->
+                    if (targetMethod == "Tunai") {
+                        Column {
+                            Spacer(Modifier.height(SpaceL))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(tr("UANG DITERIMA", "CASH RECEIVED"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                                // Desain K1: chip nominal cepat dihapus;
+                                // "Uang Pas" menjadi aksi teks di kanan label
+                                // dan mengisi kolom dengan total persis.
+                                TextButton(onClick = {
+                                    val formatted = formatDecimal(total.toString())
+                                    uangDiterima = TextFieldValue(formatted, TextRange(formatted.length))
+                                }) { Text(tr("Uang Pas", "Exact Amount"), maxLines = 1) }
+                            }
+                            Spacer(Modifier.height(SpaceS))
+                            OutlinedTextField(
+                                value = uangDiterima,
+                                onValueChange = { uangDiterima = formatDecimalFieldValue(it) },
+                                label = { Text(tr("cth: 50.000", "e.g. 50.000")) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                                    .bringIntoViewRequester(amountBringIntoView)
+                                    .onFocusEvent { if (it.isFocused) scope.launch { amountBringIntoView.bringIntoView() } }
+                            )
+                            AnimatedVisibility(visible = change > 0) {
+                                Column {
+                                    Spacer(Modifier.height(SpaceS))
+                                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                            Text(tr("Kembalian", "Change"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                                            Text(formatIDR(change), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Column {
+                            Spacer(Modifier.height(SpaceS))
+                            Text(tr("Dibayar penuh via $targetMethod sebesar ${formatIDR(total)}.", "Paid in full via $targetMethod, ${formatIDR(total)}."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+
                     cart.forEachIndexed { index, ci ->
                         // Dua baris per item: (nama | total baris), lalu
                         // (pilihan Ecer/Grosir | stepper jumlah | hapus | harga
@@ -646,85 +741,6 @@ fun KasirScreen() {
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
-                Spacer(Modifier.height(SpaceS))
-                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(tr("Total bayar", "Total to pay"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text(formatIDR(total), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-                }
-                Spacer(Modifier.height(SpaceL))
-                Text(tr("METODE BAYAR", "PAYMENT METHOD"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(SpaceS))
-                // Metode bayar: SingleChoiceSegmentedButtonRow resmi Material 3
-                // (menggantikan pil meluncur rakitan manual).
-                val methods = listOf(
-                    "Tunai" to Icons.Default.Money,
-                    "QRIS" to Icons.Default.QrCode,
-                    "Transfer" to Icons.Default.AccountBalance
-                )
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    methods.forEachIndexed { index, (m, icon) ->
-                        SegmentedButton(
-                            selected = method == m,
-                            onClick = { method = m },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = methods.size),
-                            icon = { Icon(icon, null, modifier = Modifier.size(18.dp)) },
-                            modifier = Modifier.weight(1f)
-                        ) { Text(if (m == "Tunai") tr("Tunai", "Cash") else m, maxLines = 1) }
-                    }
-                }
-                AnimatedContent(
-                    targetState = method,
-                    transitionSpec = {
-                        (fadeIn(animationSpec = tween(250)) + slideInVertically(animationSpec = tween(250)) { it / 4 }) togetherWith
-                        (fadeOut(animationSpec = tween(200)) + slideOutVertically(animationSpec = tween(200)) { -it / 4 })
-                    },
-                    label = "methodContent"
-                ) { targetMethod ->
-                    if (targetMethod == "Tunai") {
-                        Column {
-                            Spacer(Modifier.height(SpaceL))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(tr("UANG DITERIMA", "CASH RECEIVED"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                                // Desain K1: chip nominal cepat dihapus;
-                                // "Uang Pas" menjadi aksi teks di kanan label
-                                // dan mengisi kolom dengan total persis.
-                                TextButton(onClick = {
-                                    val formatted = formatDecimal(total.toString())
-                                    uangDiterima = TextFieldValue(formatted, TextRange(formatted.length))
-                                }) { Text(tr("Uang Pas", "Exact Amount"), maxLines = 1) }
-                            }
-                            Spacer(Modifier.height(SpaceS))
-                            OutlinedTextField(
-                                value = uangDiterima,
-                                onValueChange = { uangDiterima = formatDecimalFieldValue(it) },
-                                label = { Text(tr("cth: 50.000", "e.g. 50.000")) },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
-                                    .bringIntoViewRequester(amountBringIntoView)
-                                    .onFocusEvent { if (it.isFocused) scope.launch { amountBringIntoView.bringIntoView() } }
-                            )
-                            AnimatedVisibility(visible = change > 0) {
-                                Column {
-                                    Spacer(Modifier.height(SpaceS))
-                                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                            Text(tr("Kembalian", "Change"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                                            Text(formatIDR(change), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        Column {
-                            Spacer(Modifier.height(SpaceS))
-                            Text(tr("Dibayar penuh via $targetMethod sebesar ${formatIDR(total)}.", "Paid in full via $targetMethod, ${formatIDR(total)}."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
                 // Pratinjau struk sebelum bayar — kasir bisa cek isi, total,
                 // metode, dan kembalian dulu; ikut berubah saat keranjang,
                 // metode, atau uang diterima diubah.
