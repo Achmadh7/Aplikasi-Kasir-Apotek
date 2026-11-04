@@ -364,11 +364,27 @@ fun PbfScreen() {
                                         Text(formatIDR(pItem.subtotal), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
+                                // Blok ringkasan KP1 (pilihan Achmad 2026-11-04):
+                                // Subtotal item selalu tampil supaya hitungan
+                                // menuju Total transparan (sebelumnya hanya PPN
+                                // dan total di kepala kartu yang terlihat,
+                                // subtotalnya tidak pernah ditampilkan).
+                                Spacer(Modifier.height(SpaceS))
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                Spacer(Modifier.height(SpaceS))
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(tr("Subtotal", "Subtotal"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                                    Text(formatIDR(p.items.sumOf { it.subtotal }), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                }
                                 if (p.ppn > 0) {
-                                    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                                         Text("PPN", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                                         Text(formatIDR(p.ppn), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                                     }
+                                }
+                                Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(tr("Total", "Total"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                    Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 }
                                 Spacer(Modifier.height(SpaceS))
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = if (p.paymentType == "KREDIT") Arrangement.SpaceBetween else Arrangement.End) {
