@@ -284,7 +284,7 @@ fun StokScreen() {
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(tr("Stok Obat", "Medicine Stock"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                    Text(tr("Stok", "Stock"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
                     Text(tr("${medicines.size} jenis obat tercatat", "${medicines.size} medicines recorded"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

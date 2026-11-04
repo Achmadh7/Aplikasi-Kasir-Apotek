@@ -643,7 +643,7 @@ fun RiwayatScreen() {
                 Icon(Icons.Default.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
             }
             Spacer(Modifier.width(12.dp))
-            Text(tr("Riwayat Penjualan", "Sales History"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+            Text(tr("Riwayat", "History"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
         }
         Spacer(Modifier.height(SpaceL))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

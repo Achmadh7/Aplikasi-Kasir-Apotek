@@ -169,7 +169,7 @@ fun LabaScreen() {
                     Icon(Icons.Default.TrendingUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text(tr("Laporan Laba", "Profit Report"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                Text(tr("Laba", "Profit"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -441,7 +441,7 @@ fun ObatTerlarisScreen() {
                     Icon(Icons.Default.Leaderboard, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text(tr("Obat Terlaris", "Best Sellers"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                Text(tr("Terlaris", "Best Sellers"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

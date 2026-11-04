@@ -192,7 +192,7 @@ fun BackupScreen() {
             }
             Spacer(Modifier.width(12.dp))
             Column {
-                Text("Backup & Restore", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                Text("Backup", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
                 Text(tr("Simpan dan pulihkan semua data apotek.", "Save and restore all of the pharmacy's data."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -376,7 +376,7 @@ fun TentangScreen(onGoBackup: () -> Unit) {
                     Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text(tr("Tentang Aplikasi", "About App"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                Text(tr("Tentang", "About"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

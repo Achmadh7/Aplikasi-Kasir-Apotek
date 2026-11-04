@@ -399,11 +399,11 @@ fun LainnyaScreen(
         Spacer(Modifier.height(SpaceL))
         val tiles = listOf(
             LainnyaTile("laba", tr("Laba", "Profit"), tr("Laba & margin", "Profit & margins"), Icons.Default.TrendingUp),
-            LainnyaTile("terlaris", tr("Obat Terlaris", "Best Sellers"), tr("Peringkat penjualan", "Sales ranking"), Icons.Default.Leaderboard),
+            LainnyaTile("terlaris", tr("Terlaris", "Best Sellers"), tr("Peringkat penjualan", "Sales ranking"), Icons.Default.Leaderboard),
             LainnyaTile("pengingat", tr("Pengingat", "Reminders"), tr("Stok & tagihan", "Stock & bills"), Icons.Default.NotificationsActive),
             LainnyaTile("riwayat", tr("Riwayat", "History"), tr("Semua penjualan", "All sales"), Icons.Default.ReceiptLong),
             LainnyaTile("pbf", tr("Faktur PBF", "PBF Invoices"), tr("Pembelian distributor", "Distributor purchases"), Icons.Default.LocalShipping),
-            LainnyaTile("backup", tr("Backup & Restore", "Backup & Restore"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
+            LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
         )
         tiles.chunked(2).forEach { rowTiles ->
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
@@ -476,7 +476,7 @@ fun LainnyaScreen(
         )
         // Tentang Aplikasi, di bawah ganti bahasa.
         ListItem(
-            headlineContent = { Text(tr("Tentang Aplikasi", "About App"), style = MaterialTheme.typography.titleMedium) },
+            headlineContent = { Text(tr("Tentang", "About"), style = MaterialTheme.typography.titleMedium) },
             leadingContent = {
                 Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
                     Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
