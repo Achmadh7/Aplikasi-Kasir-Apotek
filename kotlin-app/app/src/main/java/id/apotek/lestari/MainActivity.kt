@@ -305,7 +305,13 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 composable("kasir") { KasirScreen() }
                 composable("stok") { StokScreen() }
                 composable("keuangan") { KeuanganScreen() }
-                composable("lainnya") { LainnyaScreen(onGo = { route -> goToTab(route) }, isDark = isDark, onToggleTheme = { toggleThemeWithReveal() }, appLang = appLang, onLanguageChange = onLanguageChange) }
+                // Petak Lainnya memakai navigate() biasa (tumpuk), BUKAN goToTab:
+                // goToTab me-popUpTo("beranda") sehingga halaman Lainnya ikut
+                // terbuang dari tumpukan dan tombol Kembali dari sub-menu
+                // mendarat di Beranda, bukan di Lainnya (laporan Achmad
+                // 2026-11-04). Dengan tumpukan biasa, Kembali dari
+                // Laba/Pengingat/dll. kembali ke halaman Lainnya.
+                composable("lainnya") { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = { toggleThemeWithReveal() }, appLang = appLang, onLanguageChange = onLanguageChange) }
                 composable("laba") { LabaScreen() }
                 composable("pengingat") { PengingatScreen(onGoStok = { goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
                 composable("riwayat") { RiwayatScreen() }
