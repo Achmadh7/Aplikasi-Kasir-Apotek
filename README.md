@@ -30,7 +30,7 @@ An Android app for pharmacies: sales cashier, medicine stock, cash book, profit 
 |:---:|:---:|
 | <img src="docs/screenshots/riwayat-penjualan.jpg" width="280" alt="Sales History"> | <img src="docs/screenshots/faktur-pbf.jpg" width="280" alt="Supplier Invoices"> |
 
-*Note: the screenshots show an earlier interface. The app has since moved to the official Material 3 Expressive design and components.*
+*Note: the main screenshots (Home, Medicine Stock, Cashier, Finance, and the Lainnya page) were refreshed on 5 November 2026 from version 1.2.0. The five Lainnya sub-page screenshots (Profit Report, Best Sellers, Reminders, Sales History, PBF Invoices) still show the previous interface.*
 
 ## Menus & main features
 
