@@ -263,13 +263,41 @@ fun BackupScreen() {
     }
 }
 
+/** Teks lengkap lisensi MIT (sama dengan file LICENSE di repo). */
+private const val MIT_LICENSE_TEXT = """MIT License
 
-/** Tentang Aplikasi: logo, nama, versi, dan deskripsi singkat. */
+Copyright (c) 2026 Achmad Hidayatullah
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE."""
+
+/** Tentang Aplikasi (desain T10, pilihan Achmad 2026-11-04): kartu
+ *  identitas ramping, deskripsi polos tanpa kartu, dan baris pintasan
+ *  aksi — Cadangkan Data membuka Backup & Restore, Lisensi membuka
+ *  teks lengkap MIT, Versi Database adalah baris info. */
 @Composable
-fun TentangScreen() {
+fun TentangScreen(onGoBackup: () -> Unit) {
     // Versi hardcoded — samakan dengan versionName di build.gradle.kts.
     // (BuildConfig tidak digenerate di setup AGP proyek ini, jadi jangan pakai BuildConfig.VERSION_NAME.)
     val version = "1.2.0"
+    // Versi skema Room saat ini (AppDatabase) — samakan bila migrasi menaikkannya.
+    val dbVersion = 12
+    var showLicense by remember { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 20.dp),
@@ -287,50 +315,77 @@ fun TentangScreen() {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
         item {
-            // Logo + nama + versi, di tengah.
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                val logo = rememberLogoBitmap()
-                if (logo != null) {
-                    Surface(color = Color.White, shape = CircleShape, modifier = Modifier.size(88.dp)) {
-                        Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(8.dp).fillMaxSize())
-                    }
-                }
-                Spacer(Modifier.height(SpaceM))
-                Text("Apotek Lestari", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-                Spacer(Modifier.height(SpaceXS))
-                Text(tr("Versi $version", "Version $version"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        item {
+            // Kartu identitas: logo kecil sejajar nama dan versi.
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text(
-                        tr("Aplikasi kasir dan manajemen stok obat untuk Apotek Lestari. Data obat, penjualan, dan kas tersimpan di perangkat.", "A cashier and medicine stock management app for Apotek Lestari. Medicine, sales and cash data are stored on the device."),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val logo = rememberLogoBitmap()
+                    if (logo != null) {
+                        Surface(color = Color.White, shape = CircleShape, modifier = Modifier.size(56.dp)) {
+                            Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(6.dp).fillMaxSize())
+                        }
+                        Spacer(Modifier.width(14.dp))
+                    }
+                    Column {
+                        Text("Apotek Lestari", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                        Text(tr("Versi $version • Database $dbVersion", "Version $version • Database $dbVersion"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("Aplikasi kasir & manajemen stok obat", "Cashier & medicine stock management app"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
         item {
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceM)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(tr("Versi", "Version"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(version, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(
+                tr("Aplikasi kasir dan manajemen stok obat untuk Apotek Lestari. Data obat, penjualan, dan kas tersimpan di perangkat.", "A cashier and medicine stock management app for Apotek Lestari. Medicine, sales and cash data are stored on the device."),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        item {
+            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth().clickable { onGoBackup() }) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(tr("Cadangkan Data", "Back Up Data"), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Text(tr("Buka Backup & Restore", "Open Backup & Restore"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(tr("Dikembangkan untuk", "Developed for"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Apotek Lestari", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Icon(Icons.Default.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        item {
+            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth().clickable { showLicense = true }) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(tr("Lisensi", "License"), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Text(tr("MIT • ketuk untuk teks lengkap", "MIT • tap for the full text"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Icon(Icons.Default.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        item {
+            // Baris info versi database (bukan aksi, tanpa chevron).
+            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(tr("Versi Database", "Database Version"), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Text(tr("$dbVersion • skema Room saat ini", "$dbVersion • current Room schema"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
     }
+    if (showLicense) {
+        AlertDialog(
+            onDismissRequest = { showLicense = false },
+            title = { Text(tr("Lisensi MIT", "MIT License")) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(MIT_LICENSE_TEXT, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLicense = false }) { Text(tr("Tutup", "Close")) }
+            }
+        )
+    }
 }
-
-// ---------- PBF (catatan pembelian dari PBF — data saja) ----------
-// Keputusan Achmad 2026-10-29: menu "PBF" berisi riwayat pembelian obat
-// dari PBF, MURNI catatan — tidak mengubah stok, tidak membuat entri kas,
-// tidak mengubah harga beli. Ringkasan di atas menjawab "hari ini belanja
-// di PBF mana saja dan uang keluar hari ini berapa".

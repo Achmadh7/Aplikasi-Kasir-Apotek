@@ -318,7 +318,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 composable("backup") { BackupScreen() }
                 composable("terlaris") { ObatTerlarisScreen() }
                 composable("pbf") { PbfScreen() }
-                composable("tentang") { TentangScreen() }
+                composable("tentang") { TentangScreen(onGoBackup = { navDirection = 1; nav.navigate("backup") { launchSingleTop = true } }) }
             }
         }
     }
