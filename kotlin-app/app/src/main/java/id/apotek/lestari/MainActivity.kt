@@ -16,9 +16,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -47,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -301,6 +305,25 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
         // supaya daftar tidak merentang dari ujung ke ujung. Navigasi bawah tetap selebar layar.
         // swipeModifier: geser kiri/kanan di konten untuk pindah tab (hanya di tab utama).
         Box(modifier = Modifier.padding(padding).fillMaxSize().then(swipeModifier), contentAlignment = Alignment.TopCenter) {
+            // Transisi sub-halaman TR1 (pilihan Achmad 2026-11-04, "Geser
+            // Penuh ala iOS") \u2014 hanya untuk tujuan sub-halaman dari
+            // Lainnya (laba, pengingat, riwayat, backup, terlaris, pbf,
+            // tentang): halaman baru meluncur PENUH dari kanan (350ms),
+            // halaman yang tertutup bergeser 1/4 ke kiri sambil memudar;
+            // Kembali membaliknya persis. Pindah antar tab utama tetap
+            // memakai transisi NavHost 200ms di bawah.
+            val subEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+                slideInHorizontally(animationSpec = tween(350, easing = FastOutSlowInEasing), initialOffsetX = { it }) + fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing))
+            }
+            val subExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+                slideOutHorizontally(animationSpec = tween(350, easing = FastOutSlowInEasing), targetOffsetX = { -it / 4 }) + fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing))
+            }
+            val subPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+                slideInHorizontally(animationSpec = tween(350, easing = FastOutSlowInEasing), initialOffsetX = { -it / 4 }) + fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing))
+            }
+            val subPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+                slideOutHorizontally(animationSpec = tween(350, easing = FastOutSlowInEasing), targetOffsetX = { it }) + fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing))
+            }
             NavHost(
                 navController = nav,
                 startDestination = "beranda",
@@ -323,13 +346,13 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 // 2026-11-04). Dengan tumpukan biasa, Kembali dari
                 // Laba/Pengingat/dll. kembali ke halaman Lainnya.
                 composable("lainnya") { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = { toggleThemeWithReveal() }, appLang = appLang, onLanguageChange = onLanguageChange, onThemeRowPositioned = { themeRowCenter = it }) }
-                composable("laba") { LabaScreen() }
-                composable("pengingat") { PengingatScreen(onGoStok = { goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
-                composable("riwayat") { RiwayatScreen() }
-                composable("backup") { BackupScreen() }
-                composable("terlaris") { ObatTerlarisScreen() }
-                composable("pbf") { PbfScreen() }
-                composable("tentang") { TentangScreen(onGoBackup = { navDirection = 1; nav.navigate("backup") { launchSingleTop = true } }) }
+                composable("laba", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { LabaScreen() }
+                composable("pengingat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { PengingatScreen(onGoStok = { goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
+                composable("riwayat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { RiwayatScreen() }
+                composable("backup", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { BackupScreen() }
+                composable("terlaris", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { ObatTerlarisScreen() }
+                composable("pbf", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { PbfScreen() }
+                composable("tentang", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { TentangScreen(onGoBackup = { navDirection = 1; nav.navigate("backup") { launchSingleTop = true } }) }
             }
         }
     }
