@@ -33,7 +33,7 @@ jobs:
         if: always()
         continue-on-error: true
         working-directory: kotlin-app
-        run: ./gradlew :app:lintDebug --stacktrace
+        run: gradle :app:lintDebug --stacktrace
 
       - name: Upload lint report
         if: always()
