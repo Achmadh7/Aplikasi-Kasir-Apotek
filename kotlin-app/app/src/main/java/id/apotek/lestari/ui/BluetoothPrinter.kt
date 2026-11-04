@@ -198,12 +198,25 @@ fun isBluetoothEnabled(context: Context): Boolean {
  * menyembunyikan printer yang namanya tidak biasa).
  */
 private fun isClearlyNotPrinter(device: BluetoothDevice): Boolean {
-    val major = runCatching { device.bluetoothClass?.majorDeviceClass }.getOrNull()
+    // bluetoothClass dan name butuh izin BLUETOOTH_CONNECT di Android
+    // 12+. SecurityException ditangkap secara eksplisit (pola yang sama
+    // seperti getPairedPrinters di bawah) karena lint tidak mengakui
+    // runCatching sebagai penanganan izin; tanpa izin, perangkat
+    // dianggap tidak dikenal dan tetap ditampilkan.
+    val major = try {
+        device.bluetoothClass?.majorDeviceClass
+    } catch (_: SecurityException) {
+        null
+    }
     if (major == BluetoothClass.Device.Major.AUDIO_VIDEO ||
         major == BluetoothClass.Device.Major.COMPUTER ||
         major == BluetoothClass.Device.Major.PHONE
     ) return true
-    val n = (runCatching { device.name }.getOrNull() ?: "").lowercase()
+    val n = (try {
+        device.name
+    } catch (_: SecurityException) {
+        null
+    } ?: "").lowercase()
     return n.contains("headphone") || n.contains("headset") || n.contains("earbud") ||
         n.contains("airpod") || n.contains("speaker") || n.contains("galaxy buds")
 }
