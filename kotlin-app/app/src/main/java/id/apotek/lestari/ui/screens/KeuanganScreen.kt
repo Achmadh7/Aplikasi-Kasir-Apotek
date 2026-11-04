@@ -117,7 +117,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
-// Layar Keuangan dan lembar Catat Kas.
+// Layar Keuangan dan formulir Catat Kas sebaris (CS4).
 
 @Composable
 fun KeuanganScreen() {
@@ -286,12 +286,26 @@ fun KeuanganScreen() {
                     // Baris bawah kartu: tombol Catat Kas (menyatu, Varian 1).
                     Spacer(Modifier.height(SpaceM))
                     Button(
-                        onClick = { formType = "in"; showForm = true },
+                        onClick = { if (showForm) showForm = false else { formType = "in"; showForm = true } },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                         shape = RoundedCornerShape(24.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
-                    ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text(tr("Catat Kas", "Record Cash"), style = MaterialTheme.typography.titleMedium) }
+                    ) {
+                        if (showForm) {
+                            Icon(Icons.Default.ExpandLess, null); Spacer(Modifier.width(8.dp)); Text(tr("Sembunyikan", "Hide"), style = MaterialTheme.typography.titleMedium)
+                        } else {
+                            Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text(tr("Catat Kas", "Record Cash"), style = MaterialTheme.typography.titleMedium)
+                        }
+                    }
                 }
+            }
+            // Formulir Catat Kas sebaris (CS4, pilihan Achmad 2026-11-04):
+            // mengembang tepat di bawah kartu Saldo Kas — bukan bottom sheet
+            // lagi. Setelah tersimpan, formulir terlipat dan daftar di bawah
+            // memuat entri baru lewat reload() yang sama seperti sebelumnya.
+            if (showForm) {
+                Spacer(Modifier.height(SpaceL))
+                CashEntryFormCard(type = formType, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
             }
             Spacer(Modifier.height(SpaceL))
             // Grafik arus kas — judul + isi mengikuti periode yang dipilih.
@@ -446,12 +460,11 @@ fun KeuanganScreen() {
             }
         }
     }
-    if (showForm) CashEntryFormSheet(type = formType, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
 }
 
 
 @Composable
-fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () -> Unit) {
+fun CashEntryFormCard(type: String, onDismiss: () -> Unit, onSaved: () -> Unit) {
     // Jenis bisa diganti dari dalam form lewat pil geser Masuk/Keluar (gaya
     // pemilih metode pembayaran di Kasir); parameter type = pilihan awal.
     var entryType by remember { mutableStateOf(type) }
@@ -470,24 +483,12 @@ fun CashEntryFormSheet(type: String, onDismiss: () -> Unit, onSaved: () -> Unit)
         dateInteraction.interactions.collect { if (it is PressInteraction.Press) showDatePicker = true }
     }
     val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): selebar layar di HP potret, 360dp di HP lanskap, 640dp di tablet.
-        sheetMaxWidth = adaptiveSheetMaxWidth(),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-    ) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    tr("Catat Kas", "Record Cash"),
-                    style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
-            }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    // CS4 (pilihan Achmad 2026-11-04): bukan bottom sheet lagi — formulir
+    // ini kartu yang mengembang di halaman Keuangan, tepat di bawah kartu
+    // Saldo Kas. Judul + tombol X lembar lama dibuang; tombol di kartu Saldo
+    // menjadi pengalih buka/tutup dan tombol Batal menutup formulir.
+    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
             // Pilihan Masuk/Keluar: SingleChoiceSegmentedButtonRow resmi
             // Material 3 (menggantikan pil meluncur rakitan manual). Warna
             // aktif tetap biru tua (Masuk) / merah tua (Keluar) pilihan
