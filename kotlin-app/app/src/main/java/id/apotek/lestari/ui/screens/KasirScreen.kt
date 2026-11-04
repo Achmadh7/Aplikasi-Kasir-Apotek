@@ -633,16 +633,47 @@ fun KasirScreen() {
                     if (targetMethod == "Tunai") {
                         Column {
                             Spacer(Modifier.height(SpaceL))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(tr("UANG DITERIMA", "CASH RECEIVED"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                                // Desain K1: chip nominal cepat dihapus;
-                                // "Uang Pas" menjadi aksi teks di kanan label
-                                // dan mengisi kolom dengan total persis.
-                                TextButton(onClick = {
-                                    val formatted = formatDecimal(total.toString())
-                                    uangDiterima = TextFieldValue(formatted, TextRange(formatted.length))
-                                }) { Text(tr("Uang Pas", "Exact Amount"), maxLines = 1) }
+                            Text(tr("UANG DITERIMA", "CASH RECEIVED"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(SpaceS))
+                            // Kartu nominal UD4 (pilihan Achmad 2026-11-04): empat
+                            // kartu besar — Uang Pas + tiga pembulatan 50 rb ke atas
+                            // dari total — masing-masing menampilkan kembaliannya;
+                            // mengetuk kartu mengisi kolom uang diterima. Kartu yang
+                            // nilainya sama dengan isi kolom tampil terpilih (biru).
+                            val firstRoundUp = (total / 50000 + 1) * 50000
+                            val nominalOptions = listOf(total, firstRoundUp, firstRoundUp + 50000, firstRoundUp + 100000)
+                            nominalOptions.chunked(2).forEach { rowOptions ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
+                                    rowOptions.forEach { amount ->
+                                        val selectedCard = paid == amount
+                                        Surface(
+                                            onClick = {
+                                                val formatted = formatDecimal(amount.toString())
+                                                uangDiterima = TextFieldValue(formatted, TextRange(formatted.length))
+                                            },
+                                            color = if (selectedCard) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                            shape = RoundedCornerShape(16.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                                                Text(
+                                                    if (amount == total) tr("Uang Pas", "Exact Amount") else formatIDR(amount),
+                                                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1,
+                                                    color = if (selectedCard) Color.White else MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    if (amount == total) formatIDR(total) else tr("Kembalian", "Change") + " " + formatCompactIDR(amount - total),
+                                                    style = MaterialTheme.typography.bodySmall, maxLines = 1,
+                                                    color = if (selectedCard) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(SpaceS))
                             }
+                            Text(tr("Jumlah lain (ketik sendiri)", "Other amount (type it yourself)"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(SpaceXS))
                             Spacer(Modifier.height(SpaceS))
                             OutlinedTextField(
                                 value = uangDiterima,
