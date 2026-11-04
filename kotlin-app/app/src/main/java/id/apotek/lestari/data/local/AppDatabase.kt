@@ -210,6 +210,9 @@ interface PurchaseDao {
     @Query("UPDATE purchases SET paymentType = :paymentType WHERE id = :id")
     suspend fun updatePaymentType(id: Int, paymentType: String): Int
 
+    @Query("UPDATE purchases SET dueDate = :dueDate WHERE id = :id")
+    suspend fun updateDueDate(id: Int, dueDate: String): Int
+
     @Query("DELETE FROM purchases")
     suspend fun deleteAll()
 

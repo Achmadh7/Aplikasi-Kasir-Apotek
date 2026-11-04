@@ -123,6 +123,7 @@ import java.util.TimeZone
 fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var dueBills by remember { mutableStateOf<List<Purchase>>(emptyList()) }
+    var noDateBills by remember { mutableStateOf<List<Purchase>>(emptyList()) }
     var window by remember { mutableStateOf(90) }
     var filter by remember { mutableStateOf("all") } // all | expiry | low | critical
     var listEntered by remember { mutableStateOf(false) }
@@ -147,6 +148,13 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
         dueBills = purchases.filter { p ->
             p.paymentType == "KREDIT" && p.dueDate.isNotBlank() && (dueDaysLeft(p.dueDate) ?: Long.MAX_VALUE) <= 7L
         }.sortedBy { it.dueDate }
+        // Tagihan Kredit TANPA tanggal jatuh tempo (permintaan Achmad
+        // 2026-11-04): sebelumnya tidak tampil di mana-mana selain daftar
+        // Faktur PBF, jadi gampang terlupakan. Urutan mengikuti daftar
+        // pembelian (tanggal beli terbaru di atas).
+        noDateBills = purchases.filter { p ->
+            p.paymentType == "KREDIT" && p.dueDate.isBlank()
+        }
     }
     LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
     val expired = medicines.filter { (daysUntilExpiry(it.expiryDate) ?: Int.MAX_VALUE) < 0 }
@@ -248,6 +256,37 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                                     Icon(Icons.Default.Schedule, null, tint = dueColor, modifier = Modifier.size(14.dp))
                                     Spacer(Modifier.width(6.dp))
                                     Text(tr("Jatuh tempo ${formatDateID(p.dueDate)} • $dueLabel", "Due ${formatDateID(p.dueDate)} • $dueLabel"), style = MaterialTheme.typography.bodySmall, color = dueColor)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (noDateBills.isNotEmpty()) {
+            item {
+                // Seksi tagihan Kredit tanpa jatuh tempo: kartu diketuk
+                // membuka Faktur PBF, tempat tanggalnya bisa diatur lewat
+                // tombol Atur Jatuh Tempo di detail pembelian.
+                Text(tr("KREDIT TANPA JATUH TEMPO", "CREDIT WITHOUT A DUE DATE"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(SpaceS))
+                Column(verticalArrangement = Arrangement.spacedBy(SpaceM)) {
+                    noDateBills.forEach { p ->
+                        ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth().clickable { onGoPbf() }) {
+                            Column(Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                                        Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
+                                    }
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(p.pbfName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                }
+                                Spacer(Modifier.height(SpaceS))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(tr("Beli ${formatDateID(p.date)} • belum ada jatuh tempo", "Bought ${formatDateID(p.date)} • no due date yet"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }

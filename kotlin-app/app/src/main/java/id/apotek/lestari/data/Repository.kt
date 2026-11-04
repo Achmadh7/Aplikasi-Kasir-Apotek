@@ -689,6 +689,18 @@ class Repository {
         OkResponse(true)
     }
 
+    /** Atur/ubah tanggal jatuh tempo pembelian Kredit yang SUDAH tercatat
+     *  (permintaan Achmad 2026-11-04) — sebelumnya tanggal hanya bisa diisi
+     *  dari formulir pembelian baru, jadi catatan lama tidak pernah bisa
+     *  muncul di Pengingat. "" berarti hapus tanggalnya. Hanya menyentuh
+     *  kolom dueDate; tanggal disimpan apa adanya (pemanggil memastikan
+     *  hanya untuk Kredit). */
+    suspend fun setPurchaseDueDate(id: Int, dueDate: String): ApiResult<OkResponse> = call {
+        val changed = DatabaseProvider.db.purchaseDao().updateDueDate(id, dueDate.trim())
+        if (changed == 0) throw IllegalStateException("Catatan pembelian tidak ditemukan")
+        OkResponse(true)
+    }
+
     // ---- Backup & Restore (semua data lokal dalam satu file JSON) ----
 
     /** Seluruh isi database (obat, penjualan, item, kas) sebagai string JSON. */

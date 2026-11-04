@@ -136,6 +136,7 @@ fun PbfScreen() {
     var showForm by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<Purchase?>(null) }
     var paidTarget by remember { mutableStateOf<Purchase?>(null) }
+    var dueTarget by remember { mutableStateOf<Purchase?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -332,6 +333,20 @@ fun PbfScreen() {
                                         Text(tr("Hapus", "Delete"), color = MaterialTheme.colorScheme.error)
                                     }
                                 }
+                                if (p.paymentType == "KREDIT") {
+                                    // Atur Jatuh Tempo untuk catatan Kredit
+                                    // yang sudah tersimpan (permintaan Achmad
+                                    // 2026-11-04): membuka pemilih tanggal
+                                    // (editor di bawah); bisa juga menghapus
+                                    // tanggalnya dari sana.
+                                    Row(Modifier.fillMaxWidth()) {
+                                        TextButton(onClick = { dueTarget = p }) {
+                                            Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(4.dp))
+                                            Text(tr("Atur Jatuh Tempo", "Set Due Date"), color = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -375,6 +390,56 @@ fun PbfScreen() {
             },
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text(tr("Batal", "Cancel")) } }
         )
+    }
+
+    // Simpan/hapus tanggal jatuh tempo dari editor di detail pembelian.
+    val saveDueDate: (Purchase, String) -> Unit = { target, newDue ->
+        scope.launch {
+            val res = repo.setPurchaseDueDate(target.id, newDue)
+            if (res is ApiResult.Success) {
+                resumeKey++
+                snackbarHostState.showSnackbar(
+                    if (newDue.isBlank()) tr("Jatuh tempo dihapus.", "Due date cleared.")
+                    else tr("Jatuh tempo disimpan.", "Due date saved.")
+                )
+            } else {
+                snackbarHostState.showSnackbar((res as? ApiResult.Error)?.message ?: tr("Gagal menyimpan jatuh tempo", "Failed to save the due date"))
+            }
+        }
+    }
+
+    if (dueTarget != null) {
+        val target = dueTarget!!
+        // Pemilih tanggal jatuh tempo untuk catatan yang sudah tersimpan:
+        // pola sama seperti pemilih di formulir (tengah malam UTC supaya
+        // tanggal tidak bergeser, "Hapus" untuk mengosongkan). Tanggal masa
+        // depan memang tujuan fitur ini, jadi tanpa NoFutureDates.
+        val dueEditState = rememberDatePickerState(initialSelectedDateMillis = utcMidnightMillis(target.dueDate.ifBlank { target.date }))
+        DatePickerDialog(
+            onDismissRequest = { dueTarget = null },
+            confirmButton = {
+                TextButton(onClick = {
+                    val newDue = dueEditState.selectedDateMillis?.let { dayKeyID(Date(it)) } ?: target.dueDate
+                    dueTarget = null
+                    saveDueDate(target, newDue)
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                Row {
+                    if (target.dueDate.isNotBlank()) {
+                        TextButton(onClick = {
+                            dueTarget = null
+                            saveDueDate(target, "")
+                        }) { Text(tr("Hapus", "Clear")) }
+                    }
+                    TextButton(onClick = { dueTarget = null }) { Text(tr("Batal", "Cancel")) }
+                }
+            }
+        ) {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                DatePicker(state = dueEditState)
+            }
+        }
     }
 
     paidTarget?.let { target ->
