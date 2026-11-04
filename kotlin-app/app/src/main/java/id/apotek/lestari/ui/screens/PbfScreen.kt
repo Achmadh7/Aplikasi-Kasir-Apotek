@@ -487,7 +487,7 @@ fun PbfScreen() {
     }
 
     if (dueTarget != null) {
-        val target = dueTarget!!
+        val target = checkNotNull(dueTarget)
         // Pemilih tanggal jatuh tempo untuk catatan yang sudah tersimpan:
         // pola sama seperti pemilih di formulir (tengah malam UTC supaya
         // tanggal tidak bergeser, "Hapus" untuk mengosongkan). Tanggal masa

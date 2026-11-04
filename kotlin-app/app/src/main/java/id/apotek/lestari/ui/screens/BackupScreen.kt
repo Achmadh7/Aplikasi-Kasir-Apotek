@@ -93,6 +93,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
+import id.apotek.lestari.BuildConfig
 import id.apotek.lestari.data.*
 import id.apotek.lestari.ui.BtPrinter
 import id.apotek.lestari.ui.buildReceiptBytes
@@ -359,9 +360,10 @@ SOFTWARE."""
  *  teks lengkap MIT, Versi Database adalah baris info. */
 @Composable
 fun TentangScreen(onGoBackup: () -> Unit) {
-    // Versi hardcoded — samakan dengan versionName di build.gradle.kts.
-    // (BuildConfig tidak digenerate di setup AGP proyek ini, jadi jangan pakai BuildConfig.VERSION_NAME.)
-    val version = "1.2.0"
+    // Versi dari BuildConfig (versionName di build.gradle.kts) — sejak
+    // audit R2 (2026-11-04) buildConfig diaktifkan, jadi angka ini selalu
+    // mengikuti rilis dan tidak perlu disamakan manual lagi.
+    val version = BuildConfig.VERSION_NAME
     // Versi skema Room saat ini (AppDatabase) — samakan bila migrasi menaikkannya.
     val dbVersion = 12
     var showLicense by remember { mutableStateOf(false) }

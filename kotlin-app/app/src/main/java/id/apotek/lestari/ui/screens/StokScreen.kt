@@ -541,12 +541,12 @@ fun StokScreen() {
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
             title = { Text(tr("Import Excel Selesai", "Excel Import Complete")) },
-            text = { Text(importSummary!!) },
+            text = { Text(importSummary.orEmpty()) },
             confirmButton = { TextButton(onClick = { showImportDialog = false }) { Text("OK") } }
         )
     }
     if (deleteTarget != null) {
-        val target = deleteTarget!!
+        val target = checkNotNull(deleteTarget)
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
             title = { Text(tr("Hapus Obat?", "Delete Medicine?")) },

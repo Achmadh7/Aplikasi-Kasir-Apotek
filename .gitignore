@@ -1,5 +1,3 @@
-node_modules/
-client/dist/
 .gradle/
 build/
 *.apk
@@ -12,4 +10,6 @@ signing.properties
 key.properties
 *.keystore
 *.jks
+*.p12
+*.pem
 keystore.properties

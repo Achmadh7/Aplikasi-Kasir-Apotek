@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Aturan backup Android 12+ (audit 2026-11-04, R5): basis data penjualan
+  dan salinan snapshot-nya TIDAK ikut Auto Backup awan maupun transfer
+  antarperangkat bawaan Android. Data apotek hanya berpindah lewat backup
+  JSON manual di dalam aplikasi, yang memang disengaja pengguna.
+  Preferensi tema/bahasa tetap boleh ikut (tidak sensitif).
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="database" path="apotek-lestari.db" />
+        <exclude domain="database" path="apotek-lestari.db-wal" />
+        <exclude domain="database" path="apotek-lestari.db-shm" />
+        <exclude domain="file" path="db-snapshots/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="database" path="apotek-lestari.db" />
+        <exclude domain="database" path="apotek-lestari.db-wal" />
+        <exclude domain="database" path="apotek-lestari.db-shm" />
+        <exclude domain="file" path="db-snapshots/" />
+    </device-transfer>
+</data-extraction-rules>

@@ -159,7 +159,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         // (konsisten dengan expiringCount di Dashboard).
         expiringMeds = meds.filter { it.expiryDate != null && it.expiryDate <= in30Key }
             .sortedBy { it.expiryDate }
-            .map { it.name to it.expiryDate!! }
+            .mapNotNull { med -> med.expiryDate?.let { exp -> med.name to exp } }
         // Tagihan PBF: pembelian Kredit yang jatuh temponya <= 7 hari lagi
         // atau sudah lewat (pilihan Achmad 2026-10-30, saran no. 1) —
         // diurutkan dari jatuh tempo paling awal.

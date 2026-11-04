@@ -492,7 +492,7 @@ fun KasirScreen() {
         // sebelum animasi terlihat.
         if (flyFrom != null) {
             key(flyId) {
-                val start = flyFrom!!
+                val start = checkNotNull(flyFrom)
                 val end = flyTo
                 val iconHalfPx = with(flyDensity) { 22.dp.toPx() }
                 val progress = remember { Animatable(0f) }
@@ -832,7 +832,7 @@ fun KasirScreen() {
     // obat dari keranjang (sama seperti − saat jumlah 1); jumlah di atas stok
     // dijepit ke stok (sama seperti tombol +).
     if (qtyEditTarget != null) {
-        val target = qtyEditTarget!!
+        val target = checkNotNull(qtyEditTarget)
         var qtyText by remember { mutableStateOf("${target.qty}") }
         var qtyError by remember { mutableStateOf("") }
         AlertDialog(

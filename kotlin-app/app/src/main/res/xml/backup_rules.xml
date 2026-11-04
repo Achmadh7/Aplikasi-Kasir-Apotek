@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Aturan backup format lama (Android 11 ke bawah, fullBackupContent) —
+  pasangan data_extraction_rules.xml dengan isi yang sama (audit
+  2026-11-04, R5): basis data dan snapshot-nya dikecualikan dari backup
+  bawaan Android; pencadangan resmi aplikasi adalah JSON manual.
+-->
+<full-backup-content>
+    <exclude domain="database" path="apotek-lestari.db" />
+    <exclude domain="database" path="apotek-lestari.db-wal" />
+    <exclude domain="database" path="apotek-lestari.db-shm" />
+    <exclude domain="file" path="db-snapshots/" />
+</full-backup-content>

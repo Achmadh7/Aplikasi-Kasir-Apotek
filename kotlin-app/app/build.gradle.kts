@@ -69,6 +69,10 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures {
         compose = true
+        // BuildConfig dibangkitkan supaya layar Tentang bisa membaca
+        // versionName dari sini (audit 2026-11-04, R2) — sebelumnya versi
+        // ditulis tangan di Tentang dan harus disamakan manual tiap rilis.
+        buildConfig = true
     }
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
