@@ -274,11 +274,7 @@ fun PbfScreen() {
                             Spacer(Modifier.height(SpaceM))
                             Text(tr("Belum ada catatan pembelian", "No purchase records yet"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceXS))
-                            Text(tr("Catat belanja dari PBF lewat tombol di bawah atau tombol + di kanan bawah — ini murni catatan, tidak mengubah stok dan kas.", "Record PBF purchases with the button below or the + button at the bottom right — these are records only and do not change stock or cash."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                            Spacer(Modifier.height(SpaceM))
-                            Button(onClick = { showForm = true }, shape = RoundedCornerShape(24.dp)) {
-                                Text(tr("Catat Pembelian Pertama", "Record First Purchase"))
-                            }
+                            Text(tr("Catat belanja dari PBF lewat tombol + di kanan bawah — ini murni catatan, tidak mengubah stok dan kas.", "Record PBF purchases with the + button at the bottom right — these are records only and do not change stock or cash."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                         }
                     }
                 }
