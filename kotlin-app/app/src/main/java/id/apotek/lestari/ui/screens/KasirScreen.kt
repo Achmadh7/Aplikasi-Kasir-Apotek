@@ -196,6 +196,13 @@ fun KasirScreen() {
     var successMethod by remember { mutableStateOf("") }
     var successTotal by remember { mutableIntStateOf(0) }
     var successChange by remember { mutableIntStateOf(0) }
+    // Struk terakhir disimpan sebagai id saja, lalu dimuat ulang dari repo.
+    // Deklarasi ini SENGAJA di atas blok animasi struk: LaunchedEffect di
+    // bawah membaca lastSale, dan Kotlin 2.4 menolak referensi ke variabel
+    // yang deklarasinya masih di bawah (build 2026-11-04: "Unresolved
+    // reference 'lastSale'"). Jangan pindahkan kembali ke bawah.
+    var lastSaleId by rememberSaveable { mutableIntStateOf(0) }
+    var lastSale by remember { mutableStateOf<Sale?>(null) }
     // Animasi masuk blok struk (laporan Achmad 2026-11-04: struk muncul
     // tanpa animasi sama sekali setelah fase sukses). Hanya alpha +
     // translation + skala kecil lewat graphicsLayer — BUKAN animasi tinggi
@@ -211,9 +218,6 @@ fun KasirScreen() {
     // Pratinjau struk di sheet dilipat secara bawaan (desain K1, pilihan
     // Achmad 2026-11-04) supaya tombol Bayar selalu terlihat tanpa gulir.
     var showReceiptPreview by remember { mutableStateOf(false) }
-    // Struk terakhir disimpan sebagai id saja, lalu dimuat ulang dari repo.
-    var lastSaleId by rememberSaveable { mutableIntStateOf(0) }
-    var lastSale by remember { mutableStateOf<Sale?>(null) }
     var showSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val receiptLayer = rememberGraphicsLayer()
