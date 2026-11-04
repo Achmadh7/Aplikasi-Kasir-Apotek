@@ -125,6 +125,9 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
     var listEntered by remember { mutableStateOf(false) }
     LaunchedEffect(dashboard) { if (dashboard != null && !listEntered) listEntered = true }
     var salesTab by remember { mutableIntStateOf(0) }
+    // Periode panel ringkasan BR5 (pilihan Achmad 2026-11-04):
+    // 0 = Hari Ini, 1 = Bulan Ini.
+    var summaryPeriod by remember { mutableIntStateOf(0) }
     var outOfStockNames by remember { mutableStateOf<List<String>>(emptyList()) }
     var lowStockMeds by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
     var expiringMeds by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
@@ -216,44 +219,83 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         expandVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)),
                     exit = fadeOut()
                 ) {
-                // Kartu Pemasukan Hari Ini — hero: ExpressiveCard resmi
-                // (primaryContainer) + insight vs kemarin.
+                // Panel ringkasan BR5 (pilihan Achmad 2026-11-04): hero
+                // Pemasukan dan kartu uang lama digabung menjadi SATU
+                // panel bertab periode Hari Ini / Bulan Ini, supaya angka
+                // harian dan bulanan tidak tampil berulang dalam dua kartu
+                // terpisah. Tab memakai SingleChoiceSegmentedButtonRow
+                // resmi Material 3 (sama seperti pemilih metode bayar).
+                val monthMode = summaryPeriod == 1
                 val diff = d.todayIn - d.yesterdayIn
-                ExpressiveCard(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.fillMaxWidth()
-                        .animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))
-                ) {
-                    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(tr("PEMASUKAN HARI INI", "TODAY'S INCOME"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                            Surface(color = Color.White.copy(alpha = 0.25f), shape = CircleShape) {
-                                Icon(Icons.Default.TrendingUp, null, tint = Color.White, modifier = Modifier.padding(6.dp).size(18.dp))
+                val panelIn = if (monthMode) d.monthIn else d.todayIn
+                val panelOut = if (monthMode) d.monthOut else d.todayOut
+                val panelProfit = if (monthMode) d.monthProfit else d.todayProfit
+                val panelSales = if (monthMode) d.totalSalesMonth else d.totalSalesToday
+                Column {
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        listOf(tr("Hari Ini", "Today"), tr("Bulan Ini", "This Month")).forEachIndexed { index, label ->
+                            SegmentedButton(
+                                selected = summaryPeriod == index,
+                                onClick = { summaryPeriod = index },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                                modifier = Modifier.weight(1f)
+                            ) { Text(label, maxLines = 1) }
+                        }
+                    }
+                    Spacer(Modifier.height(SpaceM))
+                    ExpressiveCard(
+                        modifier = Modifier.fillMaxWidth()
+                            .animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))
+                    ) {
+                        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text(if (monthMode) tr("PEMASUKAN BULAN INI", "THIS MONTH'S INCOME") else tr("PEMASUKAN HARI INI", "TODAY'S INCOME"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                                    Icon(Icons.Default.TrendingUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(6.dp).size(18.dp))
+                                }
                             }
-                        }
-                        Spacer(Modifier.height(SpaceS))
-                        AnimatedAmount(d.todayIn, MaterialTheme.typography.headlineLarge, Color.White)
-                        Spacer(Modifier.height(SpaceXS))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Receipt, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(tr("${d.totalSalesToday} transaksi penjualan", "${d.totalSalesToday} sales transactions"), color = Color.White, style = MaterialTheme.typography.bodySmall)
-                        }
-                        Spacer(Modifier.height(SpaceS))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            when {
-                                diff > 0 -> {
-                                    Icon(Icons.Default.TrendingUp, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(tr("Naik ${formatIDR(diff)} dari kemarin", "Up ${formatIDR(diff)} from yesterday"), color = Color.White, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                            Spacer(Modifier.height(SpaceS))
+                            AnimatedAmount(panelIn, MaterialTheme.typography.headlineLarge, MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(SpaceXS))
+                            if (!monthMode) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    when {
+                                        diff > 0 -> {
+                                            Icon(Icons.Default.TrendingUp, null, tint = profitGreen(), modifier = Modifier.size(16.dp))
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(tr("Naik ${formatIDR(diff)} dari kemarin", "Up ${formatIDR(diff)} from yesterday"), color = profitGreen(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                        }
+                                        diff < 0 -> {
+                                            Icon(Icons.Default.TrendingDown, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(tr("Turun ${formatIDR(-diff)} dari kemarin", "Down ${formatIDR(-diff)} from yesterday"), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                        }
+                                        else -> {
+                                            Text(tr("Sama seperti kemarin", "Same as yesterday"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                        }
+                                    }
                                 }
-                                diff < 0 -> {
-                                    Icon(Icons.Default.TrendingDown, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(tr("Turun ${formatIDR(-diff)} dari kemarin", "Down ${formatIDR(-diff)} from yesterday"), color = Color.White, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                            } else {
+                                Text(tr("Penjualan pada bulan berjalan", "Sales in the current month"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Spacer(Modifier.height(SpaceM))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            Spacer(Modifier.height(SpaceM))
+                            Row(Modifier.fillMaxWidth()) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(tr("Pengeluaran", "Expenses"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Spacer(Modifier.height(SpaceXS))
+                                    Text(formatIDR(panelOut), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
-                                else -> {
-                                    Text(tr("Sama seperti kemarin", "Same as yesterday"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                Column(Modifier.weight(1f)) {
+                                    Text(tr("Selisih", "Difference"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Spacer(Modifier.height(SpaceXS))
+                                    Text(formatIDR(panelProfit), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (panelProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text(tr("Transaksi", "Transactions"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Spacer(Modifier.height(SpaceXS))
+                                    Text("$panelSales", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                         }
@@ -363,45 +405,6 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Spacer(Modifier.height(SpaceS))
                         Text(tr("${d.totalMedicines} jenis obat terdaftar di Stok", "${d.totalMedicines} medicines registered in Stock"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                }
-            }
-            item {
-                AnimatedVisibility(
-                    visible = listEntered,
-                    enter = fadeIn(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)) { it / 3 } +
-                        expandVertically(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)),
-                    exit = fadeOut()
-                ) {
-                // Kartu uang: Pengeluaran & Selisih Kas Hari Ini disusun
-                // VERTIKAL selebar kartu (label di atas, angka di bawah) —
-                // diubah dari sejajar setengah lebar (saran asisten, dipilih
-                // Achmad 2026-10-30) supaya teksnya tidak kepotong.
-                // Selisih Kas Bulan Ini di bawah garis pemisah.
-                ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Column {
-                            Text(tr("Pengeluaran Hari Ini", "Today's Expenses"), style = MaterialTheme.typography.labelSmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Spacer(Modifier.height(SpaceXS))
-                            Text(formatIDR(d.todayOut), style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        Spacer(Modifier.height(SpaceM))
-                        Column {
-                            Text(tr("Selisih Kas Hari Ini", "Today's Cash Difference"), style = MaterialTheme.typography.labelSmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Spacer(Modifier.height(SpaceXS))
-                            Text(formatIDR(d.todayProfit), style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold, color = if (d.todayProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        Spacer(Modifier.height(SpaceM))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        Spacer(Modifier.height(SpaceS))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(tr("Selisih Kas Bulan Ini", "This Month's Cash Difference"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Medium)
-                            Text(formatIDR(d.monthProfit), style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold, color = if (d.monthProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error)
-                        }
-                        Spacer(Modifier.height(SpaceXS))
-                        Text(tr("Masuk ${formatIDR(d.monthIn)} • Keluar ${formatIDR(d.monthOut)}", "In ${formatIDR(d.monthIn)} • Out ${formatIDR(d.monthOut)}"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 }

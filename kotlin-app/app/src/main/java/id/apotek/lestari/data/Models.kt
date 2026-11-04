@@ -91,6 +91,7 @@ data class Dashboard(
     val lowStockCount: Int = 0,
     val expiringCount: Int = 0,
     val totalSalesToday: Int = 0,
+    val totalSalesMonth: Int = 0,
     val bestSellers: List<BestSeller> = emptyList(),
     val last7Days: List<DayCash> = emptyList(),
     val recentSales: List<RecentSale> = emptyList()

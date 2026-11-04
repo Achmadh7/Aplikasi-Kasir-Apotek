@@ -141,6 +141,7 @@ class Repository {
             it.expiryDate != null && it.expiryDate <= in30Key
         }
         val todaySales = salesRows.filter { (instantOf(it.createdAt) ?: -1) in startToday until endToday }
+        val monthSales = salesRows.filter { (instantOf(it.createdAt) ?: -1) in startMonth until endToday }
         // "Obat yang Terjual" di Beranda hanya dari penjualan hari ini.
         val todaySaleIds = todaySales.map { it.id }.toSet()
         val bestSellers = items.filter { it.saleId in todaySaleIds }
@@ -166,7 +167,7 @@ class Repository {
             todayIn = todayIn, yesterdayIn = yesterdayIn, todayOut = todayOut, todayProfit = todayIn - todayOut,
             monthIn = monthIn, monthOut = monthOut, monthProfit = monthIn - monthOut,
             totalMedicines = meds.size, lowStockCount = lowStockCount, expiringCount = expiringCount,
-            totalSalesToday = todaySales.size, bestSellers = bestSellers, last7Days = last7Days,
+            totalSalesToday = todaySales.size, totalSalesMonth = monthSales.size, bestSellers = bestSellers, last7Days = last7Days,
             // "Penjualan Terakhir" di Beranda juga hanya hari ini.
             recentSales = todaySales.take(5).map { RecentSale(it.id, it.invoiceNo, it.total, it.createdAt) }
         )
