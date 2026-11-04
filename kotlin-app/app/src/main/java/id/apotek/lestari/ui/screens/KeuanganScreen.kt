@@ -237,15 +237,10 @@ fun KeuanganScreen() {
                 }
             }
             Spacer(Modifier.height(SpaceL))
-            Button(
-                onClick = { formType = "in"; showForm = true },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
-                shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.fillMaxWidth().height(52.dp)
-            ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text(tr("Catat Kas", "Record Cash"), style = MaterialTheme.typography.titleMedium) }
-            Spacer(Modifier.height(SpaceL))
             // Kartu Saldo Kas — warna gradasi biru di-revert ke kartu datar seperti semula;
-            // bar proporsi + compact dipertahankan.
+            // bar proporsi + compact dipertahankan. Redesain Varian 1 (pilihan
+            // Achmad 2026-11-04): tombol Catat Kas yang dulu berdiri sendiri di
+            // atas kartu kini menyatu sebagai baris bawah kartu ini.
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -288,10 +283,19 @@ fun KeuanganScreen() {
                             if (saldoOut > 0) Box(Modifier.weight(saldoOut.toFloat()).fillMaxHeight().background(MaterialTheme.colorScheme.error))
                         }
                     }
+                    // Baris bawah kartu: tombol Catat Kas (menyatu, Varian 1).
+                    Spacer(Modifier.height(SpaceM))
+                    Button(
+                        onClick = { formType = "in"; showForm = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text(tr("Catat Kas", "Record Cash"), style = MaterialTheme.typography.titleMedium) }
                 }
             }
             Spacer(Modifier.height(SpaceL))
             // Grafik arus kas — judul + isi mengikuti periode yang dipilih.
+            // Varian 1: batang dipadatkan (maks 56dp, dulu 110dp) + label nilai per hari.
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     val chartTitle = when (period) {
@@ -349,14 +353,29 @@ fun KeuanganScreen() {
                                     modifier = if (scrollable) Modifier.width(44.dp) else Modifier.weight(1f),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
+                                    // Label nilai total hari di atas batang (grafik
+                                    // ringkas Varian 1); ruang label selalu disediakan
+                                    // supaya dasar batang tetap sejajar antarhari.
+                                    Box(Modifier.height(16.dp), contentAlignment = Alignment.BottomCenter) {
+                                        if (dayIn + dayOut > 0) {
+                                            Text(
+                                                formatCompactIDR(dayIn + dayOut),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                    Spacer(Modifier.height(2.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
                                         key(period, periodIn, periodOut) {
                                             val grow = remember { Animatable(0f) }
                                             // Jepit jeda animasi supaya grafik panjang
                                             // tidak butuh waktu lama untuk selesai tumbuh.
                                             LaunchedEffect(period, periodIn, periodOut) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
-                                            val inH = ((110f * dayIn / maxFlow * grow.value).coerceIn(0f, 110f)).let { if (dayIn > 0) it.coerceAtLeast(4f) else 0f }
-                                            val outH = ((110f * dayOut / maxFlow * grow.value).coerceIn(0f, 110f)).let { if (dayOut > 0) it.coerceAtLeast(4f) else 0f }
+                                            val inH = ((56f * dayIn / maxFlow * grow.value).coerceIn(0f, 56f)).let { if (dayIn > 0) it.coerceAtLeast(4f) else 0f }
+                                            val outH = ((56f * dayOut / maxFlow * grow.value).coerceIn(0f, 56f)).let { if (dayOut > 0) it.coerceAtLeast(4f) else 0f }
                                             Box(Modifier.width(10.dp).height(inH.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
                                             Box(Modifier.width(10.dp).height(outH.dp).background(MaterialTheme.colorScheme.error, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
                                         }
