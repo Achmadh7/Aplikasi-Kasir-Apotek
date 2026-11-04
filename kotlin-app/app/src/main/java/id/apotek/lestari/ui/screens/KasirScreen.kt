@@ -189,6 +189,13 @@ fun KasirScreen() {
     var uangDiterima by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
     var payMsg by rememberSaveable { mutableStateOf("") }
     var payCount by remember { mutableIntStateOf(0) }
+    // Fase sukses besar setelah Bayar (varian 1 pilihan Achmad 2026-11-04):
+    // sheet menampilkan centang besar di tengah sebelum struk muncul,
+    // menggantikan baris centang kecil lama yang gampang terlewat.
+    var successPhase by remember { mutableStateOf(false) }
+    var successMethod by remember { mutableStateOf("") }
+    var successTotal by remember { mutableIntStateOf(0) }
+    var successChange by remember { mutableIntStateOf(0) }
     // Struk terakhir disimpan sebagai id saja, lalu dimuat ulang dari repo.
     var lastSaleId by rememberSaveable { mutableIntStateOf(0) }
     var lastSale by remember { mutableStateOf<Sale?>(null) }
@@ -276,6 +283,14 @@ fun KasirScreen() {
     LaunchedEffect(cartSnapshot, cartInitialized) {
         if (cartInitialized) {
             savedCart = cartSnapshot.flatMap { listOf(it.first, it.second, if (it.third) 1 else 0) }
+        }
+    }
+    // Timer fase sukses: beri waktu animasi centang besar selesai
+    // (~1,5 detik), lalu fase berakhir dan blok struk mengambil alih.
+    LaunchedEffect(successPhase) {
+        if (successPhase) {
+            delay(1500)
+            successPhase = false
         }
     }
     // Muat ulang struk terakhir dari id tersimpan (untuk restore setelah rotasi).
@@ -505,7 +520,26 @@ fun KasirScreen() {
                     IconButton(onClick = closeSheet) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
-                if (cart.isNotEmpty()) {
+                if (successPhase) {
+                    // Tampilan sukses penuh (varian 1): centang besar
+                    // beranimasi di tengah sheet + rincian pembayaran.
+                    // Struk di bawah menunggu fase ini selesai supaya
+                    // animasinya tidak tertutup perubahan isi sheet.
+                    Column(
+                        Modifier.fillMaxWidth().padding(vertical = 40.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        key(payCount) { AnimatedCheckmark(size = 120.dp) }
+                        Spacer(Modifier.height(SpaceL))
+                        Text(tr("Pembayaran Berhasil", "Payment Successful"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                        Spacer(Modifier.height(SpaceS))
+                        Text(tr("Dibayar via $successMethod \u2022 Total ${formatIDR(successTotal)}", "Paid via $successMethod \u2022 Total ${formatIDR(successTotal)}"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (successChange > 0) {
+                            Spacer(Modifier.height(SpaceXS))
+                            Text(tr("Kembalian ${formatIDR(successChange)}", "Change ${formatIDR(successChange)}"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                } else if (cart.isNotEmpty()) {
                     cart.forEachIndexed { index, ci ->
                         // Dua baris per item: (nama | total baris), lalu
                         // (pilihan Ecer/Grosir | stepper jumlah | hapus | harga
@@ -691,7 +725,13 @@ fun KasirScreen() {
                             val amt = if (method == "Tunai") paid else total
                             val result = repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty, it.useWholesale) }, method, amt))
                             if (result is ApiResult.Success) {
-                                payMsg = tr("Pembayaran $method berhasil. Total ${formatIDR(total)}", "Payment successful. Total ${formatIDR(total)}") + if (method == "Tunai") tr(" • Kembalian ${formatIDR(change)}", " • Change ${formatIDR(change)}") else ""
+                                // Masuk fase sukses besar: tangkap rincian
+                                // pembayaran SEBELUM keranjang dikosongkan.
+                                successMethod = method
+                                successTotal = total
+                                successChange = change
+                                successPhase = true
+                                payMsg = ""
                                 payCount++
                                 cart.clear()
                                 savedCart = emptyList()
@@ -715,24 +755,21 @@ fun KasirScreen() {
                     modifier = Modifier.fillMaxWidth().height(52.dp).graphicsLayer(scaleX = bayarScale, scaleY = bayarScale)
                 ) { Text(tr("Bayar (${formatIDR(total)})", "Pay (${formatIDR(total)})"), style = MaterialTheme.typography.titleMedium) }
                 }
-                // Sengaja TANPA AnimatedVisibility: animasi mengembangnya
-                // bertabrakan dengan animasi tinggi sheet (pegas draggable)
-                // sehingga gerak sheet terasa jitter setelah pembayaran.
+                // Pesan galat pembayaran saja (keberhasilan sekarang lewat
+                // fase sukses besar di atas). Sengaja TANPA AnimatedVisibility:
+                // animasi mengembangnya bertabrakan dengan animasi tinggi
+                // sheet (pegas draggable) sehingga gerak sheet terasa jitter.
                 if (payMsg.isNotEmpty()) {
                     Column {
                         Spacer(Modifier.height(SpaceS))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            key(payCount) { AnimatedCheckmark() }
-                            Spacer(Modifier.width(10.dp))
-                            Text(payMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
-                        }
+                        Text(payMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
                 }
                 // Sengaja TANPA AnimatedVisibility (alasan sama seperti blok
                 // pesan sukses di atas): blok struk ini tinggi — animasi
                 // mengembangnya membuat sheet jitter saat struk muncul dan
                 // saat sheet ditutup dari tampilan struk.
-                if (lastSale != null) {
+                if (!successPhase && lastSale != null) {
                     Column {
                         Spacer(Modifier.height(SpaceL))
                         lastSale?.let {

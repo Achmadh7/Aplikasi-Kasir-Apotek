@@ -88,6 +88,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
@@ -306,9 +307,11 @@ fun PriceModeChip(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 
-/** Centang sukses pembayaran: lingkaran membesar dengan pegas, centang tergambar. */
+/** Centang sukses pembayaran: lingkaran membesar dengan pegas, centang
+ *  tergambar. Ukuran bisa diperbesar (fase sukses pembayaran memakai
+ *  120.dp); padding dan tebal garis diskalakan mengikuti ukuran. */
 @Composable
-fun AnimatedCheckmark() {
+fun AnimatedCheckmark(size: Dp = 56.dp) {
     var started by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { started = true }
     val circleScale by animateFloatAsState(
@@ -322,15 +325,16 @@ fun AnimatedCheckmark() {
         label = "checkTrim"
     )
     val checkColor = MaterialTheme.colorScheme.primary
+    val scaleF = size.value / 56f
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = CircleShape,
-        modifier = Modifier.size(56.dp).graphicsLayer(scaleX = circleScale, scaleY = circleScale)
+        modifier = Modifier.size(size).graphicsLayer(scaleX = circleScale, scaleY = circleScale)
     ) {
-        Canvas(Modifier.fillMaxSize().padding(14.dp)) {
+        Canvas(Modifier.fillMaxSize().padding((14 * scaleF).dp)) {
             val w = size.width
             val h = size.height
-            val stroke = 7.dp.toPx()
+            val stroke = (7 * scaleF).dp.toPx()
             val t1 = (trim * 2f).coerceIn(0f, 1f)
             val t2 = (trim * 2f - 1f).coerceIn(0f, 1f)
             if (t1 > 0f) {
