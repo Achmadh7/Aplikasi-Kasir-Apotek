@@ -104,11 +104,11 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.5.0-alpha08")
     implementation("androidx.compose.material3:material3-window-size-class:1.5.0-alpha08")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.navigation:navigation-compose:2.7.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.5")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     // Database lokal (Room) — data tersimpan di HP, tanpa server
     implementation("androidx.room:room-runtime:2.7.2")
