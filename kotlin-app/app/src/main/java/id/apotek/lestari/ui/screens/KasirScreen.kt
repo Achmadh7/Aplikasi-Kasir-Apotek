@@ -196,6 +196,18 @@ fun KasirScreen() {
     var successMethod by remember { mutableStateOf("") }
     var successTotal by remember { mutableIntStateOf(0) }
     var successChange by remember { mutableIntStateOf(0) }
+    // Animasi masuk blok struk (laporan Achmad 2026-11-04: struk muncul
+    // tanpa animasi sama sekali setelah fase sukses). Hanya alpha +
+    // translation + skala kecil lewat graphicsLayer — BUKAN animasi tinggi
+    // atau AnimatedVisibility, supaya tidak bertabrakan dengan pegas sheet
+    // (alasan blok struk memang polos selama ini).
+    val receiptEnter = remember { Animatable(0f) }
+    LaunchedEffect(lastSale?.id, successPhase) {
+        if (!successPhase && lastSale != null) {
+            receiptEnter.snapTo(0f)
+            receiptEnter.animateTo(1f, tween(durationMillis = 450, easing = FastOutSlowInEasing))
+        }
+    }
     // Pratinjau struk di sheet dilipat secara bawaan (desain K1, pilihan
     // Achmad 2026-11-04) supaya tombol Bayar selalu terlihat tanpa gulir.
     var showReceiptPreview by remember { mutableStateOf(false) }
@@ -764,12 +776,20 @@ fun KasirScreen() {
                         Text(payMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
                 }
-                // Sengaja TANPA AnimatedVisibility (alasan sama seperti blok
-                // pesan sukses di atas): blok struk ini tinggi — animasi
-                // mengembangnya membuat sheet jitter saat struk muncul dan
-                // saat sheet ditutup dari tampilan struk.
+                // Tetap TANPA AnimatedVisibility (alasan sama seperti blok
+                // pesan sukses di atas): animasi mengembang membuat sheet
+                // jitter. Sebagai gantinya konten struk diberi animasi masuk
+                // graphicsLayer (memudar + naik + membesar tipis) yang tidak
+                // mengubah ukuran sama sekali — lihat receiptEnter di atas.
                 if (!successPhase && lastSale != null) {
-                    Column {
+                    Column(
+                        Modifier.graphicsLayer {
+                            alpha = receiptEnter.value
+                            translationY = (1f - receiptEnter.value) * 24.dp.toPx()
+                            scaleX = 0.98f + 0.02f * receiptEnter.value
+                            scaleY = 0.98f + 0.02f * receiptEnter.value
+                        }
+                    ) {
                         Spacer(Modifier.height(SpaceL))
                         lastSale?.let {
                             InvoiceDetailCard(sale = it, graphicsLayer = receiptLayer)
