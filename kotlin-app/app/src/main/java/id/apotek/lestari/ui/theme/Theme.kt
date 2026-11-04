@@ -52,10 +52,13 @@ fun profitGreen(): Color = if (LocalIsDarkTheme.current) ExpressiveGreen else Co
 
 /** Amber peringatan (label hitung mundur jatuh tempo PBF "N hari lagi" /
  *  "Besok jatuh tempo") — mode gelap #FFB74D (amber muda, jelas di latar
- *  gelap); mode terang #B26A00 (amber pekat) karena #FFB74D nyaris tidak
- *  terbaca di kartu terang (laporan Achmad 2026-10-31). */
+ *  gelap); mode terang #8C5700 (amber pekat) karena #FFB74D nyaris tidak
+ *  terbaca di kartu terang (laporan Achmad 2026-10-31). Nilai terang lama
+ *  #B26A00 kontrasnya hanya 3,5-4,2:1 di permukaan kartu terang (di bawah
+ *  batas keterbacaan 4,5:1), jadi digelapkan lagi 2026-11-04 menjadi
+ *  #8C5700 (4,9-6,0:1 di semua permukaan terang). */
 @Composable
-fun warningAmber(): Color = if (LocalIsDarkTheme.current) Color(0xFFFFB74D) else Color(0xFFB26A00)
+fun warningAmber(): Color = if (LocalIsDarkTheme.current) Color(0xFFFFB74D) else Color(0xFF8C5700)
 
 /** Pegas ekspresif: lentur (dampingRatio ~0.7) untuk animateContentSize & transisi. */
 fun <T> expressiveSpring() = spring<T>(
