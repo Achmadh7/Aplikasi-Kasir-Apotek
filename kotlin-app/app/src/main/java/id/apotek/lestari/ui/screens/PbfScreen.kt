@@ -171,7 +171,7 @@ fun PbfScreen() {
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(vertical = 20.dp),
+            contentPadding = PaddingValues(top = 20.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(SpaceL)
         ) {
             item {
@@ -203,15 +203,56 @@ fun PbfScreen() {
                         }
                     }
                 }
-                Spacer(Modifier.height(SpaceL))
-                Button(
-                    onClick = { showForm = true },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(28.dp)
-                ) {
-                    Icon(Icons.Default.Add, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(tr("Catat Pembelian", "Record Purchase"))
+            }
+            // Kartu Kredit Belum Lunas (desain P1C, pilihan Achmad
+            // 2026-11-04): total pembelian Kredit yang belum dilunasi
+            // (paymentType masih KREDIT) + rincian terdekat jatuh temponya.
+            // Hanya tampil bila memang ada kredit yang belum lunas.
+            val outstanding = purchases.filter { it.paymentType == "KREDIT" }
+            if (outstanding.isNotEmpty()) {
+                item {
+                    val outstandingTotal = outstanding.sumOf { it.total }
+                    val outstandingSorted = outstanding.sortedWith(compareBy({ it.dueDate.isBlank() }, { it.dueDate }))
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(tr("KREDIT BELUM LUNAS", "OUTSTANDING CREDIT"), color = warningAmber(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                Text(formatIDR(outstandingTotal), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                            }
+                            Spacer(Modifier.height(SpaceS))
+                            outstandingSorted.take(3).forEach { p ->
+                                Row(
+                                    Modifier.fillMaxWidth().clickable { expanded = p.id }.padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(Modifier.size(8.dp).background(warningAmber(), CircleShape))
+                                    Spacer(Modifier.width(10.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(p.pbfName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                                        val dueText = if (p.dueDate.isNotBlank()) {
+                                            val daysLeft = dueDaysLeft(p.dueDate)
+                                            if (daysLeft != null) {
+                                                val lbl = when {
+                                                    daysLeft < 0L -> tr("Lewat ${-daysLeft} hari", "${-daysLeft} days overdue")
+                                                    daysLeft == 0L -> tr("Jatuh tempo hari ini", "Due today")
+                                                    daysLeft == 1L -> tr("Besok jatuh tempo", "Due tomorrow")
+                                                    else -> tr("$daysLeft hari lagi", "Due in $daysLeft days")
+                                                }
+                                                tr("Jatuh tempo ${formatDateID(p.dueDate)} • $lbl", "Due ${formatDateID(p.dueDate)} • $lbl")
+                                            } else formatDateID(p.dueDate)
+                                        } else tr("Tanpa jatuh tempo", "No due date")
+                                        Text(dueText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.75f))
+                                    }
+                                    Text(formatIDR(p.total), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                                }
+                            }
+                            if (outstandingSorted.size > 3) {
+                                Text(tr("+${outstandingSorted.size - 3} pembelian kredit lainnya", "+${outstandingSorted.size - 3} more credit purchases"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.75f))
+                            }
+                            Spacer(Modifier.height(SpaceS))
+                            Text(tr("Ketuk baris untuk membuka kartunya — Tandai Lunas dan Atur Jatuh Tempo ada di detail kartu.", "Tap a row to open its card — Mark as Paid and Set Due Date are in the card details."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.75f))
+                        }
+                    }
                 }
             }
             if (purchases.isEmpty()) {
@@ -220,7 +261,7 @@ fun PbfScreen() {
                         Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
                             Spacer(Modifier.height(SpaceS))
-                            Text(tr("Belum ada catatan pembelian. Catat belanja dari PBF lewat tombol + Catat Pembelian — ini murni catatan, tidak mengubah stok dan kas.", "No purchase records yet. Record PBF purchases with the + Record Purchase button — these are records only and do not change stock or cash."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Belum ada catatan pembelian. Catat belanja dari PBF lewat tombol + di kanan bawah — ini murni catatan, tidak mengubah stok dan kas.", "No purchase records yet. Record PBF purchases with the + button at the bottom right — these are records only and do not change stock or cash."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -354,7 +395,15 @@ fun PbfScreen() {
                 }
             }
         }
-        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
+        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(start = 16.dp, end = 88.dp, bottom = 16.dp))
+        // Tombol melayang Catat Pembelian (desain P1C) menggantikan
+        // tombol lebar di bawah kartu ringkasan.
+        FloatingActionButton(
+            onClick = { showForm = true },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)
+        ) {
+            Icon(Icons.Default.Add, tr("Catat Pembelian", "Record Purchase"))
+        }
     }
 
     if (showForm) {
