@@ -4,6 +4,8 @@ name: Build APK
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -27,6 +29,19 @@ jobs:
       - name: Unit tests
         run: gradle :app:testDebugUnitTest --stacktrace
         working-directory: kotlin-app
+      - name: Lint (report only)
+        if: always()
+        continue-on-error: true
+        working-directory: kotlin-app
+        run: ./gradlew :app:lintDebug --stacktrace
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: kotlin-app/app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
         working-directory: kotlin-app
@@ -48,12 +63,15 @@ jobs:
         run: gradle assembleRelease --stacktrace
         working-directory: kotlin-app
       - name: Rename release APK
-        run: cp "kotlin-app/app/build/outputs/apk/release/app-release.apk" "Apotek Lestari-1.2.0-Release.apk"
+        run: |
+          VERSION=$(grep -oP 'versionName = "\K[^"]+' kotlin-app/app/build.gradle.kts)
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+          cp "kotlin-app/app/build/outputs/apk/release/app-release.apk" "Apotek Lestari-$VERSION-Release.apk"
       - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Apotek Lestari-1.2.0-Release
-          path: Apotek Lestari-1.2.0-Release.apk
+          name: Apotek Lestari-${{ env.APP_VERSION }}-Release
+          path: Apotek Lestari-${{ env.APP_VERSION }}-Release.apk
           if-no-files-found: error
       - name: Upload APK
         uses: actions/upload-artifact@v4
