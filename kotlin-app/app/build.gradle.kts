@@ -1,8 +1,10 @@
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    // AGP 9: Kotlin melekat (built-in) — org.jetbrains.kotlin.android
+    // tidak dipasang lagi; versinya dipatok di build root.
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
@@ -23,7 +25,11 @@ val signingProperties =
 
 android {
     namespace = "id.apotek.lestari"
-    compileSdk = 36
+    // compileSdk 37: pustaka AndroidX generasi terbaru (Navigation 2.10,
+    // Material 3 1.5 beta) memang dibangun untuk API 37 dan menuntutnya
+    // (checkDebugAarMetadata). targetSdk tetap 36 — perilaku runtime
+    // tidak berubah, yang naik hanya API untuk kompilasi.
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "id.apotek.lestari"
@@ -66,7 +72,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
     buildFeatures {
         compose = true
         // BuildConfig dibangkitkan supaya layar Tentang bisa membaca
@@ -76,6 +81,14 @@ android {
     }
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    }
+}
+
+// Target bytecode Kotlin (pengganti kotlinOptions yang dihapus AGP 9 —
+// kini lewat compilerOptions DSL di blok kotlin).
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
