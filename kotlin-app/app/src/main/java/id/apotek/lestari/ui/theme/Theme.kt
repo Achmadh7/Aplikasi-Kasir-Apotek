@@ -305,7 +305,7 @@ object AppLang {
 fun tr(id: String, en: String): String = if (AppLang.code == "en") en else id
 
 /** Locale format tanggal sesuai bahasa aktif. */
-private fun appLocale(): Locale = if (AppLang.code == "en") Locale.ENGLISH else ID_LOCALE
+fun appLocale(): Locale = if (AppLang.code == "en") Locale.ENGLISH else ID_LOCALE
 
 // ---- Format tanggal Indonesia (Asia/Jakarta), seperti web app ----
 
