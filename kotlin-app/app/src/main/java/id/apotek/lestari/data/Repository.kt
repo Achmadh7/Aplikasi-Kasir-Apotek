@@ -818,6 +818,14 @@ class Repository {
     suspend fun pbfKotor(): List<PurchaseEntity> = DatabaseProvider.db.purchaseDao().getKotor()
     suspend fun itemPbfKotor(): List<PurchaseItemEntity> = DatabaseProvider.db.purchaseDao().getKotorItems()
 
+    /** True bila masih ada baris bertanda kotor di tabel mana pun —
+     *  dipakai pemicu sinkron otomatis agar putaran gema dari tulisan
+     *  sinkron sendiri (tandai bersih / tarikan) tidak menjadwalkan
+     *  sinkron kosong. */
+    suspend fun adaDataKotor(): Boolean =
+        obatKotor().isNotEmpty() || penjualanKotor().isNotEmpty() || itemJualKotor().isNotEmpty() ||
+            kasKotor().isNotEmpty() || pbfKotor().isNotEmpty() || itemPbfKotor().isNotEmpty()
+
     suspend fun obatByRemoteId(remoteId: String): MedicineEntity? =
         DatabaseProvider.db.medicineDao().getByRemoteId(remoteId)
 

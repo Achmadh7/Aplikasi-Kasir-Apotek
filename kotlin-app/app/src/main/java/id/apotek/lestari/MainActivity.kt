@@ -201,7 +201,12 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     val snackbarHostState = remember { SnackbarHostState() }
     val perluLogin = onlineSiap && emailOnline == null && !lewatiLogin
 
-    fun jalankanSync() {
+    // senyap = sinkron latar (otomatis): tanpa snackbar "Sinkronisasi
+    // selesai" — laporan Achmad 2026-11-10 bahwa notifikasinya muncul
+    // terus setiap sinkron otomatis berjalan. Status tetap terlihat
+    // dari ikon awan di Beranda. Sinkron manual & saat masuk tetap
+    // memberi kabar.
+    fun jalankanSync(senyap: Boolean = false) {
         if (!onlineSiap || emailOnline == null || statusSync == StatusSync.PROSES) return
         statusSync = StatusSync.PROSES
         appScope.launch {
@@ -210,11 +215,11 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                     statusSync = StatusSync.BERHASIL
                     syncTerakhir = System.currentTimeMillis()
                     onlinePrefs.edit().putLong("online_sync_terakhir", syncTerakhir).apply()
-                    pesanStatus = tr("Sinkronisasi selesai", "Sync complete")
+                    if (!senyap) pesanStatus = tr("Sinkronisasi selesai", "Sync complete")
                 }
                 is HasilSync.Gagal -> {
                     statusSync = StatusSync.GAGAL
-                    pesanStatus = h.pesan
+                    if (!senyap) pesanStatus = h.pesan
                 }
                 HasilSync.BelumMasuk -> statusSync = StatusSync.BELUM_MASUK
                 HasilSync.BelumDikonfigurasi -> statusSync = StatusSync.NONAKTIF
@@ -323,7 +328,10 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                     tunda?.cancel()
                     tunda = appScope.launch {
                         delay(5000)
-                        jalankanSync()
+                        // Hanya jalan bila memang ada data kotor: tulisan
+                        // dari sinkron itu sendiri tidak memicu putaran
+                        // kosong, dan sinkron otomatis berjalan senyap.
+                        if (repoOnline.adaDataKotor()) jalankanSync(senyap = true)
                     }
                 }
             }
