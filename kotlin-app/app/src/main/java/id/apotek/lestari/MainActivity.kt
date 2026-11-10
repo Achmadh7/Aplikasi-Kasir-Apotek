@@ -586,9 +586,9 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 // tab tidak lagi bergeser — hanya halaman sub (subEnter
                 // dkk.) yang tetap menggeser penuh.
                 enterTransition = { fadeIn(animationSpec = tween(150)) },
-                exitTransition = { fadeOut(durationSpec = tween(150)) },
-                popEnterTransition = { fadeIn(durationSpec = tween(150)) },
-                popExitTransition = { fadeOut(durationSpec = tween(150)) },
+                exitTransition = { fadeOut(tween(150)) },
+                popEnterTransition = { fadeIn(tween(150)) },
+                popExitTransition = { fadeOut(tween(150)) },
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
                 composable("beranda") { BerandaScreen(onGoStok = { goToTab("stok") }, onGoPengingat = { goToTab("pengingat") }, onGoLaba = { goToTab("laba") }, onGoRiwayat = { goToTab("riwayat") }, statusSync = statusSync, onSyncTap = { aksiSinkronTap() }) }
