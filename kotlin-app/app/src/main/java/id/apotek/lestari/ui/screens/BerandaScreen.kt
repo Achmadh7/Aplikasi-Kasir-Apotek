@@ -186,15 +186,20 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             ) {
             Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Header nama HN2 (pilihan Achmad 2026-11-10): logo besar
+                // dalam kotak putih membulat di kiri, nama dua baris
+                // (Apotek / Lestari berwarna primer), tanggal di bawahnya.
                 val logo = rememberLogoBitmap()
                 if (logo != null) {
-                    Surface(color = Color.White, shape = CircleShape, modifier = Modifier.size(44.dp)) {
-                        Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(4.dp).fillMaxSize())
+                    Surface(color = Color.White, shape = RoundedCornerShape(16.dp), modifier = Modifier.size(72.dp)) {
+                        Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(6.dp).fillMaxSize())
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(14.dp))
                 }
                 Column {
-                    Text("Apotek Lestari", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                    Text("Apotek", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                    Text("Lestari", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(3.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
