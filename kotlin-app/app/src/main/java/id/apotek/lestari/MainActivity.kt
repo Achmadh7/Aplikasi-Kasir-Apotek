@@ -57,11 +57,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import id.apotek.lestari.data.FirebaseKit
 import id.apotek.lestari.data.HasilReset
 import id.apotek.lestari.data.HasilSync
@@ -269,36 +266,6 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
         }
     }
 
-    fun aksiMasuk(email: String, sandi: String) {
-        appScope.launch {
-            sibukOnline = true
-            pesanOnline = null
-            try {
-                emailOnline = FirebaseKit.masukDenganEmail(email.trim(), sandi)
-                lewatiLogin = false
-            } catch (e: Exception) {
-                pesanOnline = e.message ?: tr("Gagal masuk", "Sign-in failed")
-            } finally {
-                sibukOnline = false
-            }
-        }
-    }
-
-    fun aksiDaftar(email: String, sandi: String) {
-        appScope.launch {
-            sibukOnline = true
-            pesanOnline = null
-            try {
-                emailOnline = FirebaseKit.daftarDenganEmail(email.trim(), sandi)
-                lewatiLogin = false
-            } catch (e: Exception) {
-                pesanOnline = e.message ?: tr("Gagal mendaftar", "Registration failed")
-            } finally {
-                sibukOnline = false
-            }
-        }
-    }
-
     fun aksiMasukGoogle() {
         appScope.launch {
             sibukOnline = true
@@ -308,25 +275,6 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 lewatiLogin = false
             } catch (e: Exception) {
                 pesanOnline = e.message ?: tr("Gagal masuk dengan Google", "Google sign-in failed")
-            } finally {
-                sibukOnline = false
-            }
-        }
-    }
-
-    fun aksiResetSandi(email: String) {
-        if (email.isBlank()) {
-            pesanOnline = tr("Isi email dulu untuk atur ulang kata sandi", "Enter your email first to reset the password")
-            return
-        }
-        appScope.launch {
-            sibukOnline = true
-            pesanOnline = null
-            try {
-                FirebaseKit.kirimResetSandi(email.trim())
-                pesanOnline = tr("Email atur ulang kata sandi terkirim. Cek kotak masuk email kamu.", "Password reset email sent. Check your inbox.")
-            } catch (e: Exception) {
-                pesanOnline = e.message ?: tr("Gagal mengirim email atur ulang", "Failed to send the reset email")
             } finally {
                 sibukOnline = false
             }
@@ -486,10 +434,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             googleSiap = FirebaseKit.googleSiap(context),
             sibuk = sibukOnline,
             pesan = pesanOnline,
-            onMasuk = { e, pw -> aksiMasuk(e, pw) },
-            onDaftar = { e, pw -> aksiDaftar(e, pw) },
             onGoogle = { aksiMasukGoogle() },
-            onReset = { e -> aksiResetSandi(e) },
             onLewati = { lewatiLogin = true }
         )
     } else {
@@ -940,23 +885,20 @@ fun LainnyaScreen(
 
 // ---- Gerbang login Mode Online (pola L1+L4 yang sama dengan KasBulanan):
 // satu kartu besar di tengah, ikon aplikasi melingkari tepi atas kartu,
-// tombol Google putih lebih dulu, pemisah "atau pakai email", formulir
-// email, lalu Lewati sebagai tamu. Hanya tampil bila build terkonfigurasi
-// Firebase dan belum ada yang masuk.
+// tombol Google putih, lalu Lewati sebagai tamu. Sejak 2026-11-10 login
+// HANYA Google (keputusan Achmad): formulir email/kata sandi dihapus —
+// akunnya memang akun Google, dan jalur email hanya membuka risiko
+// akun terbelah. Hanya tampil bila build terkonfigurasi Firebase dan
+// belum ada yang masuk.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LayarLogin(
     googleSiap: Boolean,
     sibuk: Boolean,
     pesan: String?,
-    onMasuk: (String, String) -> Unit,
-    onDaftar: (String, String) -> Unit,
     onGoogle: () -> Unit,
-    onReset: (String) -> Unit,
     onLewati: () -> Unit
 ) {
-    var email by remember { mutableStateOf("") }
-    var sandi by remember { mutableStateOf("") }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             Modifier
@@ -998,41 +940,21 @@ fun LayarLogin(
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth().height(50.dp)
                             ) {
-                                LogoGoogle(Modifier.size(18.dp))
+                                if (sibuk) {
+                                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFF1F1F1F))
+                                } else {
+                                    LogoGoogle(Modifier.size(18.dp))
+                                }
                                 Spacer(Modifier.width(10.dp))
                                 Text(tr("Masuk dengan Google", "Sign in with Google"), fontWeight = FontWeight.SemiBold)
                             }
-                            Spacer(Modifier.height(16.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                HorizontalDivider(Modifier.weight(1f))
-                                Text(
-                                    tr("atau pakai email", "or use email"),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 12.dp)
-                                )
-                                HorizontalDivider(Modifier.weight(1f))
-                            }
-                            Spacer(Modifier.height(16.dp))
+                        } else {
+                            Text(
+                                tr("Masuk dengan Google belum tersedia di build ini.", "Google sign-in is not available in this build."),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        OutlinedTextField(
-                            value = email,
-                            onValueChange = { email = it },
-                            label = { Text("Email") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = sandi,
-                            onValueChange = { sandi = it },
-                            label = { Text(tr("Kata Sandi", "Password")) },
-                            singleLine = true,
-                            visualTransformation = PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            modifier = Modifier.fillMaxWidth()
-                        )
                         if (pesan != null) {
                             Spacer(Modifier.height(12.dp))
                             Text(
@@ -1040,32 +962,6 @@ fun LayarLogin(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error
                             )
-                        }
-                        Spacer(Modifier.height(20.dp))
-                        Button(
-                            onClick = { onMasuk(email, sandi) },
-                            enabled = !sibuk && email.isNotBlank() && sandi.length >= 6,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth().height(50.dp)
-                        ) {
-                            if (sibuk) {
-                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                            } else {
-                                Text(tr("Masuk", "Sign In"), fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            TextButton(
-                                onClick = { onDaftar(email, sandi) },
-                                enabled = !sibuk && email.isNotBlank() && sandi.length >= 6
-                            ) { Text(tr("Daftar", "Register")) }
-                            TextButton(
-                                onClick = { onReset(email) },
-                                enabled = !sibuk
-                            ) { Text(tr("Lupa kata sandi?", "Forgot password?")) }
                         }
                         Spacer(Modifier.height(8.dp))
                         HorizontalDivider()

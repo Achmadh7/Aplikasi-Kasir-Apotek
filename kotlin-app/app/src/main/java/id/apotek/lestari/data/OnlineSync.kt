@@ -44,18 +44,6 @@ object FirebaseKit {
 
     fun emailMasuk(): String? = auth()?.currentUser?.email
 
-    suspend fun masukDenganEmail(email: String, kataSandi: String): String {
-        val auth = auth() ?: throw IllegalStateException("Firebase belum dikonfigurasi")
-        val hasil = auth.signInWithEmailAndPassword(email, kataSandi).await()
-        return hasil.user?.email ?: email
-    }
-
-    suspend fun daftarDenganEmail(email: String, kataSandi: String): String {
-        val auth = auth() ?: throw IllegalStateException("Firebase belum dikonfigurasi")
-        val hasil = auth.createUserWithEmailAndPassword(email, kataSandi).await()
-        return hasil.user?.email ?: email
-    }
-
     fun keluar() {
         auth()?.signOut()
     }
@@ -100,10 +88,6 @@ object FirebaseKit {
     }
 
     /** Kirim email atur ulang kata sandi (dibangunkan Firebase Auth). */
-    suspend fun kirimResetSandi(email: String) {
-        val auth = auth() ?: throw IllegalStateException("Firebase belum dikonfigurasi")
-        auth.sendPasswordResetEmail(email).await()
-    }
 }
 
 sealed interface HasilReset {
