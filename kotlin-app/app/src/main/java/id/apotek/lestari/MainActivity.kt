@@ -18,6 +18,10 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.rememberScrollState
@@ -435,9 +439,9 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             // Penuh ala iOS") \u2014 hanya untuk tujuan sub-halaman dari
             // Lainnya (laba, pengingat, riwayat, backup, terlaris, pbf,
             // tentang): halaman baru meluncur PENUH dari kanan (350ms),
-            // halaman yang tertutup bergeser 1/4 ke kiri sambil memudar;
-            // Kembali membaliknya persis. Pindah antar tab utama tetap
-            // memakai transisi NavHost 200ms di bawah.
+            // Transisi sub-menu: TANPA animasi (None) — sejak penghapusan
+            // semua animasi 2026-11-10 halaman sub tampil seketika; yang
+            // beranimasi hanya pindah antar tab utama (T3 di NavHost).
             val subEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { EnterTransition.None }
             val subExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { ExitTransition.None }
             val subPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { EnterTransition.None }
@@ -445,15 +449,15 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             NavHost(
                 navController = nav,
                 startDestination = "beranda",
-                // Transisi antar tab: cukup pudar singkat 150ms. Dulu
-                // dua layar sama-sama bergeser (200-350ms) dan terasa
-                // jitter di HP kelas menengah, jadi sejak 2026-11-10
-                // tab tidak lagi bergeser — hanya halaman sub (subEnter
-                // dkk.) yang tetap menggeser penuh.
-                enterTransition = { EnterTransition.None },
-                exitTransition = { ExitTransition.None },
-                popEnterTransition = { EnterTransition.None },
-                popExitTransition = { ExitTransition.None },
+                // Transisi antar tab = T3 (pilihan Achmad 2026-11-10 dari
+                // preview GIF T1-T5): layar baru memudar masuk sambil
+                // membesar mikro dari skala 0,98 ke penuh, 150ms; layar
+                // lama cukup memudar keluar. Enteng, tanpa geser sama
+                // sekali (geser 200-350ms dulu terasa jitter/bergulir).
+                enterTransition = { fadeIn(tween(150)) + scaleIn(initialScale = 0.98f, animationSpec = tween(150)) },
+                exitTransition = { fadeOut(tween(150)) },
+                popEnterTransition = { fadeIn(tween(150)) + scaleIn(initialScale = 0.98f, animationSpec = tween(150)) },
+                popExitTransition = { fadeOut(tween(150)) },
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
                 composable("beranda") { BerandaScreen(onGoStok = { goToTab("stok") }, onGoPengingat = { goToTab("pengingat") }, onGoLaba = { goToTab("laba") }, onGoRiwayat = { goToTab("riwayat") }, statusSync = statusSync, onSyncTap = { aksiSinkronTap() }) }
