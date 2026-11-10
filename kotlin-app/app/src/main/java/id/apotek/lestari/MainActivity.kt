@@ -563,11 +563,49 @@ private data class LainnyaTile(
     val icon: androidx.compose.ui.graphics.vector.ImageVector
 )
 
-// Halaman "Lainnya" — redesain A2 "Halaman Petak Besar" (pilihan Achmad
-// 2026-11-04, menggantikan sheet bawah): enam menu utama sebagai petak
-// besar dua kolom dengan subjudul penjelas; di bawahnya baris pengaturan
-// (tema, bahasa, tentang) berperilaku sama seperti dulu di sheet. Halaman
-// bisa digulir supaya tetap utuh di mode lanskap.
+// Baris menu berkelompok gaya KasBulanan untuk halaman Lainnya:
+// kotak ikon membulat + judul + subjudul + chevron (atau isi trailing lain).
+@Composable
+private fun BarisGrupLainnya(
+    ikon: androidx.compose.ui.graphics.vector.ImageVector,
+    judul: String,
+    sub: String?,
+    warnaIkon: Color? = null,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable () -> Unit = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+) {
+    Row(
+        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable { onClick() } else Modifier).padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
+            Icon(ikon, null, tint = warnaIkon ?: MaterialTheme.colorScheme.primary, modifier = Modifier.padding(9.dp).fillMaxSize())
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(judul, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            if (sub != null) {
+                Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        trailing()
+    }
+}
+
+@Composable
+private fun PemisahGrup() {
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+        modifier = Modifier.padding(start = 68.dp, end = 16.dp)
+    )
+}
+
+// Halaman "Lainnya" — gaya L1 persis KasBulanan (pilihan Achmad
+// 2026-11-10, menggantikan petak besar A2): identitas tengah (cakram
+// logo + nama + pil versi), kartu status Mode Online, satu kartu grup
+// berisi enam menu tujuan sebagai baris, satu kartu grup pengaturan
+// (tema sebagai saklar, bahasa, sinkronisasi, keluar akun), kartu
+// Tentang, lalu Reset Semua Data paling bawah.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LainnyaScreen(
@@ -585,82 +623,35 @@ fun LainnyaScreen(
     onResetTap: () -> Unit
 ) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp)) {
-        KartuHeaderGradasi(tr("Lainnya", "More"), Icons.Default.MoreHoriz)
-        Spacer(Modifier.height(SpaceL))
-        val tiles = listOf(
-            LainnyaTile("laba", tr("Laba", "Profit"), tr("Laba & margin", "Profit & margins"), Icons.Default.TrendingUp),
-            LainnyaTile("terlaris", tr("Terlaris", "Best Sellers"), tr("Peringkat penjualan", "Sales ranking"), Icons.Default.Leaderboard),
-            LainnyaTile("pengingat", tr("Pengingat", "Reminders"), tr("Stok & tagihan", "Stock & bills"), Icons.Default.NotificationsActive),
-            LainnyaTile("riwayat", tr("Riwayat", "History"), tr("Semua penjualan", "All sales"), Icons.Default.ReceiptLong),
-            LainnyaTile("pbf", tr("Faktur PBF", "PBF Invoices"), tr("Pembelian distributor", "Distributor purchases"), Icons.Default.LocalShipping),
-            LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
-        )
-        tiles.chunked(2).forEach { rowTiles ->
-            Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
-                rowTiles.forEach { tile ->
-                    ExpressiveCard(modifier = Modifier.weight(1f).height(128.dp).clickable { onGo(tile.route) }) {
-                        Column(Modifier.padding(16.dp)) {
-                            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                                Icon(tile.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-                            }
-                            Spacer(Modifier.height(SpaceM))
-                            Text(tile.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
-                            Text(tile.sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        // Identitas tengah: cakram navy berisi lingkaran putih berlogo.
+        val logo = rememberLogoBitmap()
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(color = Color(0xFF174280), shape = CircleShape, modifier = Modifier.size(104.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Surface(color = Color.White, shape = CircleShape, modifier = Modifier.size(76.dp)) {
+                        if (logo != null) {
+                            Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(7.dp).fillMaxSize())
+                        } else {
+                            Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF0A2A5C), modifier = Modifier.padding(16.dp).fillMaxSize())
                         }
                     }
                 }
-                if (rowTiles.size == 1) Spacer(Modifier.weight(1f))
             }
-            Spacer(Modifier.height(SpaceM))
+            Spacer(Modifier.height(12.dp))
+            Text("Apotek Lestari", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+            Spacer(Modifier.height(8.dp))
+            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(50)) {
+                Text(
+                    tr("Versi ", "Version ") + BuildConfig.VERSION_NAME,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                )
+            }
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = SpaceS))
-        // Ganti tema Gelap <-> Terang (pilihan tersimpan, dipakai lagi saat aplikasi dibuka).
-        // Baris ini juga melaporkan titik tengahnya untuk asal animasi AN3.
-        ListItem(
-            headlineContent = {
-                Text(
-                    if (isDark) tr("Mode Terang", "Light Mode") else tr("Mode Gelap", "Dark Mode"),
-                    style = MaterialTheme.typography.titleMedium
-                )
-            },
-            leadingContent = {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                    Icon(
-                        if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(10.dp).size(22.dp)
-                    )
-                }
-            },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            modifier = Modifier.clickable { onToggleTheme() }
-        )
-        // Ganti bahasa Indonesia <-> Inggris, di bawah ganti tema
-        // (permintaan Achmad 2026-11-02). Ketuk langsung berganti ke bahasa
-        // satunya; pilihan tersimpan untuk kunjungan berikutnya.
-        ListItem(
-            headlineContent = {
-                Text(
-                    if (appLang == "en") "Bahasa Indonesia" else "English",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            },
-            leadingContent = {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                    Icon(
-                        Icons.Default.Language,
-                        null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(10.dp).size(22.dp)
-                    )
-                }
-            },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            modifier = Modifier.clickable { onLanguageChange(if (appLang == "en") "id" else "en") }
-        )
-        // Status Mode Online/Offline (kartu info) + sinkronisasi manual +
-        // keluar akun — pola yang sama dengan KasBulanan.
+        Spacer(Modifier.height(SpaceL))
+        // Status Mode Online/Offline (kartu info) — pola yang sama
+        // dengan KasBulanan.
         val subStatus = when {
             emailOnline != null -> emailOnline + "\n" + (
                 if (syncTerakhir > 0) {
@@ -700,56 +691,86 @@ fun LainnyaScreen(
                 }
             }
         }
-        ListItem(
-            headlineContent = { Text(tr("Sinkronisasi", "Sync"), style = MaterialTheme.typography.titleMedium) },
-            supportingContent = {
-                Text(
+        Spacer(Modifier.height(SpaceM))
+        // Kartu grup tujuan: enam menu sebagai baris (dulu petak A2).
+        val tiles = listOf(
+            LainnyaTile("laba", tr("Laba", "Profit"), tr("Laba & margin", "Profit & margins"), Icons.Default.TrendingUp),
+            LainnyaTile("terlaris", tr("Terlaris", "Best Sellers"), tr("Peringkat penjualan", "Sales ranking"), Icons.Default.Leaderboard),
+            LainnyaTile("pengingat", tr("Pengingat", "Reminders"), tr("Stok & tagihan", "Stock & bills"), Icons.Default.NotificationsActive),
+            LainnyaTile("riwayat", tr("Riwayat", "History"), tr("Semua penjualan", "All sales"), Icons.Default.ReceiptLong),
+            LainnyaTile("pbf", tr("Faktur PBF", "PBF Invoices"), tr("Pembelian distributor", "Distributor purchases"), Icons.Default.LocalShipping),
+            LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
+        )
+        ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(vertical = 8.dp)) {
+                tiles.forEachIndexed { idx, tile ->
+                    if (idx > 0) PemisahGrup()
+                    BarisGrupLainnya(tile.icon, tile.label, tile.sub, onClick = { onGo(tile.route) })
+                }
+            }
+        }
+        Spacer(Modifier.height(SpaceM))
+        // Kartu grup pengaturan: tema (saklar), bahasa, sinkronisasi,
+        // keluar akun.
+        ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(vertical = 8.dp)) {
+                BarisGrupLainnya(
+                    if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
+                    tr("Mode Gelap", "Dark Mode"),
+                    if (isDark) tr("Aktif", "On") else tr("Nonaktif", "Off"),
+                    trailing = { Switch(checked = isDark, onCheckedChange = { onToggleTheme() }) }
+                )
+                PemisahGrup()
+                BarisGrupLainnya(
+                    Icons.Default.Language,
+                    tr("Bahasa", "Language"),
+                    if (appLang == "en") "English" else "Bahasa Indonesia",
+                    onClick = { onLanguageChange(if (appLang == "en") "id" else "en") }
+                )
+                PemisahGrup()
+                BarisGrupLainnya(
+                    Icons.Default.CloudSync,
+                    tr("Sinkronisasi", "Sync"),
                     when {
                         statusSync == StatusSync.PROSES -> tr("Sedang menyinkron\u2026", "Syncing\u2026")
                         emailOnline != null -> tr("Ketuk untuk sinkron sekarang", "Tap to sync now")
                         onlineSiap -> tr("Masuk untuk mengaktifkan cadangan awan", "Sign in to enable cloud backup")
                         else -> tr("Belum dikonfigurasi", "Not configured")
+                    },
+                    onClick = { onSinkronTap() },
+                    trailing = {
+                        if (statusSync == StatusSync.PROSES) {
+                            CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 )
-            },
-            leadingContent = {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                    Icon(Icons.Default.CloudSync, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                if (emailOnline != null) {
+                    PemisahGrup()
+                    BarisGrupLainnya(
+                        Icons.Default.Logout,
+                        tr("Keluar Akun", "Sign Out"),
+                        emailOnline,
+                        warnaIkon = MaterialTheme.colorScheme.error,
+                        onClick = { onKeluarTap() }
+                    )
                 }
-            },
-            trailingContent = {
-                if (statusSync == StatusSync.PROSES) {
-                    CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-                }
-            },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            modifier = Modifier.clickable { onSinkronTap() }
-        )
-        if (emailOnline != null) {
-            ListItem(
-                headlineContent = { Text(tr("Keluar Akun", "Sign Out"), style = MaterialTheme.typography.titleMedium) },
-                supportingContent = { Text(emailOnline) },
-                leadingContent = {
-                    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                        Icon(Icons.Default.Logout, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.padding(10.dp).size(22.dp))
-                    }
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier.clickable { onKeluarTap() }
-            )
+            }
         }
-        // Tentang Aplikasi, di bawah ganti bahasa.
-        ListItem(
-            headlineContent = { Text(tr("Tentang", "About"), style = MaterialTheme.typography.titleMedium) },
-            leadingContent = {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                    Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-                }
-            },
-            trailingContent = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            modifier = Modifier.clickable { onGo("tentang") }
-        )
+        Spacer(Modifier.height(SpaceM))
+        // Kartu Tentang tersendiri, seperti KasBulanan.
+        ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(vertical = 8.dp)) {
+                BarisGrupLainnya(
+                    Icons.Default.Info,
+                    tr("Tentang", "About"),
+                    tr("Versi ", "Version ") + BuildConfig.VERSION_NAME,
+                    onClick = { onGo("tentang") }
+                )
+            }
+        }
+        Spacer(Modifier.height(SpaceM))
         // Zona berbahaya paling bawah: Reset Semua Data (opsi B).
         ListItem(
             headlineContent = { Text(tr("Reset Semua Data", "Reset All Data"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error) },
