@@ -106,6 +106,13 @@ object FirebaseKit {
     }
 }
 
+sealed interface HasilReset {
+    data object Berhasil : HasilReset
+    data object BelumMasuk : HasilReset
+    data object BelumDikonfigurasi : HasilReset
+    data class Gagal(val pesan: String) : HasilReset
+}
+
 sealed interface HasilSync {
     data object BelumDikonfigurasi : HasilSync
     data object BelumMasuk : HasilSync
@@ -227,9 +234,37 @@ class SyncManager(private val repository: Repository) {
             HasilSync.Gagal(e.message ?: "Sinkronisasi gagal")
         }
     }
+
+    /**
+     * Hapus SEMUA dokumen awan milik pengguna ini di keenam koleksi
+     * (Reset Semua Data, pilihan Achmad 2026-11-10). Gagal di tengah
+     * jalan dikembalikan sebagai Gagal supaya pemanggil TIDAK menghapus
+     * data lokal sebelum awannya bersih — kalau tidak, data awan akan
+     * turun lagi pada sinkron berikutnya dan reset menjadi sia-sia.
+     */
+    suspend fun hapusSemuaDataCloud(context: Context): HasilReset {
+        if (!FirebaseKit.siap(context)) return HasilReset.BelumDikonfigurasi
+        val uid = FirebaseKit.auth()?.currentUser?.uid ?: return HasilReset.BelumMasuk
+        val fs = FirebaseKit.firestore() ?: return HasilReset.BelumDikonfigurasi
+        return try {
+            val akar = fs.collection("users").document(uid)
+            for (nama in listOf("obat", "penjualan", "penjualan_item", "kas", "pbf", "pbf_item")) {
+                val docs = akar.collection(nama).get().await().documents
+                for (potongan in docs.chunked(400)) {
+                    val batch = fs.batch()
+                    for (doc in potongan) batch.delete(doc.reference)
+                    batch.commit().await()
+                }
+            }
+            HasilReset.Berhasil
+        } catch (e: Exception) {
+            HasilReset.Gagal(e.message ?: "Gagal menghapus data awan")
+        }
+    }
 }
 
 /** Sync berkala di latar belakang; diam bila belum dikonfigurasi/masuk. */
+
 class SyncWorker(context: Context, params: WorkerParameters) :
     CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {

@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import id.apotek.lestari.data.FirebaseKit
+import id.apotek.lestari.data.HasilReset
 import id.apotek.lestari.data.HasilSync
 import id.apotek.lestari.data.Repository
 import id.apotek.lestari.data.SyncManager
@@ -198,6 +199,8 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     var pesanStatus by remember { mutableStateOf<String?>(null) }
     var tampilInfoOnline by remember { mutableStateOf(false) }
     var tampilKonfirmasiKeluar by remember { mutableStateOf(false) }
+    var tampilKonfirmasiReset by remember { mutableStateOf(false) }
+    var sibukReset by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val perluLogin = onlineSiap && emailOnline == null && !lewatiLogin
 
@@ -223,6 +226,37 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 }
                 HasilSync.BelumMasuk -> statusSync = StatusSync.BELUM_MASUK
                 HasilSync.BelumDikonfigurasi -> statusSync = StatusSync.NONAKTIF
+            }
+        }
+    }
+
+    // Reset Semua Data (opsi B, permintaan Achmad 2026-11-10): hapus
+    // awan lebih dulu — bila awan gagal dibersihkan, lokal TIDAK
+    // dihapus karena datanya pasti turun lagi. Lokal dikosongkan
+    // sesudahnya, penanda backup + waktu sinkron terakhir dibersihkan,
+    // akun tetap masuk (yang dihapus datanya, bukan akunnya).
+    fun aksiResetSemua() {
+        appScope.launch {
+            sibukReset = true
+            try {
+                if (onlineSiap && emailOnline != null) {
+                    val h = SyncManager(repoOnline).hapusSemuaDataCloud(context)
+                    if (h is HasilReset.Gagal) {
+                        pesanStatus = tr("Gagal menghapus data awan: ", "Failed to delete cloud data: ") + h.pesan
+                        return@launch
+                    }
+                }
+                repoOnline.hapusSemuaDataLokal()
+                onlinePrefs.edit()
+                    .remove("online_sync_terakhir")
+                    .remove("last_backup_at")
+                    .remove("last_backup_name")
+                    .apply()
+                syncTerakhir = 0L
+                tampilKonfirmasiReset = false
+                pesanStatus = tr("Semua data dihapus. Mulai dari nol.", "All data deleted. Starting from zero.")
+            } finally {
+                sibukReset = false
             }
         }
     }
@@ -564,7 +598,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 // mendarat di Beranda, bukan di Lainnya (laporan Achmad
                 // 2026-11-04). Dengan tumpukan biasa, Kembali dari
                 // Laba/Pengingat/dll. kembali ke halaman Lainnya.
-                composable("lainnya") { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = { toggleThemeWithReveal() }, appLang = appLang, onLanguageChange = onLanguageChange, onThemeRowPositioned = { themeRowCenter = it }, onlineSiap = onlineSiap, emailOnline = emailOnline, statusSync = statusSync, syncTerakhir = syncTerakhir, onSinkronTap = { aksiSinkronTap() }, onKeluarTap = { tampilKonfirmasiKeluar = true }) }
+                composable("lainnya") { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = { toggleThemeWithReveal() }, appLang = appLang, onLanguageChange = onLanguageChange, onThemeRowPositioned = { themeRowCenter = it }, onlineSiap = onlineSiap, emailOnline = emailOnline, statusSync = statusSync, syncTerakhir = syncTerakhir, onSinkronTap = { aksiSinkronTap() }, onKeluarTap = { tampilKonfirmasiKeluar = true }, onResetTap = { tampilKonfirmasiReset = true }) }
                 composable("laba", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { LabaScreen() }
                 composable("pengingat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { PengingatScreen(onGoStok = { goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
                 composable("riwayat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { RiwayatScreen() }
@@ -647,9 +681,36 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             }
         )
     }
+
+if (tampilKonfirmasiReset) {
+        AlertDialog(
+            onDismissRequest = { if (!sibukReset) tampilKonfirmasiReset = false },
+            title = { Text(tr("Reset Semua Data?", "Reset All Data?")) },
+            text = {
+                Text(
+                    if (emailOnline != null) tr(
+                        "Semua data obat, penjualan, kas, dan Faktur PBF di HP ini DAN salinan awannya untuk akun " + emailOnline + " akan dihapus permanen. Aplikasi mulai dari kosong. Ini tidak bisa dibatalkan — buat Backup dulu bila masih ada yang dibutuhkan.",
+                        "All medicine, sales, cash, and PBF invoice data on this phone AND its cloud copy for account " + emailOnline + " will be permanently deleted. The app starts empty. This cannot be undone — make a Backup first if anything is still needed."
+                    ) else tr(
+                        "Semua data obat, penjualan, kas, dan Faktur PBF di HP ini akan dihapus permanen dan aplikasi mulai dari kosong. Ini tidak bisa dibatalkan — buat Backup dulu bila masih ada yang dibutuhkan. (Mode tamu: bila nanti masuk ke akun yang sudah punya data, data akun itu akan turun lagi.)",
+                        "All medicine, sales, cash, and PBF invoice data on this phone will be permanently deleted and the app starts empty. This cannot be undone — make a Backup first if anything is still needed. (Guest mode: signing in later to an account that already has data will bring that data back down.)"
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { aksiResetSemua() }, enabled = !sibukReset) {
+                    Text(if (sibukReset) tr("Menghapus…", "Deleting…") else tr("Reset Semua", "Reset All"), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { tampilKonfirmasiReset = false }, enabled = !sibukReset) { Text(tr("Batal", "Cancel")) }
+            }
+        )
+    }
     }
     }
 }
+
 
 private data class LainnyaTile(
     val route: String,
@@ -677,7 +738,8 @@ fun LainnyaScreen(
     statusSync: StatusSync,
     syncTerakhir: Long,
     onSinkronTap: () -> Unit,
-    onKeluarTap: () -> Unit
+    onKeluarTap: () -> Unit,
+    onResetTap: () -> Unit
 ) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -857,6 +919,18 @@ fun LainnyaScreen(
             trailingContent = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             modifier = Modifier.clickable { onGo("tentang") }
+        )
+        // Zona berbahaya paling bawah: Reset Semua Data (opsi B).
+        ListItem(
+            headlineContent = { Text(tr("Reset Semua Data", "Reset All Data"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error) },
+            supportingContent = { Text(tr("Hapus data di HP ini dan di awan, mulai dari nol", "Delete data on this phone and in the cloud, start from zero")) },
+            leadingContent = {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                    Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.padding(10.dp).size(22.dp))
+                }
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            modifier = Modifier.clickable { onResetTap() }
         )
     }
 }

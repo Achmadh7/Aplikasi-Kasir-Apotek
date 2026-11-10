@@ -9,6 +9,8 @@ import id.apotek.lestari.data.local.SaleEntity
 import id.apotek.lestari.data.local.SaleItemEntity
 import androidx.room.withTransaction
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import id.apotek.lestari.ui.theme.dayKeyID
 import id.apotek.lestari.ui.theme.tr
 import id.apotek.lestari.ui.theme.parseISODate
@@ -822,6 +824,11 @@ class Repository {
      *  dipakai pemicu sinkron otomatis agar putaran gema dari tulisan
      *  sinkron sendiri (tandai bersih / tarikan) tidak menjadwalkan
      *  sinkron kosong. */
+    /** Kosongkan semua tabel lokal (Reset Semua Data). */
+    suspend fun hapusSemuaDataLokal() {
+        withContext(Dispatchers.IO) { DatabaseProvider.db.clearAllTables() }
+    }
+
     suspend fun adaDataKotor(): Boolean =
         obatKotor().isNotEmpty() || penjualanKotor().isNotEmpty() || itemJualKotor().isNotEmpty() ||
             kasKotor().isNotEmpty() || pbfKotor().isNotEmpty() || itemPbfKotor().isNotEmpty()
