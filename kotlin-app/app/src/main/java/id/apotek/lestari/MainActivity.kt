@@ -699,11 +699,11 @@ if (tampilKonfirmasiReset) {
             },
             confirmButton = {
                 TextButton(onClick = { aksiResetSemua() }, enabled = !sibukReset) {
-                    Text(if (sibukReset) tr("Menghapus…", "Deleting…") else tr("Reset Semua", "Reset All"), color = MaterialTheme.colorScheme.error)
+                    Text(if (sibukReset) tr("Menghapus…", "Deleting…") else tr("Ya", "Yes"), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { tampilKonfirmasiReset = false }, enabled = !sibukReset) { Text(tr("Batal", "Cancel")) }
+                TextButton(onClick = { tampilKonfirmasiReset = false }, enabled = !sibukReset) { Text(tr("Tidak", "No")) }
             }
         )
     }
