@@ -14,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,21 +32,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -64,7 +50,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
@@ -77,7 +62,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -162,48 +146,19 @@ fun adaptiveSheetMaxWidth() = when {
 // ---------- Animasi Material 3 Expressive ----------
 
 
-/** Jeda kemunculan bertahap per item daftar (maks. 400ms). */
-fun entranceDelay(index: Int) = (index * 40).coerceAtMost(400)
-
-
-/** Layar yang animasi masuknya sudah pernah dimainkan pada sesi ini. */
-private val layarSudahMasuk = mutableSetOf<String>()
-
-/**
- * Klaim giliran animasi masuk untuk [kunci]: true hanya pada kunjungan
- * pertama di sesi ini. Layar memulai `listEntered` dari
- * `!klaimAnimasiMasuk("...")`, jadi kunjungan ulang langsung tampil utuh
- * tanpa animasi — perpindahan tab tidak lagi terasa jitter (2026-11-10).
- */
-fun klaimAnimasiMasuk(kunci: String): Boolean = layarSudahMasuk.add(kunci)
-
-/** Angka berhitung naik dari 0 (dipakai Pemasukan Hari Ini & Laba). */
+/** Angka nominal (statis; dipakai Pemasukan di Beranda & Laba). */
 @Composable
 fun AnimatedAmount(value: Int, style: TextStyle, color: Color, format: (Int) -> String = { formatIDR(it) }) {
-    // rememberSaveable: nilai terakhir ikut tersimpan bersama state
-    // tujuan navigasi, jadi saat kembali ke tab ini angka tampil utuh
-    // seketika (tidak menghitung naik dari 0 lagi).
-    var shown by rememberSaveable { mutableStateOf(0) }
-    val animated by animateIntAsState(
-        targetValue = shown,
-        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
-        label = "amount"
-    )
-    LaunchedEffect(value) { shown = value }
-    Text(format(animated), color = color, style = style, fontWeight = FontWeight.Bold)
+    // Statis sejak 2026-11-10 (keputusan Achmad: semua animasi dihapus)
+    // — dulu angka ini berhitung naik 800ms setiap nilai berubah.
+    Text(format(value), color = color, style = style, fontWeight = FontWeight.Bold)
 }
 
 
-/** Skala pegas saat ditekan (tombol utama & stepper Kasir). */
+/** Skala tombol saat ditekan — selalu 1f sejak semua animasi dihapus
+ *  (2026-11-10); fungsi dipertahankan supaya pemanggil tidak berubah. */
 @Composable
-fun pressBounceScale(interactionSource: MutableInteractionSource): Float {
-    val pressed by interactionSource.collectIsPressedAsState()
-    return animateFloatAsState(
-        targetValue = if (pressed) 0.95f else 1f,
-        animationSpec = expressiveSpring(),
-        label = "pressBounce"
-    ).value
-}
+fun pressBounceScale(interactionSource: MutableInteractionSource): Float = 1f
 
 
 /** Tombol stepper +/- Kasir dengan pantulan saat ditekan. */
@@ -320,23 +275,15 @@ fun PriceModeChip(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 
-/** Centang sukses pembayaran: lingkaran membesar dengan pegas, centang
- *  tergambar. Ukuran bisa diperbesar (fase sukses pembayaran memakai
- *  120.dp); padding dan tebal garis diskalakan mengikuti ukuran. */
+/** Centang sukses pembayaran (statis): lingkaran + centang tampil utuh.
+ *  Ukuran bisa diperbesar (fase sukses pembayaran memakai 120.dp);
+ *  padding dan tebal garis diskalakan mengikuti ukuran. */
 @Composable
 fun AnimatedCheckmark(size: Dp = 56.dp) {
-    var started by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { started = true }
-    val circleScale by animateFloatAsState(
-        targetValue = if (started) 1f else 0f,
-        animationSpec = expressiveSpring(),
-        label = "checkCircle"
-    )
-    val trim by animateFloatAsState(
-        targetValue = if (started) 1f else 0f,
-        animationSpec = tween(durationMillis = 350, delayMillis = 120, easing = FastOutSlowInEasing),
-        label = "checkTrim"
-    )
+    // Statis sejak 2026-11-10 (semua animasi dihapus): lingkaran dan
+    // centang langsung tampil utuh.
+    val circleScale = 1f
+    val trim = 1f
     val checkColor = MaterialTheme.colorScheme.primary
     val scaleF = size.value / 56f
     Surface(
@@ -375,18 +322,10 @@ fun AnimatedCheckmark(size: Dp = 56.dp) {
 }
 
 
-/** Denyut halus untuk lencana KRITIS (stok 0). */
-@Composable
-fun Modifier.pulseKritis(): Modifier {
-    val alpha = remember { Animatable(1f) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            alpha.animateTo(0.65f, tween(durationMillis = 700, easing = FastOutSlowInEasing))
-            alpha.animateTo(1f, tween(durationMillis = 700, easing = FastOutSlowInEasing))
-        }
-    }
-    return this.graphicsLayer(alpha = alpha.value)
-}
+/** Lencana KRITIS (stok 0) — dulu berdenyut halus; sejak semua animasi
+ *  dihapus (2026-11-10) fungsi ini tidak mengubah apa pun, dipertahankan
+ *  supaya pemanggilnya tidak berubah. */
+fun Modifier.pulseKritis(): Modifier = this
 
 
 // Warna aksen layar memakai peran colorScheme resmi tema (lihat Theme.kt).

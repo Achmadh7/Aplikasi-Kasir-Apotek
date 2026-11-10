@@ -14,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,21 +32,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -64,7 +50,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
@@ -77,7 +62,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -122,8 +106,6 @@ import java.util.TimeZone
 @Composable
 fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit, statusSync: StatusSync, onSyncTap: () -> Unit) {
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
-    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("beranda")) }
-    LaunchedEffect(dashboard) { if (dashboard != null && !listEntered) listEntered = true }
     var salesTab by remember { mutableIntStateOf(0) }
     // Periode panel ringkasan BR5 (pilihan Achmad 2026-11-04):
     // 0 = Hari Ini, 1 = Bulan Ini.
@@ -176,12 +158,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
-            AnimatedVisibility(
-                visible = listEntered,
-                enter = fadeIn(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)) +
-                    slideInVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)) { it / 3 },
-                exit = fadeOut()
-            ) {
+            
             Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Header nama HN2 (pilihan Achmad 2026-11-10): logo besar
@@ -230,16 +207,11 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             Spacer(Modifier.height(SpaceXS))
             DemoBanner()
             }
-            }
+            
         }
         dashboard?.let { d ->
             item {
-                AnimatedVisibility(
-                    visible = listEntered,
-                    enter = fadeIn(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)) { it / 3 },
-                    exit = fadeOut()
-                ) {
+                
                 // Panel ringkasan BR5 (pilihan Achmad 2026-11-04): hero
                 // Pemasukan dan kartu uang lama digabung menjadi SATU
                 // panel bertab periode Hari Ini / Bulan Ini, supaya angka
@@ -272,7 +244,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     Spacer(Modifier.height(SpaceM))
                     ExpressiveCard(
                         modifier = Modifier.fillMaxWidth()
-                            .animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))
+                            
                     ) {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -328,30 +300,20 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         }
                     }
                 }
-                }
+                
             }
             item {
-                AnimatedVisibility(
-                    visible = listEntered,
-                    enter = fadeIn(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)) { it / 3 },
-                    exit = fadeOut()
-                ) {
+                
                 // Shortcut ke menu yang tidak lagi ada di bar bawah (Laba, Pengingat, Riwayat).
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
                     ShortcutCard(label = tr("Laba", "Profit"), icon = Icons.Default.TrendingUp, modifier = Modifier.weight(1f), onClick = onGoLaba)
                     ShortcutCard(label = tr("Pengingat", "Reminders"), icon = Icons.Default.NotificationsActive, modifier = Modifier.weight(1f), onClick = onGoPengingat)
                     ShortcutCard(label = tr("Riwayat", "History"), icon = Icons.Default.ReceiptLong, modifier = Modifier.weight(1f), onClick = onGoRiwayat)
                 }
-                }
+                
             }
             item {
-                AnimatedVisibility(
-                    visible = listEntered,
-                    enter = fadeIn(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)) { it / 3 },
-                    exit = fadeOut()
-                ) {
+                
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -432,15 +394,10 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         Text(tr("${d.totalMedicines} jenis obat terdaftar di Stok", "${d.totalMedicines} medicines registered in Stock"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                }
+                
             }
             item {
-                AnimatedVisibility(
-                    visible = listEntered,
-                    enter = fadeIn(animationSpec = tween(300, entranceDelay(5), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(5), FastOutSlowInEasing)) { it / 3 },
-                    exit = fadeOut()
-                ) {
+                
                 // Penjualan Hari Ini: Obat Terjual dan Transaksi dalam satu kartu bertab (compact).
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
@@ -497,7 +454,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         }
                     }
                 }
-                }
+                
             }
         } ?: item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }

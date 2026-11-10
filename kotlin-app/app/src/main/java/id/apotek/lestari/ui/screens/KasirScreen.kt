@@ -14,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,20 +33,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -64,7 +51,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
@@ -174,8 +160,6 @@ fun dayKeyToIsoUtc(dayKey: String): String? {
 @Composable
 fun KasirScreen() {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
-    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("kasir")) }
-    LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
     var search by rememberSaveable { mutableStateOf("") }
     var sortAz by remember { mutableStateOf(true) }
     // Pesan umpan balik di bawah kolom cari (mis. stok tidak cukup saat obat
@@ -202,18 +186,6 @@ fun KasirScreen() {
     // reference 'lastSale'"). Jangan pindahkan kembali ke bawah.
     var lastSaleId by rememberSaveable { mutableIntStateOf(0) }
     var lastSale by remember { mutableStateOf<Sale?>(null) }
-    // Animasi masuk blok struk (laporan Achmad 2026-11-04: struk muncul
-    // tanpa animasi sama sekali setelah fase sukses). Hanya alpha +
-    // translation + skala kecil lewat graphicsLayer — BUKAN animasi tinggi
-    // atau AnimatedVisibility, supaya tidak bertabrakan dengan pegas sheet
-    // (alasan blok struk memang polos selama ini).
-    val receiptEnter = remember { Animatable(0f) }
-    LaunchedEffect(lastSale?.id, successPhase) {
-        if (!successPhase && lastSale != null) {
-            receiptEnter.snapTo(0f)
-            receiptEnter.animateTo(1f, tween(durationMillis = 450, easing = FastOutSlowInEasing))
-        }
-    }
     // Pratinjau struk di sheet dilipat secara bawaan (desain K1, pilihan
     // Achmad 2026-11-04) supaya tombol Bayar selalu terlihat tanpa gulir.
     var showReceiptPreview by remember { mutableStateOf(false) }
@@ -243,20 +215,6 @@ fun KasirScreen() {
     }
     // Supaya field Uang Diterima otomatis tergulir ke atas keyboard saat diketuk.
     val amountBringIntoView = remember { BringIntoViewRequester() }
-    // Animasi "terbang ke keranjang": saat obat ditambahkan, ikon obat melayang
-    // dari kartu obat yang diketuk ke bar keranjang. Posisi dicatat dalam
-    // koordinat window lalu diubah ke koordinat lokal Box root (dikurangi
-    // posisi window Box root). cardCenters = pusat kartu obat per id obat.
-    var rootWindowPos by remember { mutableStateOf(Offset.Zero) }
-    var rootSizePx by remember { mutableStateOf(IntSize.Zero) }
-    var cartBarCenter by remember { mutableStateOf<Offset?>(null) }
-    val cardCenters = remember { mutableStateMapOf<Int, Offset>() }
-    var flyFrom by remember { mutableStateOf<Offset?>(null) }
-    var flyTo by remember { mutableStateOf(Offset.Zero) }
-    var flyId by remember { mutableIntStateOf(0) }
-    // Density dibaca di sini (saat komposisi) supaya bisa dipakai di dalam
-    // handler klik untuk menghitung posisi fallback target.
-    val flyDensity = LocalDensity.current
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME) — pola yang
     // sama seperti Laba/Obat Terlaris/Pengingat/Faktur PBF, supaya data
     // selalu segar setelah ada perubahan dari menu lain.
@@ -324,13 +282,7 @@ fun KasirScreen() {
     val paid = parseDecimal(uangDiterima.text)
     val change = if (method == "Tunai") (paid - total).coerceAtLeast(0) else 0
     val canPay = cart.isNotEmpty() && (method != "Tunai" || paid >= total)
-    Box(
-        Modifier.fillMaxSize()
-            .onGloballyPositioned {
-                rootWindowPos = it.positionInWindow()
-                rootSizePx = it.size
-            }
-    ) {
+    Box(Modifier.fillMaxSize()) {
         // Daftar obat memenuhi layar; keranjang & pembayaran pindah ke bottom sheet.
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(16.dp)) {
 
@@ -361,17 +313,11 @@ fun KasirScreen() {
         Spacer(Modifier.height(SpaceS))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             sorted.forEachIndexed { index, m ->
-                AnimatedVisibility(
-                    visible = listEntered,
-                    enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 },
-                    exit = fadeOut()
-                ) {
+                
                 val out = m.stock <= 0
                 ExpressiveCard(
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth()
-                        .onGloballyPositioned { cardCenters[m.id] = it.boundsInWindow().center }
                         .clickable(enabled = !out) {
                         val ex = cart.firstOrNull { it.medicine.id == m.id }
                         if (ex != null && ex.qty >= m.stock) {
@@ -381,21 +327,6 @@ fun KasirScreen() {
                             lastSaleId = 0
                             payMsg = ""
                             if (ex != null) ex.qty++ else cart.add(CartItem(m, 1))
-                            // Picu animasi terbang ke keranjang: dari pusat kartu
-                            // obat ini ke pusat bar keranjang (koordinat lokal Box).
-                            // Kalau posisi bar keranjang belum tercatat (keranjang
-                            // masih kosong saat obat pertama ditambah), pakai
-                            // perkiraan tengah-bawah layar sebagai target.
-                            val start = cardCenters[m.id]
-                            if (start != null) {
-                                val fallbackTarget = Offset(
-                                    rootSizePx.width / 2f,
-                                    rootSizePx.height - with(flyDensity) { 64.dp.toPx() }
-                                )
-                                flyFrom = start - rootWindowPos
-                                flyTo = (cartBarCenter ?: fallbackTarget) - rootWindowPos
-                                flyId++
-                            }
                         }
                     }
                 ) {
@@ -436,7 +367,7 @@ fun KasirScreen() {
                         }
                     }
                 }
-                }
+                
             }
         }
             // Ruang untuk bar keranjang yang nempel di bawah, supaya obat terakhir tetap bisa digulir ke atasnya.
@@ -446,28 +377,25 @@ fun KasirScreen() {
         // Bar keranjang nempel di bawah: total + tombol Bayar (membuka bottom sheet).
         AnimatedVisibility(
             visible = cart.isNotEmpty(),
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            enter = EnterTransition.None,
+            exit = ExitTransition.None,
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             ExpressiveCard(
                 shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
-                    .onGloballyPositioned { cartBarCenter = it.boundsInWindow().center }
                     .clickable { showSheet = true }
             ) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    key(cartQty) {
-                        val cartPop = remember { Animatable(1.4f) }
-                        LaunchedEffect(cartQty) { cartPop.animateTo(1f, expressiveSpring()) }
-                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape, modifier = Modifier.graphicsLayer(scaleX = cartPop.value, scaleY = cartPop.value)) {
+
+                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
                             Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text("$cartQty", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                             }
                         }
-                    }
+                    
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text("$cartQty item", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
@@ -483,58 +411,7 @@ fun KasirScreen() {
             }
         }
 
-        // Overlay animasi terbang ke keranjang: ikon obat melayang dari kartu
-        // yang diketuk ke bar keranjang, mengecil & memudar. Overlay ini tidak
-        // menghalangi sentuhan (tidak ada clickable di dalamnya).
-        // Posisi dianimasikan lewat progress 0f -> 1f + lerp manual, bukan
-        // Animatable<Offset> — Offset.VectorConverter tidak ter-resolve di
-        // versi Compose ini (itu penyebab error build). coroutineScope
-        // menunggu ketiga animasi selesai dulu sebelum overlay dihapus —
-        // tanpa itu, flyFrom = null langsung jalan dan overlay hilang
-        // sebelum animasi terlihat.
-        if (flyFrom != null) {
-            key(flyId) {
-                val start = checkNotNull(flyFrom)
-                val end = flyTo
-                val iconHalfPx = with(flyDensity) { 22.dp.toPx() }
-                val progress = remember { Animatable(0f) }
-                val scale = remember { Animatable(1f) }
-                val alpha = remember { Animatable(1f) }
-                LaunchedEffect(flyId) {
-                    coroutineScope {
-                        launch { progress.animateTo(1f, animationSpec = tween(500, easing = FastOutSlowInEasing)) }
-                        launch { scale.animateTo(0.4f, animationSpec = tween(500)) }
-                        launch { alpha.animateTo(0f, animationSpec = tween(500)) }
-                    }
-                    flyFrom = null
-                }
-                val current = Offset(
-                    x = start.x + (end.x - start.x) * progress.value,
-                    y = start.y + (end.y - start.y) * progress.value
-                )
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.TopStart
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .offset {
-                                IntOffset(
-                                    (current.x - iconHalfPx).roundToInt(),
-                                    (current.y - iconHalfPx).roundToInt()
-                                )
-                            }
-                            .size(44.dp)
-                            .graphicsLayer(scaleX = scale.value, scaleY = scale.value, alpha = alpha.value),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Surface(color = MaterialTheme.colorScheme.primary, shape = CircleShape, modifier = Modifier.fillMaxSize()) {
-                            Icon(Icons.Default.Medication, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(10.dp))
-                        }
-                    }
-                }
-            }
-        }
+
     }
 
     // Bottom sheet: keranjang + pembayaran (dan struk setelah bayar berhasil).
@@ -619,10 +496,7 @@ fun KasirScreen() {
                     Spacer(Modifier.height(SpaceS))
                 AnimatedContent(
                     targetState = method,
-                    transitionSpec = {
-                        (fadeIn(animationSpec = tween(250)) + slideInVertically(animationSpec = tween(250)) { it / 4 }) togetherWith
-                        (fadeOut(animationSpec = tween(200)) + slideOutVertically(animationSpec = tween(200)) { -it / 4 })
-                    },
+                    transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
                     label = "methodContent"
                 ) { targetMethod ->
                     if (targetMethod == "Tunai") {
@@ -680,7 +554,7 @@ fun KasirScreen() {
                                     .bringIntoViewRequester(amountBringIntoView)
                                     .onFocusEvent { if (it.isFocused) scope.launch { amountBringIntoView.bringIntoView() } }
                             )
-                            AnimatedVisibility(visible = change > 0) {
+                            AnimatedVisibility(visible = change > 0, enter = EnterTransition.None, exit = ExitTransition.None) {
                                 Column {
                                     Spacer(Modifier.height(SpaceS))
                                     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
@@ -723,21 +597,6 @@ fun KasirScreen() {
                                     Spacer(Modifier.width(12.dp))
                                 }
                                 StepperButton(Icons.Default.Remove, tr("Kurangi", "Decrease")) { if (ci.qty > 1) ci.qty-- else cart.remove(ci) }
-                                // Animasi "pop" angka jumlah HANYA saat jumlah berubah
-                                // SETELAH komposisi pertama. Dulu key(ci.qty) +
-                                // Animatable(1.35f) membuat pop berjalan di semua
-                                // baris tepat saat animasi buka sheet berjalan —
-                                // salah satu sumber jitter saat membuka keranjang.
-                                val qtyPop = remember { Animatable(1f) }
-                                var qtyPopArmed by remember { mutableStateOf(false) }
-                                LaunchedEffect(ci.qty) {
-                                    if (qtyPopArmed) {
-                                        qtyPop.snapTo(1.35f)
-                                        qtyPop.animateTo(1f, expressiveSpring())
-                                    } else {
-                                        qtyPopArmed = true
-                                    }
-                                }
                                 // Angka jumlah bisa diketuk untuk ketik jumlah langsung
                                 // (pill abu-abu menandakan bisa diketuk).
                                 Surface(
@@ -748,7 +607,7 @@ fun KasirScreen() {
                                     Text(
                                         "${ci.qty}",
                                         style = MaterialTheme.typography.titleMedium,
-                                        modifier = Modifier.width(44.dp).fillMaxHeight().wrapContentHeight(Alignment.CenterVertically).graphicsLayer(scaleX = qtyPop.value, scaleY = qtyPop.value),
+                                        modifier = Modifier.width(44.dp).fillMaxHeight().wrapContentHeight(Alignment.CenterVertically),
                                         textAlign = TextAlign.Center
                                     )
                                 }
@@ -842,20 +701,10 @@ fun KasirScreen() {
                         Text(payMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
                 }
-                // Tetap TANPA AnimatedVisibility (alasan sama seperti blok
-                // pesan sukses di atas): animasi mengembang membuat sheet
-                // jitter. Sebagai gantinya konten struk diberi animasi masuk
-                // graphicsLayer (memudar + naik + membesar tipis) yang tidak
-                // mengubah ukuran sama sekali — lihat receiptEnter di atas.
+                // Blok struk tampil polos seketika (semua animasi dihapus
+                // 2026-11-10), tanpa AnimatedVisibility maupun graphicsLayer.
                 if (!successPhase && lastSale != null) {
-                    Column(
-                        Modifier.graphicsLayer {
-                            alpha = receiptEnter.value
-                            translationY = (1f - receiptEnter.value) * 24.dp.toPx()
-                            scaleX = 0.98f + 0.02f * receiptEnter.value
-                            scaleY = 0.98f + 0.02f * receiptEnter.value
-                        }
-                    ) {
+                    Column {
                         Spacer(Modifier.height(SpaceL))
                         lastSale?.let {
                             InvoiceDetailCard(sale = it, graphicsLayer = receiptLayer)

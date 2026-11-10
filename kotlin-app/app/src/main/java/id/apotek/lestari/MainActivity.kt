@@ -9,7 +9,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
@@ -17,15 +16,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.rememberScrollState
@@ -33,14 +25,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.PathFillType
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -119,19 +107,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
-
-/** Tangkapan bitmap tampilan saat ini, untuk animasi pergantian tema. */
-private fun captureScreen(view: View): Bitmap? = try {
-    if (view.width <= 0 || view.height <= 0) {
-        null
-    } else {
-        val bmp = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-        view.draw(Canvas(bmp))
-        bmp
-    }
-} catch (e: Exception) {
-    null
 }
 
 enum class StatusSync { NONAKTIF, BELUM_MASUK, PROSES, BERHASIL, GAGAL }
@@ -330,42 +305,6 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             pesanStatus = null
         }
     }
-    var lainnyaIconCenter by remember { mutableStateOf(Offset.Zero) }
-    // Titik awal lingkaran versi AN3: tengah baris tema di halaman Lainnya
-    // (diukur baris itu sendiri lewat onGloballyPositioned), dan titik beku
-    // yang dipakai lapisan animasi selama lingkaran membesar.
-    var themeRowCenter by remember { mutableStateOf(Offset.Zero) }
-    var revealCenter by remember { mutableStateOf(Offset.Zero) }
-    var revealBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    val revealRadius = remember { Animatable(0f) }
-    fun toggleThemeWithReveal() {
-        val shot = if (revealBitmap == null) captureScreen(rootView) else null
-        // AN3: asal lingkaran = tengah baris tema; ikon tab Lainnya hanya
-        // cadangan bila baris tema belum sempat terukur.
-        val origin = if (themeRowCenter != Offset.Zero) themeRowCenter else lainnyaIconCenter
-        if (shot != null && origin != Offset.Zero) {
-            revealBitmap = shot
-            revealCenter = origin
-            onToggleTheme()
-            val center = origin
-            val w = rootView.width.toFloat()
-            val h = rootView.height.toFloat()
-            val maxR = hypot(
-                maxOf(center.x, w - center.x).toDouble(),
-                maxOf(center.y, h - center.y).toDouble()
-            ).toFloat() + 8f
-            appScope.launch {
-                revealRadius.snapTo(0f)
-                revealRadius.animateTo(
-                    maxR,
-                    tween(650, easing = FastOutSlowInEasing)
-                )
-                revealBitmap = null
-            }
-        } else {
-            onToggleTheme()
-        }
-    }
     // Urutan tab untuk swipe (kiri ke kanan): Beranda, Stok, Kasir, Keuangan,
     // Lainnya. Geser ke kiri dari Keuangan membuka halaman Lainnya (sama
     // seperti mengetuk tab Lainnya).
@@ -470,17 +409,6 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                             Icon(
                                 if (selected) tab.icon else tab.iconOutlined,
                                 contentDescription = tab.label,
-                                modifier = if (tab.route == "lainnya") {
-                                    Modifier.onGloballyPositioned { coords ->
-                                        val pos = coords.positionInRoot()
-                                        lainnyaIconCenter = Offset(
-                                            pos.x + coords.size.width / 2f,
-                                            pos.y + coords.size.height / 2f
-                                        )
-                                    }
-                                } else {
-                                    Modifier
-                                }
                             )
                         },
                         label = {
@@ -510,18 +438,10 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             // halaman yang tertutup bergeser 1/4 ke kiri sambil memudar;
             // Kembali membaliknya persis. Pindah antar tab utama tetap
             // memakai transisi NavHost 200ms di bawah.
-            val subEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-                slideInHorizontally(animationSpec = tween(350, easing = FastOutSlowInEasing), initialOffsetX = { it }) + fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing))
-            }
-            val subExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-                slideOutHorizontally(animationSpec = tween(350, easing = FastOutSlowInEasing), targetOffsetX = { -it / 4 }) + fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing))
-            }
-            val subPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-                slideInHorizontally(animationSpec = tween(350, easing = FastOutSlowInEasing), initialOffsetX = { -it / 4 }) + fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing))
-            }
-            val subPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-                slideOutHorizontally(animationSpec = tween(350, easing = FastOutSlowInEasing), targetOffsetX = { it }) + fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing))
-            }
+            val subEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { EnterTransition.None }
+            val subExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { ExitTransition.None }
+            val subPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { EnterTransition.None }
+            val subPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { ExitTransition.None }
             NavHost(
                 navController = nav,
                 startDestination = "beranda",
@@ -530,10 +450,10 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 // jitter di HP kelas menengah, jadi sejak 2026-11-10
                 // tab tidak lagi bergeser — hanya halaman sub (subEnter
                 // dkk.) yang tetap menggeser penuh.
-                enterTransition = { fadeIn(animationSpec = tween(150)) },
-                exitTransition = { fadeOut(tween(150)) },
-                popEnterTransition = { fadeIn(tween(150)) },
-                popExitTransition = { fadeOut(tween(150)) },
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
                 composable("beranda") { BerandaScreen(onGoStok = { goToTab("stok") }, onGoPengingat = { goToTab("pengingat") }, onGoLaba = { goToTab("laba") }, onGoRiwayat = { goToTab("riwayat") }, statusSync = statusSync, onSyncTap = { aksiSinkronTap() }) }
@@ -546,7 +466,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 // mendarat di Beranda, bukan di Lainnya (laporan Achmad
                 // 2026-11-04). Dengan tumpukan biasa, Kembali dari
                 // Laba/Pengingat/dll. kembali ke halaman Lainnya.
-                composable("lainnya") { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = { toggleThemeWithReveal() }, appLang = appLang, onLanguageChange = onLanguageChange, onThemeRowPositioned = { themeRowCenter = it }, onlineSiap = onlineSiap, emailOnline = emailOnline, statusSync = statusSync, syncTerakhir = syncTerakhir, onSinkronTap = { aksiSinkronTap() }, onKeluarTap = { tampilKonfirmasiKeluar = true }, onResetTap = { tampilKonfirmasiReset = true }) }
+                composable("lainnya") { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = onToggleTheme, appLang = appLang, onLanguageChange = onLanguageChange, onlineSiap = onlineSiap, emailOnline = emailOnline, statusSync = statusSync, syncTerakhir = syncTerakhir, onSinkronTap = { aksiSinkronTap() }, onKeluarTap = { tampilKonfirmasiKeluar = true }, onResetTap = { tampilKonfirmasiReset = true }) }
                 composable("laba", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { LabaScreen() }
                 composable("pengingat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { PengingatScreen(onGoStok = { goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
                 composable("riwayat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { RiwayatScreen() }
@@ -556,34 +476,6 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 composable("tentang", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { TentangScreen(onGoBackup = { navDirection = 1; nav.navigate("backup") { launchSingleTop = true } }) }
             }
         }
-    }
-    // Lapisan animasi lingkaran tema: tangkapan tema lama dengan lubang
-    // lingkaran yang membesar dari tengah baris tema (AN3); di bawah
-    // lubang itu tema baru sudah tampil, jadi tema baru tampak
-    // mengembang keluar dari titik yang diketuk.
-    val shot = revealBitmap
-    if (shot != null) {
-        val center = revealCenter
-        val r = revealRadius.value
-        Image(
-            bitmap = shot.asImageBitmap(),
-            contentDescription = null,
-            contentScale = ContentScale.FillBounds,
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(GenericShape { size, _ ->
-                    fillType = PathFillType.EvenOdd
-                    addRect(Rect(Offset.Zero, size))
-                    if (r > 0f) {
-                        addOval(
-                            Rect(
-                                Offset(center.x - r, center.y - r),
-                                Size(r * 2f, r * 2f)
-                            )
-                        )
-                    }
-                })
-        )
     }
     if (tampilInfoOnline) {
         AlertDialog(
@@ -680,7 +572,6 @@ fun LainnyaScreen(
     onToggleTheme: () -> Unit,
     appLang: String,
     onLanguageChange: (String) -> Unit,
-    onThemeRowPositioned: (Offset) -> Unit,
     onlineSiap: Boolean,
     emailOnline: String?,
     statusSync: StatusSync,
@@ -747,12 +638,7 @@ fun LainnyaScreen(
                 }
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            modifier = Modifier
-                .onGloballyPositioned { coords ->
-                    val pos = coords.positionInRoot()
-                    onThemeRowPositioned(Offset(pos.x + coords.size.width / 2f, pos.y + coords.size.height / 2f))
-                }
-                .clickable { onToggleTheme() }
+            modifier = Modifier.clickable { onToggleTheme() }
         )
         // Ganti bahasa Indonesia <-> Inggris, di bawah ganti tema
         // (permintaan Achmad 2026-11-02). Ketuk langsung berganti ke bahasa

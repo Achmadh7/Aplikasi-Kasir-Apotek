@@ -14,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,21 +32,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -64,7 +50,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
@@ -77,7 +62,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -121,8 +105,6 @@ import java.util.TimeZone
 @Composable
 fun KeuanganScreen() {
     var entries by remember { mutableStateOf<List<CashEntry>>(emptyList()) }
-    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("keuangan")) }
-    LaunchedEffect(entries) { if (entries.isNotEmpty() && !listEntered) listEntered = true }
     var cashBalance by remember { mutableStateOf<CashBalance?>(null) }
     var period by remember { mutableStateOf("today") } // today | month | all — awalnya "Hari Ini" (permintaan Achmad 2026-10-31), bukan "Semua"
     var typeFilter by remember { mutableStateOf("all") } // all | in | out
@@ -383,12 +365,8 @@ fun KeuanganScreen() {
                                     Spacer(Modifier.height(2.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
                                         key(period, periodIn, periodOut) {
-                                            val grow = remember { Animatable(0f) }
-                                            // Jepit jeda animasi supaya grafik panjang
-                                            // tidak butuh waktu lama untuk selesai tumbuh.
-                                            LaunchedEffect(period, periodIn, periodOut) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
-                                            val inH = ((56f * dayIn / maxFlow * grow.value).coerceIn(0f, 56f)).let { if (dayIn > 0) it.coerceAtLeast(4f) else 0f }
-                                            val outH = ((56f * dayOut / maxFlow * grow.value).coerceIn(0f, 56f)).let { if (dayOut > 0) it.coerceAtLeast(4f) else 0f }
+                                            val inH = ((56f * dayIn / maxFlow * 1f).coerceIn(0f, 56f)).let { if (dayIn > 0) it.coerceAtLeast(4f) else 0f }
+                                            val outH = ((56f * dayOut / maxFlow * 1f).coerceIn(0f, 56f)).let { if (dayOut > 0) it.coerceAtLeast(4f) else 0f }
                                             Box(Modifier.width(10.dp).height(inH.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
                                             Box(Modifier.width(10.dp).height(outH.dp).background(MaterialTheme.colorScheme.error, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
                                         }
@@ -424,12 +402,7 @@ fun KeuanganScreen() {
             }
         }
         itemsIndexed(shown) { index, e ->
-            AnimatedVisibility(
-                visible = listEntered,
-                enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
-                    slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 },
-                exit = fadeOut()
-            ) {
+            
             val isIn = e.type == "in"
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -455,7 +428,7 @@ fun KeuanganScreen() {
                     )
                 }
             }
-            }
+            
         }
     }
 }

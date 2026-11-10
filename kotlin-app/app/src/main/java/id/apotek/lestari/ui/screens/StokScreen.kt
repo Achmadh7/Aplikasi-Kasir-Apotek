@@ -14,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,20 +33,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -64,7 +51,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
@@ -77,7 +63,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -136,7 +121,6 @@ fun StokScreen() {
     var msg by remember { mutableStateOf("") }
     var deleteTarget by remember { mutableStateOf<Medicine?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
-    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("stok")) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var importSummary by remember { mutableStateOf<String?>(null) }
@@ -245,7 +229,6 @@ fun StokScreen() {
         reload()
     }
     // Daftar muncul bertahap begitu data pertama kali tiba; tidak berulang saat scroll.
-    LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
     // Ringkasan + filter status stok (Aman >20, Sedang ==20, Rendah <20, Habis 0).
     val countAman = medicines.count { stockLabel(it.stock) == "Aman" }
     val countSedang = medicines.count { stockLabel(it.stock) == "Sedang" }
@@ -456,12 +439,7 @@ fun StokScreen() {
             }
         }
         itemsIndexed(sorted) { index, m ->
-            AnimatedVisibility(
-                visible = listEntered,
-                enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
-                    slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 },
-                exit = fadeOut()
-            ) {
+            
             ExpressiveCard(
                 shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth().then(
@@ -507,21 +485,18 @@ fun StokScreen() {
                     }
                 }
             }
-            }
+            
         }
     }
         // FAB Tambah Obat: melayang di kanan bawah; naik sedikit saat
         // Snackbar tampil supaya tombol aksinya (mis. Urungkan) tidak
         // tertutup.
-        val fabBottomPadding by animateDpAsState(
-            targetValue = if (snackbarHostState.currentSnackbarData != null) 84.dp else 16.dp,
-            label = "fabBottomPadding"
-        )
+        val fabBottomPadding = if (snackbarHostState.currentSnackbarData != null) 84.dp else 16.dp
         AnimatedVisibility(
             visible = fabVisible,
             modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = fabBottomPadding),
-            enter = fadeIn(animationSpec = tween(200)) + slideInVertically(animationSpec = tween(250)) { it / 2 },
-            exit = fadeOut(animationSpec = tween(200)) + slideOutVertically(animationSpec = tween(250)) { it / 2 }
+            enter = EnterTransition.None,
+            exit = ExitTransition.None
         ) {
             ExtendedFloatingActionButton(
                 onClick = { editing = null; showForm = true },

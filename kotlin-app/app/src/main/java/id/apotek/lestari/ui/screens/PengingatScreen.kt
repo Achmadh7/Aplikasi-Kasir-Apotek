@@ -14,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,21 +32,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -64,7 +50,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
@@ -77,7 +62,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -125,7 +109,6 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
     var noDateBills by remember { mutableStateOf<List<Purchase>>(emptyList()) }
     var window by remember { mutableStateOf(90) }
     var filter by remember { mutableStateOf("all") } // all | expiry | low | critical
-    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("pengingat")) }
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME, pola yang sama
     // seperti Laba) supaya tagihan yang baru ditandai lunas di Faktur PBF
     // langsung hilang dari sini.
@@ -155,7 +138,6 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
             p.paymentType == "KREDIT" && p.dueDate.isBlank()
         }
     }
-    LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
     val expired = medicines.filter { (daysUntilExpiry(it.expiryDate) ?: Int.MAX_VALUE) < 0 }
     val withinWindow = medicines.filter { val d = daysUntilExpiry(it.expiryDate); d != null && d >= 0 && d <= window }
     val low = medicines.filter { it.stock in 1..9 }
@@ -328,12 +310,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                 else -> null
             }
             val advice = listOfNotNull(stockNote, expiryNote).joinToString(" ")
-            AnimatedVisibility(
-                visible = listEntered,
-                enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
-                    slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 },
-                exit = fadeOut()
-            ) {
+            
             Column {
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
@@ -391,7 +368,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
             }
-            }
+            
         }
         if (shown.isEmpty()) {
             item { Text(tr("Tidak ada pengingat — semua stok dan kadaluarsa aman.", "No reminders — all stock and expiry dates are safe."), style = MaterialTheme.typography.bodyMedium) }
