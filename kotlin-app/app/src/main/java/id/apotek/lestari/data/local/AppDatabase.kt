@@ -35,7 +35,7 @@ data class MedicineEntity(
     val stock: Int,
     val expiryDate: String?, // "yyyy-MM-dd" atau null
     val barcode: String?,
-    val createdAt: String // ISO UTC, mis. "2026-10-26T00:15:00.000Z",
+    val createdAt: String, // ISO UTC mis. "2026-10-26T00:15:00.000Z",
     // Kolom sinkronisasi Mode Online (DB v13): remoteId = identitas baris
     // di Firestore; updatedAt = cap ubah terakhir (ms epoch) untuk aturan
     // last-write-wins; terhapus = 1 berarti tombstone (hapus lunak);
@@ -54,7 +54,7 @@ data class SaleEntity(
     val paymentMethod: String,
     val amountPaid: Int,
     val changeAmount: Int,
-    val createdAt: String // ISO UTC,
+    val createdAt: String, // ISO UTC
     // Kolom sinkronisasi Mode Online (DB v13): remoteId = identitas baris
     // di Firestore; updatedAt = cap ubah terakhir (ms epoch) untuk aturan
     // last-write-wins; terhapus = 1 berarti tombstone (hapus lunak);
@@ -98,7 +98,7 @@ data class CashEntryEntity(
     val description: String,
     val amount: Int,
     val source: String, // "sale" | "manual"
-    val createdAt: String // ISO UTC,
+    val createdAt: String, // ISO UTC
     // Kolom sinkronisasi Mode Online (DB v13): remoteId = identitas baris
     // di Firestore; updatedAt = cap ubah terakhir (ms epoch) untuk aturan
     // last-write-wins; terhapus = 1 berarti tombstone (hapus lunak);
@@ -129,7 +129,7 @@ data class PurchaseEntity(
     // 2026-10-30); "" = tidak diisi / bukan Kredit. Murni informasi hitung
     // mundur di kartu — tidak memengaruhi ringkasan.
     @ColumnInfo(defaultValue = "") val dueDate: String = "",
-    val createdAt: String // ISO UTC — kapan catatan dibuat,
+    val createdAt: String, // ISO UTC — kapan catatan dibuat
     // Kolom sinkronisasi Mode Online (DB v13): remoteId = identitas baris
     // di Firestore; updatedAt = cap ubah terakhir (ms epoch) untuk aturan
     // last-write-wins; terhapus = 1 berarti tombstone (hapus lunak);
