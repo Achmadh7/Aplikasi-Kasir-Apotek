@@ -9,6 +9,14 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+// Mode Online (Firebase): plugin google-services hanya diterapkan bila
+// file konfigurasi proyek Firebase tersedia di modul ini. Tanpa file itu
+// aplikasi tetap murni offline dan tetap bisa dibangun (pola yang sama
+// dengan KasBulanan).
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 // Signing — pola Auriya: file signing.properties (gitignored) di root
 // project (kotlin-app/) dibaca di sini. Tanpa file itu build release
 // GAGAL (penjaga verifyReleaseSigning di bawah; audit 2026-11-02, M4) —
@@ -134,6 +142,19 @@ dependencies {
 
     // Excel (.xlsx) untuk Import / Export / Template Stok — Apache POI
     implementation("org.apache.poi:poi-ooxml:5.5.1")
+
+    // Mode Online (Firebase): autentikasi + cadangan awan Firestore.
+    // Semua pemakaian dijaga FirebaseKit — tanpa google-services.json
+    // fitur online tidak aktif dan aplikasi berjalan offline seperti biasa.
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    // Masuk dengan Google lewat Credential Manager.
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

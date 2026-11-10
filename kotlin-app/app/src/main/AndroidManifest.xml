@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Mode Online (Firebase): sinkronisasi cadangan awan. Aplikasi tetap
+         berfungsi penuh tanpa internet (offline-first). -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
 
     <application

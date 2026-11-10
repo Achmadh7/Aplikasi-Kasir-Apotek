@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Firebase: default_web_client_id dibaca OnlineSync secara reflektif
+     (Resources.getIdentifier) untuk tombol Masuk dengan Google. Tanpa
+     baris ini resource itu dibuang penyusut resource (isShrinkResources)
+     dan tombol Google tidak pernah muncul — pelajaran dari KasBulanan. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/default_web_client_id" />
