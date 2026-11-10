@@ -59,6 +59,8 @@ object BackupHelper {
             if (m.expiryDate != null) o.put("expiryDate", m.expiryDate) else o.put("expiryDate", JSONObject.NULL)
             if (m.barcode != null) o.put("barcode", m.barcode) else o.put("barcode", JSONObject.NULL)
             o.put("createdAt", m.createdAt)
+            o.put("remoteId", m.remoteId)
+            o.put("updatedAt", m.updatedAt)
             meds.put(o)
         }
         root.put("medicines", meds)
@@ -73,6 +75,8 @@ object BackupHelper {
             o.put("amountPaid", s.amountPaid)
             o.put("changeAmount", s.changeAmount)
             o.put("createdAt", s.createdAt)
+            o.put("remoteId", s.remoteId)
+            o.put("updatedAt", s.updatedAt)
             sales.put(o)
         }
         root.put("sales", sales)
@@ -91,6 +95,8 @@ object BackupHelper {
             o.put("priceType", it.priceType)
             o.put("buyPrice", it.buyPrice)
             o.put("subtotal", it.subtotal)
+            o.put("remoteId", it.remoteId)
+            o.put("updatedAt", it.updatedAt)
             items.put(o)
         }
         root.put("saleItems", items)
@@ -105,6 +111,8 @@ object BackupHelper {
             o.put("amount", e.amount)
             o.put("source", e.source)
             o.put("createdAt", e.createdAt)
+            o.put("remoteId", e.remoteId)
+            o.put("updatedAt", e.updatedAt)
             entries.put(o)
         }
         root.put("cashEntries", entries)
@@ -121,6 +129,8 @@ object BackupHelper {
             o.put("date", p.date)
             o.put("total", p.total)
             o.put("createdAt", p.createdAt)
+            o.put("remoteId", p.remoteId)
+            o.put("updatedAt", p.updatedAt)
             purchases.put(o)
         }
         root.put("purchases", purchases)
@@ -135,6 +145,8 @@ object BackupHelper {
             o.put("unit", pi.unit)
             o.put("buyPrice", pi.buyPrice)
             o.put("subtotal", pi.subtotal)
+            o.put("remoteId", pi.remoteId)
+            o.put("updatedAt", pi.updatedAt)
             purchaseItems.put(o)
         }
         root.put("purchaseItems", purchaseItems)
@@ -178,7 +190,9 @@ object BackupHelper {
                         stock = reqInt(o, "stock", label),
                         expiryDate = if (o.isNull("expiryDate")) null else o.optString("expiryDate"),
                         barcode = if (o.isNull("barcode")) null else o.optString("barcode"),
-                        createdAt = o.optString("createdAt", "")
+                        createdAt = o.optString("createdAt", ""),
+                        remoteId = o.optString("remoteId", ""),
+                        updatedAt = o.optLong("updatedAt", 0)
                     )
                 )
             } catch (e: JSONException) {
@@ -199,7 +213,9 @@ object BackupHelper {
                         paymentMethod = o.optString("paymentMethod", "Tunai"),
                         amountPaid = reqInt(o, "amountPaid", label),
                         changeAmount = reqInt(o, "changeAmount", label),
-                        createdAt = o.optString("createdAt", "")
+                        createdAt = o.optString("createdAt", ""),
+                        remoteId = o.optString("remoteId", ""),
+                        updatedAt = o.optLong("updatedAt", 0)
                     )
                 )
             } catch (e: JSONException) {
@@ -233,7 +249,9 @@ object BackupHelper {
                         price = price,
                         priceType = o.optString("priceType", "ECER"),
                         buyPrice = reqInt(o, "buyPrice", label),
-                        subtotal = subtotal
+                        subtotal = subtotal,
+                        remoteId = o.optString("remoteId", ""),
+                        updatedAt = o.optLong("updatedAt", 0)
                     )
                 )
             } catch (e: JSONException) {
@@ -262,7 +280,9 @@ object BackupHelper {
                         description = o.optString("description", ""),
                         amount = reqInt(o, "amount", label),
                         source = o.optString("source", "manual"),
-                        createdAt = o.optString("createdAt", "")
+                        createdAt = o.optString("createdAt", ""),
+                        remoteId = o.optString("remoteId", ""),
+                        updatedAt = o.optLong("updatedAt", 0)
                     )
                 )
             } catch (e: JSONException) {
@@ -300,7 +320,9 @@ object BackupHelper {
                             ppn = o.optInt("ppn", 0),
                             paymentType = o.optString("paymentType", "CASH"),
                             dueDate = o.optString("dueDate", ""),
-                            createdAt = o.optString("createdAt", "")
+                            createdAt = o.optString("createdAt", ""),
+                            remoteId = o.optString("remoteId", ""),
+                            updatedAt = o.optLong("updatedAt", 0)
                         )
                     )
                 } catch (e: JSONException) {
@@ -333,7 +355,9 @@ object BackupHelper {
                             qty = qty,
                             unit = o.optString("unit", "Strip"),
                             buyPrice = buyPrice,
-                            subtotal = subtotal
+                            subtotal = subtotal,
+                            remoteId = o.optString("remoteId", ""),
+                            updatedAt = o.optLong("updatedAt", 0)
                         )
                     )
                 } catch (e: JSONException) {
