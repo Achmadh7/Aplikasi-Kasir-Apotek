@@ -160,51 +160,65 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         item {
             
             Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Header nama HN2 (pilihan Achmad 2026-11-10): logo besar
-                // dalam kotak putih membulat di kiri, nama dua baris
-                // (Apotek / Lestari berwarna primer), tanggal di bawahnya.
-                val logo = rememberLogoBitmap()
-                if (logo != null) {
-                    Surface(color = Color.White, shape = RoundedCornerShape(16.dp), modifier = Modifier.size(72.dp)) {
-                        Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(6.dp).fillMaxSize())
+            // Header K3 (pilihan Achmad 2026-11-10, gaya header KasBulanan):
+            // kartu gradasi navy, logo dalam kotak putih, nama satu baris,
+            // pil kanan = status sekaligus tombol sinkron. Tanggal tidak
+            // lagi di header, dan judul "Beranda" terpisah dilepas — kartu
+            // ini adalah header Beranda.
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    Modifier.background(GradasiHeader).padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val logo = rememberLogoBitmap()
+                    Surface(color = Color.White, shape = RoundedCornerShape(14.dp), modifier = Modifier.size(48.dp)) {
+                        if (logo != null) {
+                            Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(6.dp).fillMaxSize())
+                        } else {
+                            Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF0A2A5C), modifier = Modifier.padding(11.dp).fillMaxSize())
+                        }
                     }
-                    Spacer(Modifier.width(14.dp))
-                }
-                Column {
-                    Text("Apotek", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-                    Text("Lestari", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.height(3.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(todayLabelID(), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
-                    }
-                }
-                Spacer(Modifier.weight(1f))
-                // Ikon status Mode Online: ketuk = sinkron sekarang (atau
-                // buka gerbang login bila masih tamu). Tidak tampil sama
-                // sekali bila build belum terkonfigurasi Firebase.
-                if (statusSync != StatusSync.NONAKTIF) {
-                    IconButton(onClick = onSyncTap) {
-                        when (statusSync) {
-                            StatusSync.PROSES -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                            StatusSync.BERHASIL -> Icon(Icons.Default.CloudDone, tr("Tersinkron", "Synced"), tint = MaterialTheme.colorScheme.primary)
-                            StatusSync.GAGAL -> Icon(Icons.Default.CloudOff, tr("Sinkronisasi gagal", "Sync failed"), tint = MaterialTheme.colorScheme.error)
-                            else -> Icon(Icons.Default.CloudOff, tr("Mode tamu", "Guest mode"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(12.dp))
+                    Text("Apotek Lestari", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Spacer(Modifier.weight(1f))
+                    if (statusSync != StatusSync.NONAKTIF) {
+                        Surface(
+                            color = Color.White.copy(alpha = 0.18f),
+                            shape = RoundedCornerShape(50),
+                            modifier = Modifier.clickable { onSyncTap() }
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                when (statusSync) {
+                                    StatusSync.PROSES -> CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                                    StatusSync.BERHASIL -> Icon(Icons.Default.CloudDone, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    StatusSync.GAGAL -> Icon(Icons.Default.CloudOff, null, tint = Color(0xFFFFB4AB), modifier = Modifier.size(18.dp))
+                                    else -> Icon(Icons.Default.CloudOff, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                }
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    when (statusSync) {
+                                        StatusSync.PROSES -> tr("Menyinkron\u2026", "Syncing\u2026")
+                                        StatusSync.BERHASIL -> tr("Tersinkron", "Synced")
+                                        StatusSync.GAGAL -> tr("Gagal", "Failed")
+                                        else -> tr("Mode Tamu", "Guest")
+                                    },
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (statusSync == StatusSync.GAGAL) Color(0xFFFFB4AB) else Color.White
+                                )
+                            }
                         }
                     }
                 }
             }
             Spacer(Modifier.height(SpaceS))
-            Text(tr("Beranda", "Home"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-            Spacer(Modifier.height(SpaceL))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            // Jarak garis -> panel ringkasan dirapatkan (laporan Achmad
-            // 2026-11-10: celah di bawah garis ke pemilih Hari Ini/Bulan
-            // Ini terlalu jauh). Totalnya kini 4dp di sini + 20dp jarak
-            // antar item LazyColumn.
-            Spacer(Modifier.height(SpaceXS))
             DemoBanner()
             }
             

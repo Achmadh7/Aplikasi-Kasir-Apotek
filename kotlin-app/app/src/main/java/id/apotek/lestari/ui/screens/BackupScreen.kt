@@ -187,18 +187,7 @@ fun BackupScreen() {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                Icon(Icons.Default.Backup, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-            }
-            Spacer(Modifier.width(12.dp))
-            Column {
-                Text("Backup", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
-                Text(tr("Simpan dan pulihkan semua data apotek.", "Save and restore all of the pharmacy's data."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Spacer(Modifier.height(SpaceL))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        KartuHeaderGradasi("Backup", Icons.Default.Backup, tr("Simpan dan pulihkan semua data apotek.", "Save and restore all of the pharmacy's data."))
         Spacer(Modifier.height(SpaceL))
         ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
@@ -373,15 +362,8 @@ fun TentangScreen(onGoBackup: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(SpaceL)
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                    Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Text(tr("Tentang", "About"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
-            }
+            KartuHeaderGradasi(tr("Tentang", "About"), Icons.Default.Info)
             Spacer(Modifier.height(SpaceL))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
         item {
             // Kartu identitas: logo kecil sejajar nama dan versi.

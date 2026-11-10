@@ -310,15 +310,7 @@ fun KasirScreen() {
         // Daftar obat memenuhi layar; keranjang & pembayaran pindah ke bottom sheet.
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(16.dp)) {
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                Icon(Icons.Default.PointOfSale, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-            }
-            Spacer(Modifier.width(12.dp))
-            Text(tr("Kasir", "Cashier"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
-        }
-        Spacer(Modifier.height(SpaceL))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        KartuHeaderGradasi(tr("Kasir", "Cashier"), Icons.Default.PointOfSale)
         Spacer(Modifier.height(SpaceL))
         DemoBanner()
         SearchField(

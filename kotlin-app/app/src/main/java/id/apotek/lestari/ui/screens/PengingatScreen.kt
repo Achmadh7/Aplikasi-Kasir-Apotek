@@ -165,15 +165,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(SpaceL)
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                    Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Text(tr("Pengingat", "Reminders"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
-            }
-            Spacer(Modifier.height(SpaceL))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            KartuHeaderGradasi(tr("Pengingat", "Reminders"), Icons.Default.NotificationsActive)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             Text(tr("MASA KADALUARSA", "EXPIRY WINDOW"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

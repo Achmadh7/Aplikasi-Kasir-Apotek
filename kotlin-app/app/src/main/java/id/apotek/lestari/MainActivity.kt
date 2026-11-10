@@ -585,15 +585,7 @@ fun LainnyaScreen(
     onResetTap: () -> Unit
 ) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                Icon(Icons.Default.MoreHoriz, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-            }
-            Spacer(Modifier.width(12.dp))
-            Text(tr("Lainnya", "More"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
-        }
-        Spacer(Modifier.height(SpaceL))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        KartuHeaderGradasi(tr("Lainnya", "More"), Icons.Default.MoreHoriz)
         Spacer(Modifier.height(SpaceL))
         val tiles = listOf(
             LainnyaTile("laba", tr("Laba", "Profit"), tr("Laba & margin", "Profit & margins"), Icons.Default.TrendingUp),

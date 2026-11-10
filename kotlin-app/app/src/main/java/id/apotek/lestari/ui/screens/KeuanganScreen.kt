@@ -204,15 +204,7 @@ fun KeuanganScreen() {
     ) {
         item {
             Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                    Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Text(tr("Keuangan", "Finance"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
-            }
-            Spacer(Modifier.height(SpaceL))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            KartuHeaderGradasi(tr("Keuangan", "Finance"), Icons.Default.AccountBalanceWallet)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {

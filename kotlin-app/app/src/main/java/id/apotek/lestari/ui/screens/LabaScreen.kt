@@ -142,15 +142,7 @@ fun LabaScreen() {
         item {
             
             Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                    Icon(Icons.Default.TrendingUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Text(tr("Laba", "Profit"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
-            }
-            Spacer(Modifier.height(SpaceL))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            KartuHeaderGradasi(tr("Laba", "Profit"), Icons.Default.TrendingUp)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -374,15 +366,7 @@ fun ObatTerlarisScreen() {
         verticalArrangement = Arrangement.spacedBy(SpaceL)
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                    Icon(Icons.Default.Leaderboard, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Text(tr("Terlaris", "Best Sellers"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
-            }
-            Spacer(Modifier.height(SpaceL))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            KartuHeaderGradasi(tr("Terlaris", "Best Sellers"), Icons.Default.Leaderboard)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {

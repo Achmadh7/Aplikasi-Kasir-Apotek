@@ -619,15 +619,7 @@ fun RiwayatScreen() {
         }
     }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                Icon(Icons.Default.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-            }
-            Spacer(Modifier.width(12.dp))
-            Text(tr("Riwayat", "History"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
-        }
-        Spacer(Modifier.height(SpaceL))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        KartuHeaderGradasi(tr("Riwayat", "History"), Icons.Default.ReceiptLong)
         Spacer(Modifier.height(SpaceL))
         DemoBanner()
         if (sales.isEmpty()) Text(tr("Belum ada penjualan tercatat.", "No sales recorded yet."))

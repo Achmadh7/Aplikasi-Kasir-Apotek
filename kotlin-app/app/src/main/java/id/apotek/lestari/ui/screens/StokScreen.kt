@@ -260,18 +260,7 @@ fun StokScreen() {
     ) {
         item {
             Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                    Icon(Icons.Default.Medication, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(tr("Stok", "Stock"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
-                    Text(tr("${medicines.size} jenis obat tercatat", "${medicines.size} medicines recorded"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Spacer(Modifier.height(SpaceL))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            KartuHeaderGradasi(tr("Stok", "Stock"), Icons.Default.Medication, tr("${medicines.size} jenis obat tercatat", "${medicines.size} medicines recorded"))
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             SearchField(

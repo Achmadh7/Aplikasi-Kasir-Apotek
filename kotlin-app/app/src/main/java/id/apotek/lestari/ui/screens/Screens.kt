@@ -149,6 +149,42 @@ fun adaptiveSheetMaxWidth() = when {
     else -> 360.dp
 }
 
+// ---------- Header kartu gradasi (gaya K3, pilihan Achmad 2026-11-10) ----------
+
+/** Gradasi navy kartu header semua layar (tetap navy di dua mode). */
+val GradasiHeader = Brush.horizontalGradient(listOf(Color(0xFF0A2A5C), Color(0xFF1B4B8F)))
+
+/**
+ * Kartu header nama layar bergaya header KasBulanan: kartu gradasi navy,
+ * ikon menu dalam kotak putih membulat, judul putih ExtraBold. Dipakai
+ * semua layar selain Beranda (Beranda memakai varian logo + pil sinkron).
+ */
+@Composable
+fun KartuHeaderGradasi(judul: String, ikon: ImageVector, subjudul: String? = null) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            Modifier.background(GradasiHeader).padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(color = Color.White, shape = RoundedCornerShape(14.dp), modifier = Modifier.size(48.dp)) {
+                Icon(ikon, null, tint = Color(0xFF0A2A5C), modifier = Modifier.padding(11.dp).fillMaxSize())
+            }
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(judul, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                if (subjudul != null) {
+                    Text(subjudul, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
+                }
+            }
+        }
+    }
+}
+
+
 // ---------- Animasi terpilih (dikembalikan Achmad 2026-11-10: angka,
 // centang sukses, denyut KRITIS; selebihnya aplikasi tanpa animasi) ----------
 
