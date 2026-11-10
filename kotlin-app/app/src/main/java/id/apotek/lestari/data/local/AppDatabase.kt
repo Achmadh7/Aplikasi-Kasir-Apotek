@@ -35,7 +35,15 @@ data class MedicineEntity(
     val stock: Int,
     val expiryDate: String?, // "yyyy-MM-dd" atau null
     val barcode: String?,
-    val createdAt: String // ISO UTC, mis. "2026-10-26T00:15:00.000Z"
+    val createdAt: String // ISO UTC, mis. "2026-10-26T00:15:00.000Z",
+    // Kolom sinkronisasi Mode Online (DB v13): remoteId = identitas baris
+    // di Firestore; updatedAt = cap ubah terakhir (ms epoch) untuk aturan
+    // last-write-wins; terhapus = 1 berarti tombstone (hapus lunak);
+    // kotor = 1 berarti belum tersinkron ke awan.
+    @ColumnInfo(defaultValue = "") val remoteId: String = "",
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @ColumnInfo(defaultValue = "0") val terhapus: Int = 0,
+    @ColumnInfo(defaultValue = "1") val kotor: Int = 1
 )
 
 @Entity(tableName = "sales", indices = [Index(value = ["invoiceNo"])])
@@ -46,7 +54,15 @@ data class SaleEntity(
     val paymentMethod: String,
     val amountPaid: Int,
     val changeAmount: Int,
-    val createdAt: String // ISO UTC
+    val createdAt: String // ISO UTC,
+    // Kolom sinkronisasi Mode Online (DB v13): remoteId = identitas baris
+    // di Firestore; updatedAt = cap ubah terakhir (ms epoch) untuk aturan
+    // last-write-wins; terhapus = 1 berarti tombstone (hapus lunak);
+    // kotor = 1 berarti belum tersinkron ke awan.
+    @ColumnInfo(defaultValue = "") val remoteId: String = "",
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @ColumnInfo(defaultValue = "0") val terhapus: Int = 0,
+    @ColumnInfo(defaultValue = "1") val kotor: Int = 1
 )
 
 @Entity(tableName = "sale_items")
@@ -63,7 +79,15 @@ data class SaleItemEntity(
     // 2026-10-29 — ditampilkan di invoice). Penjualan lama = "ECER".
     @ColumnInfo(defaultValue = "ECER") val priceType: String = "ECER",
     val buyPrice: Int, // harga beli saat transaksi (snapshot HPP)
-    val subtotal: Int
+    val subtotal: Int,
+    // Kolom sinkronisasi Mode Online (DB v13): remoteId = identitas baris
+    // di Firestore; updatedAt = cap ubah terakhir (ms epoch) untuk aturan
+    // last-write-wins; terhapus = 1 berarti tombstone (hapus lunak);
+    // kotor = 1 berarti belum tersinkron ke awan.
+    @ColumnInfo(defaultValue = "") val remoteId: String = "",
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @ColumnInfo(defaultValue = "0") val terhapus: Int = 0,
+    @ColumnInfo(defaultValue = "1") val kotor: Int = 1
 )
 
 @Entity(tableName = "cash_entries")
@@ -74,7 +98,15 @@ data class CashEntryEntity(
     val description: String,
     val amount: Int,
     val source: String, // "sale" | "manual"
-    val createdAt: String // ISO UTC
+    val createdAt: String // ISO UTC,
+    // Kolom sinkronisasi Mode Online (DB v13): remoteId = identitas baris
+    // di Firestore; updatedAt = cap ubah terakhir (ms epoch) untuk aturan
+    // last-write-wins; terhapus = 1 berarti tombstone (hapus lunak);
+    // kotor = 1 berarti belum tersinkron ke awan.
+    @ColumnInfo(defaultValue = "") val remoteId: String = "",
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @ColumnInfo(defaultValue = "0") val terhapus: Int = 0,
+    @ColumnInfo(defaultValue = "1") val kotor: Int = 1
 )
 
 // Catatan pembelian dari PBF — MURNI catatan (keputusan Achmad 2026-10-29):
@@ -97,7 +129,15 @@ data class PurchaseEntity(
     // 2026-10-30); "" = tidak diisi / bukan Kredit. Murni informasi hitung
     // mundur di kartu — tidak memengaruhi ringkasan.
     @ColumnInfo(defaultValue = "") val dueDate: String = "",
-    val createdAt: String // ISO UTC — kapan catatan dibuat
+    val createdAt: String // ISO UTC — kapan catatan dibuat,
+    // Kolom sinkronisasi Mode Online (DB v13): remoteId = identitas baris
+    // di Firestore; updatedAt = cap ubah terakhir (ms epoch) untuk aturan
+    // last-write-wins; terhapus = 1 berarti tombstone (hapus lunak);
+    // kotor = 1 berarti belum tersinkron ke awan.
+    @ColumnInfo(defaultValue = "") val remoteId: String = "",
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @ColumnInfo(defaultValue = "0") val terhapus: Int = 0,
+    @ColumnInfo(defaultValue = "1") val kotor: Int = 1
 )
 
 @Entity(tableName = "purchase_items")
@@ -110,21 +150,43 @@ data class PurchaseItemEntity(
     // supaya jelas qty itu dalam satuan apa (permintaan Achmad 2026-10-29).
     @ColumnInfo(defaultValue = "Strip") val unit: String = "Strip",
     val buyPrice: Int, // harga satuan dari PBF
-    val subtotal: Int
+    val subtotal: Int,
+    // Kolom sinkronisasi Mode Online (DB v13): remoteId = identitas baris
+    // di Firestore; updatedAt = cap ubah terakhir (ms epoch) untuk aturan
+    // last-write-wins; terhapus = 1 berarti tombstone (hapus lunak);
+    // kotor = 1 berarti belum tersinkron ke awan.
+    @ColumnInfo(defaultValue = "") val remoteId: String = "",
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @ColumnInfo(defaultValue = "0") val terhapus: Int = 0,
+    @ColumnInfo(defaultValue = "1") val kotor: Int = 1
 )
 
 // ---- DAOs ----
 
 @Dao
 interface MedicineDao {
-    @Query("SELECT * FROM medicines ORDER BY id DESC")
+    @Query("SELECT * FROM medicines WHERE terhapus = 0 ORDER BY id DESC")
     suspend fun getAll(): List<MedicineEntity>
 
-    @Query("SELECT * FROM medicines WHERE id = :id")
+    @Query("SELECT * FROM medicines WHERE id = :id AND terhapus = 0")
     suspend fun getById(id: Int): MedicineEntity?
 
-    @Query("SELECT * FROM medicines WHERE barcode = :barcode LIMIT 1")
+    @Query("SELECT * FROM medicines WHERE barcode = :barcode AND terhapus = 0 LIMIT 1")
     suspend fun findByBarcode(barcode: String): MedicineEntity?
+
+    // Tanpa saringan terhapus: dipakai jalur sinkronisasi (tombstone ikut)
+    // dan pemeriksaan barcode saat menghidupkan lagi obat yang terhapus.
+    @Query("SELECT * FROM medicines WHERE barcode = :barcode LIMIT 1")
+    suspend fun findByBarcodeAny(barcode: String): MedicineEntity?
+
+    @Query("SELECT * FROM medicines WHERE remoteId = :remoteId LIMIT 1")
+    suspend fun getByRemoteId(remoteId: String): MedicineEntity?
+
+    @Query("SELECT * FROM medicines WHERE id = :id")
+    suspend fun getByIdAny(id: Int): MedicineEntity?
+
+    @Query("SELECT * FROM medicines WHERE kotor = 1")
+    suspend fun getKotor(): List<MedicineEntity>
 
     @Insert
     suspend fun insert(medicine: MedicineEntity): Long
@@ -132,32 +194,74 @@ interface MedicineDao {
     @Update
     suspend fun update(medicine: MedicineEntity): Int
 
-    @Query("DELETE FROM medicines WHERE id = :id")
-    suspend fun deleteById(id: Int): Int
+    // Hapus lunak sejak DB v13: baris menjadi tombstone supaya penghapusan
+    // ikut tersinkron; penghapusan fisik terjadi lewat purge() setelah
+    // tombstone terkirim.
+    @Query("UPDATE medicines SET terhapus = 1, kotor = 1, updatedAt = :now WHERE id = :id")
+    suspend fun deleteById(id: Int, now: Long): Int
+
+    @Query("UPDATE medicines SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
+    suspend fun tandaiBersih(remoteId: String, updatedAt: Long): Int
+
+    @Query("DELETE FROM medicines WHERE terhapus = 1 AND kotor = 0")
+    suspend fun purge(): Int
 
     @Query("DELETE FROM medicines")
     suspend fun deleteAll()
 
-    @Query("UPDATE medicines SET stock = stock - :qty WHERE id = :id AND stock >= :qty")
-    suspend fun decrementStock(id: Int, qty: Int): Int
+    @Query("UPDATE medicines SET stock = stock - :qty, kotor = 1, updatedAt = :now WHERE id = :id AND stock >= :qty AND terhapus = 0")
+    suspend fun decrementStock(id: Int, qty: Int, now: Long): Int
 }
 
 @Dao
 interface SaleDao {
-    @Query("SELECT * FROM sales ORDER BY id DESC")
+    @Query("SELECT * FROM sales WHERE terhapus = 0 ORDER BY id DESC")
     suspend fun getAll(): List<SaleEntity>
 
     @Insert
     suspend fun insert(sale: SaleEntity): Long
 
-    @Query("SELECT * FROM sale_items WHERE saleId = :saleId ORDER BY id")
+    @Update
+    suspend fun update(sale: SaleEntity): Int
+
+    @Query("SELECT * FROM sales WHERE remoteId = :remoteId LIMIT 1")
+    suspend fun getByRemoteId(remoteId: String): SaleEntity?
+
+    @Query("SELECT * FROM sales WHERE id = :id")
+    suspend fun getByIdAny(id: Int): SaleEntity?
+
+    @Query("SELECT * FROM sales WHERE kotor = 1")
+    suspend fun getKotor(): List<SaleEntity>
+
+    @Query("UPDATE sales SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
+    suspend fun tandaiBersih(remoteId: String, updatedAt: Long): Int
+
+    @Query("DELETE FROM sales WHERE terhapus = 1 AND kotor = 0")
+    suspend fun purge(): Int
+
+    @Query("SELECT * FROM sale_items WHERE saleId = :saleId AND terhapus = 0 ORDER BY id")
     suspend fun getItemsForSale(saleId: Int): List<SaleItemEntity>
 
-    @Query("SELECT * FROM sale_items")
+    @Query("SELECT * FROM sale_items WHERE terhapus = 0")
     suspend fun getAllItems(): List<SaleItemEntity>
 
     @Insert
     suspend fun insertItems(items: List<SaleItemEntity>)
+
+    @Update
+    suspend fun updateItem(item: SaleItemEntity): Int
+
+    @Query("SELECT * FROM sale_items WHERE remoteId = :remoteId LIMIT 1")
+    suspend fun getItemByRemoteId(remoteId: String): SaleItemEntity?
+
+    @Query("SELECT * FROM sale_items WHERE kotor = 1")
+    suspend fun getKotorItems(): List<SaleItemEntity>
+
+    @Query("UPDATE sale_items SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
+    suspend fun tandaiBersihItem(remoteId: String, updatedAt: Long): Int
+
+    @Query("DELETE FROM sale_items WHERE terhapus = 1 AND kotor = 0")
+    suspend fun purgeItems(): Int
 
     @Query("DELETE FROM sales")
     suspend fun deleteAll()
@@ -168,50 +272,100 @@ interface SaleDao {
 
 @Dao
 interface CashDao {
-    @Query("SELECT * FROM cash_entries ORDER BY id DESC")
+    @Query("SELECT * FROM cash_entries WHERE terhapus = 0 ORDER BY id DESC")
     suspend fun getAll(): List<CashEntryEntity>
 
     @Insert
     suspend fun insert(entry: CashEntryEntity): Long
 
-    @Query("DELETE FROM cash_entries WHERE id = :id")
-    suspend fun deleteById(id: Int): Int
+    @Update
+    suspend fun update(entry: CashEntryEntity): Int
+
+    @Query("SELECT * FROM cash_entries WHERE remoteId = :remoteId LIMIT 1")
+    suspend fun getByRemoteId(remoteId: String): CashEntryEntity?
+
+    @Query("SELECT * FROM cash_entries WHERE kotor = 1")
+    suspend fun getKotor(): List<CashEntryEntity>
+
+    // Hapus lunak sejak DB v13 (tombstone ikut tersinkron).
+    @Query("UPDATE cash_entries SET terhapus = 1, kotor = 1, updatedAt = :now WHERE id = :id")
+    suspend fun deleteById(id: Int, now: Long): Int
+
+    @Query("UPDATE cash_entries SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
+    suspend fun tandaiBersih(remoteId: String, updatedAt: Long): Int
+
+    @Query("DELETE FROM cash_entries WHERE terhapus = 1 AND kotor = 0")
+    suspend fun purge(): Int
 
     @Query("DELETE FROM cash_entries")
     suspend fun deleteAll()
 
-    @Query("SELECT COALESCE(SUM(amount), 0) FROM cash_entries WHERE type = 'in'")
+    @Query("SELECT COALESCE(SUM(amount), 0) FROM cash_entries WHERE type = 'in' AND terhapus = 0")
     suspend fun sumIn(): Int
 
-    @Query("SELECT COALESCE(SUM(amount), 0) FROM cash_entries WHERE type = 'out'")
+    @Query("SELECT COALESCE(SUM(amount), 0) FROM cash_entries WHERE type = 'out' AND terhapus = 0")
     suspend fun sumOut(): Int
 }
 
 @Dao
 interface PurchaseDao {
-    @Query("SELECT * FROM purchases ORDER BY date DESC, id DESC")
+    @Query("SELECT * FROM purchases WHERE terhapus = 0 ORDER BY date DESC, id DESC")
     suspend fun getAll(): List<PurchaseEntity>
 
-    @Query("SELECT * FROM purchase_items ORDER BY id")
+    @Query("SELECT * FROM purchase_items WHERE terhapus = 0 ORDER BY id")
     suspend fun getAllItems(): List<PurchaseItemEntity>
 
     @Insert
     suspend fun insert(purchase: PurchaseEntity): Long
 
+    @Update
+    suspend fun update(purchase: PurchaseEntity): Int
+
     @Insert
     suspend fun insertItems(items: List<PurchaseItemEntity>)
 
-    @Query("DELETE FROM purchases WHERE id = :id")
-    suspend fun deleteById(id: Int): Int
+    @Update
+    suspend fun updateItem(item: PurchaseItemEntity): Int
 
-    @Query("DELETE FROM purchase_items WHERE purchaseId = :purchaseId")
-    suspend fun deleteItemsForPurchase(purchaseId: Int)
+    @Query("SELECT * FROM purchases WHERE remoteId = :remoteId LIMIT 1")
+    suspend fun getByRemoteId(remoteId: String): PurchaseEntity?
 
-    @Query("UPDATE purchases SET paymentType = :paymentType WHERE id = :id")
-    suspend fun updatePaymentType(id: Int, paymentType: String): Int
+    @Query("SELECT * FROM purchases WHERE id = :id")
+    suspend fun getByIdAny(id: Int): PurchaseEntity?
 
-    @Query("UPDATE purchases SET dueDate = :dueDate WHERE id = :id")
-    suspend fun updateDueDate(id: Int, dueDate: String): Int
+    @Query("SELECT * FROM purchases WHERE kotor = 1")
+    suspend fun getKotor(): List<PurchaseEntity>
+
+    @Query("SELECT * FROM purchase_items WHERE remoteId = :remoteId LIMIT 1")
+    suspend fun getItemByRemoteId(remoteId: String): PurchaseItemEntity?
+
+    @Query("SELECT * FROM purchase_items WHERE kotor = 1")
+    suspend fun getKotorItems(): List<PurchaseItemEntity>
+
+    // Hapus lunak sejak DB v13 (tombstone ikut tersinkron).
+    @Query("UPDATE purchases SET terhapus = 1, kotor = 1, updatedAt = :now WHERE id = :id")
+    suspend fun deleteById(id: Int, now: Long): Int
+
+    @Query("UPDATE purchase_items SET terhapus = 1, kotor = 1, updatedAt = :now WHERE purchaseId = :purchaseId")
+    suspend fun deleteItemsForPurchase(purchaseId: Int, now: Long): Int
+
+    @Query("UPDATE purchases SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
+    suspend fun tandaiBersih(remoteId: String, updatedAt: Long): Int
+
+    @Query("UPDATE purchase_items SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
+    suspend fun tandaiBersihItem(remoteId: String, updatedAt: Long): Int
+
+    @Query("DELETE FROM purchases WHERE terhapus = 1 AND kotor = 0")
+    suspend fun purge(): Int
+
+    @Query("DELETE FROM purchase_items WHERE terhapus = 1 AND kotor = 0")
+    suspend fun purgeItems(): Int
+
+    @Query("UPDATE purchases SET paymentType = :paymentType, kotor = 1, updatedAt = :now WHERE id = :id")
+    suspend fun updatePaymentType(id: Int, paymentType: String, now: Long): Int
+
+    @Query("UPDATE purchases SET dueDate = :dueDate, kotor = 1, updatedAt = :now WHERE id = :id")
+    suspend fun updateDueDate(id: Int, dueDate: String, now: Long): Int
 
     @Query("DELETE FROM purchases")
     suspend fun deleteAll()
@@ -320,6 +474,33 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
     }
 }
 
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Mode Online (2026-11-10): kolom sinkronisasi di keenam tabel —
+        // remoteId (identitas baris di Firestore), updatedAt (cap ubah
+        // terakhir, ms epoch, untuk last-write-wins), terhapus (tombstone
+        // hapus lunak), kotor (belum tersinkron). Baris lama diberi
+        // remoteId turunan dari ID lokalnya dan updatedAt dari createdAt
+        // bila terbaca; kotor = 1 supaya semuanya terunggah pada
+        // sinkronisasi pertama. Tidak ada data yang berubah selain kolom
+        // baru ini.
+        val tabel = listOf(
+            "medicines" to "obat", "sales" to "jual", "sale_items" to "jualitem",
+            "cash_entries" to "kas", "purchases" to "pbf", "purchase_items" to "pbfitem"
+        )
+        for ((nama, awalan) in tabel) {
+            db.execSQL("ALTER TABLE `$nama` ADD COLUMN `remoteId` TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE `$nama` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE `$nama` ADD COLUMN `terhapus` INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE `$nama` ADD COLUMN `kotor` INTEGER NOT NULL DEFAULT 1")
+            db.execSQL("UPDATE `$nama` SET `remoteId` = '$awalan-' || `id`")
+        }
+        for (nama in listOf("medicines", "sales", "cash_entries", "purchases")) {
+            db.execSQL("UPDATE `$nama` SET `updatedAt` = COALESCE(CAST(strftime('%s', `createdAt`) AS INTEGER), 0) * 1000")
+        }
+    }
+}
+
 val MIGRATION_11_12 = object : Migration(11, 12) {
     override fun migrate(db: SupportSQLiteDatabase) {
         // Format invoice baru (2026-11-01) memakai satu nomor yang sama
@@ -334,7 +515,7 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
 
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -398,7 +579,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13).build()
                 }
             }
         }
