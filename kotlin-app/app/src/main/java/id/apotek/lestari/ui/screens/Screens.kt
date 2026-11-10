@@ -34,6 +34,12 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -143,15 +149,24 @@ fun adaptiveSheetMaxWidth() = when {
     else -> 360.dp
 }
 
-// ---------- Animasi Material 3 Expressive ----------
+// ---------- Animasi terpilih (dikembalikan Achmad 2026-11-10: angka,
+// centang sukses, denyut KRITIS; selebihnya aplikasi tanpa animasi) ----------
 
 
-/** Angka nominal (statis; dipakai Pemasukan di Beranda & Laba). */
+/** Angka berhitung naik dari 0 (dipakai Pemasukan Hari Ini & Laba). */
 @Composable
 fun AnimatedAmount(value: Int, style: TextStyle, color: Color, format: (Int) -> String = { formatIDR(it) }) {
-    // Statis sejak 2026-11-10 (keputusan Achmad: semua animasi dihapus)
-    // — dulu angka ini berhitung naik 800ms setiap nilai berubah.
-    Text(format(value), color = color, style = style, fontWeight = FontWeight.Bold)
+    // rememberSaveable: nilai terakhir ikut tersimpan bersama state
+    // tujuan navigasi, jadi saat kembali ke tab ini angka tampil utuh
+    // seketika (tidak menghitung naik dari 0 lagi).
+    var shown by rememberSaveable { mutableStateOf(0) }
+    val animated by animateIntAsState(
+        targetValue = shown,
+        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+        label = "amount"
+    )
+    LaunchedEffect(value) { shown = value }
+    Text(format(animated), color = color, style = style, fontWeight = FontWeight.Bold)
 }
 
 
@@ -275,15 +290,23 @@ fun PriceModeChip(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 
-/** Centang sukses pembayaran (statis): lingkaran + centang tampil utuh.
- *  Ukuran bisa diperbesar (fase sukses pembayaran memakai 120.dp);
- *  padding dan tebal garis diskalakan mengikuti ukuran. */
+/** Centang sukses pembayaran: lingkaran membesar dengan pegas, centang
+ *  tergambar. Ukuran bisa diperbesar (fase sukses pembayaran memakai
+ *  120.dp); padding dan tebal garis diskalakan mengikuti ukuran. */
 @Composable
 fun AnimatedCheckmark(size: Dp = 56.dp) {
-    // Statis sejak 2026-11-10 (semua animasi dihapus): lingkaran dan
-    // centang langsung tampil utuh.
-    val circleScale = 1f
-    val trim = 1f
+    var started by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { started = true }
+    val circleScale by animateFloatAsState(
+        targetValue = if (started) 1f else 0f,
+        animationSpec = expressiveSpring(),
+        label = "checkCircle"
+    )
+    val trim by animateFloatAsState(
+        targetValue = if (started) 1f else 0f,
+        animationSpec = tween(durationMillis = 350, delayMillis = 120, easing = FastOutSlowInEasing),
+        label = "checkTrim"
+    )
     val checkColor = MaterialTheme.colorScheme.primary
     val scaleF = size.value / 56f
     Surface(
@@ -322,26 +345,17 @@ fun AnimatedCheckmark(size: Dp = 56.dp) {
 }
 
 
-/** Lencana KRITIS (stok 0) — dulu berdenyut halus; sejak semua animasi
- *  dihapus (2026-11-10) fungsi ini tidak mengubah apa pun, dipertahankan
- *  supaya pemanggilnya tidak berubah. */
-fun Modifier.pulseKritis(): Modifier = this
-
-
-// Warna aksen layar memakai peran colorScheme resmi tema (lihat Theme.kt).
-// Satu pengecualian atas permintaan Achmad (2026-11-01): pilihan Kas
-// Masuk/Keluar di sheet Catat Kas memakai biru tua & merah tua pekat
-// (peran skema terlalu pucat di mode gelap untuk penanda masuk/keluar),
-// dengan teks putih di atasnya.
-val KasMasukBlue = Color(0xFF0061A4)
-
-
-val KasKeluarRed = Color(0xFFD32F2F)
-
-
+/** Denyut halus untuk lencana KRITIS (stok 0). */
 @Composable
-fun DemoBanner() {
-    // Mode offline: semua data tersimpan di HP (Room), tidak ada banner demo.
+fun Modifier.pulseKritis(): Modifier {
+    val alpha = remember { Animatable(1f) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            alpha.animateTo(0.65f, tween(durationMillis = 700, easing = FastOutSlowInEasing))
+            alpha.animateTo(1f, tween(durationMillis = 700, easing = FastOutSlowInEasing))
+        }
+    }
+    return this.graphicsLayer(alpha = alpha.value)
 }
 
 

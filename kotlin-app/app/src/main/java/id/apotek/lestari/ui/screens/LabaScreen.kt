@@ -34,6 +34,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -281,7 +284,11 @@ fun LabaScreen() {
                                             )
                                             Spacer(Modifier.height(SpaceXS))
                                             key(period) {
-                                                val barH = ((110f * day.profit / maxProfit * 1f).coerceIn(0f, 110f)).let { if (day.profit > 0) it.coerceAtLeast(4f) else 0f }
+                                                val grow = remember { Animatable(0f) }
+                                                // Jepit jeda animasi supaya grafik panjang
+                                                // tidak butuh waktu lama untuk selesai tumbuh.
+                                                LaunchedEffect(period) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
+                                                val barH = ((110f * day.profit / maxProfit * grow.value).coerceIn(0f, 110f)).let { if (day.profit > 0) it.coerceAtLeast(4f) else 0f }
                                                 Box(
                                                     Modifier.width(28.dp).height(barH.dp)
                                                         .background(

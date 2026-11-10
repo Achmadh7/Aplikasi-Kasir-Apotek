@@ -35,6 +35,10 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -215,6 +219,20 @@ fun KasirScreen() {
     }
     // Supaya field Uang Diterima otomatis tergulir ke atas keyboard saat diketuk.
     val amountBringIntoView = remember { BringIntoViewRequester() }
+    // Animasi "terbang ke keranjang": saat obat ditambahkan, ikon obat melayang
+    // dari kartu obat yang diketuk ke bar keranjang. Posisi dicatat dalam
+    // koordinat window lalu diubah ke koordinat lokal Box root (dikurangi
+    // posisi window Box root). cardCenters = pusat kartu obat per id obat.
+    var rootWindowPos by remember { mutableStateOf(Offset.Zero) }
+    var rootSizePx by remember { mutableStateOf(IntSize.Zero) }
+    var cartBarCenter by remember { mutableStateOf<Offset?>(null) }
+    val cardCenters = remember { mutableStateMapOf<Int, Offset>() }
+    var flyFrom by remember { mutableStateOf<Offset?>(null) }
+    var flyTo by remember { mutableStateOf(Offset.Zero) }
+    var flyId by remember { mutableIntStateOf(0) }
+    // Density dibaca di sini (saat komposisi) supaya bisa dipakai di dalam
+    // handler klik untuk menghitung posisi fallback target.
+    val flyDensity = LocalDensity.current
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME) — pola yang
     // sama seperti Laba/Obat Terlaris/Pengingat/Faktur PBF, supaya data
     // selalu segar setelah ada perubahan dari menu lain.
@@ -282,7 +300,13 @@ fun KasirScreen() {
     val paid = parseDecimal(uangDiterima.text)
     val change = if (method == "Tunai") (paid - total).coerceAtLeast(0) else 0
     val canPay = cart.isNotEmpty() && (method != "Tunai" || paid >= total)
-    Box(Modifier.fillMaxSize()) {
+    Box(
+        Modifier.fillMaxSize()
+            .onGloballyPositioned {
+                rootWindowPos = it.positionInWindow()
+                rootSizePx = it.size
+            }
+    ) {
         // Daftar obat memenuhi layar; keranjang & pembayaran pindah ke bottom sheet.
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(16.dp)) {
 
@@ -318,6 +342,7 @@ fun KasirScreen() {
                 ExpressiveCard(
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth()
+                        .onGloballyPositioned { cardCenters[m.id] = it.boundsInWindow().center }
                         .clickable(enabled = !out) {
                         val ex = cart.firstOrNull { it.medicine.id == m.id }
                         if (ex != null && ex.qty >= m.stock) {
@@ -327,6 +352,21 @@ fun KasirScreen() {
                             lastSaleId = 0
                             payMsg = ""
                             if (ex != null) ex.qty++ else cart.add(CartItem(m, 1))
+                            // Picu animasi terbang ke keranjang: dari pusat kartu
+                            // obat ini ke pusat bar keranjang (koordinat lokal Box).
+                            // Kalau posisi bar keranjang belum tercatat (keranjang
+                            // masih kosong saat obat pertama ditambah), pakai
+                            // perkiraan tengah-bawah layar sebagai target.
+                            val start = cardCenters[m.id]
+                            if (start != null) {
+                                val fallbackTarget = Offset(
+                                    rootSizePx.width / 2f,
+                                    rootSizePx.height - with(flyDensity) { 64.dp.toPx() }
+                                )
+                                flyFrom = start - rootWindowPos
+                                flyTo = (cartBarCenter ?: fallbackTarget) - rootWindowPos
+                                flyId++
+                            }
                         }
                     }
                 ) {
@@ -384,17 +424,22 @@ fun KasirScreen() {
             ExpressiveCard(
                 shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
+                    .onGloballyPositioned { cartBarCenter = it.boundsInWindow().center }
                     .clickable { showSheet = true }
             ) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
 
-                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                    key(cartQty) {
+                        val cartPop = remember { Animatable(1.4f) }
+                        LaunchedEffect(cartQty) { cartPop.animateTo(1f, expressiveSpring()) }
+                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape, modifier = Modifier.graphicsLayer(scaleX = cartPop.value, scaleY = cartPop.value)) {
                             Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text("$cartQty", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                             }
                         }
+                    }
                     
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -412,6 +457,58 @@ fun KasirScreen() {
         }
 
 
+        // Overlay animasi terbang ke keranjang: ikon obat melayang dari kartu
+        // yang diketuk ke bar keranjang, mengecil & memudar. Overlay ini tidak
+        // menghalangi sentuhan (tidak ada clickable di dalamnya).
+        // Posisi dianimasikan lewat progress 0f -> 1f + lerp manual, bukan
+        // Animatable<Offset> — Offset.VectorConverter tidak ter-resolve di
+        // versi Compose ini (itu penyebab error build). coroutineScope
+        // menunggu ketiga animasi selesai dulu sebelum overlay dihapus —
+        // tanpa itu, flyFrom = null langsung jalan dan overlay hilang
+        // sebelum animasi terlihat.
+        if (flyFrom != null) {
+            key(flyId) {
+                val start = checkNotNull(flyFrom)
+                val end = flyTo
+                val iconHalfPx = with(flyDensity) { 22.dp.toPx() }
+                val progress = remember { Animatable(0f) }
+                val scale = remember { Animatable(1f) }
+                val alpha = remember { Animatable(1f) }
+                LaunchedEffect(flyId) {
+                    coroutineScope {
+                        launch { progress.animateTo(1f, animationSpec = tween(500, easing = FastOutSlowInEasing)) }
+                        launch { scale.animateTo(0.4f, animationSpec = tween(500)) }
+                        launch { alpha.animateTo(0f, animationSpec = tween(500)) }
+                    }
+                    flyFrom = null
+                }
+                val current = Offset(
+                    x = start.x + (end.x - start.x) * progress.value,
+                    y = start.y + (end.y - start.y) * progress.value
+                )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.TopStart
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    (current.x - iconHalfPx).roundToInt(),
+                                    (current.y - iconHalfPx).roundToInt()
+                                )
+                            }
+                            .size(44.dp)
+                            .graphicsLayer(scaleX = scale.value, scaleY = scale.value, alpha = alpha.value),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(color = MaterialTheme.colorScheme.primary, shape = CircleShape, modifier = Modifier.fillMaxSize()) {
+                            Icon(Icons.Default.Medication, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(10.dp))
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Bottom sheet: keranjang + pembayaran (dan struk setelah bayar berhasil).

@@ -34,6 +34,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -365,8 +368,12 @@ fun KeuanganScreen() {
                                     Spacer(Modifier.height(2.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
                                         key(period, periodIn, periodOut) {
-                                            val inH = ((56f * dayIn / maxFlow * 1f).coerceIn(0f, 56f)).let { if (dayIn > 0) it.coerceAtLeast(4f) else 0f }
-                                            val outH = ((56f * dayOut / maxFlow * 1f).coerceIn(0f, 56f)).let { if (dayOut > 0) it.coerceAtLeast(4f) else 0f }
+                                            val grow = remember { Animatable(0f) }
+                                            // Jepit jeda animasi supaya grafik panjang
+                                            // tidak butuh waktu lama untuk selesai tumbuh.
+                                            LaunchedEffect(period, periodIn, periodOut) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
+                                            val inH = ((56f * dayIn / maxFlow * grow.value).coerceIn(0f, 56f)).let { if (dayIn > 0) it.coerceAtLeast(4f) else 0f }
+                                            val outH = ((56f * dayOut / maxFlow * grow.value).coerceIn(0f, 56f)).let { if (dayOut > 0) it.coerceAtLeast(4f) else 0f }
                                             Box(Modifier.width(10.dp).height(inH.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
                                             Box(Modifier.width(10.dp).height(outH.dp).background(MaterialTheme.colorScheme.error, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
                                         }
