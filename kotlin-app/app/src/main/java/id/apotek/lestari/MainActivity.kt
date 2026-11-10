@@ -73,6 +73,9 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.hypot
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import androidx.room.InvalidationTracker
 import id.apotek.lestari.ui.rememberLogoBitmap
 import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
@@ -297,6 +300,38 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             jalankanSync()
         } else if (onlineSiap) {
             statusSync = StatusSync.BELUM_MASUK
+        }
+    }
+
+    // Sinkron otomatis ±5 detik setelah data berubah selagi masuk.
+    // Awalnya Apotek hanya sinkron saat masuk, saat diketuk manual, dan
+    // lewat pekerja berkala 6 jam — jadi impor Excel dan perubahan lain
+    // terasa "tidak langsung tersinkron" (laporan Achmad 2026-11-10;
+    // KasBulanan sudah punya pemicu ini). Pengamat Room atas keenam
+    // tabel menangkap tulisan apa pun (catat, impor, hapus lunak); hasil
+    // tarikan sinkron sendiri bisa memicu satu putaran ekstra yang
+    // kosong, lalu berhenti.
+    DisposableEffect(emailOnline) {
+        if (!onlineSiap || emailOnline == null) {
+            onDispose { }
+        } else {
+            var tunda: Job? = null
+            val pengamat = object : InvalidationTracker.Observer(
+                "medicines", "sales", "sale_items", "cash_entries", "purchases", "purchase_items"
+            ) {
+                override fun onInvalidated(tables: Set<String>) {
+                    tunda?.cancel()
+                    tunda = appScope.launch {
+                        delay(5000)
+                        jalankanSync()
+                    }
+                }
+            }
+            DatabaseProvider.db.invalidationTracker.addObserver(pengamat)
+            onDispose {
+                tunda?.cancel()
+                DatabaseProvider.db.invalidationTracker.removeObserver(pengamat)
+            }
         }
     }
     LaunchedEffect(pesanStatus) {
