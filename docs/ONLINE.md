@@ -21,18 +21,25 @@ menang; penghapusan menyebar sebagai tombstone).
   `penjualan_item`, `kas`, `pbf`, `pbf_item` — satu dokumen per baris,
   dikunci `remoteId`-nya.
 - Sinkronisasi berjalan: otomatis beberapa detik setelah data berubah
-  (saat masuk), berkala tiap 6 jam (WorkManager, hanya saat ada
+  (saat masuk; senyap — tanpa pemberitahuan, statusnya terlihat di ikon
+  awan Beranda), berkala tiap 6 jam (WorkManager, hanya saat ada
   jaringan), dan manual dari menu Lainnya / ikon awan di Beranda.
 - Mengembalikan backup JSON saat sedang masuk menandai semua baris
   kotor, jadi isi restore tersinkron naik menggantikan isi awan.
+- **Reset Semua Data** (paling bawah menu Lainnya) menghapus data lokal
+  DAN salinan awan akun yang sedang masuk — awan dihapus lebih dulu,
+  dan bila penghapusan awan gagal, data lokal tidak jadi dihapus.
+  Dilindungi dialog konfirmasi Ya/Tidak; akun tetap dalam keadaan masuk.
 - Satu metode masuk per akun: email yang sama lewat Google dan lewat
   email+kata sandi bisa menjadi **dua akun berbeda**. Pilih satu metode
   utama (disarankan Google) dan pakai konsisten.
 
 ## Menyiapkan Firebase (satu kali, ±10 menit)
 
-1. Buka [Firebase Console](https://console.firebase.google.com), buat
-   proyek baru khusus Apotek Lestari (terpisah dari proyek KasBulanan).
+1. Buka [Firebase Console](https://console.firebase.google.com). Buat
+   proyek baru, ATAU pakai proyek yang sudah ada (misalnya proyek
+   KasBulanan — Apotek Lestari produksi memang berbagi proyek itu):
+   data tetap terpisah karena nama koleksi Firestore-nya berbeda.
 2. Tambahkan aplikasi Android dengan package persis `id.apotek.lestari`.
 3. Daftarkan sidik jari sertifikat rilis (SHA-1) dari keystore aplikasi
    di Project settings — diperlukan untuk Masuk dengan Google.
@@ -48,7 +55,10 @@ menang; penghapusan menyebar sebagai tombstone).
 
 ## Verifikasi sinkronisasi pertama
 
-1. Buka aplikasi, masuk dengan Google (atau daftar email).
+1. Buka aplikasi, masuk dengan Google (atau daftar email). (Catatan:
+   proyek produksi berbagi proyek Firebase dengan KasBulanan,
+   `kasbulanan-6171e` — pohon data Apotek berada di koleksi
+   `obat`/`penjualan`/dll. di bawah `users/{uid}` yang sama.)
 2. Catat satu obat / satu penjualan uji.
 3. Di Firebase Console: Authentication > Users harus memuat akunmu;
    Firestore Database > Data > `users/{uid}` harus memuat koleksi
