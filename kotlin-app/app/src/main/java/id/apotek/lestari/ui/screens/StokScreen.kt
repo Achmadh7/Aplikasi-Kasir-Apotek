@@ -715,9 +715,10 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            // Formulir kartu berbagian (TO1) dengan margin langsung
-            // (TO2), warna kartu sama seperti TO1 — pilihan Achmad
-            // 2026-11-04. Berlaku untuk Tambah maupun Edit Obat.
+            // Formulir kartu berbagian (TO1), warna kartu sama seperti
+            // TO1 — pilihan Achmad 2026-11-04. Berlaku untuk Tambah
+            // maupun Edit Obat. (Strip margin langsung TO2 dihapus
+            // 2026-11-10 atas permintaan Achmad.)
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                     Text(tr("IDENTITAS", "IDENTITY"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -745,23 +746,6 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                     Text(tr("HARGA", "PRICE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     OutlinedTextField(buy, { buy = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Beli", "Buy Price")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(sell, { sell = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Jual", "Sell Price")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-                    // Margin langsung (gagasan TO2 di dalam kartu TO1):
-                    // dihitung dari angka yang sedang diketik dengan rumus
-                    // yang sama seperti layar Laba, (jual - beli) / jual.
-                    // Muncul hanya bila kedua harga terisi; jual tidak lebih
-                    // tinggi dari beli tampil sebagai peringatan merah.
-                    val buyNow = parseDecimal(buy.text)
-                    val sellNow = parseDecimal(sell.text)
-                    if (buyNow > 0 && sellNow > 0) {
-                        if (sellNow > buyNow) {
-                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(tr("Margin ", "Margin ") + marginTextID((sellNow - buyNow) * 100.0 / sellNow) + "%", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = profitGreen(), modifier = Modifier.weight(1f))
-                                Text(tr("Untung ", "Profit ") + formatIDR(sellNow - buyNow), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        } else {
-                            Text(tr("Harga Jual tidak lebih tinggi dari Harga Beli", "Sell price is not higher than the buy price"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                        }
-                    }
                     OutlinedTextField(grosir, { grosir = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Jual Grosir (boleh kosong)", "Wholesale Sell Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
             }
