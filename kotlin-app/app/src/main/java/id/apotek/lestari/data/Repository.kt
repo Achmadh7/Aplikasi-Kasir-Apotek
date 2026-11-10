@@ -17,6 +17,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.util.UUID
 
 /**
  * Repository — satu-satunya pintu data untuk UI.
@@ -70,6 +71,12 @@ class Repository {
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
+
+    /** Cap waktu sekarang (ms epoch) untuk kolom sinkronisasi updatedAt. */
+    private fun nowMillis(): Long = System.currentTimeMillis()
+
+    /** Identitas awan acak untuk baris baru (awalan menandai tabelnya). */
+    private fun genRemoteId(awalan: String): String = awalan + "-" + UUID.randomUUID().toString()
 
     /** Label hari Indonesia: "Sen", "Sel", ... "Min". */
     private fun dayLabelID(date: Date): String =
@@ -196,8 +203,25 @@ class Repository {
         val dao = DatabaseProvider.db.medicineDao()
         val barcode = args.barcode?.trim().orEmpty().ifBlank { null }
         if (barcode != null) {
-            val dup = dao.findByBarcode(barcode)
-            if (dup != null) throw IllegalStateException("Barcode $barcode sudah dipakai untuk ${dup.name}")
+            val dup = dao.findByBarcodeAny(barcode)
+            if (dup != null && dup.terhapus == 0) {
+                throw IllegalStateException("Barcode $barcode sudah dipakai untuk ${dup.name}")
+            }
+            if (dup != null) {
+                // Barcode milik obat yang sudah dihapus (tombstone): indeks
+                // unik barcode melarang baris baru, jadi obat lama
+                // dihidupkan lagi dengan data formulir ini.
+                dao.update(
+                    dup.copy(
+                        name = args.name, category = args.category, unit = args.unit,
+                        buyPrice = args.buyPrice, sellPrice = args.sellPrice,
+                        wholesalePrice = args.wholesalePrice, stock = args.stock,
+                        expiryDate = args.expiryDate, terhapus = 0,
+                        updatedAt = nowMillis(), kotor = 1
+                    )
+                )
+                return@call IdResponse(dup.id)
+            }
         }
         val id = dao.insert(
             MedicineEntity(
@@ -205,7 +229,8 @@ class Repository {
                 buyPrice = args.buyPrice, sellPrice = args.sellPrice,
                 wholesalePrice = args.wholesalePrice,
                 stock = args.stock,
-                expiryDate = args.expiryDate, barcode = barcode, createdAt = nowIso()
+                expiryDate = args.expiryDate, barcode = barcode, createdAt = nowIso(),
+                remoteId = genRemoteId("obat"), updatedAt = nowMillis()
             )
         ).toInt()
         IdResponse(id)
@@ -231,7 +256,9 @@ class Repository {
                 wholesalePrice = args.wholesalePrice,
                 stock = args.stock,
                 expiryDate = args.expiryDate, barcode = barcode,
-                createdAt = old?.createdAt ?: nowIso()
+                createdAt = old?.createdAt ?: nowIso(),
+                remoteId = old?.remoteId?.ifBlank { null } ?: genRemoteId("obat"),
+                updatedAt = nowMillis(), kotor = 1
             )
         )
         if (changed == 0) throw IllegalStateException("Obat tidak ditemukan")
@@ -241,7 +268,7 @@ class Repository {
     suspend fun deleteMedicine(id: Int): ApiResult<OkResponse> = call {
         // Riwayat penjualan tetap utuh: item penjualan menyimpan snapshot
         // nama obat, jadi menghapus obat tidak menghapus riwayat.
-        val deleted = DatabaseProvider.db.medicineDao().deleteById(id)
+        val deleted = DatabaseProvider.db.medicineDao().deleteById(id, nowMillis())
         if (deleted == 0) throw IllegalStateException("Obat tidak ditemukan")
         OkResponse(true)
     }
@@ -286,7 +313,8 @@ class Repository {
                             stock = item.stock,
                             // Baris impor tanpa barcode: pertahankan barcode lama
                             // (jangan ditimpa null — obat jadi tidak bisa dipindai).
-                            expiryDate = item.expiryDate, barcode = barcode ?: existing.barcode
+                            expiryDate = item.expiryDate, barcode = barcode ?: existing.barcode,
+                            updatedAt = nowMillis(), kotor = 1
                         )
                     )
                     updated++
@@ -297,7 +325,8 @@ class Repository {
                             buyPrice = item.buyPrice, sellPrice = item.sellPrice,
                             wholesalePrice = item.wholesalePrice,
                             stock = item.stock,
-                            expiryDate = item.expiryDate, barcode = barcode, createdAt = nowIso()
+                            expiryDate = item.expiryDate, barcode = barcode, createdAt = nowIso(),
+                            remoteId = genRemoteId("obat"), updatedAt = nowMillis()
                         )
                     )
                     inserted++
@@ -356,13 +385,14 @@ class Repository {
         db.withTransaction {
             // Kurangi stok secara atomik; decrementStock return 0 = stok tidak cukup.
             for ((medicineId, qty) in qtyById) {
-                val changed = db.medicineDao().decrementStock(medicineId, qty)
+                val changed = db.medicineDao().decrementStock(medicineId, qty, nowMillis())
                 if (changed == 0) throw IllegalStateException(tr("Stok ${nameById[medicineId] ?: "obat"} tidak cukup", "Not enough stock of ${nameById[medicineId] ?: "the medicine"}"))
             }
             val saleId = db.saleDao().insert(
                 SaleEntity(
                     invoiceNo = invoiceNo, total = total, paymentMethod = args.paymentMethod,
-                    amountPaid = args.amountPaid, changeAmount = change, createdAt = createdAt
+                    amountPaid = args.amountPaid, changeAmount = change, createdAt = createdAt,
+                    remoteId = genRemoteId("jual"), updatedAt = nowMillis()
                 )
             ).toInt()
             db.saleDao().insertItems(
@@ -370,7 +400,8 @@ class Repository {
                     SaleItemEntity(
                         saleId = saleId, medicineId = it.med.id, medicineName = it.med.name,
                         qty = it.qty, price = it.unitPrice, priceType = it.priceType, buyPrice = it.med.buyPrice,
-                        subtotal = it.subtotal, category = it.med.category, unit = it.med.unit
+                        subtotal = it.subtotal, category = it.med.category, unit = it.med.unit,
+                        remoteId = genRemoteId("jualitem"), updatedAt = nowMillis()
                     )
                 }
             )
@@ -378,7 +409,8 @@ class Repository {
             db.cashDao().insert(
                 CashEntryEntity(
                     type = "in", category = "Penjualan", description = "Penjualan $invoiceNo",
-                    amount = total, source = "sale", createdAt = createdAt
+                    amount = total, source = "sale", createdAt = createdAt,
+                    remoteId = genRemoteId("kas"), updatedAt = nowMillis()
                 )
             )
             CreateSaleResponse(saleId, invoiceNo, total, change)
@@ -419,7 +451,8 @@ class Repository {
         val id = DatabaseProvider.db.cashDao().insert(
             CashEntryEntity(
                 type = args.type, category = args.category, description = args.description,
-                amount = args.amount, source = "manual", createdAt = args.createdAt ?: nowIso()
+                amount = args.amount, source = "manual", createdAt = args.createdAt ?: nowIso(),
+                remoteId = genRemoteId("kas"), updatedAt = nowMillis()
             )
         ).toInt()
         IdResponse(id)
@@ -430,7 +463,7 @@ class Repository {
         // laporan tidak lagi cocok dengan riwayat penjualan.
         val entry = DatabaseProvider.db.cashDao().getAll().firstOrNull { it.id == id }
         if (entry?.source == "sale") throw IllegalStateException("Kas penjualan tidak bisa dihapus")
-        val deleted = DatabaseProvider.db.cashDao().deleteById(id)
+        val deleted = DatabaseProvider.db.cashDao().deleteById(id, nowMillis())
         if (deleted == 0) throw IllegalStateException("Kas tidak ditemukan")
         OkResponse(true)
     }
@@ -654,7 +687,8 @@ class Repository {
                     // Jatuh tempo hanya berlaku untuk Kredit; selain itu
                     // selalu disimpan kosong supaya tidak ada sisa tanggal.
                     dueDate = if (args.paymentType == "KREDIT") args.dueDate.trim() else "",
-                    createdAt = nowIso()
+                    createdAt = nowIso(),
+                    remoteId = genRemoteId("pbf"), updatedAt = nowMillis()
                 )
             ).toInt()
             dao.insertItems(args.items.map {
@@ -664,7 +698,8 @@ class Repository {
                     qty = it.qty,
                     unit = it.unit.ifBlank { "Strip" },
                     buyPrice = it.buyPrice,
-                    subtotal = it.qty * it.buyPrice
+                    subtotal = it.qty * it.buyPrice,
+                    remoteId = genRemoteId("pbfitem"), updatedAt = nowMillis()
                 )
             })
         }
@@ -675,9 +710,10 @@ class Repository {
         val db = DatabaseProvider.db
         val dao = db.purchaseDao()
         db.withTransaction {
-            val deleted = dao.deleteById(id)
+            val cap = nowMillis()
+            val deleted = dao.deleteById(id, cap)
             if (deleted == 0) throw IllegalStateException("Catatan pembelian tidak ditemukan")
-            dao.deleteItemsForPurchase(id)
+            dao.deleteItemsForPurchase(id, cap)
         }
         OkResponse(true)
     }
@@ -685,7 +721,7 @@ class Repository {
     /** Tandai pembelian Kredit sebagai lunas: paymentType diubah ke CASH,
      *  sehingga nominalnya masuk ringkasan belanja (sesuai tanggal belinya). */
     suspend fun markPurchasePaid(id: Int): ApiResult<OkResponse> = call {
-        val changed = DatabaseProvider.db.purchaseDao().updatePaymentType(id, "CASH")
+        val changed = DatabaseProvider.db.purchaseDao().updatePaymentType(id, "CASH", nowMillis())
         if (changed == 0) throw IllegalStateException("Catatan pembelian tidak ditemukan")
         OkResponse(true)
     }
@@ -697,7 +733,7 @@ class Repository {
      *  kolom dueDate; tanggal disimpan apa adanya (pemanggil memastikan
      *  hanya untuk Kredit). */
     suspend fun setPurchaseDueDate(id: Int, dueDate: String): ApiResult<OkResponse> = call {
-        val changed = DatabaseProvider.db.purchaseDao().updateDueDate(id, dueDate.trim())
+        val changed = DatabaseProvider.db.purchaseDao().updateDueDate(id, dueDate.trim(), nowMillis())
         if (changed == 0) throw IllegalStateException("Catatan pembelian tidak ditemukan")
         OkResponse(true)
     }
@@ -753,14 +789,151 @@ class Repository {
             db.cashDao().deleteAll()
             db.purchaseDao().deleteAll()
             db.purchaseDao().deleteAllItems()
-            data.medicines.forEach { db.medicineDao().insert(it) }
-            data.sales.forEach { db.saleDao().insert(it) }
-            if (data.saleItems.isNotEmpty()) db.saleDao().insertItems(data.saleItems)
-            data.cashEntries.forEach { db.cashDao().insert(it) }
-            data.purchases.forEach { db.purchaseDao().insert(it) }
-            if (data.purchaseItems.isNotEmpty()) db.purchaseDao().insertItems(data.purchaseItems)
+            data.medicines.map { it.copy(remoteId = it.remoteId.ifBlank { "obat-" + it.id }, kotor = 1) }
+                .forEach { db.medicineDao().insert(it) }
+            data.sales.map { it.copy(remoteId = it.remoteId.ifBlank { "jual-" + it.id }, kotor = 1) }
+                .forEach { db.saleDao().insert(it) }
+            if (data.saleItems.isNotEmpty()) db.saleDao().insertItems(
+                data.saleItems.map { it.copy(remoteId = it.remoteId.ifBlank { "jualitem-" + it.id }, kotor = 1) }
+            )
+            data.cashEntries.map { it.copy(remoteId = it.remoteId.ifBlank { "kas-" + it.id }, kotor = 1) }
+                .forEach { db.cashDao().insert(it) }
+            data.purchases.map { it.copy(remoteId = it.remoteId.ifBlank { "pbf-" + it.id }, kotor = 1) }
+                .forEach { db.purchaseDao().insert(it) }
+            if (data.purchaseItems.isNotEmpty()) db.purchaseDao().insertItems(
+                data.purchaseItems.map { it.copy(remoteId = it.remoteId.ifBlank { "pbfitem-" + it.id }, kotor = 1) }
+            )
         }
         tr("Dipulihkan: ${data.medicines.size} obat, ${data.sales.size} penjualan, ${data.saleItems.size} item, ${data.cashEntries.size} kas, ${data.purchases.size} pembelian PBF.", "Restored: ${data.medicines.size} medicines, ${data.sales.size} sales, ${data.saleItems.size} items, ${data.cashEntries.size} cash entries, ${data.purchases.size} PBF purchases.")
+    }
+
+    // ================= SINKRONISASI MODE ONLINE =================
+    // Primitif untuk SyncManager (data/OnlineSync.kt). Semua fungsi ini
+    // bekerja pada Entity langsung (termasuk tombstone) — bukan jalur UI.
+
+    suspend fun obatKotor(): List<MedicineEntity> = DatabaseProvider.db.medicineDao().getKotor()
+    suspend fun penjualanKotor(): List<SaleEntity> = DatabaseProvider.db.saleDao().getKotor()
+    suspend fun itemJualKotor(): List<SaleItemEntity> = DatabaseProvider.db.saleDao().getKotorItems()
+    suspend fun kasKotor(): List<CashEntryEntity> = DatabaseProvider.db.cashDao().getKotor()
+    suspend fun pbfKotor(): List<PurchaseEntity> = DatabaseProvider.db.purchaseDao().getKotor()
+    suspend fun itemPbfKotor(): List<PurchaseItemEntity> = DatabaseProvider.db.purchaseDao().getKotorItems()
+
+    suspend fun obatByRemoteId(remoteId: String): MedicineEntity? =
+        DatabaseProvider.db.medicineDao().getByRemoteId(remoteId)
+
+    suspend fun penjualanByRemoteId(remoteId: String): SaleEntity? =
+        DatabaseProvider.db.saleDao().getByRemoteId(remoteId)
+
+    suspend fun pembelianByRemoteId(remoteId: String): PurchaseEntity? =
+        DatabaseProvider.db.purchaseDao().getByRemoteId(remoteId)
+
+    suspend fun obatByIdSync(id: Int): MedicineEntity? =
+        DatabaseProvider.db.medicineDao().getByIdAny(id)
+
+    suspend fun penjualanByIdSync(id: Int): SaleEntity? =
+        DatabaseProvider.db.saleDao().getByIdAny(id)
+
+    suspend fun pembelianByIdSync(id: Int): PurchaseEntity? =
+        DatabaseProvider.db.purchaseDao().getByIdAny(id)
+
+    /** Terapkan satu baris dari awan: sisipkan bila belum ada, timpa bila
+     *  versi awan menang (last-write-wins), tandai bersih. */
+    suspend fun terapkanRemoteObat(e: MedicineEntity) {
+        val dao = DatabaseProvider.db.medicineDao()
+        val ada = dao.getByRemoteId(e.remoteId)
+        if (ada == null) {
+            val bc = e.barcode
+            val tabrak = if (bc != null) dao.findByBarcodeAny(bc) else null
+            if (tabrak != null && tabrak.remoteId != e.remoteId) {
+                // Barcode unik sudah dipakai baris lokal lain: terapkan
+                // tanpa barcode supaya indeks unik tidak menabrak.
+                dao.insert(e.copy(id = 0, barcode = null, kotor = 0))
+            } else {
+                dao.insert(e.copy(id = 0, kotor = 0))
+            }
+        } else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
+            dao.update(e.copy(id = ada.id, kotor = 0))
+        }
+    }
+
+    suspend fun terapkanRemotePenjualan(e: SaleEntity) {
+        val dao = DatabaseProvider.db.saleDao()
+        val ada = dao.getByRemoteId(e.remoteId)
+        if (ada == null) dao.insert(e.copy(id = 0, kotor = 0))
+        else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
+            dao.update(e.copy(id = ada.id, kotor = 0))
+        }
+    }
+
+    suspend fun terapkanRemoteItemJual(e: SaleItemEntity) {
+        val dao = DatabaseProvider.db.saleDao()
+        val ada = dao.getItemByRemoteId(e.remoteId)
+        if (ada == null) dao.insertItems(listOf(e.copy(id = 0, kotor = 0)))
+        else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
+            dao.updateItem(e.copy(id = ada.id, kotor = 0))
+        }
+    }
+
+    suspend fun terapkanRemoteKas(e: CashEntryEntity) {
+        val dao = DatabaseProvider.db.cashDao()
+        val ada = dao.getByRemoteId(e.remoteId)
+        if (ada == null) dao.insert(e.copy(id = 0, kotor = 0))
+        else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
+            dao.update(e.copy(id = ada.id, kotor = 0))
+        }
+    }
+
+    suspend fun terapkanRemotePbf(e: PurchaseEntity) {
+        val dao = DatabaseProvider.db.purchaseDao()
+        val ada = dao.getByRemoteId(e.remoteId)
+        if (ada == null) dao.insert(e.copy(id = 0, kotor = 0))
+        else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
+            dao.update(e.copy(id = ada.id, kotor = 0))
+        }
+    }
+
+    suspend fun terapkanRemoteItemPbf(e: PurchaseItemEntity) {
+        val dao = DatabaseProvider.db.purchaseDao()
+        val ada = dao.getItemByRemoteId(e.remoteId)
+        if (ada == null) dao.insertItems(listOf(e.copy(id = 0, kotor = 0)))
+        else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
+            dao.updateItem(e.copy(id = ada.id, kotor = 0))
+        }
+    }
+
+    suspend fun tandaiBersihObat(remoteId: String, updatedAt: Long) {
+        DatabaseProvider.db.medicineDao().tandaiBersih(remoteId, updatedAt)
+    }
+
+    suspend fun tandaiBersihPenjualan(remoteId: String, updatedAt: Long) {
+        DatabaseProvider.db.saleDao().tandaiBersih(remoteId, updatedAt)
+    }
+
+    suspend fun tandaiBersihItemJual(remoteId: String, updatedAt: Long) {
+        DatabaseProvider.db.saleDao().tandaiBersihItem(remoteId, updatedAt)
+    }
+
+    suspend fun tandaiBersihKas(remoteId: String, updatedAt: Long) {
+        DatabaseProvider.db.cashDao().tandaiBersih(remoteId, updatedAt)
+    }
+
+    suspend fun tandaiBersihPbf(remoteId: String, updatedAt: Long) {
+        DatabaseProvider.db.purchaseDao().tandaiBersih(remoteId, updatedAt)
+    }
+
+    suspend fun tandaiBersihItemPbf(remoteId: String, updatedAt: Long) {
+        DatabaseProvider.db.purchaseDao().tandaiBersihItem(remoteId, updatedAt)
+    }
+
+    /** Buang fisik tombstone yang sudah terkirim ke awan. */
+    suspend fun purgeTombstones() {
+        val db = DatabaseProvider.db
+        db.medicineDao().purge()
+        db.saleDao().purge()
+        db.saleDao().purgeItems()
+        db.cashDao().purge()
+        db.purchaseDao().purge()
+        db.purchaseDao().purgeItems()
     }
 }
 
