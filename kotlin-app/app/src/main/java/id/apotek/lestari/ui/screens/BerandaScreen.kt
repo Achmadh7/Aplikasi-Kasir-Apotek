@@ -258,6 +258,12 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 selected = summaryPeriod == index,
                                 onClick = { summaryPeriod = index },
                                 shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                                // Tanpa ikon centang bawaan: slot ikonnya
+                                // menyisakan celah lebar di samping label
+                                // terpilih dan membuat label tidak lagi
+                                // tengah (laporan Achmad 2026-11-10). Pilihan
+                                // aktif sudah jelas dari warna wadahnya.
+                                icon = {},
                                 modifier = Modifier.weight(1f)
                             ) { Text(label, maxLines = 1) }
                         }
