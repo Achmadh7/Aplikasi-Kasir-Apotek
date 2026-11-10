@@ -396,6 +396,12 @@ fun Modifier.pulseKritis(): Modifier {
 
 
 @Composable
+fun DemoBanner() {
+    // Mode offline: semua data tersimpan di HP (Room), tidak ada banner demo.
+}
+
+
+@Composable
 fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = false) {
     val label = stockLabel(stock)
     // Teks badge mengikuti bahasa aktif; `label` sendiri tetap berbahasa
