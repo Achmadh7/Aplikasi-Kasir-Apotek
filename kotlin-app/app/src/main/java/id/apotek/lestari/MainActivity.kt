@@ -73,6 +73,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.hypot
 import kotlinx.coroutines.launch
+import id.apotek.lestari.ui.rememberLogoBitmap
 import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
 import id.apotek.lestari.ui.theme.AppLang
@@ -948,17 +949,33 @@ fun LayarLogin(
                         )
                     }
                 }
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.size(76.dp)
-                ) {
-                    Icon(
-                        Icons.Default.LocalPharmacy,
-                        null,
-                        tint = Color.White,
-                        modifier = Modifier.padding(18.dp).fillMaxSize()
-                    )
+                val logoGate = rememberLogoBitmap()
+                if (logoGate != null) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.White,
+                        modifier = Modifier.size(76.dp)
+                    ) {
+                        Image(
+                            logoGate,
+                            null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.padding(8.dp).fillMaxSize()
+                        )
+                    }
+                } else {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(76.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.LocalPharmacy,
+                            null,
+                            tint = Color.White,
+                            modifier = Modifier.padding(18.dp).fillMaxSize()
+                        )
+                    }
                 }
             }
         }
