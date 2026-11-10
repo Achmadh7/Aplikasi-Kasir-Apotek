@@ -8,7 +8,10 @@ import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
@@ -799,13 +802,15 @@ fun LainnyaScreen(
     }
 }
 
-// ---- Gerbang login Mode Online (pola L1+L4 yang sama dengan KasBulanan):
-// satu kartu besar di tengah, ikon aplikasi melingkari tepi atas kartu,
-// tombol Google putih, lalu Lewati sebagai tamu. Sejak 2026-11-10 login
-// HANYA Google (keputusan Achmad): formulir email/kata sandi dihapus —
-// akunnya memang akun Google, dan jalur email hanya membuka risiko
-// akun terbelah. Hanya tampil bila build terkonfigurasi Firebase dan
-// belum ada yang masuk.
+// ---- Gerbang login Mode Online: desain M2 GELAP PREMIUM (pilihan
+// Achmad 2026-11-10, menggantikan G2): latar nyaris hitam yang tetap
+// sama di kedua mode tema (seperti pita K3 yang selalu navy), logo di
+// dalam lingkaran putih bercincin cyan #40C4FF, garis aksen cyan, nama
+// ditumpuk APOTEK / LESTARI, tombol Google putih, Lewati berwarna cyan.
+// Sejak 2026-11-10 login HANYA Google (keputusan Achmad): formulir
+// email/kata sandi dihapus - akunnya memang akun Google, dan jalur
+// email hanya membuka risiko akun terbelah. Hanya tampil bila build
+// terkonfigurasi Firebase dan belum ada yang masuk.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LayarLogin(
@@ -815,7 +820,8 @@ fun LayarLogin(
     onGoogle: () -> Unit,
     onLewati: () -> Unit
 ) {
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    val cyan = Color(0xFF40C4FF)
+    Surface(Modifier.fillMaxSize(), color = Color(0xFF070A0E)) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -824,105 +830,110 @@ fun LayarLogin(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Pita identitas gradasi K3 (G2, pilihan Achmad 2026-11-10):
-            // logo dalam kotak putih membulat + nama + subjudul.
             val logoGate = rememberLogoBitmap()
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                Modifier
+                    .size(100.dp)
+                    .border(2.5.dp, cyan, CircleShape)
+                    .padding(4.dp)
+                    .clip(CircleShape)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    Modifier.background(GradasiHeader).padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(color = Color.White, shape = RoundedCornerShape(16.dp), modifier = Modifier.size(64.dp)) {
-                        if (logoGate != null) {
-                            Image(logoGate, null, contentScale = ContentScale.Fit, modifier = Modifier.padding(6.dp).fillMaxSize())
-                        } else {
-                            Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF0A2A5C), modifier = Modifier.padding(14.dp).fillMaxSize())
-                        }
-                    }
-                    Spacer(Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            "Apotek Lestari",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
-                        )
-                        Text(
-                            tr("Kasir Apotek", "Pharmacy Cashier"),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                    }
+                if (logoGate != null) {
+                    Image(logoGate, null, contentScale = ContentScale.Fit, modifier = Modifier.padding(8.dp).fillMaxSize())
+                } else {
+                    Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF0A2A5C), modifier = Modifier.padding(22.dp).fillMaxSize())
                 }
             }
             Spacer(Modifier.height(20.dp))
-            // Kartu masuk: ajakan + tombol Google + Lewati.
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            Box(
+                Modifier
+                    .width(48.dp)
+                    .height(3.dp)
+                    .background(cyan, RoundedCornerShape(2.dp))
+            )
+            Spacer(Modifier.height(18.dp))
+            Text(
+                "APOTEK",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 2.sp,
+                color = Color(0xFFE8EEF5)
+            )
+            Text(
+                "LESTARI",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 2.sp,
+                color = Color(0xFFE8EEF5)
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                tr("Kasir Apotek", "Pharmacy Cashier"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF93A5B8)
+            )
+            Spacer(Modifier.height(48.dp))
+            Text(
+                tr("Masuk untuk mencadangkan data ke akunmu", "Sign in to back up your data to your account"),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFFC7D2DE),
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(20.dp))
+            if (googleSiap) {
+                Button(
+                    onClick = onGoogle,
+                    enabled = !sibuk,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color(0xFF1F1F1F)
+                    ),
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
-                    Text(
-                        tr("Masuk untuk mencadangkan data ke akunmu", "Sign in to back up your data to your account"),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(24.dp))
-                    if (googleSiap) {
-                        Button(
-                            onClick = onGoogle,
-                            enabled = !sibuk,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White,
-                                contentColor = Color(0xFF1F1F1F)
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth().height(50.dp)
-                        ) {
-                            if (sibuk) {
-                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFF1F1F1F))
-                            } else {
-                                LogoGoogle(Modifier.size(18.dp))
-                            }
-                            Spacer(Modifier.width(10.dp))
-                            Text(tr("Masuk dengan Google", "Sign in with Google"), fontWeight = FontWeight.SemiBold)
-                        }
+                    if (sibuk) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFF1F1F1F))
                     } else {
-                        Text(
-                            tr("Masuk dengan Google belum tersedia di build ini.", "Google sign-in is not available in this build."),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        LogoGoogle(Modifier.size(18.dp))
                     }
-                    if (pesan != null) {
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            pesan,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    HorizontalDivider()
-                    Spacer(Modifier.height(8.dp))
-                    TextButton(onClick = onLewati, enabled = !sibuk) {
-                        Text(tr("Lewati \u2014 Pakai Tanpa Akun", "Skip \u2014 Use Without an Account"))
-                    }
-                    Text(
-                        tr("Mode tamu: data hanya tersimpan di HP ini", "Guest mode: data is only stored on this phone"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(tr("Masuk dengan Google", "Sign in with Google"), fontWeight = FontWeight.SemiBold)
                 }
+            } else {
+                Text(
+                    tr("Masuk dengan Google belum tersedia di build ini.", "Google sign-in is not available in this build."),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF93A5B8),
+                    textAlign = TextAlign.Center
+                )
             }
+            if (pesan != null) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    pesan,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFFFB4AB),
+                    textAlign = TextAlign.Center
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.14f))
+            Spacer(Modifier.height(8.dp))
+            TextButton(
+                onClick = onLewati,
+                enabled = !sibuk,
+                colors = ButtonDefaults.textButtonColors(contentColor = cyan)
+            ) {
+                Text(tr("Lewati \u2014 Pakai Tanpa Akun", "Skip \u2014 Use Without an Account"))
+            }
+            Text(
+                tr("Mode tamu: data hanya tersimpan di HP ini", "Guest mode: data is only stored on this phone"),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF6E7C8C)
+            )
         }
     }
 }
