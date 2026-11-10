@@ -395,6 +395,17 @@ fun Modifier.pulseKritis(): Modifier {
 }
 
 
+// Warna aksen layar memakai peran colorScheme resmi tema (lihat Theme.kt).
+// Satu pengecualian atas permintaan Achmad (2026-11-01): pilihan Kas
+// Masuk/Keluar di sheet Catat Kas memakai biru tua & merah tua pekat
+// (peran skema terlalu pucat di mode gelap untuk penanda masuk/keluar),
+// dengan teks putih di atasnya.
+val KasMasukBlue = Color(0xFF0061A4)
+
+
+val KasKeluarRed = Color(0xFFD32F2F)
+
+
 @Composable
 fun DemoBanner() {
     // Mode offline: semua data tersimpan di HP (Room), tidak ada banner demo.
