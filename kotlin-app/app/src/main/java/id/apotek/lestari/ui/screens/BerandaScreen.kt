@@ -93,6 +93,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import id.apotek.lestari.data.*
+import id.apotek.lestari.StatusSync
 import id.apotek.lestari.ui.BtPrinter
 import id.apotek.lestari.ui.buildReceiptBytes
 import id.apotek.lestari.ui.getPairedPrinters
@@ -120,7 +121,7 @@ import java.util.TimeZone
 // Layar Beranda.
 
 @Composable
-fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit) {
+fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit, statusSync: StatusSync, onSyncTap: () -> Unit) {
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
     var listEntered by remember { mutableStateOf(false) }
     LaunchedEffect(dashboard) { if (dashboard != null && !listEntered) listEntered = true }
@@ -198,6 +199,20 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         Icon(Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
                         Text(todayLabelID(), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                // Ikon status Mode Online: ketuk = sinkron sekarang (atau
+                // buka gerbang login bila masih tamu). Tidak tampil sama
+                // sekali bila build belum terkonfigurasi Firebase.
+                if (statusSync != StatusSync.NONAKTIF) {
+                    IconButton(onClick = onSyncTap) {
+                        when (statusSync) {
+                            StatusSync.PROSES -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            StatusSync.BERHASIL -> Icon(Icons.Default.CloudDone, tr("Tersinkron", "Synced"), tint = MaterialTheme.colorScheme.primary)
+                            StatusSync.GAGAL -> Icon(Icons.Default.CloudOff, tr("Sinkronisasi gagal", "Sync failed"), tint = MaterialTheme.colorScheme.error)
+                            else -> Icon(Icons.Default.CloudOff, tr("Mode tamu", "Guest mode"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }

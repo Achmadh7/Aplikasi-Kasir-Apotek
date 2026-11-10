@@ -26,6 +26,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -41,6 +42,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
@@ -55,7 +57,20 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import id.apotek.lestari.data.FirebaseKit
+import id.apotek.lestari.data.HasilSync
+import id.apotek.lestari.data.Repository
+import id.apotek.lestari.data.SyncManager
+import id.apotek.lestari.data.jadwalkanSyncBerkala
 import id.apotek.lestari.data.local.DatabaseProvider
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.hypot
 import kotlinx.coroutines.launch
 import id.apotek.lestari.ui.screens.*
@@ -117,6 +132,8 @@ private fun captureScreen(view: View): Bitmap? = try {
     null
 }
 
+enum class StatusSync { NONAKTIF, BELUM_MASUK, PROSES, BERHASIL, GAGAL }
+
 data class TabDef(
     val route: String,
     val label: String,
@@ -153,6 +170,140 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     // Bila tangkapan gagal, tema berganti seketika seperti sebelumnya.
     val rootView = LocalView.current
     val appScope = rememberCoroutineScope()
+    // ---- Mode Online (Firebase): gerbang login + status sinkronisasi.
+    // onlineSiap hanya benar bila build memuat google-services.json;
+    // tanpa itu seluruh lapisan ini diam dan aplikasi murni offline.
+    val context = LocalContext.current
+    val onlinePrefs = remember { context.getSharedPreferences("apotek_prefs", Context.MODE_PRIVATE) }
+    val repoOnline = remember { Repository() }
+    val onlineSiap = remember { FirebaseKit.siap(context) }
+    var emailOnline by remember { mutableStateOf(if (onlineSiap) FirebaseKit.emailMasuk() else null) }
+    var lewatiLogin by remember { mutableStateOf(false) }
+    var statusSync by remember {
+        mutableStateOf(
+            when {
+                !onlineSiap -> StatusSync.NONAKTIF
+                emailOnline != null -> StatusSync.BERHASIL
+                else -> StatusSync.BELUM_MASUK
+            }
+        )
+    }
+    var syncTerakhir by remember { mutableLongStateOf(onlinePrefs.getLong("online_sync_terakhir", 0L)) }
+    var sibukOnline by remember { mutableStateOf(false) }
+    var pesanOnline by remember { mutableStateOf<String?>(null) }
+    var pesanStatus by remember { mutableStateOf<String?>(null) }
+    var tampilInfoOnline by remember { mutableStateOf(false) }
+    var tampilKonfirmasiKeluar by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val perluLogin = onlineSiap && emailOnline == null && !lewatiLogin
+
+    fun jalankanSync() {
+        if (!onlineSiap || emailOnline == null || statusSync == StatusSync.PROSES) return
+        statusSync = StatusSync.PROSES
+        appScope.launch {
+            when (val h = SyncManager(repoOnline).sinkronSekarang(context)) {
+                is HasilSync.Berhasil -> {
+                    statusSync = StatusSync.BERHASIL
+                    syncTerakhir = System.currentTimeMillis()
+                    onlinePrefs.edit().putLong("online_sync_terakhir", syncTerakhir).apply()
+                    pesanStatus = tr("Sinkronisasi selesai", "Sync complete")
+                }
+                is HasilSync.Gagal -> {
+                    statusSync = StatusSync.GAGAL
+                    pesanStatus = h.pesan
+                }
+                HasilSync.BelumMasuk -> statusSync = StatusSync.BELUM_MASUK
+                HasilSync.BelumDikonfigurasi -> statusSync = StatusSync.NONAKTIF
+            }
+        }
+    }
+
+    fun aksiSinkronTap() {
+        when {
+            !onlineSiap -> tampilInfoOnline = true
+            emailOnline != null -> jalankanSync()
+            else -> lewatiLogin = false
+        }
+    }
+
+    fun aksiMasuk(email: String, sandi: String) {
+        appScope.launch {
+            sibukOnline = true
+            pesanOnline = null
+            try {
+                emailOnline = FirebaseKit.masukDenganEmail(email.trim(), sandi)
+                lewatiLogin = false
+            } catch (e: Exception) {
+                pesanOnline = e.message ?: tr("Gagal masuk", "Sign-in failed")
+            } finally {
+                sibukOnline = false
+            }
+        }
+    }
+
+    fun aksiDaftar(email: String, sandi: String) {
+        appScope.launch {
+            sibukOnline = true
+            pesanOnline = null
+            try {
+                emailOnline = FirebaseKit.daftarDenganEmail(email.trim(), sandi)
+                lewatiLogin = false
+            } catch (e: Exception) {
+                pesanOnline = e.message ?: tr("Gagal mendaftar", "Registration failed")
+            } finally {
+                sibukOnline = false
+            }
+        }
+    }
+
+    fun aksiMasukGoogle() {
+        appScope.launch {
+            sibukOnline = true
+            pesanOnline = null
+            try {
+                emailOnline = FirebaseKit.masukDenganGoogle(context)
+                lewatiLogin = false
+            } catch (e: Exception) {
+                pesanOnline = e.message ?: tr("Gagal masuk dengan Google", "Google sign-in failed")
+            } finally {
+                sibukOnline = false
+            }
+        }
+    }
+
+    fun aksiResetSandi(email: String) {
+        if (email.isBlank()) {
+            pesanOnline = tr("Isi email dulu untuk atur ulang kata sandi", "Enter your email first to reset the password")
+            return
+        }
+        appScope.launch {
+            sibukOnline = true
+            pesanOnline = null
+            try {
+                FirebaseKit.kirimResetSandi(email.trim())
+                pesanOnline = tr("Email atur ulang kata sandi terkirim. Cek kotak masuk email kamu.", "Password reset email sent. Check your inbox.")
+            } catch (e: Exception) {
+                pesanOnline = e.message ?: tr("Gagal mengirim email atur ulang", "Failed to send the reset email")
+            } finally {
+                sibukOnline = false
+            }
+        }
+    }
+
+    LaunchedEffect(emailOnline) {
+        if (emailOnline != null) {
+            jadwalkanSyncBerkala(context)
+            jalankanSync()
+        } else if (onlineSiap) {
+            statusSync = StatusSync.BELUM_MASUK
+        }
+    }
+    LaunchedEffect(pesanStatus) {
+        pesanStatus?.let {
+            snackbarHostState.showSnackbar(it)
+            pesanStatus = null
+        }
+    }
     var lainnyaIconCenter by remember { mutableStateOf(Offset.Zero) }
     // Titik awal lingkaran versi AN3: tengah baris tema di halaman Lainnya
     // (diukur baris itu sendiri lewat onGloballyPositioned), dan titik beku
@@ -241,8 +392,21 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     } else {
         Modifier
     }
+    if (perluLogin) {
+        LayarLogin(
+            googleSiap = FirebaseKit.googleSiap(context),
+            sibuk = sibukOnline,
+            pesan = pesanOnline,
+            onMasuk = { e, pw -> aksiMasuk(e, pw) },
+            onDaftar = { e, pw -> aksiDaftar(e, pw) },
+            onGoogle = { aksiMasukGoogle() },
+            onReset = { e -> aksiResetSandi(e) },
+            onLewati = { lewatiLogin = true }
+        )
+    } else {
     Box(Modifier.fillMaxSize()) {
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             // Bar bawah memakai komponen RESMI Material 3 Expressive
             // (permintaan Achmad 2026-11-01, menggantikan dock liquid
@@ -335,7 +499,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 popExitTransition = { fadeOut(animationSpec = tween(200)) + slideOutHorizontally(animationSpec = tween(200), targetOffsetX = { it / 4 * navDirection }) },
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
-                composable("beranda") { BerandaScreen(onGoStok = { goToTab("stok") }, onGoPengingat = { goToTab("pengingat") }, onGoLaba = { goToTab("laba") }, onGoRiwayat = { goToTab("riwayat") }) }
+                composable("beranda") { BerandaScreen(onGoStok = { goToTab("stok") }, onGoPengingat = { goToTab("pengingat") }, onGoLaba = { goToTab("laba") }, onGoRiwayat = { goToTab("riwayat") }, statusSync = statusSync, onSyncTap = { aksiSinkronTap() }) }
                 composable("kasir") { KasirScreen() }
                 composable("stok") { StokScreen() }
                 composable("keuangan") { KeuanganScreen() }
@@ -345,7 +509,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 // mendarat di Beranda, bukan di Lainnya (laporan Achmad
                 // 2026-11-04). Dengan tumpukan biasa, Kembali dari
                 // Laba/Pengingat/dll. kembali ke halaman Lainnya.
-                composable("lainnya") { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = { toggleThemeWithReveal() }, appLang = appLang, onLanguageChange = onLanguageChange, onThemeRowPositioned = { themeRowCenter = it }) }
+                composable("lainnya") { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = { toggleThemeWithReveal() }, appLang = appLang, onLanguageChange = onLanguageChange, onThemeRowPositioned = { themeRowCenter = it }, onlineSiap = onlineSiap, emailOnline = emailOnline, statusSync = statusSync, syncTerakhir = syncTerakhir, onSinkronTap = { aksiSinkronTap() }, onKeluarTap = { tampilKonfirmasiKeluar = true }) }
                 composable("laba", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { LabaScreen() }
                 composable("pengingat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { PengingatScreen(onGoStok = { goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
                 composable("riwayat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { RiwayatScreen() }
@@ -384,6 +548,51 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 })
         )
     }
+    if (tampilInfoOnline) {
+        AlertDialog(
+            onDismissRequest = { tampilInfoOnline = false },
+            title = { Text(tr("Mode Online", "Online Mode")) },
+            text = {
+                Text(
+                    tr(
+                        "Build ini belum dikonfigurasi untuk Mode Online, jadi aplikasi berjalan lokal sepenuhnya di HP ini. Mode Online aktif setelah proyek Firebase disiapkan dan file google-services.json masuk ke repo.",
+                        "This build is not configured for Online Mode yet, so the app runs fully locally on this phone. Online Mode activates once a Firebase project is set up and google-services.json is added to the repo."
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { tampilInfoOnline = false }) { Text(tr("Mengerti", "Got it")) }
+            }
+        )
+    }
+    if (tampilKonfirmasiKeluar) {
+        AlertDialog(
+            onDismissRequest = { tampilKonfirmasiKeluar = false },
+            title = { Text(tr("Keluar Akun?", "Sign Out?")) },
+            text = {
+                Text(
+                    tr(
+                        "Data di HP ini tidak berubah dan tidak terhapus. Sinkronisasi berhenti sampai kamu masuk lagi.",
+                        "Data on this phone stays unchanged and is not deleted. Syncing stops until you sign in again."
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        tampilKonfirmasiKeluar = false
+                        FirebaseKit.keluar()
+                        emailOnline = null
+                        lewatiLogin = false
+                    }
+                ) { Text(tr("Keluar", "Sign Out"), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { tampilKonfirmasiKeluar = false }) { Text(tr("Batal", "Cancel")) }
+            }
+        )
+    }
+    }
     }
 }
 
@@ -407,7 +616,13 @@ fun LainnyaScreen(
     onToggleTheme: () -> Unit,
     appLang: String,
     onLanguageChange: (String) -> Unit,
-    onThemeRowPositioned: (Offset) -> Unit
+    onThemeRowPositioned: (Offset) -> Unit,
+    onlineSiap: Boolean,
+    emailOnline: String?,
+    statusSync: StatusSync,
+    syncTerakhir: Long,
+    onSinkronTap: () -> Unit,
+    onKeluarTap: () -> Unit
 ) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -497,6 +712,85 @@ fun LainnyaScreen(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             modifier = Modifier.clickable { onLanguageChange(if (appLang == "en") "id" else "en") }
         )
+        // Status Mode Online/Offline (kartu info) + sinkronisasi manual +
+        // keluar akun — pola yang sama dengan KasBulanan.
+        val subStatus = when {
+            emailOnline != null -> emailOnline + "\n" + (
+                if (syncTerakhir > 0) {
+                    tr("Sinkron terakhir: ", "Last sync: ") +
+                        SimpleDateFormat("d MMM yyyy, HH.mm", Locale("id", "ID")).format(Date(syncTerakhir))
+                } else {
+                    tr("Belum pernah sinkron", "Never synced")
+                }
+                )
+            onlineSiap -> tr("Mode tamu \u2014 data hanya tersimpan di HP ini", "Guest mode \u2014 data is only stored on this phone")
+            else -> tr("Aplikasi berjalan lokal sepenuhnya di HP ini", "The app runs fully locally on this phone")
+        }
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = SpaceS)
+        ) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (emailOnline != null) Icons.Default.CloudDone else Icons.Default.CloudOff,
+                    null,
+                    tint = if (emailOnline != null) Color(0xFF43A047) else Color(0xFFE3B341),
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(
+                        if (emailOnline != null) tr("Mode Online", "Online Mode") else tr("Mode Offline", "Offline Mode"),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        subStatus,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        ListItem(
+            headlineContent = { Text(tr("Sinkronisasi", "Sync"), style = MaterialTheme.typography.titleMedium) },
+            supportingContent = {
+                Text(
+                    when {
+                        statusSync == StatusSync.PROSES -> tr("Sedang menyinkron\u2026", "Syncing\u2026")
+                        emailOnline != null -> tr("Ketuk untuk sinkron sekarang", "Tap to sync now")
+                        onlineSiap -> tr("Masuk untuk mengaktifkan cadangan awan", "Sign in to enable cloud backup")
+                        else -> tr("Belum dikonfigurasi", "Not configured")
+                    }
+                )
+            },
+            leadingContent = {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                    Icon(Icons.Default.CloudSync, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+                }
+            },
+            trailingContent = {
+                if (statusSync == StatusSync.PROSES) {
+                    CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                }
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            modifier = Modifier.clickable { onSinkronTap() }
+        )
+        if (emailOnline != null) {
+            ListItem(
+                headlineContent = { Text(tr("Keluar Akun", "Sign Out"), style = MaterialTheme.typography.titleMedium) },
+                supportingContent = { Text(emailOnline) },
+                leadingContent = {
+                    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                        Icon(Icons.Default.Logout, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.padding(10.dp).size(22.dp))
+                    }
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable { onKeluarTap() }
+            )
+        }
         // Tentang Aplikasi, di bawah ganti bahasa.
         ListItem(
             headlineContent = { Text(tr("Tentang", "About"), style = MaterialTheme.typography.titleMedium) },
@@ -508,6 +802,189 @@ fun LainnyaScreen(
             trailingContent = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             modifier = Modifier.clickable { onGo("tentang") }
+        )
+    }
+}
+
+// ---- Gerbang login Mode Online (pola L1+L4 yang sama dengan KasBulanan):
+// satu kartu besar di tengah, ikon aplikasi melingkari tepi atas kartu,
+// tombol Google putih lebih dulu, pemisah "atau pakai email", formulir
+// email, lalu Lewati sebagai tamu. Hanya tampil bila build terkonfigurasi
+// Firebase dan belum ada yang masuk.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LayarLogin(
+    googleSiap: Boolean,
+    sibuk: Boolean,
+    pesan: String?,
+    onMasuk: (String, String) -> Unit,
+    onDaftar: (String, String) -> Unit,
+    onGoogle: () -> Unit,
+    onReset: (String) -> Unit,
+    onLewati: () -> Unit
+) {
+    var email by remember { mutableStateOf("") }
+    var sandi by remember { mutableStateOf("") }
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(contentAlignment = Alignment.TopCenter) {
+                Card(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    modifier = Modifier.fillMaxWidth().padding(top = 38.dp)
+                ) {
+                    Column(
+                        Modifier.padding(start = 24.dp, end = 24.dp, top = 56.dp, bottom = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "Apotek Lestari",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            tr("Masuk untuk mencadangkan data ke akunmu", "Sign in to back up your data to your account"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(24.dp))
+                        if (googleSiap) {
+                            Button(
+                                onClick = onGoogle,
+                                enabled = !sibuk,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.White,
+                                    contentColor = Color(0xFF1F1F1F)
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().height(50.dp)
+                            ) {
+                                LogoGoogle(Modifier.size(18.dp))
+                                Spacer(Modifier.width(10.dp))
+                                Text(tr("Masuk dengan Google", "Sign in with Google"), fontWeight = FontWeight.SemiBold)
+                            }
+                            Spacer(Modifier.height(16.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                HorizontalDivider(Modifier.weight(1f))
+                                Text(
+                                    tr("atau pakai email", "or use email"),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 12.dp)
+                                )
+                                HorizontalDivider(Modifier.weight(1f))
+                            }
+                            Spacer(Modifier.height(16.dp))
+                        }
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            label = { Text("Email") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = sandi,
+                            onValueChange = { sandi = it },
+                            label = { Text(tr("Kata Sandi", "Password")) },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (pesan != null) {
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                pesan,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Spacer(Modifier.height(20.dp))
+                        Button(
+                            onClick = { onMasuk(email, sandi) },
+                            enabled = !sibuk && email.isNotBlank() && sandi.length >= 6,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().height(50.dp)
+                        ) {
+                            if (sibuk) {
+                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(tr("Masuk", "Sign In"), fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            TextButton(
+                                onClick = { onDaftar(email, sandi) },
+                                enabled = !sibuk && email.isNotBlank() && sandi.length >= 6
+                            ) { Text(tr("Daftar", "Register")) }
+                            TextButton(
+                                onClick = { onReset(email) },
+                                enabled = !sibuk
+                            ) { Text(tr("Lupa kata sandi?", "Forgot password?")) }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = onLewati, enabled = !sibuk) {
+                            Text(tr("Lewati — Pakai Tanpa Akun", "Skip — Use Without an Account"))
+                        }
+                        Text(
+                            tr("Mode tamu: data hanya tersimpan di HP ini", "Guest mode: data is only stored on this phone"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(76.dp)
+                ) {
+                    Icon(
+                        Icons.Default.LocalPharmacy,
+                        null,
+                        tint = Color.White,
+                        modifier = Modifier.padding(18.dp).fillMaxSize()
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Logo "G" Google digambar dengan Canvas (empat warna resmi di atas cakram
+// putih) — tanpa aset gambar tambahan.
+@Composable
+private fun LogoGoogle(modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val r = size.minDimension / 2f
+        val c = Offset(size.width / 2f, size.height / 2f)
+        drawCircle(Color.White, r, c)
+        val stroke = r * 0.5f
+        val arcR = r * 0.6f
+        val kiri = Offset(c.x - arcR, c.y - arcR)
+        val uk = Size(arcR * 2f, arcR * 2f)
+        drawArc(Color(0xFF4285F4), -50f, 100f, false, kiri, uk, style = Stroke(stroke, cap = StrokeCap.Butt))
+        drawArc(Color(0xFFEA4335), -140f, 90f, false, kiri, uk, style = Stroke(stroke, cap = StrokeCap.Butt))
+        drawArc(Color(0xFFFBBC05), 130f, 80f, false, kiri, uk, style = Stroke(stroke, cap = StrokeCap.Butt))
+        drawArc(Color(0xFF34A853), 50f, 80f, false, kiri, uk, style = Stroke(stroke, cap = StrokeCap.Butt))
+        drawRect(
+            Color(0xFF4285F4),
+            topLeft = Offset(c.x - stroke * 0.2f, c.y - stroke / 2f),
+            size = Size(arcR + stroke * 0.2f, stroke)
         )
     }
 }
