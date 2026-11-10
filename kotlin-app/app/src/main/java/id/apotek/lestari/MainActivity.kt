@@ -348,6 +348,9 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     // Arah navigasi antar tab (1 = maju/ke kanan, -1 = mundur/ke kiri) —
     // dipakai transisi NavHost supaya layar mengikuti arah geser/ketukan.
     var navDirection by remember { mutableIntStateOf(1) }
+    // Sub-menu yang ditumpuk di atas tab (dari Beranda/Lainnya) — dipakai
+    // logika Kembali di goToTab dan penyama durasi transisi NavHost.
+    val subRoutes = listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf")
     fun tabPosition(route: String): Int = when (route) {
         "beranda" -> 0
         "stok" -> 1
@@ -357,6 +360,14 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     }
     fun goToTab(route: String) {
         navDirection = if (tabPosition(route) >= tabPosition(current)) 1 else -1
+        // Kembali ke tab induk dari sub-menu (mis. Tentang -> Lainnya lewat
+        // bar bawah) harus POP: navigate() biasa memainkan transisi MAJU
+        // (sub-menu keluar hanya -1/4 ke kiri) sehingga terasa seperti
+        // membuka halaman baru, bukan kembali. popBackStack memainkan
+        // transisi mundur yang benar (sub-menu keluar penuh ke kanan).
+        // Bila tab tujuan tidak ada di tumpukan, popBackStack false dan
+        // alur navigate biasa di bawah yang berjalan.
+        if (current in subRoutes && nav.popBackStack(route, false)) return
         // saveState + restoreState (audit 2026-11-02, H1): state saveable
         // tiap layar (keranjang Kasir, pencarian, metode bayar, dst.)
         // disimpan saat tab ditinggalkan dan dipulihkan saat kembali —
@@ -494,9 +505,9 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 startDestination = "beranda",
                 // Transisi antar tab: pudar + geser halus, bukan ganti mendadak.
                 // Arah geser mengikuti navDirection (1 = maju, -1 = mundur).
-                enterTransition = { fadeIn(animationSpec = tween(200)) + slideInHorizontally(animationSpec = tween(200), initialOffsetX = { it / 4 * navDirection }) },
-                exitTransition = { fadeOut(animationSpec = tween(200)) + slideOutHorizontally(animationSpec = tween(200), targetOffsetX = { -it / 4 * navDirection }) },
-                popEnterTransition = { fadeIn(animationSpec = tween(200)) + slideInHorizontally(animationSpec = tween(200), initialOffsetX = { -it / 4 * navDirection }) },
+                enterTransition = { val d = if (initialState.destination.route in subRoutes) 350 else 200; fadeIn(animationSpec = tween(d)) + slideInHorizontally(animationSpec = tween(d), initialOffsetX = { it / 4 * navDirection }) },
+                exitTransition = { val d = if (targetState.destination.route in subRoutes) 350 else 200; fadeOut(animationSpec = tween(d)) + slideOutHorizontally(animationSpec = tween(d), targetOffsetX = { -it / 4 * navDirection }) },
+                popEnterTransition = { val d = if (initialState.destination.route in subRoutes) 350 else 200; fadeIn(animationSpec = tween(d)) + slideInHorizontally(animationSpec = tween(d), initialOffsetX = { -it / 4 * navDirection }) },
                 popExitTransition = { fadeOut(animationSpec = tween(200)) + slideOutHorizontally(animationSpec = tween(200), targetOffsetX = { it / 4 * navDirection }) },
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
