@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -811,101 +812,103 @@ fun LayarLogin(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Box(contentAlignment = Alignment.TopCenter) {
-                Card(
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                    modifier = Modifier.fillMaxWidth().padding(top = 38.dp)
+            // Pita identitas gradasi K3 (G2, pilihan Achmad 2026-11-10):
+            // logo dalam kotak putih membulat + nama + subjudul.
+            val logoGate = rememberLogoBitmap()
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    Modifier.background(GradasiHeader).padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        Modifier.padding(start = 24.dp, end = 24.dp, top = 56.dp, bottom = 24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                    Surface(color = Color.White, shape = RoundedCornerShape(16.dp), modifier = Modifier.size(64.dp)) {
+                        if (logoGate != null) {
+                            Image(logoGate, null, contentScale = ContentScale.Fit, modifier = Modifier.padding(6.dp).fillMaxSize())
+                        } else {
+                            Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF0A2A5C), modifier = Modifier.padding(14.dp).fillMaxSize())
+                        }
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column {
                         Text(
                             "Apotek Lestari",
                             style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
                         )
                         Text(
-                            tr("Masuk untuk mencadangkan data ke akunmu", "Sign in to back up your data to your account"),
+                            tr("Kasir Apotek", "Pharmacy Cashier"),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(24.dp))
-                        if (googleSiap) {
-                            Button(
-                                onClick = onGoogle,
-                                enabled = !sibuk,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.White,
-                                    contentColor = Color(0xFF1F1F1F)
-                                ),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth().height(50.dp)
-                            ) {
-                                if (sibuk) {
-                                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFF1F1F1F))
-                                } else {
-                                    LogoGoogle(Modifier.size(18.dp))
-                                }
-                                Spacer(Modifier.width(10.dp))
-                                Text(tr("Masuk dengan Google", "Sign in with Google"), fontWeight = FontWeight.SemiBold)
-                            }
-                        } else {
-                            Text(
-                                tr("Masuk dengan Google belum tersedia di build ini.", "Google sign-in is not available in this build."),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        if (pesan != null) {
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                pesan,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        HorizontalDivider()
-                        Spacer(Modifier.height(8.dp))
-                        TextButton(onClick = onLewati, enabled = !sibuk) {
-                            Text(tr("Lewati — Pakai Tanpa Akun", "Skip — Use Without an Account"))
-                        }
-                        Text(
-                            tr("Mode tamu: data hanya tersimpan di HP ini", "Guest mode: data is only stored on this phone"),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color.White.copy(alpha = 0.8f)
                         )
                     }
                 }
-                val logoGate = rememberLogoBitmap()
-                if (logoGate != null) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White,
-                        modifier = Modifier.size(76.dp)
-                    ) {
-                        Image(
-                            logoGate,
-                            null,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.padding(8.dp).fillMaxSize()
+            }
+            Spacer(Modifier.height(20.dp))
+            // Kartu masuk: ajakan + tombol Google + Lewati.
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        tr("Masuk untuk mencadangkan data ke akunmu", "Sign in to back up your data to your account"),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    if (googleSiap) {
+                        Button(
+                            onClick = onGoogle,
+                            enabled = !sibuk,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White,
+                                contentColor = Color(0xFF1F1F1F)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().height(50.dp)
+                        ) {
+                            if (sibuk) {
+                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFF1F1F1F))
+                            } else {
+                                LogoGoogle(Modifier.size(18.dp))
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text(tr("Masuk dengan Google", "Sign in with Google"), fontWeight = FontWeight.SemiBold)
+                        }
+                    } else {
+                        Text(
+                            tr("Masuk dengan Google belum tersedia di build ini.", "Google sign-in is not available in this build."),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                } else {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.size(76.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.LocalPharmacy,
-                            null,
-                            tint = Color.White,
-                            modifier = Modifier.padding(18.dp).fillMaxSize()
+                    if (pesan != null) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            pesan,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
+                    Spacer(Modifier.height(8.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(onClick = onLewati, enabled = !sibuk) {
+                        Text(tr("Lewati \u2014 Pakai Tanpa Akun", "Skip \u2014 Use Without an Account"))
+                    }
+                    Text(
+                        tr("Mode tamu: data hanya tersimpan di HP ini", "Guest mode: data is only stored on this phone"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
