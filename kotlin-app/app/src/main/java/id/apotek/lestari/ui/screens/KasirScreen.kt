@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -175,7 +174,7 @@ fun dayKeyToIsoUtc(dayKey: String): String? {
 @Composable
 fun KasirScreen() {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
-    var listEntered by remember { mutableStateOf(false) }
+    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("kasir")) }
     LaunchedEffect(medicines) { if (medicines.isNotEmpty() && !listEntered) listEntered = true }
     var search by rememberSaveable { mutableStateOf("") }
     var sortAz by remember { mutableStateOf(true) }
@@ -365,8 +364,7 @@ fun KasirScreen() {
                 AnimatedVisibility(
                     visible = listEntered,
                     enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
-                        expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                        slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 },
                     exit = fadeOut()
                 ) {
                 val out = m.stock <= 0

@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -167,10 +166,24 @@ fun adaptiveSheetMaxWidth() = when {
 fun entranceDelay(index: Int) = (index * 40).coerceAtMost(400)
 
 
+/** Layar yang animasi masuknya sudah pernah dimainkan pada sesi ini. */
+private val layarSudahMasuk = mutableSetOf<String>()
+
+/**
+ * Klaim giliran animasi masuk untuk [kunci]: true hanya pada kunjungan
+ * pertama di sesi ini. Layar memulai `listEntered` dari
+ * `!klaimAnimasiMasuk("...")`, jadi kunjungan ulang langsung tampil utuh
+ * tanpa animasi — perpindahan tab tidak lagi terasa jitter (2026-11-10).
+ */
+fun klaimAnimasiMasuk(kunci: String): Boolean = layarSudahMasuk.add(kunci)
+
 /** Angka berhitung naik dari 0 (dipakai Pemasukan Hari Ini & Laba). */
 @Composable
 fun AnimatedAmount(value: Int, style: TextStyle, color: Color, format: (Int) -> String = { formatIDR(it) }) {
-    var shown by remember { mutableStateOf(0) }
+    // rememberSaveable: nilai terakhir ikut tersimpan bersama state
+    // tujuan navigasi, jadi saat kembali ke tab ini angka tampil utuh
+    // seketika (tidak menghitung naik dari 0 lagi).
+    var shown by rememberSaveable { mutableStateOf(0) }
     val animated by animateIntAsState(
         targetValue = shown,
         animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),

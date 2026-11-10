@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -130,7 +129,7 @@ class PurchaseItemRow {
 @Composable
 fun PbfScreen() {
     var purchases by remember { mutableStateOf<List<Purchase>>(emptyList()) }
-    var listEntered by remember { mutableStateOf(false) }
+    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("pbf")) }
     LaunchedEffect(purchases) { if (purchases.isNotEmpty() && !listEntered) listEntered = true }
     var expanded by remember { mutableStateOf<Int?>(null) }
     var showForm by remember { mutableStateOf(false) }
@@ -299,8 +298,7 @@ fun PbfScreen() {
                     AnimatedVisibility(
                         visible = listEntered,
                         enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
-                            slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
-                            expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                            slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 },
                         exit = fadeOut()
                     ) {
                     val isOpen = expanded == p.id

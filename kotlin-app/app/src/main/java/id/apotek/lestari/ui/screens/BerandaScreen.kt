@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -123,7 +122,7 @@ import java.util.TimeZone
 @Composable
 fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit, statusSync: StatusSync, onSyncTap: () -> Unit) {
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
-    var listEntered by remember { mutableStateOf(false) }
+    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("beranda")) }
     LaunchedEffect(dashboard) { if (dashboard != null && !listEntered) listEntered = true }
     var salesTab by remember { mutableIntStateOf(0) }
     // Periode panel ringkasan BR5 (pilihan Achmad 2026-11-04):
@@ -180,8 +179,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             AnimatedVisibility(
                 visible = listEntered,
                 enter = fadeIn(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)) +
-                    slideInVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)) { it / 3 } +
-                    expandVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)),
+                    slideInVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)) { it / 3 },
                 exit = fadeOut()
             ) {
             Column {
@@ -239,8 +237,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 AnimatedVisibility(
                     visible = listEntered,
                     enter = fadeIn(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)) { it / 3 } +
-                        expandVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)),
+                        slideInVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)) { it / 3 },
                     exit = fadeOut()
                 ) {
                 // Panel ringkasan BR5 (pilihan Achmad 2026-11-04): hero
@@ -337,8 +334,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 AnimatedVisibility(
                     visible = listEntered,
                     enter = fadeIn(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)) { it / 3 } +
-                        expandVertically(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)),
+                        slideInVertically(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)) { it / 3 },
                     exit = fadeOut()
                 ) {
                 // Shortcut ke menu yang tidak lagi ada di bar bawah (Laba, Pengingat, Riwayat).
@@ -353,8 +349,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 AnimatedVisibility(
                     visible = listEntered,
                     enter = fadeIn(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)) { it / 3 } +
-                        expandVertically(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)),
+                        slideInVertically(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)) { it / 3 },
                     exit = fadeOut()
                 ) {
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
@@ -443,8 +438,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 AnimatedVisibility(
                     visible = listEntered,
                     enter = fadeIn(animationSpec = tween(300, entranceDelay(5), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(5), FastOutSlowInEasing)) { it / 3 } +
-                        expandVertically(animationSpec = tween(300, entranceDelay(5), FastOutSlowInEasing)),
+                        slideInVertically(animationSpec = tween(300, entranceDelay(5), FastOutSlowInEasing)) { it / 3 },
                     exit = fadeOut()
                 ) {
                 // Penjualan Hari Ini: Obat Terjual dan Transaksi dalam satu kartu bertab (compact).

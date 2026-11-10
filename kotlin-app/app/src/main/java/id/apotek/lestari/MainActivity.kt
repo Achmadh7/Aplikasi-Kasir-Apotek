@@ -580,12 +580,15 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             NavHost(
                 navController = nav,
                 startDestination = "beranda",
-                // Transisi antar tab: pudar + geser halus, bukan ganti mendadak.
-                // Arah geser mengikuti navDirection (1 = maju, -1 = mundur).
-                enterTransition = { val d = if (initialState.destination.route in subRoutes) 350 else 200; fadeIn(animationSpec = tween(d)) + slideInHorizontally(animationSpec = tween(d), initialOffsetX = { it / 4 * navDirection }) },
-                exitTransition = { val d = if (targetState.destination.route in subRoutes) 350 else 200; fadeOut(animationSpec = tween(d)) + slideOutHorizontally(animationSpec = tween(d), targetOffsetX = { -it / 4 * navDirection }) },
-                popEnterTransition = { val d = if (initialState.destination.route in subRoutes) 350 else 200; fadeIn(animationSpec = tween(d)) + slideInHorizontally(animationSpec = tween(d), initialOffsetX = { -it / 4 * navDirection }) },
-                popExitTransition = { fadeOut(animationSpec = tween(200)) + slideOutHorizontally(animationSpec = tween(200), targetOffsetX = { it / 4 * navDirection }) },
+                // Transisi antar tab: cukup pudar singkat 150ms. Dulu
+                // dua layar sama-sama bergeser (200-350ms) dan terasa
+                // jitter di HP kelas menengah, jadi sejak 2026-11-10
+                // tab tidak lagi bergeser — hanya halaman sub (subEnter
+                // dkk.) yang tetap menggeser penuh.
+                enterTransition = { fadeIn(animationSpec = tween(150)) },
+                exitTransition = { fadeOut(durationSpec = tween(150)) },
+                popEnterTransition = { fadeIn(durationSpec = tween(150)) },
+                popExitTransition = { fadeOut(durationSpec = tween(150)) },
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
                 composable("beranda") { BerandaScreen(onGoStok = { goToTab("stok") }, onGoPengingat = { goToTab("pengingat") }, onGoLaba = { goToTab("laba") }, onGoRiwayat = { goToTab("riwayat") }, statusSync = statusSync, onSyncTap = { aksiSinkronTap() }) }

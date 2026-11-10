@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -137,7 +136,7 @@ fun StokScreen() {
     var msg by remember { mutableStateOf("") }
     var deleteTarget by remember { mutableStateOf<Medicine?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
-    var listEntered by remember { mutableStateOf(false) }
+    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("stok")) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var importSummary by remember { mutableStateOf<String?>(null) }
@@ -460,8 +459,7 @@ fun StokScreen() {
             AnimatedVisibility(
                 visible = listEntered,
                 enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
-                    slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
-                    expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                    slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 },
                 exit = fadeOut()
             ) {
             ExpressiveCard(

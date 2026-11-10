@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -613,7 +612,7 @@ fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, sale: Sal
 fun RiwayatScreen() {
     var sales by remember { mutableStateOf<List<Sale>>(emptyList()) }
     var expanded by remember { mutableStateOf<Int?>(null) }
-    var listEntered by remember { mutableStateOf(false) }
+    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("riwayat")) }
     var salesLimit by remember { mutableIntStateOf(50) }
     var hasMore by remember { mutableStateOf(false) }
     val receiptLayer = rememberGraphicsLayer()
@@ -698,8 +697,7 @@ fun RiwayatScreen() {
                     AnimatedVisibility(
                         visible = listEntered,
                         enter = fadeIn(animationSpec = tween(300, entranceDelay(globalIndex), FastOutSlowInEasing)) +
-                            slideInVertically(animationSpec = tween(300, entranceDelay(globalIndex), FastOutSlowInEasing)) { it / 3 } +
-                            expandVertically(animationSpec = tween(300, entranceDelay(globalIndex), FastOutSlowInEasing)),
+                            slideInVertically(animationSpec = tween(300, entranceDelay(globalIndex), FastOutSlowInEasing)) { it / 3 },
                         exit = fadeOut()
                     ) {
                     ExpressiveCard(

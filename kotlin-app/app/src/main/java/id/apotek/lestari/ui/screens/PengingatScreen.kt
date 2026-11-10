@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -126,7 +125,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
     var noDateBills by remember { mutableStateOf<List<Purchase>>(emptyList()) }
     var window by remember { mutableStateOf(90) }
     var filter by remember { mutableStateOf("all") } // all | expiry | low | critical
-    var listEntered by remember { mutableStateOf(false) }
+    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("pengingat")) }
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME, pola yang sama
     // seperti Laba) supaya tagihan yang baru ditandai lunas di Faktur PBF
     // langsung hilang dari sini.
@@ -332,8 +331,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
             AnimatedVisibility(
                 visible = listEntered,
                 enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
-                    slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
-                    expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                    slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 },
                 exit = fadeOut()
             ) {
             Column {

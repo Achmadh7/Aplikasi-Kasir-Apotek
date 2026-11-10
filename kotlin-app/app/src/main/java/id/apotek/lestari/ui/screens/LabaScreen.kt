@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -125,7 +124,7 @@ fun LabaScreen() {
     // Pesan kegagalan muat (audit 2026-11-02, M2): tanpa ini, kegagalan
     // laporan membuat LoadingIndicator berputar selamanya.
     var loadError by remember { mutableStateOf<String?>(null) }
-    var listEntered by remember { mutableStateOf(false) }
+    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("laba")) }
     LaunchedEffect(report) { if (report != null && !listEntered) listEntered = true }
     var period by remember { mutableStateOf("month") }
     // Muat ulang laporan setiap kali layar Laba kembali tampil (ON_RESUME),
@@ -159,8 +158,7 @@ fun LabaScreen() {
             AnimatedVisibility(
                 visible = listEntered,
                 enter = fadeIn(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)) +
-                    slideInVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)) { it / 3 } +
-                    expandVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)),
+                    slideInVertically(animationSpec = tween(300, entranceDelay(0), FastOutSlowInEasing)) { it / 3 },
                 exit = fadeOut()
             ) {
             Column {
@@ -188,8 +186,7 @@ fun LabaScreen() {
                 AnimatedVisibility(
                     visible = listEntered,
                     enter = fadeIn(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)) { it / 3 } +
-                        expandVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)),
+                        slideInVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)) { it / 3 },
                     exit = fadeOut()
                 ) {
                 // Desain LP4 (pilihan Achmad 2026-11-04): DUA kartu hero
@@ -230,8 +227,7 @@ fun LabaScreen() {
                 AnimatedVisibility(
                     visible = listEntered,
                     enter = fadeIn(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)) { it / 3 } +
-                        expandVertically(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)),
+                        slideInVertically(animationSpec = tween(300, entranceDelay(2), FastOutSlowInEasing)) { it / 3 },
                     exit = fadeOut()
                 ) {
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
@@ -262,8 +258,7 @@ fun LabaScreen() {
                 AnimatedVisibility(
                     visible = listEntered,
                     enter = fadeIn(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)) +
-                        slideInVertically(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)) { it / 3 } +
-                        expandVertically(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)),
+                        slideInVertically(animationSpec = tween(300, entranceDelay(4), FastOutSlowInEasing)) { it / 3 },
                     exit = fadeOut()
                 ) {
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
@@ -389,7 +384,7 @@ fun ObatTerlarisScreen() {
     // Pesan kegagalan muat (audit 2026-11-02, M2): tanpa ini, kegagalan
     // tampil sebagai daftar kosong tanpa penjelasan.
     var loadError by remember { mutableStateOf<String?>(null) }
-    var listEntered by remember { mutableStateOf(false) }
+    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("terlaris")) }
     LaunchedEffect(sellers) { if (!sellers.isNullOrEmpty() && !listEntered) listEntered = true }
     var period by remember { mutableStateOf("month") }
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME), supaya
@@ -479,8 +474,7 @@ fun ObatTerlarisScreen() {
                                 AnimatedVisibility(
                                     visible = listEntered,
                                     enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
-                                        slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
-                                        expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                                        slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 },
                                     exit = fadeOut()
                                 ) {
                                 Column {

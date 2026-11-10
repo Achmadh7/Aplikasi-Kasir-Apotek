@@ -34,7 +34,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -122,7 +121,7 @@ import java.util.TimeZone
 @Composable
 fun KeuanganScreen() {
     var entries by remember { mutableStateOf<List<CashEntry>>(emptyList()) }
-    var listEntered by remember { mutableStateOf(false) }
+    var listEntered by remember { mutableStateOf(!klaimAnimasiMasuk("keuangan")) }
     LaunchedEffect(entries) { if (entries.isNotEmpty() && !listEntered) listEntered = true }
     var cashBalance by remember { mutableStateOf<CashBalance?>(null) }
     var period by remember { mutableStateOf("today") } // today | month | all — awalnya "Hari Ini" (permintaan Achmad 2026-10-31), bukan "Semua"
@@ -428,8 +427,7 @@ fun KeuanganScreen() {
             AnimatedVisibility(
                 visible = listEntered,
                 enter = fadeIn(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) +
-                    slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 } +
-                    expandVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)),
+                    slideInVertically(animationSpec = tween(300, entranceDelay(index), FastOutSlowInEasing)) { it / 3 },
                 exit = fadeOut()
             ) {
             val isIn = e.type == "in"
