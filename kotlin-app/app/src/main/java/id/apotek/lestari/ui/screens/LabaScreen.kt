@@ -142,7 +142,7 @@ fun LabaScreen() {
         item {
             
             Column {
-            KartuHeaderGradasi(tr("Laba", "Profit"), Icons.Default.TrendingUp)
+            KartuHeaderPremium(tr("Laba", "Profit"), Icons.Default.TrendingUp)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -366,7 +366,7 @@ fun ObatTerlarisScreen() {
         verticalArrangement = Arrangement.spacedBy(SpaceL)
     ) {
         item {
-            KartuHeaderGradasi(tr("Terlaris", "Best Sellers"), Icons.Default.Leaderboard)
+            KartuHeaderPremium(tr("Terlaris", "Best Sellers"), Icons.Default.Leaderboard)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {

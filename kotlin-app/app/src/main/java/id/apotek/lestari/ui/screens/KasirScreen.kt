@@ -312,7 +312,7 @@ fun KasirScreen() {
         // Daftar obat memenuhi layar; keranjang & pembayaran pindah ke bottom sheet.
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(16.dp)) {
 
-        KartuHeaderGradasi(tr("Kasir", "Cashier"), Icons.Default.PointOfSale)
+        KartuHeaderPremium(tr("Kasir", "Cashier"), Icons.Default.PointOfSale)
         Spacer(Modifier.height(SpaceL))
         DemoBanner()
         SearchField(

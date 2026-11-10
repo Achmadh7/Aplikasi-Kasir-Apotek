@@ -165,7 +165,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(SpaceL)
     ) {
         item {
-            KartuHeaderGradasi(tr("Pengingat", "Reminders"), Icons.Default.NotificationsActive)
+            KartuHeaderPremium(tr("Pengingat", "Reminders"), Icons.Default.NotificationsActive)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             Text(tr("MASA KADALUARSA", "EXPIRY WINDOW"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

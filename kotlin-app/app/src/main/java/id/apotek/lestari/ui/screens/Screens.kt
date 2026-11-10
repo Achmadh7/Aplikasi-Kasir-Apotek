@@ -52,7 +52,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
@@ -149,35 +148,36 @@ fun adaptiveSheetMaxWidth() = when {
     else -> 360.dp
 }
 
-// ---------- Header kartu gradasi (gaya K3, pilihan Achmad 2026-11-10) ----------
+// ---------- Header nama layar N2 solid gelap premium (pilihan Achmad
+// 2026-11-10, menggantikan K3 gradasi): batang navy nyaris hitam yang
+// tetap sama di kedua mode tema (satu keluarga dengan gerbang masuk
+// M2), garis tepi halus, ikon menu dalam kotak putih membulat, judul
+// putih ExtraBold. Dipakai semua layar selain Beranda (Beranda memakai
+// varian logo + tombol awan sinkron) dan Lainnya (identitas L1). -------
 
-/** Gradasi navy kartu header semua layar (tetap navy di dua mode). */
-val GradasiHeader = Brush.horizontalGradient(listOf(Color(0xFF0A2A5C), Color(0xFF1B4B8F)))
+/** Warna batang header N2 (tetap di dua mode). */
+val WarnaHeaderN2 = Color(0xFF0B1526)
 
-/**
- * Kartu header nama layar bergaya header KasBulanan: kartu gradasi navy,
- * ikon menu dalam kotak putih membulat, judul putih ExtraBold. Dipakai
- * semua layar selain Beranda (Beranda memakai varian logo + pil sinkron).
- */
 @Composable
-fun KartuHeaderGradasi(judul: String, ikon: ImageVector, subjudul: String? = null) {
+fun KartuHeaderPremium(judul: String, ikon: ImageVector, subjudul: String? = null) {
     Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = WarnaHeaderN2),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            Modifier.background(GradasiHeader).padding(16.dp),
+            Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(color = Color.White, shape = RoundedCornerShape(14.dp), modifier = Modifier.size(48.dp)) {
-                Icon(ikon, null, tint = Color(0xFF0A2A5C), modifier = Modifier.padding(11.dp).fillMaxSize())
+            Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(46.dp)) {
+                Icon(ikon, null, tint = Color(0xFF16324F), modifier = Modifier.padding(11.dp).fillMaxSize())
             }
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(judul, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = Color.White)
                 if (subjudul != null) {
-                    Text(subjudul, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
+                    Text(subjudul, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
                 }
             }
         }

@@ -204,7 +204,7 @@ fun KeuanganScreen() {
     ) {
         item {
             Column {
-            KartuHeaderGradasi(tr("Keuangan", "Finance"), Icons.Default.AccountBalanceWallet)
+            KartuHeaderPremium(tr("Keuangan", "Finance"), Icons.Default.AccountBalanceWallet)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {

@@ -160,26 +160,27 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         item {
             
             Column {
-            // Header K3 (pilihan Achmad 2026-11-10, gaya header KasBulanan):
-            // kartu gradasi navy, logo dalam kotak putih, nama satu baris,
-            // pil kanan = status sekaligus tombol sinkron. Tanggal tidak
-            // lagi di header, dan judul "Beranda" terpisah dilepas — kartu
-            // ini adalah header Beranda.
+            // Header N2 (pilihan Achmad 2026-11-10, menggantikan K3):
+            // batang navy nyaris hitam, logo dalam kotak putih, nama satu
+            // baris, kanan = tombol awan saja (tanpa tulisan status -
+            // permintaan Achmad) yang tetap menjadi tombol sinkron.
+            // Tanggal tidak di header; kartu ini adalah header Beranda.
             Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = WarnaHeaderN2),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    Modifier.background(GradasiHeader).padding(16.dp),
+                    Modifier.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val logo = rememberLogoBitmap()
-                    Surface(color = Color.White, shape = RoundedCornerShape(14.dp), modifier = Modifier.size(48.dp)) {
+                    Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(46.dp)) {
                         if (logo != null) {
                             Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(6.dp).fillMaxSize())
                         } else {
-                            Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF0A2A5C), modifier = Modifier.padding(11.dp).fillMaxSize())
+                            Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF16324F), modifier = Modifier.padding(11.dp).fillMaxSize())
                         }
                     }
                     Spacer(Modifier.width(12.dp))
@@ -187,32 +188,21 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     Spacer(Modifier.weight(1f))
                     if (statusSync != StatusSync.NONAKTIF) {
                         Surface(
-                            color = Color.White.copy(alpha = 0.18f),
-                            shape = RoundedCornerShape(50),
-                            modifier = Modifier.clickable { onSyncTap() }
+                            color = Color.Transparent,
+                            shape = CircleShape,
+                            border = BorderStroke(
+                                1.5.dp,
+                                if (statusSync == StatusSync.GAGAL) Color(0xFFFFB4AB) else Color(0xFF40C4FF)
+                            ),
+                            modifier = Modifier.size(38.dp).clickable { onSyncTap() }
                         ) {
-                            Row(
-                                Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Box(contentAlignment = Alignment.Center) {
                                 when (statusSync) {
-                                    StatusSync.PROSES -> CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
-                                    StatusSync.BERHASIL -> Icon(Icons.Default.CloudDone, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                    StatusSync.GAGAL -> Icon(Icons.Default.CloudOff, null, tint = Color(0xFFFFB4AB), modifier = Modifier.size(18.dp))
-                                    else -> Icon(Icons.Default.CloudOff, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    StatusSync.PROSES -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color(0xFF40C4FF))
+                                    StatusSync.BERHASIL -> Icon(Icons.Default.CloudDone, tr("Tersinkron", "Synced"), tint = Color(0xFF40C4FF), modifier = Modifier.size(20.dp))
+                                    StatusSync.GAGAL -> Icon(Icons.Default.CloudOff, tr("Gagal", "Failed"), tint = Color(0xFFFFB4AB), modifier = Modifier.size(20.dp))
+                                    else -> Icon(Icons.Default.CloudOff, tr("Mode Tamu", "Guest mode"), tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    when (statusSync) {
-                                        StatusSync.PROSES -> tr("Menyinkron\u2026", "Syncing\u2026")
-                                        StatusSync.BERHASIL -> tr("Tersinkron", "Synced")
-                                        StatusSync.GAGAL -> tr("Gagal", "Failed")
-                                        else -> tr("Mode Tamu", "Guest")
-                                    },
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (statusSync == StatusSync.GAGAL) Color(0xFFFFB4AB) else Color.White
-                                )
                             }
                         }
                     }

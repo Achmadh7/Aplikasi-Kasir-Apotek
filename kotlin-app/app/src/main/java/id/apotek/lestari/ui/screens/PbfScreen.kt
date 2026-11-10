@@ -157,7 +157,7 @@ fun PbfScreen() {
             verticalArrangement = Arrangement.spacedBy(SpaceL)
         ) {
             item {
-                KartuHeaderGradasi(tr("Faktur PBF", "PBF Invoices"), Icons.Default.LocalShipping)
+                KartuHeaderPremium(tr("Faktur PBF", "PBF Invoices"), Icons.Default.LocalShipping)
                 Spacer(Modifier.height(SpaceL))
                 DemoBanner()
                 // Ringkasan belanja (desain PF1, pilihan Achmad 2026-11-04):

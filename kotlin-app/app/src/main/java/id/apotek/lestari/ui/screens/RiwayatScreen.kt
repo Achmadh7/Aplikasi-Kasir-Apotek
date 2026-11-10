@@ -619,7 +619,7 @@ fun RiwayatScreen() {
         }
     }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        KartuHeaderGradasi(tr("Riwayat", "History"), Icons.Default.ReceiptLong)
+        KartuHeaderPremium(tr("Riwayat", "History"), Icons.Default.ReceiptLong)
         Spacer(Modifier.height(SpaceL))
         DemoBanner()
         if (sales.isEmpty()) Text(tr("Belum ada penjualan tercatat.", "No sales recorded yet."))

@@ -187,7 +187,7 @@ fun BackupScreen() {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        KartuHeaderGradasi("Backup", Icons.Default.Backup, tr("Simpan dan pulihkan semua data apotek.", "Save and restore all of the pharmacy's data."))
+        KartuHeaderPremium("Backup", Icons.Default.Backup, tr("Simpan dan pulihkan semua data apotek.", "Save and restore all of the pharmacy's data."))
         Spacer(Modifier.height(SpaceL))
         ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
@@ -362,7 +362,7 @@ fun TentangScreen(onGoBackup: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(SpaceL)
     ) {
         item {
-            KartuHeaderGradasi(tr("Tentang", "About"), Icons.Default.Info)
+            KartuHeaderPremium(tr("Tentang", "About"), Icons.Default.Info)
             Spacer(Modifier.height(SpaceL))
         }
         item {

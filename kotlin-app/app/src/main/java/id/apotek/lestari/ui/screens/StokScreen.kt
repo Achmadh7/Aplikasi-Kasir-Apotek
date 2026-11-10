@@ -262,7 +262,7 @@ fun StokScreen() {
     ) {
         item {
             Column {
-            KartuHeaderGradasi(tr("Stok", "Stock"), Icons.Default.Medication, tr("${medicines.size} jenis obat tercatat", "${medicines.size} medicines recorded"))
+            KartuHeaderPremium(tr("Stok", "Stock"), Icons.Default.Medication, tr("${medicines.size} jenis obat tercatat", "${medicines.size} medicines recorded"))
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             SearchField(
