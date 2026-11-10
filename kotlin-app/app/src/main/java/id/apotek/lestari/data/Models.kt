@@ -97,30 +97,27 @@ data class Dashboard(
     val recentSales: List<RecentSale> = emptyList()
 )
 
-data class ProfitAgg(val qty: Int = 0, val revenue: Int = 0, val hpp: Int = 0, val profit: Int = 0, val marginPct: Double = 0.0)
-data class ProfitByMedicine(val name: String = "", val category: String = "", val qty: Int = 0, val revenue: Int = 0, val hpp: Int = 0, val profit: Int = 0, val marginPct: Double = 0.0)
-data class ProfitByCategory(val category: String = "", val qty: Int = 0, val revenue: Int = 0, val hpp: Int = 0, val profit: Int = 0, val marginPct: Double = 0.0)
-data class ProfitDaily(val date: String = "", val label: String = "", val revenue: Int = 0, val hpp: Int = 0, val profit: Int = 0)
+data class ProfitByMedicine(val name: String = "", val category: String = "", val qty: Int = 0, val revenue: Int = 0)
+data class ProfitByCategory(val category: String = "", val qty: Int = 0, val revenue: Int = 0)
+data class ProfitDaily(val date: String = "", val label: String = "", val revenue: Int = 0, val profit: Int = 0)
 
 data class ProfitReport(
     val period: String = "month",
-    val revenue: Int = 0, val hpp: Int = 0,
-    val grossProfit: Int = 0,
+    val revenue: Int = 0,
     val marginPct: Double = 0.0,
     val operationalExpense: Int = 0,
     val stockPurchaseExpense: Int = 0,
     val netProfit: Int = 0,
     val transactionCount: Int = 0,
     val itemsSold: Int = 0,
-    val costMissingQty: Int = 0,
     val byMedicine: List<ProfitByMedicine> = emptyList(),
     val byCategory: List<ProfitByCategory> = emptyList(),
     val daily: List<ProfitDaily> = emptyList()
 )
 
 // ---- Per-action request args ----
-data class MedicineArgs(val name: String, val category: String, val unit: String, val buyPrice: Int, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null, val wholesalePrice: Int = 0)
-data class UpdateMedicineArgs(val id: Int, val name: String, val category: String, val unit: String, val buyPrice: Int, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null, val wholesalePrice: Int = 0)
+data class MedicineArgs(val name: String, val category: String, val unit: String, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null, val wholesalePrice: Int = 0)
+data class UpdateMedicineArgs(val id: Int, val name: String, val category: String, val unit: String, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null, val wholesalePrice: Int = 0)
 data class BulkImportArgs(val items: List<MedicineArgs>)
 data class CreateSaleItemArgs(val medicineId: Int, val qty: Int, val useWholesale: Boolean = false)
 data class CreateSaleArgs(val items: List<CreateSaleItemArgs>, val paymentMethod: String, val amountPaid: Int)

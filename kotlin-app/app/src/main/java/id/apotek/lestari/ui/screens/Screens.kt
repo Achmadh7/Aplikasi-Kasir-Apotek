@@ -167,7 +167,7 @@ fun adaptiveSheetMaxWidth() = when {
 fun entranceDelay(index: Int) = (index * 40).coerceAtMost(400)
 
 
-/** Angka berhitung naik dari 0 (dipakai Pemasukan Hari Ini & Laba Kotor). */
+/** Angka berhitung naik dari 0 (dipakai Pemasukan Hari Ini & Laba). */
 @Composable
 fun AnimatedAmount(value: Int, style: TextStyle, color: Color, format: (Int) -> String = { formatIDR(it) }) {
     var shown by remember { mutableStateOf(0) }

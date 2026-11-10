@@ -200,7 +200,6 @@ class Repository {
 
     suspend fun createMedicine(args: MedicineArgs): ApiResult<IdResponse> = call {
         if (args.name.isBlank()) throw IllegalArgumentException(tr("Nama obat tidak boleh kosong", "Medicine name must not be empty"))
-        if (args.buyPrice <= 0) throw IllegalArgumentException(tr("Harga beli harus lebih dari 0", "Buy price must be more than 0"))
         if (args.sellPrice <= 0) throw IllegalArgumentException(tr("Harga jual harus lebih dari 0", "Sell price must be more than 0"))
         val dao = DatabaseProvider.db.medicineDao()
         val barcode = args.barcode?.trim().orEmpty().ifBlank { null }
@@ -216,7 +215,7 @@ class Repository {
                 dao.update(
                     dup.copy(
                         name = args.name, category = args.category, unit = args.unit,
-                        buyPrice = args.buyPrice, sellPrice = args.sellPrice,
+                        sellPrice = args.sellPrice,
                         wholesalePrice = args.wholesalePrice, stock = args.stock,
                         expiryDate = args.expiryDate, terhapus = 0,
                         updatedAt = nowMillis(), kotor = 1
@@ -228,7 +227,7 @@ class Repository {
         val id = dao.insert(
             MedicineEntity(
                 name = args.name, category = args.category, unit = args.unit,
-                buyPrice = args.buyPrice, sellPrice = args.sellPrice,
+                buyPrice = 0, sellPrice = args.sellPrice,
                 wholesalePrice = args.wholesalePrice,
                 stock = args.stock,
                 expiryDate = args.expiryDate, barcode = barcode, createdAt = nowIso(),
@@ -240,7 +239,6 @@ class Repository {
 
     suspend fun updateMedicine(args: UpdateMedicineArgs): ApiResult<OkResponse> = call {
         if (args.name.isBlank()) throw IllegalArgumentException(tr("Nama obat tidak boleh kosong", "Medicine name must not be empty"))
-        if (args.buyPrice <= 0) throw IllegalArgumentException(tr("Harga beli harus lebih dari 0", "Buy price must be more than 0"))
         if (args.sellPrice <= 0) throw IllegalArgumentException(tr("Harga jual harus lebih dari 0", "Sell price must be more than 0"))
         val dao = DatabaseProvider.db.medicineDao()
         val barcode = args.barcode?.trim().orEmpty().ifBlank { null }
@@ -254,7 +252,7 @@ class Repository {
         val changed = dao.update(
             MedicineEntity(
                 id = args.id, name = args.name, category = args.category, unit = args.unit,
-                buyPrice = args.buyPrice, sellPrice = args.sellPrice,
+                buyPrice = old?.buyPrice ?: 0, sellPrice = args.sellPrice,
                 wholesalePrice = args.wholesalePrice,
                 stock = args.stock,
                 expiryDate = args.expiryDate, barcode = barcode,
@@ -287,7 +285,7 @@ class Repository {
                     skipped++
                     continue
                 }
-                if (item.buyPrice <= 0 || item.sellPrice <= 0) {
+                if (item.sellPrice <= 0) {
                     skipped++
                     continue
                 }
@@ -307,7 +305,7 @@ class Repository {
                     dao.update(
                         existing.copy(
                             name = item.name, category = item.category, unit = item.unit,
-                            buyPrice = item.buyPrice, sellPrice = item.sellPrice,
+                            sellPrice = item.sellPrice,
                             // Harga grosir dari file dipakai bila terisi (> 0);
                             // file lama tanpa kolom itu / sel kosong TIDAK
                             // menghapus harga grosir yang sudah tersimpan.
@@ -324,7 +322,7 @@ class Repository {
                     dao.insert(
                         MedicineEntity(
                             name = item.name, category = item.category, unit = item.unit,
-                            buyPrice = item.buyPrice, sellPrice = item.sellPrice,
+                            buyPrice = 0, sellPrice = item.sellPrice,
                             wholesalePrice = item.wholesalePrice,
                             stock = item.stock,
                             expiryDate = item.expiryDate, barcode = barcode, createdAt = nowIso(),
@@ -401,7 +399,7 @@ class Repository {
                 lines.map {
                     SaleItemEntity(
                         saleId = saleId, medicineId = it.med.id, medicineName = it.med.name,
-                        qty = it.qty, price = it.unitPrice, priceType = it.priceType, buyPrice = it.med.buyPrice,
+                        qty = it.qty, price = it.unitPrice, priceType = it.priceType, buyPrice = 0,
                         subtotal = it.subtotal, category = it.med.category, unit = it.med.unit,
                         remoteId = genRemoteId("jualitem"), updatedAt = nowMillis()
                     )
@@ -500,52 +498,39 @@ class Repository {
         val periodSaleIds = periodSales.map { it.id }.toSet()
         val periodItems = items.filter { it.saleId in periodSaleIds }
 
-        // Biaya tiap item: HANYA snapshot harga beli saat transaksi.
-        // Kalau snapshot 0 (mis. obat dibuat sebelum snapshot dicatat),
-        // biayanya 0 dan item dihitung di costMissingQty — jangan fallback
-        // ke harga beli saat ini, karena itu mengubah laba histori.
-        fun costOf(it: SaleItemEntity): Int =
-            if (it.buyPrice > 0) it.buyPrice else 0
-
+        // Sejak Harga Beli dihapus total (permintaan Achmad
+        // 2026-11-10), laporan ini tanpa modal/HPP: Laba Bersih =
+        // Penjualan - Biaya Operasional, dan marginPct = margin bersih.
         val revenue = periodItems.sumOf { it.subtotal }
-        val hpp = periodItems.sumOf { costOf(it) * it.qty }
-        val grossProfit = revenue - hpp
-        val marginPct = marginPctOf(revenue, grossProfit)
         val itemsSold = periodItems.sumOf { it.qty }
-        val costMissingQty = periodItems.filter { costOf(it) == 0 }.sumOf { it.qty }
 
         val periodOut = entries.filter { it.type == "out" && inPeriod(it.createdAt) }
         val operationalExpense = periodOut.filter { !it.category.trim().equals("Beli Stok", ignoreCase = true) }.sumOf { it.amount }
         val stockPurchaseExpense = periodOut.filter { it.category.trim().equals("Beli Stok", ignoreCase = true) }.sumOf { it.amount }
-        val netProfit = grossProfit - operationalExpense
+        val netProfit = revenue - operationalExpense
+        val marginPct = marginPctOf(revenue, netProfit)
 
-        data class Agg(var qty: Int = 0, var revenue: Int = 0, var hpp: Int = 0)
+        data class Agg(var qty: Int = 0, var revenue: Int = 0)
         val medAgg = linkedMapOf<Int, Agg>()
         val medName = mutableMapOf<Int, String>()
         val medCategory = mutableMapOf<Int, String>()
         val catAgg = linkedMapOf<String, Agg>()
         for (it in periodItems) {
-            val cost = costOf(it) * it.qty
             val category = medById[it.medicineId]?.category ?: "Lainnya"
             val cur = medAgg.getOrPut(it.medicineId) { Agg() }
-            cur.qty += it.qty; cur.revenue += it.subtotal; cur.hpp += cost
+            cur.qty += it.qty; cur.revenue += it.subtotal
             // Nama tampilan: nama obat saat ini, fallback ke snapshot nama item.
             medName[it.medicineId] = medById[it.medicineId]?.name ?: it.medicineName
             medCategory[it.medicineId] = category
             val cc = catAgg.getOrPut(category) { Agg() }
-            cc.qty += it.qty; cc.revenue += it.subtotal; cc.hpp += cost
+            cc.qty += it.qty; cc.revenue += it.subtotal
         }
-        fun withMargin(a: Agg) = ProfitAgg(
-            a.qty, a.revenue, a.hpp, a.revenue - a.hpp, marginPctOf(a.revenue, a.revenue - a.hpp)
-        )
         val byMedicine = medAgg.entries.map { (id, a) ->
-            val m = withMargin(a)
-            ProfitByMedicine(medName[id] ?: "", medCategory[id] ?: "Lainnya", m.qty, m.revenue, m.hpp, m.profit, m.marginPct)
-        }.sortedByDescending { it.profit }
+            ProfitByMedicine(medName[id] ?: "", medCategory[id] ?: "Lainnya", a.qty, a.revenue)
+        }.sortedByDescending { it.revenue }
         val byCategory = catAgg.entries.map { (category, a) ->
-            val m = withMargin(a)
-            ProfitByCategory(category, m.qty, m.revenue, m.hpp, m.profit, m.marginPct)
-        }.sortedByDescending { it.profit }
+            ProfitByCategory(category, a.qty, a.revenue)
+        }.sortedByDescending { it.revenue }
 
         // Laba harian untuk grafik: mengikuti periode, kecuali "Hari Ini" yang
         // tetap 7 hari terakhir supaya jelas (1 batang saja tidak memberi konteks
@@ -571,27 +556,32 @@ class Repository {
             val dayStart = jakartaDayStartMillis(-offset)
             val next = dayStart + 24L * 60 * 60 * 1000
             var rev = 0
-            var cost = 0
             for (it in items) {
                 val sale = saleById[it.saleId] ?: continue
                 val t = parseISODate(sale.createdAt)?.time ?: continue
                 if (t in dayStart until next) {
                     rev += it.subtotal
-                    cost += costOf(it) * it.qty
                 }
+            }
+            var opx = 0
+            for (e in entries) {
+                if (e.type != "out") continue
+                if (e.category.trim().equals("Beli Stok", ignoreCase = true)) continue
+                val t = parseISODate(e.createdAt)?.time ?: continue
+                if (t in dayStart until next) opx += e.amount
             }
             val date = Date(dayStart)
             // Label tanggal ("27 Okt") supaya tidak ambigu bila grafik panjang
             // (nama hari saja berulang); Keuangan tetap pakai dayLabelID.
-            ProfitDaily(dayKeyID(date), dayDateLabelID(date), rev, cost, rev - cost)
+            ProfitDaily(dayKeyID(date), dayDateLabelID(date), rev, rev - opx)
         }
 
         ProfitReport(
-            period = period, revenue = revenue, hpp = hpp, grossProfit = grossProfit,
+            period = period, revenue = revenue,
             marginPct = marginPct, operationalExpense = operationalExpense,
             stockPurchaseExpense = stockPurchaseExpense, netProfit = netProfit,
             transactionCount = periodSales.size, itemsSold = itemsSold,
-            costMissingQty = costMissingQty, byMedicine = byMedicine,
+            byMedicine = byMedicine,
             byCategory = byCategory, daily = daily
         )
     }

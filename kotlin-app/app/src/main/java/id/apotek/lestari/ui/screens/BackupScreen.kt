@@ -365,7 +365,7 @@ fun TentangScreen(onGoBackup: () -> Unit) {
     // mengikuti rilis dan tidak perlu disamakan manual lagi.
     val version = BuildConfig.VERSION_NAME
     // Versi skema Room saat ini (AppDatabase) — samakan bila migrasi menaikkannya.
-    val dbVersion = 12
+    val dbVersion = 14
     var showLicense by remember { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),

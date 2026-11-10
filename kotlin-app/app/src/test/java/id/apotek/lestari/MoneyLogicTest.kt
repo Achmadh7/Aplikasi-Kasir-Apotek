@@ -35,15 +35,15 @@ class MoneyLogicTest {
 
     private fun sampleBackup() = BackupData(
         medicines = listOf(
-            MedicineEntity(id = 1, name = "Paracetamol 500mg", category = "Pereda Nyeri", unit = "Strip", buyPrice = 8000, sellPrice = 12000, wholesalePrice = 10500, stock = 37, expiryDate = "2027-12-31", barcode = null, createdAt = "2026-10-26T00:15:00.000Z"),
-            MedicineEntity(id = 2, name = "Vitamin C 1000mg", category = "Vitamin", unit = "Botol", buyPrice = 35000, sellPrice = 50000, wholesalePrice = 0, stock = 13, expiryDate = null, barcode = "8991234567890", createdAt = "2026-10-26T00:16:00.000Z")
+            MedicineEntity(id = 1, name = "Paracetamol 500mg", category = "Pereda Nyeri", unit = "Strip", buyPrice = 0, sellPrice = 12000, wholesalePrice = 10500, stock = 37, expiryDate = "2027-12-31", barcode = null, createdAt = "2026-10-26T00:15:00.000Z"),
+            MedicineEntity(id = 2, name = "Vitamin C 1000mg", category = "Vitamin", unit = "Botol", buyPrice = 0, sellPrice = 50000, wholesalePrice = 0, stock = 13, expiryDate = null, barcode = "8991234567890", createdAt = "2026-10-26T00:16:00.000Z")
         ),
         sales = listOf(
             SaleEntity(id = 1, invoiceNo = "INV - 04/11/26", total = 136000, paymentMethod = "Tunai", amountPaid = 140000, changeAmount = 4000, createdAt = "2026-11-04T05:21:00.000Z")
         ),
         saleItems = listOf(
-            SaleItemEntity(id = 1, saleId = 1, medicineId = 1, medicineName = "Paracetamol 500mg", category = "Pereda Nyeri", unit = "Strip", qty = 3, price = 12000, priceType = "ECER", buyPrice = 8000, subtotal = 36000),
-            SaleItemEntity(id = 2, saleId = 1, medicineId = 2, medicineName = "Vitamin C 1000mg", category = "Vitamin", unit = "Botol", qty = 2, price = 50000, priceType = "GROSIR", buyPrice = 35000, subtotal = 100000)
+            SaleItemEntity(id = 1, saleId = 1, medicineId = 1, medicineName = "Paracetamol 500mg", category = "Pereda Nyeri", unit = "Strip", qty = 3, price = 12000, priceType = "ECER", buyPrice = 0, subtotal = 36000),
+            SaleItemEntity(id = 2, saleId = 1, medicineId = 2, medicineName = "Vitamin C 1000mg", category = "Vitamin", unit = "Botol", qty = 2, price = 50000, priceType = "GROSIR", buyPrice = 0, subtotal = 100000)
         ),
         cashEntries = listOf(
             CashEntryEntity(id = 1, type = "in", category = "Penjualan", description = "INV - 04/11/26", amount = 136000, source = "sale", createdAt = "2026-11-04T05:21:00.000Z")
@@ -138,7 +138,6 @@ class MoneyLogicTest {
         assertEquals("Paracetamol 500mg", first.name)
         assertEquals("Pereda Nyeri", first.category)
         assertEquals("Strip", first.unit)
-        assertEquals(8000, first.buyPrice)
         assertEquals(12000, first.sellPrice)
         assertEquals(10500, first.wholesalePrice)
         assertEquals(37, first.stock)

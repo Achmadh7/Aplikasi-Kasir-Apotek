@@ -52,7 +52,6 @@ object BackupHelper {
             o.put("name", m.name)
             o.put("category", m.category)
             o.put("unit", m.unit)
-            o.put("buyPrice", m.buyPrice)
             o.put("sellPrice", m.sellPrice)
             o.put("wholesalePrice", m.wholesalePrice)
             o.put("stock", m.stock)
@@ -93,7 +92,6 @@ object BackupHelper {
             o.put("qty", it.qty)
             o.put("price", it.price)
             o.put("priceType", it.priceType)
-            o.put("buyPrice", it.buyPrice)
             o.put("subtotal", it.subtotal)
             o.put("remoteId", it.remoteId)
             o.put("updatedAt", it.updatedAt)
@@ -184,7 +182,7 @@ object BackupHelper {
                         name = reqString(o, "name", label),
                         category = o.optString("category", "Umum"),
                         unit = o.optString("unit", "Strip"),
-                        buyPrice = reqInt(o, "buyPrice", label),
+                        buyPrice = o.optInt("buyPrice", 0),
                         sellPrice = reqInt(o, "sellPrice", label),
                         wholesalePrice = o.optInt("wholesalePrice", 0),
                         stock = reqInt(o, "stock", label),
@@ -248,7 +246,7 @@ object BackupHelper {
                         qty = qty,
                         price = price,
                         priceType = o.optString("priceType", "ECER"),
-                        buyPrice = reqInt(o, "buyPrice", label),
+                        buyPrice = o.optInt("buyPrice", 0),
                         subtotal = subtotal,
                         remoteId = o.optString("remoteId", ""),
                         updatedAt = o.optLong("updatedAt", 0)

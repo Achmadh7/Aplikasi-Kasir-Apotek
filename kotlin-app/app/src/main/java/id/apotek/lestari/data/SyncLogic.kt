@@ -53,7 +53,6 @@ object SyncLogic {
         put("name", e.name)
         put("category", e.category)
         put("unit", e.unit)
-        put("buyPrice", e.buyPrice.toLong())
         put("sellPrice", e.sellPrice.toLong())
         put("wholesalePrice", e.wholesalePrice.toLong())
         put("stock", e.stock.toLong())
@@ -69,7 +68,7 @@ object SyncLogic {
             name = m.teksWajib("name"),
             category = m.teks("category") ?: "Umum",
             unit = m.teks("unit") ?: "Strip",
-            buyPrice = m.int("buyPrice"),
+            buyPrice = 0,
             sellPrice = m.int("sellPrice"),
             wholesalePrice = m.int("wholesalePrice"),
             stock = m.int("stock"),
@@ -123,7 +122,6 @@ object SyncLogic {
             put("qty", e.qty.toLong())
             put("price", e.price.toLong())
             put("priceType", e.priceType)
-            put("buyPrice", e.buyPrice.toLong())
             put("subtotal", e.subtotal.toLong())
         }
 
@@ -145,7 +143,7 @@ object SyncLogic {
             qty = m.int("qty"),
             price = m.int("price"),
             priceType = m.teks("priceType") ?: "ECER",
-            buyPrice = m.int("buyPrice"),
+            buyPrice = 0,
             subtotal = m.int("subtotal"),
             remoteId = remoteId,
             updatedAt = m.angka("updatedAt"),

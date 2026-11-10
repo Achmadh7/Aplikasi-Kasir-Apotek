@@ -38,7 +38,7 @@ An Android app for pharmacies: sales cashier, medicine stock, cash book, profit 
 - **Kasir (Cashier)** — shopping cart with one combined total + payment-method panel, Cash/QRIS/Transfer payments, large quick-amount cards for cash received (exact amount or the next 50k round-ups, each showing its change), per-medicine Retail/Wholesale (Ecer/Grosir) pricing, and receipts carrying the "Semoga Cepat Sembuh" (get well soon) message.
 - **Stok Obat (Medicine Stock)** — stock status Safe (16+) / Medium (10–15) / Low (1–9) / Out of stock (0), search & status filters, Excel import/export/template.
 - **Keuangan (Finance)** — cash balance, cash in/out entries (Catat Kas), and a 7-day cash-flow chart.
-- **Laporan Laba (Profit Report)** — side-by-side gross/net profit cards with margins, a revenue/cost/expense breakdown, and a daily chart per period.
+- **Laporan Laba (Profit Report)** — side-by-side revenue and net-profit cards (net = revenue − operating costs, shown with its net margin), a revenue/expense breakdown, and a daily net-profit chart per period. The app deliberately does not track buy prices, so there is no COGS/HPP figure.
 - **Obat Terlaris (Best-Selling Medicines)** — medicine ranking by units sold.
 - **Pengingat (Reminders)** — low/out-of-stock medicines, medicines nearing expiry, and distributor bills nearing their due date.
 - **Riwayat Penjualan (Sales History)** — daily history, invoice details, receipt sharing/printing.

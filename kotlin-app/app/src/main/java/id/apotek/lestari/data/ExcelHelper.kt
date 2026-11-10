@@ -23,8 +23,10 @@ import java.util.TimeZone
  * Formatnya sama dengan template web app (Aplikasi Apotik Lestari), jadi satu
  * file bisa dipakai di keduanya.
  *
- * Kolom: Nama Obat | Kategori | Satuan | Harga Beli | Harga Jual |
+ * Kolom: Nama Obat | Kategori | Satuan | Harga Jual |
  * Harga Jual Grosir | Stok | Tanggal Kadaluarsa (YYYY-MM-DD)
+ * (Harga Beli dihapus total 2026-11-10; file lama yang masih punya
+ * kolom itu tetap bisa diimpor — kolomnya diabaikan.)
  */
 object ExcelHelper {
     const val MIME_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -33,13 +35,13 @@ object ExcelHelper {
 
     val HEADERS = arrayOf(
         "Nama Obat", "Kategori", "Satuan",
-        "Harga Beli", "Harga Jual", "Harga Jual Grosir", "Stok", "Tanggal Kadaluarsa"
+        "Harga Jual", "Harga Jual Grosir", "Stok", "Tanggal Kadaluarsa"
     )
 
     private val TEMPLATE_EXAMPLES = listOf(
-        arrayOf<Any>("Paracetamol 500mg", "Pereda Nyeri", "Strip", 8000, 12000, 10500, 50, "2027-12-31"),
-        arrayOf<Any>("Amoxicillin 500mg", "Antibiotik", "Strip", 15000, 22000, 19000, 30, "2026-11-30"),
-        arrayOf<Any>("Vitamin C 1000mg", "Vitamin", "Botol", 35000, 50000, 42000, 20, "2028-06-30"),
+        arrayOf<Any>("Paracetamol 500mg", "Pereda Nyeri", "Strip", 12000, 10500, 50, "2027-12-31"),
+        arrayOf<Any>("Amoxicillin 500mg", "Antibiotik", "Strip", 22000, 19000, 30, "2026-11-30"),
+        arrayOf<Any>("Vitamin C 1000mg", "Vitamin", "Botol", 50000, 42000, 20, "2028-06-30"),
     )
 
     private val PETUNJUK = listOf(
@@ -51,7 +53,7 @@ object ExcelHelper {
         "3. Kolom wajib: Nama Obat. Kolom lain boleh kosong (akan diisi nilai bawaan).",
         "   - Kategori: Umum, Obat Bebas, Obat Bebas Terbatas, Obat Keras, Antibiotik, Vitamin, Pereda Nyeri, Obat Batuk & Flu, Pencernaan, Kulit, Mata, Lainnya",
         "   - Satuan: Strip, Botol, Vial, Ampul, Box, Tablet, Kapsul, Tube, Drop, Sachet, Pcs",
-        "   - Harga Beli & Harga Jual: angka saja, contoh 12000 (tanpa Rp / titik)",
+        "   - Harga Jual: angka saja, contoh 12000 (tanpa Rp / titik)",
         "   - Harga Jual Grosir: harga khusus pembelian banyak (boleh kosong = tidak ada harga grosir)",
         "   - Stok: angka bulat",
         "   - Tanggal Kadaluarsa: format YYYY-MM-DD, contoh 2027-12-31 (boleh kosong)",
@@ -66,7 +68,7 @@ object ExcelHelper {
         val rows = if (medicines.isEmpty()) TEMPLATE_EXAMPLES else medicines.map { m ->
             arrayOf<Any>(
                 m.name, m.category, m.unit,
-                m.buyPrice, m.sellPrice, m.wholesalePrice, m.stock, m.expiryDate ?: ""
+                m.sellPrice, m.wholesalePrice, m.stock, m.expiryDate ?: ""
             )
         }
         buildStockSheet(wb, rows)
@@ -82,7 +84,7 @@ object ExcelHelper {
         val rows = medicines.map { m ->
             arrayOf<Any>(
                 m.name, m.category, m.unit,
-                m.buyPrice, m.sellPrice, m.wholesalePrice, m.stock, m.expiryDate ?: ""
+                m.sellPrice, m.wholesalePrice, m.stock, m.expiryDate ?: ""
             )
         }
         buildStockSheet(wb, rows)
@@ -126,7 +128,7 @@ object ExcelHelper {
                     if (row.rowNum == 0) continue
                     val name = text(row, "Nama Obat", 0)
                     if (name.isBlank()) {
-                        val anyValue = (0..7).any { text(row, HEADERS[it], it).isNotEmpty() }
+                        val anyValue = (0..6).any { text(row, HEADERS[it], it).isNotEmpty() }
                         if (anyValue) skipped.add(row.rowNum + 1)
                         continue
                     }
@@ -138,10 +140,9 @@ object ExcelHelper {
                     val unit = text(row, "Satuan", 2).ifBlank { "Strip" }
                     // A7: angka rusak (null dari parser) jangan diam-diam jadi 0 —
                     // baris dilewati dan dicatat di skippedRows.
-                    val buy = text(row, "Harga Beli", 3).toIntOrNullStrict()
-                    val sell = text(row, "Harga Jual", 4).toIntOrNullStrict()
-                    val stock = text(row, "Stok", 6).toIntOrNullStrict()
-                    if (buy == null || sell == null || stock == null) {
+                    val sell = text(row, "Harga Jual", 3).toIntOrNullStrict()
+                    val stock = text(row, "Stok", 5).toIntOrNullStrict()
+                    if (sell == null || stock == null) {
                         skipped.add(row.rowNum + 1)
                         continue
                     }
@@ -153,23 +154,23 @@ object ExcelHelper {
                     // kolom), jadi file lama akan mengisi harga grosir palsu
                     // (bug N1, audit 2026-10-30).
                     val grosir = if (colIndex.containsKey("harga jual grosir")) {
-                        text(row, "Harga Jual Grosir", 5).toIntOrNullStrict() ?: 0
+                        text(row, "Harga Jual Grosir", 4).toIntOrNullStrict() ?: 0
                     } else {
                         0
                     }
                     // C7: tanggal terisi tapi tidak bisa diparse -> baris dilewati;
                     // tanggal kosong -> null (boleh).
-                    val expiryRaw = text(row, "Tanggal Kadaluarsa", 7)
+                    val expiryRaw = text(row, "Tanggal Kadaluarsa", 6)
                     val expiry = if (expiryRaw.isBlank()) {
                         null
                     } else {
-                        readExpiry(row, idx("Tanggal Kadaluarsa", 7), formatter)
+                        readExpiry(row, idx("Tanggal Kadaluarsa", 6), formatter)
                     }
                     if (expiryRaw.isNotBlank() && expiry == null) {
                         skipped.add(row.rowNum + 1)
                         continue
                     }
-                    items.add(MedicineArgs(name, category, unit, buy, sell, stock, expiry, wholesalePrice = grosir))
+                    items.add(MedicineArgs(name, category, unit, sell, stock, expiry, wholesalePrice = grosir))
                 }
             } finally {
                 wb.close()

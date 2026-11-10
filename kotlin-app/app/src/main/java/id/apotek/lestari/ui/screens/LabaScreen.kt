@@ -192,11 +192,12 @@ fun LabaScreen() {
                         expandVertically(animationSpec = tween(300, entranceDelay(1), FastOutSlowInEasing)),
                     exit = fadeOut()
                 ) {
-                // Desain LP4 (pilihan Achmad 2026-11-04): Laba Kotor dan
-                // Laba Bersih jadi DUA kartu hero sejajar \u2014 biru primer dan
-                // hijau \u2014 menggantikan hero tunggal + grid statistik 2x2.
-                // Angka tetap formatIDR penuh lewat AnimatedAmount
-                // (headlineSmall supaya muat di kartu setengah lebar).
+                // Desain LP4 (pilihan Achmad 2026-11-04): DUA kartu hero
+                // sejajar, biru primer dan hijau. Sejak Harga Beli dihapus
+                // total (2026-11-10) kartu biru berisi PENJUALAN (bukan lagi
+                // Laba Kotor) dan kartu hijau LABA BERSIH = Penjualan -
+                // Biaya Operasional. Angka formatIDR penuh lewat
+                // AnimatedAmount (headlineSmall supaya muat).
                 val netMarginPct = if (r.revenue > 0) r.netProfit * 100.0 / r.revenue else 0.0
                 val bersihDark = LocalIsDarkTheme.current
                 val bersihBg = if (bersihDark) Color(0xFF163428) else Color(0xFFDFF2E4)
@@ -206,11 +207,11 @@ fun LabaScreen() {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                     ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.weight(1f).animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                            Text(tr("LABA KOTOR", "GROSS PROFIT"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text(tr("PENJUALAN", "REVENUE"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceS))
-                            AnimatedAmount(r.grossProfit, MaterialTheme.typography.headlineSmall, Color.White)
+                            AnimatedAmount(r.revenue, MaterialTheme.typography.headlineSmall, Color.White)
                             Spacer(Modifier.height(SpaceXS))
-                            Text("Margin ${marginTextID(r.marginPct)}%", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+                            Text(tr("${r.itemsSold} item terjual", "${r.itemsSold} items sold"), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = bersihBg, modifier = Modifier.weight(1f).animateContentSize(animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))) {
@@ -235,12 +236,11 @@ fun LabaScreen() {
                 ) {
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        // Rincian LP4: tiga baris label-nilai (Penjualan,
-                        // Modal, Biaya Operasional). Laba Bersih tidak
-                        // diulang di sini \u2014 sudah naik ke kartu hero hijau.
+                        // Rincian LP4: baris label-nilai (Penjualan,
+                        // Biaya Operasional). Laba Bersih tidak diulang di
+                        // sini, sudah naik ke kartu hero hijau.
                         val detailRows = listOf(
                             tr("Penjualan", "Revenue") to formatIDR(r.revenue),
-                            tr("Modal (HPP)", "Cost (COGS)") to formatIDR(r.hpp),
                             tr("Biaya Operasional", "Operating Costs") to formatIDR(r.operationalExpense)
                         )
                         detailRows.forEachIndexed { index, (label, value) ->
@@ -258,28 +258,6 @@ fun LabaScreen() {
                 }
                 }
             }
-            if (r.costMissingQty > 0) {
-                item {
-                    AnimatedVisibility(
-                        visible = listEntered,
-                        enter = fadeIn(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)) +
-                            slideInVertically(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)) { it / 3 } +
-                            expandVertically(animationSpec = tween(300, entranceDelay(3), FastOutSlowInEasing)),
-                        exit = fadeOut()
-                    ) {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
-                            Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                tr("Ada ${r.costMissingQty} item terjual yang harga belinya tidak diketahui (obat sudah dihapus dari stok), jadi laba untuk item tersebut terhitung lebih besar dari seharusnya.", "${r.costMissingQty} sold items have an unknown buy price (the medicine was deleted from stock), so their profit is counted higher than it should be."),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                    }
-                }
-            }
             item {
                 AnimatedVisibility(
                     visible = listEntered,
@@ -293,10 +271,10 @@ fun LabaScreen() {
                         // Judul grafik mengikuti periode; "Hari Ini" menampilkan
                         // 7 hari terakhir (judulnya pun demikian).
                         val chartTitle = when (period) {
-                            "today" -> tr("Laba Kotor 7 Hari Terakhir", "Gross Profit - Last 7 Days")
-                            "month" -> tr("Laba Kotor Bulan Ini", "Gross Profit - This Month")
-                            "last30" -> tr("Laba Kotor 30 Hari Terakhir", "Gross Profit - Last 30 Days")
-                            else -> tr("Laba Kotor Semua", "Gross Profit - All Time")
+                            "today" -> tr("Laba Bersih 7 Hari Terakhir", "Net Profit - Last 7 Days")
+                            "month" -> tr("Laba Bersih Bulan Ini", "Net Profit - This Month")
+                            "last30" -> tr("Laba Bersih 30 Hari Terakhir", "Net Profit - Last 30 Days")
+                            else -> tr("Laba Bersih Semua", "Net Profit - All Time")
                         }
                         Text(chartTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(SpaceL))

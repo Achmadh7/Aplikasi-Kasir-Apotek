@@ -48,7 +48,7 @@ class SyncLogicTest {
         assertEquals(0, hasil.id)
         assertEquals(asal.name, hasil.name)
         assertEquals(asal.category, hasil.category)
-        assertEquals(asal.buyPrice, hasil.buyPrice)
+        assertEquals(0, hasil.buyPrice) // Harga Beli tidak lagi disinkron (dihapus total 2026-11-10)
         assertEquals(asal.sellPrice, hasil.sellPrice)
         assertEquals(asal.wholesalePrice, hasil.wholesalePrice)
         assertEquals(asal.stock, hasil.stock)

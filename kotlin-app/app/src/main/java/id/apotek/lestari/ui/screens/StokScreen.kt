@@ -492,7 +492,7 @@ fun StokScreen() {
                         }
                         Spacer(Modifier.height(SpaceXS))
                         Text(
-                            tr("${m.category} • ${m.unit} • Jual ${formatIDR(m.sellPrice)} • Beli ${formatIDR(m.buyPrice)}", "${m.category} • ${m.unit} • Sell ${formatIDR(m.sellPrice)} • Buy ${formatIDR(m.buyPrice)}") +
+                            tr("${m.category} • ${m.unit} • Jual ${formatIDR(m.sellPrice)}", "${m.category} • ${m.unit} • Sell ${formatIDR(m.sellPrice)}") +
                                 if (m.expiryDate != null) " • Exp ${formatDateID(m.expiryDate)}" else "",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -567,7 +567,7 @@ fun StokScreen() {
                                 repo.createMedicine(
                                     MedicineArgs(
                                         target.name, target.category, target.unit,
-                                        target.buyPrice, target.sellPrice, target.stock,
+                                        target.sellPrice, target.stock,
                                         target.expiryDate, target.barcode,
                                         wholesalePrice = target.wholesalePrice
                                     )
@@ -610,7 +610,7 @@ fun StokScreen() {
                                     repo.createMedicine(
                                         MedicineArgs(
                                             it.name, it.category, it.unit,
-                                            it.buyPrice, it.sellPrice, it.stock,
+                                            it.sellPrice, it.stock,
                                             it.expiryDate, it.barcode,
                                             wholesalePrice = it.wholesalePrice
                                         )
@@ -692,7 +692,6 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
     LaunchedEffect(expiryInteraction) {
         expiryInteraction.interactions.collect { if (it is PressInteraction.Press) showDatePicker = true }
     }
-    var buy by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.buyPrice?.toString() ?: ""))) }
     var sell by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.sellPrice?.toString() ?: ""))) }
     // Harga jual grosir: boleh kosong (= belum diatur, nilai 0); ditampilkan
     // kosong bila 0 supaya tidak tertukar dengan harga beneran.
@@ -744,7 +743,6 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                     Text(tr("HARGA", "PRICE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    OutlinedTextField(buy, { buy = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Beli", "Buy Price")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(sell, { sell = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Jual", "Sell Price")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(grosir, { grosir = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Jual Grosir (boleh kosong)", "Wholesale Sell Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
@@ -777,7 +775,6 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                         scope.launch {
                             val cat = category.ifBlank { "Umum" }
                             val unt = unit.ifBlank { "Strip" }
-                            val b = parseDecimal(buy.text)
                             val s = parseDecimal(sell.text)
                             val st = stock.toIntOrNull() ?: 0
                             val exp = expiry.ifBlank { null }
@@ -787,9 +784,9 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                             // supaya pencocokan impor berikutnya tidak rusak.
                             val bc = editing?.barcode
                             val result = if (editing == null) {
-                                repo.createMedicine(MedicineArgs(name, cat, unt, b, s, st, exp, bc, wholesalePrice = parseDecimal(grosir.text)))
+                                repo.createMedicine(MedicineArgs(name, cat, unt, s, st, exp, bc, wholesalePrice = parseDecimal(grosir.text)))
                             } else {
-                                repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, b, s, st, exp, bc, wholesalePrice = parseDecimal(grosir.text)))
+                                repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, s, st, exp, bc, wholesalePrice = parseDecimal(grosir.text)))
                             }
                             if (result is ApiResult.Success) {
                                 onSaved()
@@ -798,7 +795,7 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                             }
                         }
                     },
-                    enabled = name.isNotBlank() && parseDecimal(buy.text) > 0 && parseDecimal(sell.text) > 0,
+                    enabled = name.isNotBlank() && parseDecimal(sell.text) > 0,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.weight(1f).height(52.dp)
