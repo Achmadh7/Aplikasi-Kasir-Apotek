@@ -151,8 +151,9 @@ fun adaptiveSheetMaxWidth() = when {
 // ---------- Header nama layar N2 solid gelap premium (pilihan Achmad
 // 2026-11-10, menggantikan K3 gradasi): batang navy nyaris hitam yang
 // tetap sama di kedua mode tema (satu keluarga dengan gerbang masuk
-// M2), garis tepi halus, ikon menu dalam kotak putih membulat, judul
-// putih ExtraBold. Dipakai semua layar selain Beranda (Beranda memakai
+// M2), garis tepi halus, ikon menu dalam kotak tonal navy #1B385C
+// berikon biru muda (I2, pilihan Achmad 2026-11-10), judul putih
+// ExtraBold. Dipakai semua layar selain Beranda (Beranda memakai
 // varian logo + tombol awan sinkron) dan Lainnya (identitas L1). -------
 
 /** Warna batang header N2 (tetap di dua mode). */
@@ -170,8 +171,8 @@ fun KartuHeaderPremium(judul: String, ikon: ImageVector, subjudul: String? = nul
             Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(46.dp)) {
-                Icon(ikon, null, tint = Color(0xFF16324F), modifier = Modifier.padding(11.dp).fillMaxSize())
+            Surface(color = Color(0xFF1B385C), shape = RoundedCornerShape(12.dp), modifier = Modifier.size(46.dp)) {
+                Icon(ikon, null, tint = Color(0xFF9FCAFF), modifier = Modifier.padding(11.dp).fillMaxSize())
             }
             Spacer(Modifier.width(12.dp))
             Column {
