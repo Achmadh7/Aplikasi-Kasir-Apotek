@@ -225,7 +225,11 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             Text(tr("Beranda", "Home"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1)
             Spacer(Modifier.height(SpaceL))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Spacer(Modifier.height(SpaceL))
+            // Jarak garis -> panel ringkasan dirapatkan (laporan Achmad
+            // 2026-11-10: celah di bawah garis ke pemilih Hari Ini/Bulan
+            // Ini terlalu jauh). Totalnya kini 4dp di sini + 20dp jarak
+            // antar item LazyColumn.
+            Spacer(Modifier.height(SpaceXS))
             DemoBanner()
             }
             }
