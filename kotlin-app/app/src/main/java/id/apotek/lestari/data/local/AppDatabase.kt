@@ -203,6 +203,9 @@ interface MedicineDao {
     @Query("UPDATE medicines SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
     suspend fun tandaiBersih(remoteId: String, updatedAt: Long): Int
 
+    @Query("UPDATE medicines SET kotor = 1")
+    suspend fun tandaiSemuaKotor(): Int
+
     @Query("DELETE FROM medicines WHERE terhapus = 1 AND kotor = 0")
     suspend fun purge(): Int
 
@@ -236,6 +239,9 @@ interface SaleDao {
     @Query("UPDATE sales SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
     suspend fun tandaiBersih(remoteId: String, updatedAt: Long): Int
 
+    @Query("UPDATE sales SET kotor = 1")
+    suspend fun tandaiSemuaKotor(): Int
+
     @Query("DELETE FROM sales WHERE terhapus = 1 AND kotor = 0")
     suspend fun purge(): Int
 
@@ -259,6 +265,9 @@ interface SaleDao {
 
     @Query("UPDATE sale_items SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
     suspend fun tandaiBersihItem(remoteId: String, updatedAt: Long): Int
+
+    @Query("UPDATE sale_items SET kotor = 1")
+    suspend fun tandaiSemuaKotorItem(): Int
 
     @Query("DELETE FROM sale_items WHERE terhapus = 1 AND kotor = 0")
     suspend fun purgeItems(): Int
@@ -293,6 +302,9 @@ interface CashDao {
 
     @Query("UPDATE cash_entries SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
     suspend fun tandaiBersih(remoteId: String, updatedAt: Long): Int
+
+    @Query("UPDATE cash_entries SET kotor = 1")
+    suspend fun tandaiSemuaKotor(): Int
 
     @Query("DELETE FROM cash_entries WHERE terhapus = 1 AND kotor = 0")
     suspend fun purge(): Int
@@ -352,8 +364,14 @@ interface PurchaseDao {
     @Query("UPDATE purchases SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
     suspend fun tandaiBersih(remoteId: String, updatedAt: Long): Int
 
+    @Query("UPDATE purchases SET kotor = 1")
+    suspend fun tandaiSemuaKotor(): Int
+
     @Query("UPDATE purchase_items SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
     suspend fun tandaiBersihItem(remoteId: String, updatedAt: Long): Int
+
+    @Query("UPDATE purchase_items SET kotor = 1")
+    suspend fun tandaiSemuaKotorItem(): Int
 
     @Query("DELETE FROM purchases WHERE terhapus = 1 AND kotor = 0")
     suspend fun purge(): Int

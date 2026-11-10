@@ -823,6 +823,22 @@ class Repository {
         obatKotor().isNotEmpty() || penjualanKotor().isNotEmpty() || itemJualKotor().isNotEmpty() ||
             kasKotor().isNotEmpty() || pbfKotor().isNotEmpty() || itemPbfKotor().isNotEmpty()
 
+    /** Konsolidasi ganti akun (2026-11-10): tandai SEMUA baris kotor
+     * supaya sinkron berikutnya menaikkan seluruh isi lokal ke pohon
+     * awan akun yang baru masuk. Tanpa ini, baris yang sudah bersih di
+     * akun lama tidak pernah naik ke akun baru dan data awan terbelah
+     * mengikuti akun. updatedAt SENGAJA tidak diubah: adu mutakhir
+     * (last-write-wins) harus tetap jujur terhadap suntingan yang lebih
+     * baru dari perangkat lain di akun tujuan. */
+    suspend fun tandaiSemuaKotor() {
+        DatabaseProvider.db.medicineDao().tandaiSemuaKotor()
+        DatabaseProvider.db.saleDao().tandaiSemuaKotor()
+        DatabaseProvider.db.saleDao().tandaiSemuaKotorItem()
+        DatabaseProvider.db.cashDao().tandaiSemuaKotor()
+        DatabaseProvider.db.purchaseDao().tandaiSemuaKotor()
+        DatabaseProvider.db.purchaseDao().tandaiSemuaKotorItem()
+    }
+
     suspend fun obatByRemoteId(remoteId: String): MedicineEntity? =
         DatabaseProvider.db.medicineDao().getByRemoteId(remoteId)
 

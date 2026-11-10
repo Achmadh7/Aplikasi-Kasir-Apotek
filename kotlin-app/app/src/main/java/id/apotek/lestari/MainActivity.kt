@@ -263,6 +263,18 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
 
     LaunchedEffect(emailOnline) {
         if (emailOnline != null) {
+            // Konsolidasi ganti akun: bila akun yang masuk berbeda dari
+            // akun sinkron terakhir (atau belum pernah tercatat, mis.
+            // setelah pembaruan dari versi sebelum fitur ini), naikkan
+            // seluruh isi lokal ke akun ini supaya data awan tidak
+            // terbelah mengikuti akun. Penanda disimpan lebih dulu;
+            // baris yang gagal naik tetap kotor dan ikut putaran
+            // sinkron berikutnya.
+            val emailSebelumnya = onlinePrefs.getString("online_email_terakhir", null)
+            if (emailSebelumnya != emailOnline) {
+                repoOnline.tandaiSemuaKotor()
+                onlinePrefs.edit().putString("online_email_terakhir", emailOnline).apply()
+            }
             jadwalkanSyncBerkala(context)
             jalankanSync()
         } else if (onlineSiap) {
