@@ -8,6 +8,7 @@ import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.ui.text.style.TextAlign
@@ -23,6 +24,9 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -175,6 +179,24 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     }
     var syncTerakhir by remember { mutableLongStateOf(onlinePrefs.getLong("online_sync_terakhir", 0L)) }
     var sibukOnline by remember { mutableStateOf(false) }
+    // True hanya bila masuk Google-nya terjadi di sesi proses ini
+    // (lewat gerbang), bukan sesi lama yang tersimpan saat app
+    // dibuka - membedakan kabar sinkron saat buka app (pola yang
+    // sama seperti Kasir PlayStation).
+    var baruSajaMasuk by remember { mutableStateOf(false) }
+    // Lencana "Tersinkron" di atas-tengah (desain S12 warna N2):
+    // pengganti snackbar untuk kabar sinkron BERHASIL. Galat tetap
+    // lewat snackbar supaya pesannya terbaca utuh. Catatan: geser+
+    // memudar lencana ini satu animasi kecil di luar lima animasi
+    // yang dipulihkan - diminta Achmad eksplisit 2026-11-11
+    // ("implement kaya gini" mengikuti Kasir).
+    var tampilLencanaSync by remember { mutableStateOf(false) }
+    LaunchedEffect(tampilLencanaSync) {
+        if (tampilLencanaSync) {
+            delay(2600)
+            tampilLencanaSync = false
+        }
+    }
     var pesanOnline by remember { mutableStateOf<String?>(null) }
     var pesanStatus by remember { mutableStateOf<String?>(null) }
     var tampilInfoOnline by remember { mutableStateOf(false) }
@@ -184,11 +206,12 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     val snackbarHostState = remember { SnackbarHostState() }
     val perluLogin = onlineSiap && emailOnline == null && !lewatiLogin
 
-    // senyap = sinkron latar (otomatis): tanpa snackbar "Sinkronisasi
-    // selesai" — laporan Achmad 2026-11-10 bahwa notifikasinya muncul
-    // terus setiap sinkron otomatis berjalan. Status tetap terlihat
-    // dari ikon awan di Beranda. Sinkron manual & saat masuk tetap
-    // memberi kabar.
+    // senyap = sinkron latar (otomatis): tanpa kabar apa pun -
+    // laporan Achmad 2026-11-10 bahwa notifikasinya muncul terus
+    // setiap sinkron otomatis berjalan. Status tetap terlihat dari
+    // ikon awan di Beranda. Sinkron manual & saat masuk yang
+    // BERHASIL berkabar lewat lencana "Tersinkron" di atas-tengah;
+    // yang GAGAL tetap lewat snackbar.
     fun jalankanSync(senyap: Boolean = false) {
         if (!onlineSiap || emailOnline == null || statusSync == StatusSync.PROSES) return
         statusSync = StatusSync.PROSES
@@ -198,7 +221,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                     statusSync = StatusSync.BERHASIL
                     syncTerakhir = System.currentTimeMillis()
                     onlinePrefs.edit().putLong("online_sync_terakhir", syncTerakhir).apply()
-                    if (!senyap) pesanStatus = tr("Sinkronisasi selesai", "Sync complete")
+                    if (!senyap) tampilLencanaSync = true
                 }
                 is HasilSync.Gagal -> {
                     statusSync = StatusSync.GAGAL
@@ -255,6 +278,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             pesanOnline = null
             try {
                 emailOnline = FirebaseKit.masukDenganGoogle(context)
+                baruSajaMasuk = true
                 lewatiLogin = false
             } catch (e: Exception) {
                 pesanOnline = e.message ?: tr("Gagal masuk dengan Google", "Google sign-in failed")
@@ -279,7 +303,14 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 onlinePrefs.edit().putString("online_email_terakhir", emailOnline).apply()
             }
             jadwalkanSyncBerkala(context)
-            jalankanSync()
+            // Kabar sinkron hanya untuk masuk yang benar-benar baru
+            // (lewat gerbang) dan ketukan manual. Buka app dengan
+            // sesi tersimpan = sinkron senyap, supaya kabar itu
+            // tidak muncul di setiap app dibuka (permintaan Achmad
+            // 2026-11-11, pola yang sama seperti Kasir).
+            val bersuara = baruSajaMasuk
+            baruSajaMasuk = false
+            jalankanSync(senyap = !bersuara)
         } else if (onlineSiap) {
             statusSync = StatusSync.BELUM_MASUK
         }
@@ -494,6 +525,45 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 composable("terlaris", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { ObatTerlarisScreen() }
                 composable("pbf", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { PbfScreen() }
                 composable("tentang", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { TentangScreen(onGoBackup = { navDirection = 1; nav.navigate("backup") { launchSingleTop = true } }) }
+            }
+        }
+        // Lencana sinkron S12: pil WarnaHeaderN2 melayang di
+        // atas-tengah menimpa header, awan CloudDone cyan #40C4FF +
+        // teks "Tersinkron" (pasangan tr yang sama seperti ikon
+        // awan Beranda). Muncul 2,6 detik lalu hilang sendiri.
+        AnimatedVisibility(
+            visible = tampilLencanaSync,
+            enter = slideInVertically(tween(300)) { -it } + fadeIn(tween(300)),
+            exit = slideOutVertically(tween(250)) { -it } + fadeOut(tween(250)),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 10.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = WarnaHeaderN2,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+                shadowElevation = 6.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.CloudDone,
+                        contentDescription = null,
+                        tint = Color(0xFF40C4FF),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        tr("Tersinkron", "Synced"),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
