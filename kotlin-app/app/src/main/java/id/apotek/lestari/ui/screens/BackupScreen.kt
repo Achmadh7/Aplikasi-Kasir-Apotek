@@ -320,33 +320,11 @@ fun BackupScreen() {
 private fun formatBackupStamp(millis: Long): String =
     SimpleDateFormat("d MMM yyyy, HH.mm", appLocale()).format(Date(millis))
 
-/** Teks lengkap lisensi MIT (sama dengan file LICENSE di repo). */
-private const val MIT_LICENSE_TEXT = """MIT License
-
-Copyright (c) 2026 Achmad Hidayatullah
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE."""
 
 /** Tentang Aplikasi (desain T10, pilihan Achmad 2026-11-04): kartu
  *  identitas ramping, deskripsi polos tanpa kartu, dan baris pintasan
- *  aksi — Cadangkan Data membuka Backup & Restore, Lisensi membuka
- *  teks lengkap MIT, Versi Database adalah baris info. */
+ *  aksi — Cadangkan Data membuka Backup & Restore,
+ *  Versi Database adalah baris info. */
 @Composable
 fun TentangScreen(onGoBackup: () -> Unit) {
     // Versi dari BuildConfig (versionName di build.gradle.kts) — sejak
@@ -355,7 +333,6 @@ fun TentangScreen(onGoBackup: () -> Unit) {
     val version = BuildConfig.VERSION_NAME
     // Versi skema Room saat ini (AppDatabase) — samakan bila migrasi menaikkannya.
     val dbVersion = 14
-    var showLicense by remember { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 20.dp),
@@ -403,17 +380,6 @@ fun TentangScreen(onGoBackup: () -> Unit) {
             }
         }
         item {
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth().clickable { showLicense = true }) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(tr("Lisensi", "License"), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        Text(tr("MIT • ketuk untuk teks lengkap", "MIT • tap for the full text"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Icon(Icons.Default.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        item {
             // Baris info versi database (bukan aksi, tanpa chevron).
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -424,19 +390,5 @@ fun TentangScreen(onGoBackup: () -> Unit) {
                 }
             }
         }
-    }
-    if (showLicense) {
-        AlertDialog(
-            onDismissRequest = { showLicense = false },
-            title = { Text(tr("Lisensi MIT", "MIT License")) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text(MIT_LICENSE_TEXT, style = MaterialTheme.typography.bodySmall)
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showLicense = false }) { Text(tr("Tutup", "Close")) }
-            }
-        )
     }
 }
