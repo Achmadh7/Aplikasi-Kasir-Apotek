@@ -136,7 +136,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     // Database lokal (Room) — data tersimpan di HP, tanpa server
-    implementation("androidx.room:room-runtime:2.7.2")
+    implementation("androidx.room:room-runtime:2.8.5")
     implementation("androidx.room:room-ktx:2.7.2")
     ksp("androidx.room:room-compiler:2.7.2")
 
