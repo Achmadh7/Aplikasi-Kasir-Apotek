@@ -10,5 +10,5 @@ plugins {
     id("com.google.devtools.ksp") version "2.3.9" apply false
     // Mode Online (Firebase): plugin google-services HANYA diterapkan di
     // modul app bila file google-services.json ada (lihat app/build).
-    id("com.google.gms.google-services") version "4.4.2" apply false
+    id("com.google.gms.google-services") version "4.5.0" apply false
 }
