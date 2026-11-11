@@ -321,18 +321,29 @@ private fun formatBackupStamp(millis: Long): String =
     SimpleDateFormat("d MMM yyyy, HH.mm", appLocale()).format(Date(millis))
 
 
-/** Tentang Aplikasi (desain T10, pilihan Achmad 2026-11-04): kartu
- *  identitas ramping, deskripsi polos tanpa kartu, dan baris pintasan
- *  aksi — Cadangkan Data membuka Backup & Restore,
- *  Versi Database adalah baris info. */
+/** Tentang Aplikasi (desain T2 Satu Kartu Grup, pilihan Achmad
+ *  2026-11-11, menggantikan T10): SEMUA isi masuk satu kartu grup -
+ *  identitas di puncak, lalu deskripsi, versi aplikasi, versi
+ *  database, fitur utama, statistik langsung (jumlah obat dan
+ *  transaksi dari Repository), dan aksi Cadangkan Data di dasar,
+ *  masing-masing dipisah garis rambut. Versi database hanya tampil
+ *  di satu tempat (baris info), tidak lagi ganda di identitas. */
 @Composable
 fun TentangScreen(onGoBackup: () -> Unit) {
-    // Versi dari BuildConfig (versionName di build.gradle.kts) — sejak
+    // Versi dari BuildConfig (versionName di build.gradle.kts) \u2014 sejak
     // audit R2 (2026-11-04) buildConfig diaktifkan, jadi angka ini selalu
     // mengikuti rilis dan tidak perlu disamakan manual lagi.
     val version = BuildConfig.VERSION_NAME
-    // Versi skema Room saat ini (AppDatabase) — samakan bila migrasi menaikkannya.
+    // Versi skema Room saat ini (AppDatabase) \u2014 samakan bila migrasi menaikkannya.
     val dbVersion = 14
+    // Statistik langsung untuk grup info: dihitung dari data asli
+    // perangkat ini, kosong (tanda \u2013) sampai selesai dimuat.
+    var jumlahObat by remember { mutableStateOf<Int?>(null) }
+    var jumlahTransaksi by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(Unit) {
+        (repo.listMedicines() as? ApiResult.Success)?.let { jumlahObat = it.data.medicines.size }
+        (repo.listSales() as? ApiResult.Success)?.let { jumlahTransaksi = it.data.sales.size }
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 20.dp),
@@ -343,52 +354,92 @@ fun TentangScreen(onGoBackup: () -> Unit) {
             Spacer(Modifier.height(SpaceL))
         }
         item {
-            // Kartu identitas: logo kecil sejajar nama dan versi.
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val logo = rememberLogoBitmap()
-                    if (logo != null) {
-                        Surface(color = Color.White, shape = CircleShape, modifier = Modifier.size(56.dp)) {
-                            Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(6.dp).fillMaxSize())
+                Column(Modifier.fillMaxWidth()) {
+                    // Identitas: logo sejajar nama + tagline (versi pindah
+                    // ke baris info di bawah, tidak ganda).
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        val logo = rememberLogoBitmap()
+                        if (logo != null) {
+                            Surface(color = Color.White, shape = CircleShape, modifier = Modifier.size(56.dp)) {
+                                Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(6.dp).fillMaxSize())
+                            }
+                            Spacer(Modifier.width(14.dp))
                         }
-                        Spacer(Modifier.width(14.dp))
+                        Column {
+                            Text("Apotek Lestari", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                            Text(tr("Aplikasi kasir & manajemen stok obat", "Cashier & medicine stock management app"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
-                    Column {
-                        Text("Apotek Lestari", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
-                        Text(tr("Versi $version • Database $dbVersion", "Version $version • Database $dbVersion"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(tr("Aplikasi kasir & manajemen stok obat", "Cashier & medicine stock management app"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    PemisahGrupTentang()
+                    Text(
+                        tr("Aplikasi kasir dan manajemen stok obat untuk Apotek Lestari. Bekerja penuh tanpa internet; bila kamu masuk dengan Google, data tersinkron ke akunmu sebagai cadangan.", "A cashier and medicine stock management app for Apotek Lestari. Works fully offline; when you sign in with Google, your data syncs to your account as a backup."),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                    )
+                    PemisahGrupTentang()
+                    BarisInfoTentang(tr("Versi Aplikasi", "App Version"), version)
+                    PemisahGrupTentang()
+                    BarisInfoTentang(tr("Versi Database", "Database Version"), dbVersion.toString())
+                    PemisahGrupTentang()
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                        Text(tr("Fitur Utama", "Key Features"), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        val fitur = listOf(
+                            tr("Kasir & struk (termasuk cetak Bluetooth)", "Cashier & receipts (incl. Bluetooth printing)"),
+                            tr("Stok & pengingat kadaluwarsa", "Stock & expiry reminders"),
+                            tr("Faktur PBF", "PBF purchase invoices"),
+                            tr("Laba & laporan kas", "Profit & cash reports"),
+                            tr("Mode Online \u2014 sinkronisasi Google", "Online Mode \u2014 Google sync"),
+                            tr("Ekspor Excel & cadangan JSON", "Excel export & JSON backup")
+                        )
+                        fitur.forEach { item ->
+                            Row(verticalAlignment = Alignment.Top) {
+                                Text("\u2022", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(8.dp))
+                                Text(item, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                    PemisahGrupTentang()
+                    BarisInfoTentang(tr("Jumlah Obat", "Medicines"), jumlahObat?.toString() ?: "\u2013")
+                    PemisahGrupTentang()
+                    BarisInfoTentang(tr("Jumlah Transaksi", "Transactions"), jumlahTransaksi?.toString() ?: "\u2013")
+                    PemisahGrupTentang()
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onGoBackup() }.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(tr("Cadangkan Data", "Back Up Data"), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                            Text(tr("Buka Backup & Restore", "Open Backup & Restore"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.Default.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
-        item {
-            Text(
-                tr("Aplikasi kasir dan manajemen stok obat untuk Apotek Lestari. Data obat, penjualan, dan kas tersimpan di perangkat.", "A cashier and medicine stock management app for Apotek Lestari. Medicine, sales and cash data are stored on the device."),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        item {
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth().clickable { onGoBackup() }) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(tr("Cadangkan Data", "Back Up Data"), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        Text(tr("Buka Backup & Restore", "Open Backup & Restore"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Icon(Icons.Default.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        item {
-            // Baris info versi database (bukan aksi, tanpa chevron).
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(tr("Versi Database", "Database Version"), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        Text(tr("$dbVersion • skema Room saat ini", "$dbVersion • current Room schema"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-        }
+    }
+}
+
+/** Garis rambut pemisah antargrup di kartu Tentang. */
+@Composable
+private fun PemisahGrupTentang() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
+}
+
+/** Baris info label-kiri nilai-kanan di kartu Tentang. */
+@Composable
+private fun BarisInfoTentang(label: String, value: String) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
     }
 }
