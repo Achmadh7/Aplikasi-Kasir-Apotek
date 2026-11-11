@@ -485,20 +485,21 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
         // supaya daftar tidak merentang dari ujung ke ujung. Navigasi bawah tetap selebar layar.
         // swipeModifier: geser kiri/kanan di konten untuk pindah tab (hanya di tab utama).
         Box(modifier = Modifier.padding(padding).fillMaxSize().then(swipeModifier), contentAlignment = Alignment.TopCenter) {
-            // Transisi sub-halaman (perbaikan 2026-11-12, laporan Achmad:
-            // kembali dari sub-menu ke Lainnya terasa kasar): ketujuh
-            // sub-halaman dari Lainnya (laba, pengingat, riwayat, backup,
-            // terlaris, pbf, tentang) memakai geser ala iOS, 300ms dengan
-            // FastOutSlowInEasing. Maju: halaman baru meluncur penuh dari
-            // kanan sementara Lainnya bergeser seperempat lebar ke kiri +
-            // memudar. Mundur (tombol Kembali / bar bawah): kebalikannya —
-            // sub-halaman meluncur penuh ke kanan, Lainnya kembali dari
-            // seperempat kiri + memudar masuk. Transisi antar tab utama
-            // tetap T3 (fade + skala mikro, 150ms) di NavHost.
-            val subEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(300)) }
-            val subExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { -it / 4 } + fadeOut(tween(300)) }
-            val subPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { -it / 4 } + fadeIn(tween(300)) }
-            val subPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(300)) }
+            // Transisi sub-halaman S3 SUMBU-X MATERIAL (pilihan Achmad
+            // 2026-11-12 dari demo S1-S6): ketujuh sub-halaman dari
+            // Lainnya (laba, pengingat, riwayat, backup, terlaris, pbf,
+            // tentang) memakai pola shared axis resmi Material — kedua
+            // layar bergeser hanya 30dp berlawanan arah + memudar,
+            // 300ms FastOutSlowInEasing. Maju: halaman baru masuk dari
+            // +30dp, Lainnya keluar ke -30dp. Mundur (tombol Kembali /
+            // bar bawah): kebalikannya — sub-halaman keluar ke +30dp,
+            // Lainnya masuk dari -30dp. Transisi antar tab utama tetap
+            // T3 (fade + skala mikro, 150ms) di NavHost.
+            val geserSumbuX = with(density) { 30.dp.toPx().toInt() }
+            val subEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { geserSumbuX } + fadeIn(tween(300)) }
+            val subExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { -geserSumbuX } + fadeOut(tween(300)) }
+            val subPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { -geserSumbuX } + fadeIn(tween(300)) }
+            val subPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { geserSumbuX } + fadeOut(tween(300)) }
             NavHost(
                 navController = nav,
                 startDestination = "beranda",
