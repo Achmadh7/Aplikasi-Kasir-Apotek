@@ -534,43 +534,45 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 composable("tentang", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { TentangScreen(onGoBackup = { navDirection = 1; nav.navigate("backup") { launchSingleTop = true } }) }
             }
         }
-        // Lencana sinkron S12: pil WarnaHeaderN2 melayang di
-        // atas-tengah menimpa header, awan CloudDone cyan #40C4FF +
-        // teks "Tersinkron" (pasangan tr yang sama seperti ikon
-        // awan Beranda). Muncul 2,6 detik lalu hilang sendiri.
-        AnimatedVisibility(
-            visible = tampilLencanaSync,
-            enter = slideInVertically(tween(300)) { -it } + fadeIn(tween(300)),
-            exit = slideOutVertically(tween(250)) { -it } + fadeOut(tween(250)),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(top = 10.dp)
+    }
+    // Lencana sinkron S12: pil WarnaHeaderN2 melayang di atas-tengah,
+    // awan CloudDone cyan #40C4FF + teks "Tersinkron". Muncul 2,6 detik
+    // lalu hilang sendiri. PENEMPATAN (perbaikan 2026-11-12): lencana
+    // HARUS jadi anak langsung Box layar penuh ini — waktu masih di
+    // dalam lambda konten Scaffold, .align(TopCenter) tidak berlaku
+    // (Scaffold menaruhnya di kiri atas) meski kodenya terkompilasi.
+    AnimatedVisibility(
+        visible = tampilLencanaSync,
+        enter = slideInVertically(tween(300)) { -it } + fadeIn(tween(300)),
+        exit = slideOutVertically(tween(250)) { -it } + fadeOut(tween(250)),
+        modifier = Modifier
+            .align(Alignment.TopCenter)
+            .statusBarsPadding()
+            .padding(top = 10.dp)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = WarnaHeaderN2,
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+            shadowElevation = 6.dp
         ) {
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = WarnaHeaderN2,
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
-                shadowElevation = 6.dp
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.CloudDone,
-                        contentDescription = null,
-                        tint = Color(0xFF40C4FF),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        tr("Tersinkron", "Synced"),
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                Icon(
+                    Icons.Default.CloudDone,
+                    contentDescription = null,
+                    tint = Color(0xFF40C4FF),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    tr("Tersinkron", "Synced"),
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
