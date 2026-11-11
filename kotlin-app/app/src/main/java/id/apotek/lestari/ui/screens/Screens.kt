@@ -149,36 +149,40 @@ fun adaptiveSheetMaxWidth() = when {
 }
 
 // ---------- Header nama layar N2 solid gelap premium (pilihan Achmad
-// 2026-11-10, menggantikan K3 gradasi): batang navy nyaris hitam yang
-// tetap sama di kedua mode tema (satu keluarga dengan gerbang masuk
-// M2), garis tepi halus, ikon menu dalam kotak tonal navy #1B385C
-// berikon biru muda (I2, pilihan Achmad 2026-11-10), judul putih
-// ExtraBold. Dipakai semua layar selain Beranda (Beranda memakai
-// varian logo + tombol awan sinkron) dan Lainnya (identitas L1). -------
+// 2026-11-10, menggantikan K3 gradasi) — MODE GELAP tetap: batang navy
+// nyaris hitam (satu keluarga dengan gerbang masuk M2), garis tepi
+// halus, ikon menu dalam kotak tonal navy #1B385C berikon biru muda
+// (I2, pilihan Achmad 2026-11-10), judul putih ExtraBold. MODE LIGHT
+// = H6 (pilihan Achmad 2026-11-12 dari papan H1-H6): kartu biru muda
+// #D3E3F3 tanpa garis tepi, judul navy #0B1526, subjudul #3D5A75,
+// kotak ikon putih berikon #2E5A88. Dipakai semua layar selain Beranda
+// (Beranda memakai varian logo + tombol awan sinkron, ikut H6) dan
+// Lainnya (identitas L1). -------
 
 /** Warna batang header N2 (tetap di dua mode). */
 val WarnaHeaderN2 = Color(0xFF0B1526)
 
 @Composable
 fun KartuHeaderPremium(judul: String, ikon: ImageVector, subjudul: String? = null) {
+    val gelap = LocalIsDarkTheme.current
     Card(
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = WarnaHeaderN2),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+        colors = CardDefaults.cardColors(containerColor = if (gelap) WarnaHeaderN2 else Color(0xFFD3E3F3)),
+        border = if (gelap) BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)) else null,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(color = Color(0xFF1B385C), shape = RoundedCornerShape(12.dp), modifier = Modifier.size(46.dp)) {
-                Icon(ikon, null, tint = Color(0xFF9FCAFF), modifier = Modifier.padding(11.dp).fillMaxSize())
+            Surface(color = if (gelap) Color(0xFF1B385C) else Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(46.dp)) {
+                Icon(ikon, null, tint = if (gelap) Color(0xFF9FCAFF) else Color(0xFF2E5A88), modifier = Modifier.padding(11.dp).fillMaxSize())
             }
             Spacer(Modifier.width(12.dp))
             Column {
-                Text(judul, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                Text(judul, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = if (gelap) Color.White else WarnaHeaderN2)
                 if (subjudul != null) {
-                    Text(subjudul, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
+                    Text(subjudul, style = MaterialTheme.typography.bodySmall, color = if (gelap) Color.White.copy(alpha = 0.7f) else Color(0xFF3D5A75))
                 }
             }
         }

@@ -105,6 +105,7 @@ import java.util.TimeZone
 
 @Composable
 fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit, statusSync: StatusSync, onSyncTap: () -> Unit) {
+    val gelap = LocalIsDarkTheme.current
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
     var salesTab by remember { mutableIntStateOf(0) }
     // Periode panel ringkasan BR5 (pilihan Achmad 2026-11-04):
@@ -161,14 +162,18 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             
             Column {
             // Header N2 (pilihan Achmad 2026-11-10, menggantikan K3):
-            // batang navy nyaris hitam, logo dalam kotak putih, nama satu
-            // baris, kanan = tombol awan saja (tanpa tulisan status -
-            // permintaan Achmad) yang tetap menjadi tombol sinkron.
-            // Tanggal tidak di header; kartu ini adalah header Beranda.
+            // MODE GELAP tetap batang navy nyaris hitam, logo dalam kotak
+            // putih, nama satu baris putih. MODE LIGHT = H6 (pilihan
+            // Achmad 2026-11-12): kartu biru muda #D3E3F3, nama navy,
+            // tombol awan berbingkai biru gelap #0284C7 (merah #B3261E
+            // saat GAGAL) supaya tetap terbaca di atas kartu terang.
+            // Kanan = tombol awan saja (tanpa tulisan status - permintaan
+            // Achmad) yang tetap menjadi tombol sinkron. Tanggal tidak
+            // di header; kartu ini adalah header Beranda.
             Card(
                 shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = WarnaHeaderN2),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+                colors = CardDefaults.cardColors(containerColor = if (gelap) WarnaHeaderN2 else Color(0xFFD3E3F3)),
+                border = if (gelap) BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)) else null,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -184,7 +189,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         }
                     }
                     Spacer(Modifier.width(12.dp))
-                    Text("Apotek Lestari", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Text("Apotek Lestari", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = if (gelap) Color.White else WarnaHeaderN2)
                     Spacer(Modifier.weight(1f))
                     if (statusSync != StatusSync.NONAKTIF) {
                         Surface(
@@ -192,16 +197,16 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             shape = CircleShape,
                             border = BorderStroke(
                                 1.5.dp,
-                                if (statusSync == StatusSync.GAGAL) Color(0xFFFFB4AB) else Color(0xFF40C4FF)
+                                if (statusSync == StatusSync.GAGAL) (if (gelap) Color(0xFFFFB4AB) else Color(0xFFB3261E)) else (if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7))
                             ),
                             modifier = Modifier.size(38.dp).clickable { onSyncTap() }
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 when (statusSync) {
-                                    StatusSync.PROSES -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color(0xFF40C4FF))
-                                    StatusSync.BERHASIL -> Icon(Icons.Default.CloudDone, tr("Tersinkron", "Synced"), tint = Color(0xFF40C4FF), modifier = Modifier.size(20.dp))
-                                    StatusSync.GAGAL -> Icon(Icons.Default.CloudOff, tr("Gagal", "Failed"), tint = Color(0xFFFFB4AB), modifier = Modifier.size(20.dp))
-                                    else -> Icon(Icons.Default.CloudOff, tr("Mode Tamu", "Guest mode"), tint = Color.White, modifier = Modifier.size(20.dp))
+                                    StatusSync.PROSES -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7))
+                                    StatusSync.BERHASIL -> Icon(Icons.Default.CloudDone, tr("Tersinkron", "Synced"), tint = if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7), modifier = Modifier.size(20.dp))
+                                    StatusSync.GAGAL -> Icon(Icons.Default.CloudOff, tr("Gagal", "Failed"), tint = if (gelap) Color(0xFFFFB4AB) else Color(0xFFB3261E), modifier = Modifier.size(20.dp))
+                                    else -> Icon(Icons.Default.CloudOff, tr("Mode Tamu", "Guest mode"), tint = if (gelap) Color.White else WarnaHeaderN2, modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
