@@ -5,21 +5,26 @@ flows. Written from the code at the current head (app version 1.2.0).
 
 ## Overview
 
-Apotek Lestari is a **fully offline** pharmacy cashier and inventory app:
-all data lives locally on the phone (Room/SQLite), with no server and no
-accounts. A single app module (`kotlin-app/app`) and a single Activity host
-the whole app; `MainActivity.kt` handles navigation with a Material 3
-Expressive bottom bar (ShortNavigationBar): **Beranda (Home), Kasir (POS),
-Stok (Stock), Keuangan (Finance)**, plus a **Lainnya (More)** page (Profit,
-Reminders, Sales History, PBF Invoices, Best Sellers, Backup & Restore,
-About). The app is bilingual ID/EN (the `tr(id, en)` function in the theme)
-and supports dark/light mode.
+Apotek Lestari is an **offline-first** pharmacy cashier and inventory app:
+all data lives locally on the phone (Room/SQLite) and every feature works
+without a connection. An optional **Online Mode** mirrors the local data
+to the user's own Firebase project when they sign in with Google (see
+"Online Mode" below and `docs/ONLINE.md`). A single app module
+(`kotlin-app/app`) and a single Activity host the whole app;
+`MainActivity.kt` handles navigation with a Material 3 Expressive bottom
+bar (ShortNavigationBar): **Beranda (Home), Stok (Stock), Kasir (POS),
+Keuangan (Finance)**, plus a **Lainnya (More)** page (Profit, Reminders,
+Sales History, PBF Invoices, Best Sellers, Backup & Restore, About). The
+app is bilingual ID/EN (the `tr(id, en)` function in the theme) and
+supports dark/light mode, dark by default.
 
 ## Tech stack
 
 - Kotlin 2.4.10, Jetpack Compose, Material 3 Expressive (material3 1.5.0-beta02)
 - Fidelity colour scheme from seed `#0061A4`
-- Room (local database, version 12) — no networking at all
+- Room (local database, version 14) — offline-first source of truth
+- Firebase (BOM 33.5.1: Authentication + Cloud Firestore) — only for the
+  optional Online Mode; the app never requires an account
 - Apache POI 5.5.1 for Excel (.xlsx) import/export
 - Android Gradle Plugin 9.1.1, Gradle 9.3.1, JDK 17
 - minSdk 26, targetSdk 36, compileSdk 37
@@ -38,6 +43,8 @@ kotlin-app/
         Repository.kt         the single entry point for business logic & queries
         ExcelHelper.kt        stock Excel template/import/export
         BackupHelper.kt       JSON backup/restore
+        SyncLogic.kt          pure sync conflict rules (last-write-wins)
+        OnlineSync.kt         Online Mode engine: Firebase sign-in, SyncManager, worker
         local/AppDatabase.kt  Room entities, DAOs, migrations, DatabaseProvider
       ui/
         theme/                Theme.kt — colour scheme, tr() ID/EN, stockLabel()
@@ -54,18 +61,21 @@ Screens never touch the DAOs directly — everything goes through
 `Repository`, so business rules (stock limits, price snapshots, cash
 sources) stay consistent across screens.
 
-## Database (Room, version 12)
+## Database (Room, version 14)
 
 | Table | Contents |
 |---|---|
-| `medicines` | Medicines: name, category, unit, buy/sell/wholesale price, stock, expiry date, barcode (unique index) |
+| `medicines` | Medicines: name, category, unit, sell/wholesale price, stock, expiry date, barcode (unique index). The buy-price column still exists but is dormant: migration 13→14 zeroed stored values and the UI no longer reads or writes it. |
 | `sales` | Sales: invoice number `INV - dd/MM/yy` (NON-unique index — same-day sales share the displayed number), total, payment method, paid/change |
 | `sale_items` | Sale lines: name, qty, price snapshot, subtotal, `priceType` ECER (retail) / GROSIR (wholesale) |
 | `cash_entries` | Cash in/out: `type` in/out, `source` (`sale` = from a sale, `manual` = recorded by hand) |
 | `purchases` | PBF invoices: supplier name, invoice number, total including VAT (PPN), CASH/KREDIT, due date |
 | `purchase_items` | PBF invoice line items |
 
-- Sequential migrations 1 → 12 are registered in `AppDatabase.kt`; never
+- Every table also carries Online Mode sync columns (`remoteId`,
+  `updatedAt`, `kotor` dirty flag, `terhapus` soft-delete flag); see
+  "Online Mode".
+- Sequential migrations 1 → 14 are registered in `AppDatabase.kt`; never
   change the schema without adding a new migration.
 - Update safety net: `DatabaseProvider` copies the database file to
   `filesDir/db-snapshots/` (newest 3 kept) before Room opens, whenever the
@@ -83,27 +93,45 @@ decremented → one `cash_entries` row of type `in` with `source = "sale"` is
 created → invoice and receipt (image, share, or Bluetooth thermal print).
 
 **Stock.** Add/edit via the form, or Excel import (matched on
-Name+Category+Unit; the template and export use 8 columns including
-Wholesale Price). Stock status is purely count-based: 0 = Out, 1–9 = Low,
-10–15 = Medium, 16+ = Safe (`stockLabel()` in Theme.kt doubles as the
-internal logic key).
+Name+Category+Unit; the template and export use 7 columns including
+Wholesale Price — older 8-column files that still carry a buy-price
+column import fine, the column is ignored). Stock status is purely
+count-based: 0 = Out, 1–9 = Low, 10–15 = Medium, 16+ = Safe
+(`stockLabel()` in Theme.kt doubles as the internal logic key).
 
 **Finance & profit.** Cash Balance = all cash in − all cash out. The Home
 screen's "Income Today" counts only sales (`source = "sale"`); manual cash
-entries affect only the Cash Balance. Profit is sales-based: revenue − cost
-of goods at the current buy price per medicine sold.
+entries affect only the Cash Balance. Profit uses **no buy prices (no
+COGS/HPP)**: the Profit screen's hero is revenue (Penjualan), and Net
+Profit = Revenue − Operating Costs, shown with its net margin and a daily
+net chart.
 
 **PBF invoices.** Purchase records only: they do **not** change stock,
-cash, buy prices, profit, or the Cash Balance. Credit (KREDIT) purchases
-carry a due date, can be marked paid (becoming CASH), and bills due within
-7 days surface in Reminders and on the Home reminder card. Spending
-summaries count CASH only.
+cash, profit, or the Cash Balance (their own item prices are just record
+data). Credit (KREDIT) purchases carry a due date, can be marked paid
+(becoming CASH), and bills due within 7 days surface in Reminders and on
+the Home reminder card. Spending summaries count CASH only.
 
 **Backup & restore.** A single JSON file `{version, app, medicines, sales,
 saleItems, cashEntries, purchases, purchaseItems}` via the Storage Access
 Framework (can be saved to Drive). Restore replaces all data inside one
 Room transaction, after a preview (file date and record counts) and
 confirmation.
+
+**Online Mode (optional).** Sign-in is Google-only (the account's data
+lives under `users/{uid}/` in the shared Firebase project; rules are
+owner-only, see `firestore.rules`). `Repository` stamps every write with
+a `remoteId`, an `updatedAt` timestamp, and the dirty flag; deletes are
+soft (tombstones). The SyncManager pushes dirty rows first, then pulls
+the account tree; conflicts resolve last-write-wins, with ties going to
+the tombstone (`SyncLogic.kt`). Sync runs automatically a few seconds
+after any change (silently), on a 6-hour periodic worker, and on demand;
+a floating "Synced" badge confirms sign-in and manual syncs only.
+Signing in with a different account than the last one marks every row
+dirty, so the full local data set uploads into that account's tree.
+Reset Semua Data wipes the cloud tree first — if that fails, nothing
+local is touched — then clears the local tables. Guest use (Lewati)
+keeps the app fully local. Setup and details: `docs/ONLINE.md`.
 
 ## Build & release
 
@@ -114,4 +142,7 @@ GitHub Secrets, and builds the release APK (uploaded as the
 `Apotek Lestari-<version>-Release` artifact). `app/build.gradle.kts` reads that `signing.properties`;
 the `verifyReleaseSigning` guard fails the release build when signing is
 incomplete — a release APK can never silently ship signed with the debug
-key.
+key. The repo also carries the Gradle wrapper (`gradlew` / `gradlew.bat`,
+Gradle 9.3.1), so the project builds locally in Android Studio from the
+`kotlin-app` folder; a local release build needs the same
+`signing.properties` + keystore.

@@ -15,14 +15,28 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
   next three 50k round-ups above the total, each card showing its change.
 - Backup restore preview (file date and record counts shown before any data
   is replaced) and last-backup info on the Backup screen.
-- Medicine form reorganised into Identity / Price / Stock & Expiry cards with
-  a live margin strip (and a warning when the selling price is not above the
-  buying price).
+- Medicine form reorganised into Identity / Price / Stock & Expiry cards.
 - Supplier-invoice form reorganised into Invoice / Items / Summary cards;
   expanded purchase cards show a Subtotal / VAT / Total breakdown.
 - CI now runs Android Lint (report-only) and uploads the report as an artifact.
-- Unit test suite grown to 19 JVM tests covering money math, backup
-  round-trips, Excel round-trips, and due-date logic.
+- Unit test suite grown to 26 JVM tests covering money math, backup
+  round-trips, Excel round-trips, due-date logic, and sync conflict rules.
+- Online Mode: optional Google sign-in mirrors all data to the user's own
+  Firebase project (Firestore, per-account tree under `users/{uid}/`) with
+  sync columns and soft deletes on all six tables, last-write-wins
+  conflicts, automatic sync a few seconds after any change, and a 6-hour
+  periodic worker. See `docs/ONLINE.md`.
+- Reset Semua Data on the More page: wipes the cloud tree first (a failure
+  aborts before anything local is touched), then clears the local tables;
+  the account stays signed in.
+- A floating "Synced" badge confirms sign-in and manual syncs; background
+  syncs and ordinary app opens now sync silently.
+- Account-switch consolidation: signing in with a different account marks
+  every local row dirty, so the full local data set uploads into that
+  account's cloud tree.
+- Gradle wrapper (`gradlew` / `gradlew.bat`, Gradle 9.3.1) added, so the
+  project also builds locally in Android Studio.
+- About screen shows live statistics: medicine and transaction counts.
 
 ### Changed
 
@@ -30,8 +44,9 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
   targetSdk 36 (from 34), Compose BOM 2026.09.00 / Material 3 1.5.0-beta02,
   Apache POI 5.5.1, Navigation Compose 2.10.2, Lifecycle 2.11.0,
   Coroutines 1.11.0.
-- Profit report: gross and net profit now sit side by side as two hero cards
-  with margins, above a revenue / COGS / operating-cost breakdown.
+- Profit report rebuilt without buy prices: the hero is revenue
+  (Penjualan); Net Profit = Revenue - Operating Costs, shown with its net
+  margin, a revenue/expense breakdown, and a daily net chart.
 - Home: the revenue hero and money card merged into one panel with a
   Today / This Month period switch.
 - Cashier medicine list: compact two-line rows (name + price, then
@@ -44,17 +59,37 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
 - Supplier-invoice summary split into two side-by-side cards (Today / This
   Month) with a new empty state.
 - History entries preview their first items while collapsed.
-- Sub-page navigation (from the More menu) now uses a full-width iOS-style
-  slide; tab switching keeps the shorter directional fade.
-- Theme switching animates as a circular reveal from the tapped row; the
-  About page was redesigned and reads the version from BuildConfig instead
+- Animations were audited down to a short kept set (tab transitions as a
+  fade with a slight scale, amount count-up, chart bar growth, cashier
+  fly-to-cart, the payment success check, and the sync badge); sub-page
+  transitions and the theme circular reveal were removed, so theme
+  switching is instant.
+- Login is Google-only: the gate is a dark premium screen (logo in a white
+  circle with a cyan ring, white Google button, guest pass). The
+  email/password form was removed.
+- Screen headers unified into the N2 solid dark premium card with tonal
+  icon chips; the More page uses the L1 centred-identity layout with
+  grouped cards.
+- Excel stock template/export now use 7 columns (the buy-price column was
+  dropped); older 8-column files still import, the column is ignored.
+- The About page was redesigned twice (T10, then T2: a single grouped card
+  with refreshed content) and reads the version from BuildConfig instead
   of a hand-written string.
 - Screen titles now match their menu/tab labels exactly.
 
 ### Removed
 
-- The unused INTERNET permission (the app has no network code) and stale
-  ProGuard rules left over from long-removed libraries.
+- Buy price (Harga Beli) everywhere: the medicine form field, stock
+  lists, Excel columns, backup and sync payloads. Database v14 zeroes the
+  stored values (the columns stay dormant in the schema). Profit no
+  longer uses COGS/HPP. PBF purchase-item prices are untouched records.
+- Email/password sign-in: the login form, the app handlers, and the
+  Firebase email functions.
+- The MIT license: the About license card and dialog, the license text
+  constant, and the LICENSE file (the repository carries no license file).
+- Note: the INTERNET permission, removed earlier in this cycle when the
+  app had no network code, was re-added for Online Mode. Stale ProGuard
+  rules left over from long-removed libraries were also removed.
 
 ### Fixed
 

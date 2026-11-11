@@ -30,7 +30,7 @@ An Android app for pharmacies: sales cashier, medicine stock, cash book, profit 
 |:---:|:---:|
 | <img src="docs/screenshots/riwayat-penjualan.jpg" width="280" alt="Sales History"> | <img src="docs/screenshots/faktur-pbf.jpg" width="280" alt="Supplier Invoices"> |
 
-*Note: all screenshots were refreshed on 5 November 2026 from version 1.2.0.*
+*Note: screenshots are from 5 November 2026 (version 1.2.0) and predate Online Mode and the current headers; they will be refreshed from a newer build.*
 
 ## Menus & main features
 
