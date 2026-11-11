@@ -24,9 +24,12 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -482,17 +485,20 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
         // supaya daftar tidak merentang dari ujung ke ujung. Navigasi bawah tetap selebar layar.
         // swipeModifier: geser kiri/kanan di konten untuk pindah tab (hanya di tab utama).
         Box(modifier = Modifier.padding(padding).fillMaxSize().then(swipeModifier), contentAlignment = Alignment.TopCenter) {
-            // Transisi sub-halaman TR1 (pilihan Achmad 2026-11-04, "Geser
-            // Penuh ala iOS") \u2014 hanya untuk tujuan sub-halaman dari
-            // Lainnya (laba, pengingat, riwayat, backup, terlaris, pbf,
-            // tentang): halaman baru meluncur PENUH dari kanan (350ms),
-            // Transisi sub-menu: TANPA animasi (None) — sejak penghapusan
-            // semua animasi 2026-11-10 halaman sub tampil seketika; yang
-            // beranimasi hanya pindah antar tab utama (T3 di NavHost).
-            val subEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { EnterTransition.None }
-            val subExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { ExitTransition.None }
-            val subPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { EnterTransition.None }
-            val subPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { ExitTransition.None }
+            // Transisi sub-halaman (perbaikan 2026-11-12, laporan Achmad:
+            // kembali dari sub-menu ke Lainnya terasa kasar): ketujuh
+            // sub-halaman dari Lainnya (laba, pengingat, riwayat, backup,
+            // terlaris, pbf, tentang) memakai geser ala iOS, 300ms dengan
+            // FastOutSlowInEasing. Maju: halaman baru meluncur penuh dari
+            // kanan sementara Lainnya bergeser seperempat lebar ke kiri +
+            // memudar. Mundur (tombol Kembali / bar bawah): kebalikannya —
+            // sub-halaman meluncur penuh ke kanan, Lainnya kembali dari
+            // seperempat kiri + memudar masuk. Transisi antar tab utama
+            // tetap T3 (fade + skala mikro, 150ms) di NavHost.
+            val subEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(300)) }
+            val subExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { -it / 4 } + fadeOut(tween(300)) }
+            val subPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { -it / 4 } + fadeIn(tween(300)) }
+            val subPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(300)) }
             NavHost(
                 navController = nav,
                 startDestination = "beranda",
