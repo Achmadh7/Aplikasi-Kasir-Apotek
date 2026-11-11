@@ -37,7 +37,7 @@ jobs:
 
       - name: Upload lint report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-report
           path: kotlin-app/app/build/reports/lint-results-debug.html
@@ -68,13 +68,13 @@ jobs:
           echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
           cp "kotlin-app/app/build/outputs/apk/release/app-release.apk" "Apotek Lestari-$VERSION-Release.apk"
       - name: Upload release APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Apotek Lestari-${{ env.APP_VERSION }}-Release
           path: Apotek Lestari-${{ env.APP_VERSION }}-Release.apk
           if-no-files-found: error
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: app-debug-apk
           path: kotlin-app/app/build/outputs/apk/debug/app-debug.apk
