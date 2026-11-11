@@ -126,7 +126,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3:1.5.0-beta02")
+    implementation("androidx.compose.material3:material3:1.5.0-rc01")
     implementation("androidx.compose.material3:material3-window-size-class:1.5.0-beta02")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.10.2")
