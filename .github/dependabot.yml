@@ -1,0 +1,35 @@
+# Dependabot — Apotek Lestari
+# Weekly update PRs for the Gradle dependencies (kotlin-app/) and for the
+# GitHub Actions used by .github/workflows/main.yml. Review and merge the
+# PRs by hand; nothing auto-merges. The CI workflow runs on every PR, so a
+# bad bump fails the checks instead of landing silently.
+version: 2
+updates:
+  - package-ecosystem: "gradle"
+    directory: "/kotlin-app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "Asia/Jakarta"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      kotlin:
+        patterns:
+          - "org.jetbrains.kotlin*"
+      firebase:
+        patterns:
+          - "com.google.firebase*"
+          - "com.google.gms*"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "Asia/Jakarta"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
