@@ -22,10 +22,10 @@ jobs:
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
-      - name: Set up Gradle 9.3.1
+      - name: Set up Gradle 9.6.0
         uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: '9.3.1'
+          gradle-version: '9.6.0'
       - name: Unit tests
         run: gradle :app:testDebugUnitTest --stacktrace
         working-directory: kotlin-app
