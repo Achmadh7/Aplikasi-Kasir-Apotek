@@ -527,6 +527,13 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     var showDatePicker by remember { mutableStateOf(false) }
     var showDuePicker by remember { mutableStateOf(false) }
     var formError by remember { mutableStateOf("") }
+    // Daftar pemasok (G5): nama PBF dipilih dari daftar, bukan ketik bebas.
+    var suppliers by remember { mutableStateOf<List<Supplier>>(emptyList()) }
+    var showSupplierPicker by remember { mutableStateOf(false) }
+    var showAddSupplier by remember { mutableStateOf(false) }
+    var newSupplierName by remember { mutableStateOf("") }
+    var newSupplierContact by remember { mutableStateOf("") }
+    var supplierFormError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -535,6 +542,7 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     // satuan baris ini dengan satuan obat itu di Stok.
     LaunchedEffect(Unit) {
         (repo.listMedicines() as? ApiResult.Success)?.let { res -> meds = res.data.medicines }
+        (repo.listSuppliers() as? ApiResult.Success)?.let { res -> suppliers = res.data.suppliers }
     }
 
     // Field tanggal read-only: ketukan ditangkap lewat interactionSource
@@ -547,6 +555,12 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     val dueInteraction = remember { MutableInteractionSource() }
     LaunchedEffect(dueInteraction) {
         dueInteraction.interactions.collect { if (it is PressInteraction.Press) showDuePicker = true }
+    }
+    // Field Nama PBF: pola read-only + interactionSource yang sama —
+    // ketukan membuka pemilih pemasok (G5), bukan keyboard.
+    val supplierInteraction = remember { MutableInteractionSource() }
+    LaunchedEffect(supplierInteraction) {
+        supplierInteraction.interactions.collect { if (it is PressInteraction.Press) showSupplierPicker = true }
     }
 
     // Total Belanja = subtotal semua obat + PPN (PPN diketik sebagai nominal
@@ -574,7 +588,14 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                     Text(tr("FAKTUR", "INVOICE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                OutlinedTextField(pbfName, { pbfName = it }, label = { Text(tr("Nama PBF", "PBF Name")) }, placeholder = { Text(tr("cth: Kimia Farma", "e.g. Kimia Farma")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = pbfName, onValueChange = {}, label = { Text(tr("Nama PBF", "PBF Name")) },
+                    placeholder = { Text(tr("Pilih pemasok", "Choose a supplier")) },
+                    readOnly = true, singleLine = true,
+                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = tr("Pilih pemasok", "Choose a supplier")) },
+                    interactionSource = supplierInteraction,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 OutlinedTextField(invoiceNo, { invoiceNo = it }, label = { Text(tr("Nomor Faktur (boleh kosong)", "Invoice Number (optional)")) }, placeholder = { Text(tr("mis. nomor faktur dari PBF", "e.g. the invoice number from the PBF")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(
                     value = formatDateID(date), onValueChange = {}, label = { Text(tr("Tanggal Beli", "Purchase Date")) },
@@ -782,5 +803,107 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     unitPickerRow?.let { target ->
         val options = if (target.unit in UNITS) UNITS else listOf(target.unit) + UNITS
         OptionPickerSheet(title = tr("Satuan", "Unit"), options = options, selected = target.unit, onSelect = { target.unit = it; unitPickerRow = null }, onDismiss = { unitPickerRow = null })
+    }
+    // Pemilih pemasok (G5): daftar nama + kontak dari Daftar Pemasok;
+    // baris bawahnya membuka formulir tambah pemasok baru di tempat.
+    if (showSupplierPicker) {
+        AlertDialog(
+            onDismissRequest = { showSupplierPicker = false },
+            title = { Text(tr("Pilih Pemasok", "Choose Supplier")) },
+            text = {
+                Column {
+                    if (suppliers.isEmpty()) {
+                        Text(
+                            tr("Belum ada pemasok — tambah dulu di bawah, atau impor dari riwayat di layar Pemasok.", "No suppliers yet — add one below, or import from history on the Suppliers screen."),
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+                            items(suppliers, key = { it.id }) { s ->
+                                Row(
+                                    Modifier.fillMaxWidth().clickable {
+                                        pbfName = s.name
+                                        showSupplierPicker = false
+                                    }.padding(vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(s.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                                        if (s.contact.isNotBlank()) {
+                                            Text(s.contact, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                    if (s.name == pbfName) {
+                                        Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSupplierPicker = false
+                    newSupplierName = ""
+                    newSupplierContact = ""
+                    supplierFormError = ""
+                    showAddSupplier = true
+                }) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(tr("Tambah pemasok baru", "Add a new supplier"))
+                }
+            },
+            dismissButton = { TextButton(onClick = { showSupplierPicker = false }) { Text(tr("Batal", "Cancel")) } }
+        )
+    }
+    // Formulir tambah pemasok baru dari dalam pemilih (G5): begitu
+    // tersimpan, namanya langsung terpilih di formulir pembelian ini.
+    if (showAddSupplier) {
+        AlertDialog(
+            onDismissRequest = { showAddSupplier = false },
+            title = { Text(tr("Tambah Pemasok", "Add Supplier")) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(SpaceS)) {
+                    OutlinedTextField(
+                        value = newSupplierName,
+                        onValueChange = { newSupplierName = it },
+                        label = { Text(tr("Nama PBF", "PBF Name")) },
+                        placeholder = { Text(tr("cth: Kimia Farma", "e.g. Kimia Farma")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newSupplierContact,
+                        onValueChange = { newSupplierContact = it },
+                        label = { Text(tr("Kontak (boleh kosong)", "Contact (optional)")) },
+                        placeholder = { Text(tr("mis. nomor WA/telepon", "e.g. WhatsApp/phone number")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (supplierFormError.isNotEmpty()) Text(supplierFormError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            supplierFormError = ""
+                            val res = repo.createSupplier(SupplierArgs(newSupplierName, newSupplierContact))
+                            if (res is ApiResult.Success) {
+                                (repo.listSuppliers() as? ApiResult.Success)?.let { suppliers = it.data.suppliers }
+                                pbfName = newSupplierName.trim()
+                                showAddSupplier = false
+                            } else {
+                                supplierFormError = (res as? ApiResult.Error)?.message ?: tr("Gagal menyimpan", "Failed to save")
+                            }
+                        }
+                    },
+                    enabled = newSupplierName.isNotBlank()
+                ) { Text(tr("Simpan", "Save")) }
+            },
+            dismissButton = { TextButton(onClick = { showAddSupplier = false }) { Text(tr("Batal", "Cancel")) } }
+        )
     }
 }

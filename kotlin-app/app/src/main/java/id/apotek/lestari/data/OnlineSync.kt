@@ -108,8 +108,8 @@ sealed interface HasilSync {
  * Sinkronisasi dua arah Room <-> Firestore: dorong baris kotor (induk
  * dulu, baru itemnya), lalu tarik semua dokumen dan terapkan yang
  * menang menurut last-write-wins. Struktur server di bawah
- * users/{uid}/: obat, penjualan, penjualan_item, kas, pbf, pbf_item —
- * satu dokumen per baris, dikunci remoteId-nya.
+ * users/{uid}/: obat, penjualan, penjualan_item, kas, pbf, pbf_item,
+ * pemasok — satu dokumen per baris, dikunci remoteId-nya.
  */
 class SyncManager(private val repository: Repository) {
 
@@ -153,6 +153,13 @@ class SyncManager(private val repository: Repository) {
                 repository.tandaiBersihKas(e.remoteId, e.updatedAt)
                 didorong++
             }
+            for (e in repository.pemasokKotor()) {
+                if (e.remoteId.isBlank()) continue
+                akar.collection("pemasok").document(e.remoteId)
+                    .set(SyncLogic.pemasokKePeta(e)).await()
+                repository.tandaiBersihPemasok(e.remoteId, e.updatedAt)
+                didorong++
+            }
             for (e in repository.itemJualKotor()) {
                 if (e.remoteId.isBlank()) continue
                 val induk = repository.penjualanByIdSync(e.saleId) ?: continue
@@ -193,6 +200,11 @@ class SyncManager(private val repository: Repository) {
                 repository.terapkanRemoteKas(e)
                 ditarik++
             }
+            for (doc in akar.collection("pemasok").get().await().documents) {
+                val e = SyncLogic.pemasokDariPeta(doc.data ?: continue) ?: continue
+                repository.terapkanRemotePemasok(e)
+                ditarik++
+            }
             for (doc in akar.collection("penjualan_item").get().await().documents) {
                 val data = doc.data ?: continue
                 val indukRemote = SyncLogic.itemJualIndukRemoteId(data) ?: continue
@@ -220,7 +232,7 @@ class SyncManager(private val repository: Repository) {
     }
 
     /**
-     * Hapus SEMUA dokumen awan milik pengguna ini di keenam koleksi
+     * Hapus SEMUA dokumen awan milik pengguna ini di ketujuh koleksi
      * (Reset Semua Data, pilihan Achmad 2026-11-10). Gagal di tengah
      * jalan dikembalikan sebagai Gagal supaya pemanggil TIDAK menghapus
      * data lokal sebelum awannya bersih — kalau tidak, data awan akan
@@ -232,7 +244,7 @@ class SyncManager(private val repository: Repository) {
         val fs = FirebaseKit.firestore() ?: return HasilReset.BelumDikonfigurasi
         return try {
             val akar = fs.collection("users").document(uid)
-            for (nama in listOf("obat", "penjualan", "penjualan_item", "kas", "pbf", "pbf_item")) {
+            for (nama in listOf("obat", "penjualan", "penjualan_item", "kas", "pbf", "pbf_item", "pemasok")) {
                 val docs = akar.collection(nama).get().await().documents
                 for (potongan in docs.chunked(400)) {
                     val batch = fs.batch()

@@ -161,6 +161,26 @@ data class PurchaseItemEntity(
     @ColumnInfo(defaultValue = "1") val kotor: Int = 1
 )
 
+// Daftar pemasok PBF (G5, pilihan Achmad 2026-11-12): nama + kontak
+// yang tersimpan, supaya formulir Faktur PBF tinggal memilih dari
+// daftar, bukan mengetik nama yang sama berulang kali. Catatan pembelian
+// tetap menyimpan pbfName sebagai teks (snapshot) — menghapus pemasok
+// tidak mengubah catatan yang sudah ada.
+@Entity(tableName = "suppliers")
+data class SupplierEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val name: String, // nama perusahaan PBF (distributor)
+    // Kontak pemasok (mis. nomor WA/telepon); "" = tidak diisi.
+    @ColumnInfo(defaultValue = "") val contact: String = "",
+    val createdAt: String, // ISO UTC — kapan pemasok ditambahkan
+    // Kolom sinkronisasi Mode Online: sama seperti keenam tabel lain
+    // (remoteId, updatedAt, terhapus, kotor).
+    @ColumnInfo(defaultValue = "") val remoteId: String = "",
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @ColumnInfo(defaultValue = "0") val terhapus: Int = 0,
+    @ColumnInfo(defaultValue = "1") val kotor: Int = 1
+)
+
 // ---- DAOs ----
 
 @Dao
@@ -392,6 +412,47 @@ interface PurchaseDao {
     suspend fun deleteAllItems()
 }
 
+@Dao
+interface SupplierDao {
+    @Query("SELECT * FROM suppliers WHERE terhapus = 0 ORDER BY name ASC")
+    suspend fun getAll(): List<SupplierEntity>
+
+    @Query("SELECT * FROM suppliers WHERE id = :id AND terhapus = 0")
+    suspend fun getById(id: Int): SupplierEntity?
+
+    @Query("SELECT * FROM suppliers WHERE remoteId = :remoteId LIMIT 1")
+    suspend fun getByRemoteId(remoteId: String): SupplierEntity?
+
+    @Query("SELECT * FROM suppliers WHERE id = :id")
+    suspend fun getByIdAny(id: Int): SupplierEntity?
+
+    @Query("SELECT * FROM suppliers WHERE kotor = 1")
+    suspend fun getKotor(): List<SupplierEntity>
+
+    @Insert
+    suspend fun insert(supplier: SupplierEntity): Long
+
+    @Update
+    suspend fun update(supplier: SupplierEntity): Int
+
+    // Hapus lunak (tombstone ikut tersinkron), pola yang sama seperti
+    // tabel lain sejak DB v13.
+    @Query("UPDATE suppliers SET terhapus = 1, kotor = 1, updatedAt = :now WHERE id = :id")
+    suspend fun deleteById(id: Int, now: Long): Int
+
+    @Query("UPDATE suppliers SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
+    suspend fun tandaiBersih(remoteId: String, updatedAt: Long): Int
+
+    @Query("UPDATE suppliers SET kotor = 1")
+    suspend fun tandaiSemuaKotor(): Int
+
+    @Query("DELETE FROM suppliers WHERE terhapus = 1 AND kotor = 0")
+    suspend fun purge(): Int
+
+    @Query("DELETE FROM suppliers")
+    suspend fun deleteAll()
+}
+
 // ---- Database ----
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -542,9 +603,21 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
     }
 }
 
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Daftar pemasok PBF (G5, pilihan Achmad 2026-11-12): tabel BARU
+        // untuk nama + kontak pemasok. Kolom sinkronisasi langsung ikut
+        // sejak awal (remoteId, updatedAt, terhapus, kotor) supaya
+        // pemasok ikut tersinkron seperti tabel lain. Tabel baru berarti
+        // tidak ada data lama yang berubah; remoteId diisi saat baris
+        // dibuat, bukan saat migrasi.
+        db.execSQL("CREATE TABLE IF NOT EXISTS `suppliers` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `contact` TEXT NOT NULL DEFAULT '', `createdAt` TEXT NOT NULL, `remoteId` TEXT NOT NULL DEFAULT '', `updatedAt` INTEGER NOT NULL DEFAULT 0, `terhapus` INTEGER NOT NULL DEFAULT 0, `kotor` INTEGER NOT NULL DEFAULT 1)")
+    }
+}
+
 @Database(
-    entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class],
-    version = 14,
+    entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class, SupplierEntity::class],
+    version = 15,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -552,6 +625,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun saleDao(): SaleDao
     abstract fun cashDao(): CashDao
     abstract fun purchaseDao(): PurchaseDao
+    abstract fun supplierDao(): SupplierDao
 }
 
 object DatabaseProvider {
@@ -608,7 +682,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15).build()
                 }
             }
         }

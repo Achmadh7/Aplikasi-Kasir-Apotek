@@ -7,6 +7,7 @@ import id.apotek.lestari.data.local.PurchaseEntity
 import id.apotek.lestari.data.local.PurchaseItemEntity
 import id.apotek.lestari.data.local.SaleEntity
 import id.apotek.lestari.data.local.SaleItemEntity
+import id.apotek.lestari.data.local.SupplierEntity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -142,5 +143,21 @@ class SyncLogicTest {
         assertEquals(11, hasilItem.purchaseId)
         assertEquals(item.medicineName, hasilItem.medicineName)
         assertEquals(item.subtotal, hasilItem.subtotal)
+    }
+
+    @Test
+    fun pemasok_bolakBalikPeta_danTanpaRemoteIdDitolak() {
+        val pemasok = SupplierEntity(
+            id = 3, name = "PBF Sehat", contact = "0812-3456-7890",
+            createdAt = "2026-11-12T01:00:00.000Z",
+            remoteId = "pemasok-3", updatedAt = 1000L, terhapus = 0, kotor = 1
+        )
+        val hasil = SyncLogic.pemasokDariPeta(SyncLogic.pemasokKePeta(pemasok))!!
+        assertEquals(pemasok.name, hasil.name)
+        assertEquals(pemasok.contact, hasil.contact)
+        assertEquals(pemasok.createdAt, hasil.createdAt)
+        assertEquals(pemasok.remoteId, hasil.remoteId)
+        val tanpaId = SyncLogic.pemasokKePeta(pemasok).toMutableMap().apply { put("remoteId", "") }
+        assertNull(SyncLogic.pemasokDariPeta(tanpaId))
     }
 }

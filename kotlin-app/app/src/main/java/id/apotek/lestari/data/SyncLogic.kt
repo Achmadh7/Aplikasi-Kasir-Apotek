@@ -6,6 +6,7 @@ import id.apotek.lestari.data.local.PurchaseEntity
 import id.apotek.lestari.data.local.PurchaseItemEntity
 import id.apotek.lestari.data.local.SaleEntity
 import id.apotek.lestari.data.local.SaleItemEntity
+import id.apotek.lestari.data.local.SupplierEntity
 
 /**
  * Logika sinkronisasi Mode Online yang murni (tanpa Firebase, tanpa
@@ -239,6 +240,28 @@ object SyncLogic {
             unit = m.teks("unit") ?: "Strip",
             buyPrice = m.int("buyPrice"),
             subtotal = m.int("subtotal"),
+            remoteId = remoteId,
+            updatedAt = m.angka("updatedAt"),
+            terhapus = m.terhapus(),
+            kotor = 0
+        )
+    }
+
+    // ---- Pemasok PBF (G5) ----
+
+    fun pemasokKePeta(e: SupplierEntity): Map<String, Any?> = dasar(e.remoteId, e.updatedAt, e.terhapus).apply {
+        put("name", e.name)
+        put("contact", e.contact)
+        put("createdAt", e.createdAt)
+    }
+
+    fun pemasokDariPeta(m: Map<String, Any?>): SupplierEntity? {
+        val remoteId = m.teks("remoteId")?.takeIf { it.isNotBlank() } ?: return null
+        return SupplierEntity(
+            id = 0,
+            name = m.teksWajib("name"),
+            contact = m.teksWajib("contact"),
+            createdAt = m.teksWajib("createdAt"),
             remoteId = remoteId,
             updatedAt = m.angka("updatedAt"),
             terhapus = m.terhapus(),

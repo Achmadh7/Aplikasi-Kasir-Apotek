@@ -21,7 +21,7 @@ menang; penghapusan menyebar sebagai tombstone).
   akun. Tamu memakai aplikasi sepenuhnya secara lokal; data tamu tidak
   tersinkron.
 - Yang tersinkron per akun (`users/{uid}/...`): `obat`, `penjualan`,
-  `penjualan_item`, `kas`, `pbf`, `pbf_item` — satu dokumen per baris,
+  `penjualan_item`, `kas`, `pbf`, `pbf_item`, `pemasok` — satu dokumen per baris,
   dikunci `remoteId`-nya.
 - Sinkronisasi berjalan: otomatis beberapa detik setelah data berubah
   (saat masuk; senyap — tanpa pemberitahuan, statusnya terlihat di ikon

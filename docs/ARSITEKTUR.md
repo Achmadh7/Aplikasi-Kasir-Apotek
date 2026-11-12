@@ -22,7 +22,7 @@ supports dark/light mode, dark by default.
 
 - Kotlin 2.4.10, Jetpack Compose, Material 3 Expressive (material3 1.5.0-beta02)
 - Fidelity colour scheme from seed `#0061A4`
-- Room (local database, version 14) — offline-first source of truth
+- Room (local database, version 15) — offline-first source of truth
 - Firebase (BOM 33.5.1: Authentication + Cloud Firestore) — only for the
   optional Online Mode; the app never requires an account
 - Apache POI 5.5.1 for Excel (.xlsx) import/export
@@ -61,7 +61,7 @@ Screens never touch the DAOs directly — everything goes through
 `Repository`, so business rules (stock limits, price snapshots, cash
 sources) stay consistent across screens.
 
-## Database (Room, version 14)
+## Database (Room, version 15)
 
 | Table | Contents |
 |---|---|
@@ -71,11 +71,12 @@ sources) stay consistent across screens.
 | `cash_entries` | Cash in/out: `type` in/out, `source` (`sale` = from a sale, `manual` = recorded by hand) |
 | `purchases` | PBF invoices: supplier name, invoice number, total including VAT (PPN), CASH/KREDIT, due date |
 | `purchase_items` | PBF invoice line items |
+| `suppliers` | PBF supplier directory: name (unique among active rows), contact; picked by the PBF purchase form instead of free typing |
 
 - Every table also carries Online Mode sync columns (`remoteId`,
   `updatedAt`, `kotor` dirty flag, `terhapus` soft-delete flag); see
   "Online Mode".
-- Sequential migrations 1 → 14 are registered in `AppDatabase.kt`; never
+- Sequential migrations 1 → 15 are registered in `AppDatabase.kt`; never
   change the schema without adding a new migration.
 - Update safety net: `DatabaseProvider` copies the database file to
   `filesDir/db-snapshots/` (newest 3 kept) before Room opens, whenever the

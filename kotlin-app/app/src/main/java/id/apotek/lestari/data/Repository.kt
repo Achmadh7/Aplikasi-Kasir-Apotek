@@ -7,6 +7,7 @@ import id.apotek.lestari.data.local.PurchaseEntity
 import id.apotek.lestari.data.local.PurchaseItemEntity
 import id.apotek.lestari.data.local.SaleEntity
 import id.apotek.lestari.data.local.SaleItemEntity
+import id.apotek.lestari.data.local.SupplierEntity
 import androidx.room.withTransaction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -730,6 +731,82 @@ class Repository {
         OkResponse(true)
     }
 
+    // ================= DAFTAR PEMASOK PBF (G5) =================
+    // Nama + kontak pemasok yang tersimpan supaya formulir Faktur PBF
+    // tinggal memilih dari daftar. Nama pemasok harus unik (tanpa
+    // memperhatikan huruf besar/kecil) supaya daftar tidak berisi nama
+    // yang sama dua kali dengan ejaan berbeda.
+
+    suspend fun listSuppliers(): ApiResult<ListSuppliersResponse> = call {
+        val suppliers = DatabaseProvider.db.supplierDao().getAll()
+            .map { Supplier(it.id, it.name, it.contact) }
+        ListSuppliersResponse(suppliers)
+    }
+
+    suspend fun createSupplier(args: SupplierArgs): ApiResult<IdResponse> = call {
+        val nama = args.name.trim()
+        if (nama.isBlank()) throw IllegalArgumentException(tr("Nama pemasok tidak boleh kosong", "Supplier name must not be empty"))
+        val dao = DatabaseProvider.db.supplierDao()
+        if (dao.getAll().any { it.name.equals(nama, ignoreCase = true) }) {
+            throw IllegalArgumentException(tr("Pemasok \"$nama\" sudah ada di daftar", "Supplier \"$nama\" is already in the list"))
+        }
+        val id = dao.insert(
+            SupplierEntity(
+                name = nama,
+                contact = args.contact.trim(),
+                createdAt = nowIso(),
+                remoteId = genRemoteId("pemasok"), updatedAt = nowMillis()
+            )
+        ).toInt()
+        IdResponse(id)
+    }
+
+    suspend fun updateSupplier(args: UpdateSupplierArgs): ApiResult<OkResponse> = call {
+        val nama = args.name.trim()
+        if (nama.isBlank()) throw IllegalArgumentException(tr("Nama pemasok tidak boleh kosong", "Supplier name must not be empty"))
+        val dao = DatabaseProvider.db.supplierDao()
+        val lama = dao.getById(args.id)
+            ?: throw IllegalStateException("Pemasok tidak ditemukan")
+        if (dao.getAll().any { it.id != args.id && it.name.equals(nama, ignoreCase = true) }) {
+            throw IllegalArgumentException(tr("Pemasok \"$nama\" sudah ada di daftar", "Supplier \"$nama\" is already in the list"))
+        }
+        dao.update(lama.copy(name = nama, contact = args.contact.trim(), updatedAt = nowMillis(), kotor = 1))
+        OkResponse(true)
+    }
+
+    /** Hapus lunak: baris menjadi tombstone supaya penghapusan ikut
+     *  tersinkron; catatan pembelian lama tetap menyimpan namanya. */
+    suspend fun deleteSupplier(id: Int): ApiResult<OkResponse> = call {
+        val changed = DatabaseProvider.db.supplierDao().deleteById(id, nowMillis())
+        if (changed == 0) throw IllegalStateException("Pemasok tidak ditemukan")
+        OkResponse(true)
+    }
+
+    /** Impor satu kali dari riwayat pembelian: nama PBF yang pernah
+     *  dipakai di catatan pembelian tapi belum ada di daftar pemasok
+     *  ditambahkan (kontak kosong, bisa dilengkapi nanti). Mengembalikan
+     *  jumlah nama yang diimpor. */
+    suspend fun importSuppliersFromPurchases(): ApiResult<Int> = call {
+        val dao = DatabaseProvider.db.supplierDao()
+        val ada = dao.getAll().map { it.name.lowercase() }.toSet()
+        val namaBaru = DatabaseProvider.db.purchaseDao().getAll()
+            .map { it.pbfName.trim() }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+            .filter { it.lowercase() !in ada }
+        for (nama in namaBaru) {
+            dao.insert(
+                SupplierEntity(
+                    name = nama,
+                    contact = "",
+                    createdAt = nowIso(),
+                    remoteId = genRemoteId("pemasok"), updatedAt = nowMillis()
+                )
+            )
+        }
+        namaBaru.size
+    }
+
     // ---- Backup & Restore (semua data lokal dalam satu file JSON) ----
 
     /** Seluruh isi database (obat, penjualan, item, kas) sebagai string JSON. */
@@ -741,7 +818,8 @@ class Repository {
             saleItems = db.saleDao().getAllItems(),
             cashEntries = db.cashDao().getAll(),
             purchases = db.purchaseDao().getAll(),
-            purchaseItems = db.purchaseDao().getAllItems()
+            purchaseItems = db.purchaseDao().getAllItems(),
+            suppliers = db.supplierDao().getAll()
         )
         BackupHelper.buildJson(data)
     }
@@ -760,7 +838,8 @@ class Repository {
             saleItems = db.saleDao().getAllItems(),
             cashEntries = db.cashDao().getAll(),
             purchases = db.purchaseDao().getAll(),
-            purchaseItems = db.purchaseDao().getAllItems()
+            purchaseItems = db.purchaseDao().getAllItems(),
+            suppliers = db.supplierDao().getAll()
         )
         fileData to current
     }
@@ -781,6 +860,7 @@ class Repository {
             db.cashDao().deleteAll()
             db.purchaseDao().deleteAll()
             db.purchaseDao().deleteAllItems()
+            db.supplierDao().deleteAll()
             data.medicines.map { it.copy(remoteId = it.remoteId.ifBlank { "obat-" + it.id }, kotor = 1) }
                 .forEach { db.medicineDao().insert(it) }
             data.sales.map { it.copy(remoteId = it.remoteId.ifBlank { "jual-" + it.id }, kotor = 1) }
@@ -795,6 +875,8 @@ class Repository {
             if (data.purchaseItems.isNotEmpty()) db.purchaseDao().insertItems(
                 data.purchaseItems.map { it.copy(remoteId = it.remoteId.ifBlank { "pbfitem-" + it.id }, kotor = 1) }
             )
+            data.suppliers.map { it.copy(remoteId = it.remoteId.ifBlank { "pemasok-" + it.id }, kotor = 1) }
+                .forEach { db.supplierDao().insert(it) }
         }
         tr("Dipulihkan: ${data.medicines.size} obat, ${data.sales.size} penjualan, ${data.saleItems.size} item, ${data.cashEntries.size} kas, ${data.purchases.size} pembelian PBF.", "Restored: ${data.medicines.size} medicines, ${data.sales.size} sales, ${data.saleItems.size} items, ${data.cashEntries.size} cash entries, ${data.purchases.size} PBF purchases.")
     }
@@ -809,6 +891,7 @@ class Repository {
     suspend fun kasKotor(): List<CashEntryEntity> = DatabaseProvider.db.cashDao().getKotor()
     suspend fun pbfKotor(): List<PurchaseEntity> = DatabaseProvider.db.purchaseDao().getKotor()
     suspend fun itemPbfKotor(): List<PurchaseItemEntity> = DatabaseProvider.db.purchaseDao().getKotorItems()
+    suspend fun pemasokKotor(): List<SupplierEntity> = DatabaseProvider.db.supplierDao().getKotor()
 
     /** True bila masih ada baris bertanda kotor di tabel mana pun —
      *  dipakai pemicu sinkron otomatis agar putaran gema dari tulisan
@@ -821,7 +904,8 @@ class Repository {
 
     suspend fun adaDataKotor(): Boolean =
         obatKotor().isNotEmpty() || penjualanKotor().isNotEmpty() || itemJualKotor().isNotEmpty() ||
-            kasKotor().isNotEmpty() || pbfKotor().isNotEmpty() || itemPbfKotor().isNotEmpty()
+            kasKotor().isNotEmpty() || pbfKotor().isNotEmpty() || itemPbfKotor().isNotEmpty() ||
+            pemasokKotor().isNotEmpty()
 
     /** Konsolidasi ganti akun (2026-11-10): tandai SEMUA baris kotor
      * supaya sinkron berikutnya menaikkan seluruh isi lokal ke pohon
@@ -837,6 +921,7 @@ class Repository {
         DatabaseProvider.db.cashDao().tandaiSemuaKotor()
         DatabaseProvider.db.purchaseDao().tandaiSemuaKotor()
         DatabaseProvider.db.purchaseDao().tandaiSemuaKotorItem()
+        DatabaseProvider.db.supplierDao().tandaiSemuaKotor()
     }
 
     suspend fun obatByRemoteId(remoteId: String): MedicineEntity? =
@@ -922,6 +1007,15 @@ class Repository {
         }
     }
 
+    suspend fun terapkanRemotePemasok(e: SupplierEntity) {
+        val dao = DatabaseProvider.db.supplierDao()
+        val ada = dao.getByRemoteId(e.remoteId)
+        if (ada == null) dao.insert(e.copy(id = 0, kotor = 0))
+        else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
+            dao.update(e.copy(id = ada.id, kotor = 0))
+        }
+    }
+
     suspend fun tandaiBersihObat(remoteId: String, updatedAt: Long) {
         DatabaseProvider.db.medicineDao().tandaiBersih(remoteId, updatedAt)
     }
@@ -946,6 +1040,10 @@ class Repository {
         DatabaseProvider.db.purchaseDao().tandaiBersihItem(remoteId, updatedAt)
     }
 
+    suspend fun tandaiBersihPemasok(remoteId: String, updatedAt: Long) {
+        DatabaseProvider.db.supplierDao().tandaiBersih(remoteId, updatedAt)
+    }
+
     /** Buang fisik tombstone yang sudah terkirim ke awan. */
     suspend fun purgeTombstones() {
         val db = DatabaseProvider.db
@@ -955,6 +1053,7 @@ class Repository {
         db.cashDao().purge()
         db.purchaseDao().purge()
         db.purchaseDao().purgeItems()
+        db.supplierDao().purge()
     }
 }
 

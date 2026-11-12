@@ -8,6 +8,7 @@ import id.apotek.lestari.data.local.PurchaseEntity
 import id.apotek.lestari.data.local.PurchaseItemEntity
 import id.apotek.lestari.data.local.SaleEntity
 import id.apotek.lestari.data.local.SaleItemEntity
+import id.apotek.lestari.data.local.SupplierEntity
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -18,9 +19,10 @@ import org.json.JSONObject
  *
  * Format file: {"version":1, "app":"apotek-lestari", "exportedAtMillis":<ms epoch>,
  *   "medicines":[...], "sales":[...], "saleItems":[...], "cashEntries":[...],
- *   "purchases":[...], "purchaseItems":[...]}
- * Array purchases/purchaseItems (fitur PBF) bersifat OPSIONAL saat dibaca:
- * backup lama yang belum punya kedua array itu tetap bisa dipulihkan.
+ *   "purchases":[...], "purchaseItems":[...], "suppliers":[...]}
+ * Array purchases/purchaseItems/suppliers (fitur PBF + daftar pemasok)
+ * bersifat OPSIONAL saat dibaca: backup lama yang belum punya array itu
+ * tetap bisa dipulihkan.
  * Dipakai org.json bawaan Android, jadi tidak perlu dependensi baru.
  * Restore MENGGANTI seluruh data saat ini dengan isi file backup
  * (ID dipertahankan supaya relasi penjualan-item tetap utuh).
@@ -32,6 +34,7 @@ data class BackupData(
     val cashEntries: List<CashEntryEntity> = emptyList(),
     val purchases: List<PurchaseEntity> = emptyList(),
     val purchaseItems: List<PurchaseItemEntity> = emptyList(),
+    val suppliers: List<SupplierEntity> = emptyList(),
     // Cap waktu pembuatan file (ms epoch); 0 = file lama tanpa cap waktu.
     val exportedAtMillis: Long = 0
 )
@@ -148,6 +151,19 @@ object BackupHelper {
             purchaseItems.put(o)
         }
         root.put("purchaseItems", purchaseItems)
+
+        val suppliers = JSONArray()
+        for (sp in data.suppliers) {
+            val o = JSONObject()
+            o.put("id", sp.id)
+            o.put("name", sp.name)
+            o.put("contact", sp.contact)
+            o.put("createdAt", sp.createdAt)
+            o.put("remoteId", sp.remoteId)
+            o.put("updatedAt", sp.updatedAt)
+            suppliers.put(o)
+        }
+        root.put("suppliers", suppliers)
 
         return root.toString(2)
     }
@@ -375,6 +391,31 @@ object BackupHelper {
             }
         }
 
+        // Daftar pemasok (G5): array OPSIONAL seperti pembelian — backup
+        // lama tidak punya array ini dan tetap sah.
+        val suppliers = mutableListOf<SupplierEntity>()
+        val supplierArr = root.optJSONArray("suppliers")
+        if (supplierArr != null) {
+            for (i in 0 until supplierArr.length()) {
+                val label = tr("Baris pemasok ke-${i + 1}", "Supplier row ${i + 1}")
+                val o = rowObject(supplierArr, i, label)
+                try {
+                    suppliers.add(
+                        SupplierEntity(
+                            id = reqInt(o, "id", label),
+                            name = reqString(o, "name", label),
+                            contact = o.optString("contact", ""),
+                            createdAt = o.optString("createdAt", ""),
+                            remoteId = o.optString("remoteId", ""),
+                            updatedAt = o.optLong("updatedAt", 0)
+                        )
+                    )
+                } catch (e: JSONException) {
+                    throw IllegalArgumentException(tr("$label rusak: ${e.message}", "$label is invalid: ${e.message}"))
+                }
+            }
+        }
+
         // A5 (audit 2026-11-02, M7): tolak duplikat sejak di sini. ID/barcode
         // kembar pasti menabrak indeks unik saat restore dan menggagalkan
         // seluruh proses dengan pesan SQLite yang tidak menjelaskan baris
@@ -404,8 +445,14 @@ object BackupHelper {
                 throw IllegalArgumentException(tr("ID pembelian duplikat di file backup: ${purchase.id} (${purchase.pbfName})", "Duplicate purchase ID in the backup file: ${purchase.id} (${purchase.pbfName})"))
             }
         }
+        val seenSupplierIds = HashSet<Int>()
+        for (supplier in suppliers) {
+            if (!seenSupplierIds.add(supplier.id)) {
+                throw IllegalArgumentException(tr("ID pemasok duplikat di file backup: ${supplier.id} (${supplier.name})", "Duplicate supplier ID in the backup file: ${supplier.id} (${supplier.name})"))
+            }
+        }
 
-        return BackupData(medicines, sales, items, entries, purchases, purchaseItems, exportedAtMillis)
+        return BackupData(medicines, sales, items, entries, purchases, purchaseItems, suppliers, exportedAtMillis)
     }
 
     /** A3: array wajib ada dan benar-benar JSONArray; kalau tidak, backup ditolak. */

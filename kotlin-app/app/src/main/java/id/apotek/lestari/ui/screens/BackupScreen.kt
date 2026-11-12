@@ -468,7 +468,7 @@ fun TentangScreen(onGoBackup: () -> Unit) {
     // mengikuti rilis dan tidak perlu disamakan manual lagi.
     val version = BuildConfig.VERSION_NAME
     // Versi skema Room saat ini (AppDatabase) \u2014 samakan bila migrasi menaikkannya.
-    val dbVersion = 14
+    val dbVersion = 15
     // Statistik langsung untuk grup info: dihitung dari data asli
     // perangkat ini, kosong (tanda \u2013) sampai selesai dimuat.
     var jumlahObat by remember { mutableStateOf<Int?>(null) }
