@@ -43,7 +43,8 @@ An Android app for pharmacies: sales cashier, medicine stock, cash book, profit 
 - **Pengingat (Reminders)** — low/out-of-stock medicines, medicines nearing expiry, and distributor bills nearing their due date.
 - **Riwayat Penjualan (Sales History)** — daily history, invoice details, receipt sharing/printing.
 - **Faktur PBF (Supplier Invoices)** — purchase records from distributors (Cash/Credit, VAT/PPN, due dates, mark-as-paid). Records only: they never change stock or cash.
-- **Backup & Restore** — a single JSON file through the system file picker (can be saved to Google Drive); restore shows a preview (file date and record counts) before anything is replaced.
+- **Pemasok (Suppliers)** — a saved directory of distributor names and contacts, picked from a list in the PBF form instead of retyping; names can be imported once from past purchase records.
+- **Backup & Restore** — a single JSON file through the system file picker (can be saved to Google Drive); restore shows a preview (file date and record counts) before anything is replaced. Optional **scheduled automatic backup** (daily or weekly) writes the same JSON file to a folder of your choice, silently in the background.
 - **Online Mode (optional)** — a sign-in gate at launch (Google sign-in only, or continue as guest — email/password sign-in was removed on 2026-11-10 by the owner's decision: the account is a Google account, and the email path only risked split accounts), automatic sync to **your own Firebase project** (Cloud Firestore, one tree per account under `users/{uid}`) a few seconds after any change while signed in — silently, in the background — plus a periodic 6-hour sync, a sync status card and manual sync in Lainnya, and **Reset Semua Data** (bottom of Lainnya) that wipes this device *and* the signed-in account's cloud copy after a Yes/No confirmation. Sync feedback is quiet by design: opening the app syncs silently as well, a successful manual or just-signed-in sync shows a small floating “Synced” badge at the top centre, and failures are reported with a snackbar. The on-device database stays the source of truth; a build without a Firebase config file never shows the gate and runs fully local. Setup and details: `docs/ONLINE.md`.
 - **Tentang Aplikasi (About)** — app version info.
 
@@ -53,14 +54,14 @@ Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58
 
 | Area | Technology |
 |---|---|
-| Language | Kotlin 2.4.10 |
-| UI | Jetpack Compose — Material 3 Expressive (`material3` 1.5.0-beta02, Compose BOM 2026.09.00), Navigation Compose 2.10.2 |
+| Language | Kotlin 2.4.21 |
+| UI | Jetpack Compose — Material 3 Expressive (`material3` 1.5.0-rc01, Compose BOM 2026.09.00), Navigation Compose 2.10.2 |
 | Theme | `MaterialExpressiveTheme` + `MotionScheme.expressive()`; official components (`ShortNavigationBar`, `SegmentedButton`, chips, `ListItem`); color scheme generated with Google's Material Color Utilities algorithm (Fidelity style, seed `#0061A4`, 2025 color spec) |
-| Database | Room 2.7.2 (SQLite), offline-first — database version 14 (sync columns + soft deletes for Online Mode; v14 also retired the stored buy prices) |
+| Database | Room 2.8.5 (SQLite), offline-first — database version 15 (sync columns + soft deletes for Online Mode; v14 retired the stored buy prices, v15 added the PBF supplier directory) |
 | Online sync (optional) | Firebase Auth + Cloud Firestore (Firebase BOM 33.5.1), WorkManager 2.9.1 periodic sync, last-write-wins merging |
 | Excel | Apache POI 5.5.1 (`.xlsx` import/export/template) |
-| Build | AGP 9.1.1, Gradle 9.3.1, compileSdk 37, targetSdk 36, minSdk 26 |
-| CI | GitHub Actions — 25 JVM unit tests, Android Lint (report-only), debug + signed release builds |
+| Build | AGP 9.5.1, Gradle 9.3.1, compileSdk 37, targetSdk 36, minSdk 26 |
+| CI | GitHub Actions — 32 JVM unit tests, Android Lint (report-only), debug + signed release builds |
 | Printing | Android PrintManager + ESC/POS over Bluetooth |
 
 ## How to build the APK

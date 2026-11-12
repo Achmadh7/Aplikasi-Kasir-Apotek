@@ -19,17 +19,18 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
 - Supplier-invoice form reorganised into Invoice / Items / Summary cards;
   expanded purchase cards show a Subtotal / VAT / Total breakdown.
 - CI now runs Android Lint (report-only) and uploads the report as an artifact.
-- Unit test suite grown to 26 JVM tests covering money math, backup
-  round-trips, Excel round-trips, due-date logic, and sync conflict rules.
+- Unit test suite grown to 32 JVM tests covering money math, backup
+  round-trips, Excel round-trips, due-date logic, sync conflict rules,
+  automatic-backup file naming, and supplier sync mapping.
 - Online Mode: optional Google sign-in mirrors all data to the user's own
   Firebase project (Firestore, per-account tree under `users/{uid}/`) with
-  sync columns and soft deletes on all six tables, last-write-wins
+  sync columns and soft deletes on all seven tables, last-write-wins
   conflicts, automatic sync a few seconds after any change, and a 6-hour
   periodic worker. See `docs/ONLINE.md`.
 - Reset Semua Data on the More page: wipes the cloud tree first (a failure
   aborts before anything local is touched), then clears the local tables;
   the account stays signed in.
-- A floating "Synced" badge confirms sign-in and manual syncs; background
+- A floating top-centre "Synced" badge confirms sign-in and manual syncs; background
   syncs and ordinary app opens now sync silently.
 - Account-switch consolidation: signing in with a different account marks
   every local row dirty, so the full local data set uploads into that
@@ -37,13 +38,26 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
 - Gradle wrapper (`gradlew` / `gradlew.bat`, Gradle 9.3.1) added, so the
   project also builds locally in Android Studio.
 - About screen shows live statistics: medicine and transaction counts.
+- Scheduled automatic backup: the same JSON backup written daily or
+  weekly by WorkManager to a folder chosen on the Backup screen
+  (persistable folder permission, silent on success, schedule
+  re-asserted on every app start); the Backup screen also has a
+  one-time Back Up Now run and a last-run stamp.
+- PBF supplier directory: saved supplier names and contacts on a new
+  Pemasok page (Lainnya), with a one-time import from past purchase
+  records; the PBF form now picks the supplier from the list (with an
+  inline add form) instead of free typing. Suppliers sync like the
+  other tables (Firestore collection `pemasok`) and ride along in JSON
+  backup/restore.
 
 ### Changed
 
-- Toolchain upgraded: AGP 9.1.1, Gradle 9.3.1, Kotlin 2.4.10, compileSdk 37,
-  targetSdk 36 (from 34), Compose BOM 2026.09.00 / Material 3 1.5.0-beta02,
+- Toolchain upgraded: AGP 9.5.1, Gradle 9.3.1, Kotlin 2.4.21, compileSdk 37,
+  targetSdk 36 (from 34), Compose BOM 2026.09.00 / Material 3 1.5.0-rc01,
   Apache POI 5.5.1, Navigation Compose 2.10.2, Lifecycle 2.11.0,
-  Coroutines 1.11.0.
+  Coroutines 1.11.0, Room 2.8.5, google-services 4.5.0.
+- GitHub Actions upgraded (checkout v7, setup-java v6, upload-artifact v7,
+  gradle/actions v6) and Dependabot enabled (weekly PRs, hand-merged).
 - Profit report rebuilt without buy prices: the hero is revenue
   (Penjualan); Net Profit = Revenue - Operating Costs, shown with its net
   margin, a revenue/expense breakdown, and a daily net chart.
@@ -61,15 +75,15 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
 - History entries preview their first items while collapsed.
 - Animations were audited down to a short kept set (tab transitions as a
   fade with a slight scale, amount count-up, chart bar growth, cashier
-  fly-to-cart, the payment success check, and the sync badge); sub-page
-  transitions and the theme circular reveal were removed, so theme
-  switching is instant.
+  fly-to-cart, the payment success check, and the sync badge); the theme
+  circular reveal was removed, so theme switching is instant. Lainnya
+  sub-pages use shared-axis slide transitions (30dp, S3).
 - Login is Google-only: the gate is a dark premium screen (logo in a white
   circle with a cyan ring, white Google button, guest pass). The
   email/password form was removed.
 - Screen headers unified into the N2 solid dark premium card with tonal
-  icon chips; the More page uses the L1 centred-identity layout with
-  grouped cards.
+  icon chips (light mode uses the H6 light-blue card with navy titles);
+  the More page uses the L1 centred-identity layout with grouped cards.
 - Excel stock template/export now use 7 columns (the buy-price column was
   dropped); older 8-column files still import, the column is ignored.
 - The About page was redesigned twice (T10, then T2: a single grouped card

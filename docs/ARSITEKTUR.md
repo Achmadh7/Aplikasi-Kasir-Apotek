@@ -20,13 +20,13 @@ supports dark/light mode, dark by default.
 
 ## Tech stack
 
-- Kotlin 2.4.10, Jetpack Compose, Material 3 Expressive (material3 1.5.0-beta02)
+- Kotlin 2.4.21, Jetpack Compose, Material 3 Expressive (material3 1.5.0-rc01)
 - Fidelity colour scheme from seed `#0061A4`
 - Room (local database, version 15) — offline-first source of truth
 - Firebase (BOM 33.5.1: Authentication + Cloud Firestore) — only for the
   optional Online Mode; the app never requires an account
 - Apache POI 5.5.1 for Excel (.xlsx) import/export
-- Android Gradle Plugin 9.1.1, Gradle 9.3.1, JDK 17
+- Android Gradle Plugin 9.5.1, Gradle 9.3.1, JDK 17
 - minSdk 26, targetSdk 36, compileSdk 37
 
 ## Project structure
