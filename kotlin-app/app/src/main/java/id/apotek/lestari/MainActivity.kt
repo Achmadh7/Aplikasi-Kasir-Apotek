@@ -65,8 +65,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import id.apotek.lestari.data.FirebaseKit
 import id.apotek.lestari.data.HasilReset
 import id.apotek.lestari.data.HasilSync
+import id.apotek.lestari.data.PREF_AUTO_BACKUP_NAMA_TERAKHIR
+import id.apotek.lestari.data.PREF_AUTO_BACKUP_TERAKHIR
 import id.apotek.lestari.data.Repository
 import id.apotek.lestari.data.SyncManager
+import id.apotek.lestari.data.jadwalkanBackupOtomatis
 import id.apotek.lestari.data.jadwalkanSyncBerkala
 import id.apotek.lestari.data.local.DatabaseProvider
 import java.text.SimpleDateFormat
@@ -257,6 +260,8 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                     .remove("online_sync_terakhir")
                     .remove("last_backup_at")
                     .remove("last_backup_name")
+                    .remove(PREF_AUTO_BACKUP_TERAKHIR)
+                    .remove(PREF_AUTO_BACKUP_NAMA_TERAKHIR)
                     .apply()
                 syncTerakhir = 0L
                 tampilKonfirmasiReset = false
@@ -292,6 +297,9 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     }
 
     LaunchedEffect(emailOnline) {
+        // Backup otomatis (G6): tegaskan jadwal tiap app dibuka, terlepas
+        // dari status masuk — cadangan lokal tidak butuh akun.
+        jadwalkanBackupOtomatis(context)
         if (emailOnline != null) {
             // Konsolidasi ganti akun: bila akun yang masuk berbeda dari
             // akun sinkron terakhir (atau belum pernah tercatat, mis.

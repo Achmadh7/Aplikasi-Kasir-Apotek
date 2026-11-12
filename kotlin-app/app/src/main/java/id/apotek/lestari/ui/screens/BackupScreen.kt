@@ -3,6 +3,7 @@
 package id.apotek.lestari.ui.screens
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -134,6 +135,44 @@ fun BackupScreen() {
     var lastBackupAt by remember { mutableStateOf(prefs.getLong("last_backup_at", 0L)) }
     var lastBackupName by remember { mutableStateOf(prefs.getString("last_backup_name", "") ?: "") }
     var suggestedBackupName by remember { mutableStateOf("") }
+    // Backup otomatis terjadwal (G6): folder SAF + frekuensi, dibaca dari
+    // apotek_prefs; jadwalnya ditegakkan lewat jadwalkanBackupOtomatis.
+    var autoAktif by remember { mutableStateOf(prefs.getBoolean(PREF_AUTO_BACKUP_AKTIF, false)) }
+    var autoFolderUri by remember { mutableStateOf(prefs.getString(PREF_AUTO_BACKUP_FOLDER_URI, null)) }
+    var autoFolderNama by remember { mutableStateOf(prefs.getString(PREF_AUTO_BACKUP_FOLDER_NAMA, "") ?: "") }
+    var autoFrekuensi by remember { mutableStateOf(FrekuensiBackup.dariString(prefs.getString(PREF_AUTO_BACKUP_FREKUENSI, null))) }
+    var autoTerakhir by remember { mutableStateOf(prefs.getLong(PREF_AUTO_BACKUP_TERAKHIR, 0L)) }
+    var autoNamaTerakhir by remember { mutableStateOf(prefs.getString(PREF_AUTO_BACKUP_NAMA_TERAKHIR, "") ?: "") }
+    var mintaAktifkan by remember { mutableStateOf(false) }
+
+    // Pilih folder tujuan backup otomatis (SAF): izin baca+tulis disimpan
+    // permanen supaya worker latar belakang bisa menulis tanpa aplikasi dibuka.
+    // Bila saklar dinyalakan sebelum folder dipilih, pemilihan folder ini
+    // sekaligus mengaktifkan jadwalnya (mintaAktifkan).
+    val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri == null) {
+            mintaAktifkan = false
+            return@rememberLauncherForActivityResult
+        }
+        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        runCatching { context.contentResolver.takePersistableUriPermission(uri, flags) }
+        val nama = runCatching {
+            context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+        }.getOrNull()?.takeIf { it.isNotBlank() } ?: tr("Folder pilihan", "Chosen folder")
+        prefs.edit()
+            .putString(PREF_AUTO_BACKUP_FOLDER_URI, uri.toString())
+            .putString(PREF_AUTO_BACKUP_FOLDER_NAMA, nama)
+            .apply()
+        autoFolderUri = uri.toString()
+        autoFolderNama = nama
+        if (mintaAktifkan) {
+            mintaAktifkan = false
+            prefs.edit().putBoolean(PREF_AUTO_BACKUP_AKTIF, true).apply()
+            autoAktif = true
+            jadwalkanBackupOtomatis(context)
+            msg = tr("Backup otomatis diaktifkan.", "Automatic backup enabled.")
+        }
+    }
 
     // Backup: pilih lokasi simpan, lalu tulis JSON hasil export.
     val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -241,6 +280,100 @@ fun BackupScreen() {
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.fillMaxWidth().height(52.dp)
                 ) { Text("Backup Data") }
+            }
+        }
+        Spacer(Modifier.height(SpaceL))
+        // Backup Otomatis (G6): saklar + folder tujuan + frekuensi + jalan sekali.
+        ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                        Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(tr("Backup Otomatis", "Automatic Backup"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(tr("Cadangkan berkala ke folder pilihan, tanpa perlu diingat", "Back up on a schedule to a chosen folder, no need to remember"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = autoAktif,
+                        onCheckedChange = { nyala ->
+                            if (nyala && autoFolderUri.isNullOrBlank()) {
+                                mintaAktifkan = true
+                                folderLauncher.launch(null)
+                            } else {
+                                prefs.edit().putBoolean(PREF_AUTO_BACKUP_AKTIF, nyala).apply()
+                                autoAktif = nyala
+                                jadwalkanBackupOtomatis(context)
+                                msg = if (nyala) tr("Backup otomatis diaktifkan.", "Automatic backup enabled.") else tr("Backup otomatis dimatikan.", "Automatic backup disabled.")
+                            }
+                        }
+                    )
+                }
+                Spacer(Modifier.height(SpaceS))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { folderLauncher.launch(null) }) {
+                    Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(tr("Folder tujuan", "Destination folder"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        Text(
+                            if (autoFolderNama.isNotBlank()) autoFolderNama else tr("Belum dipilih — ketuk untuk memilih", "Not chosen yet — tap to choose"),
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(Icons.Default.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(Modifier.height(SpaceS))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Frekuensi", "Frequency"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.width(10.dp))
+                    FilterChip(
+                        selected = autoFrekuensi == FrekuensiBackup.HARIAN,
+                        onClick = {
+                            autoFrekuensi = FrekuensiBackup.HARIAN
+                            prefs.edit().putString(PREF_AUTO_BACKUP_FREKUENSI, FrekuensiBackup.HARIAN.keString()).apply()
+                            jadwalkanBackupOtomatis(context)
+                        },
+                        label = { Text(tr("Harian", "Daily")) }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    FilterChip(
+                        selected = autoFrekuensi == FrekuensiBackup.MINGGUAN,
+                        onClick = {
+                            autoFrekuensi = FrekuensiBackup.MINGGUAN
+                            prefs.edit().putString(PREF_AUTO_BACKUP_FREKUENSI, FrekuensiBackup.MINGGUAN.keString()).apply()
+                            jadwalkanBackupOtomatis(context)
+                        },
+                        label = { Text(tr("Mingguan", "Weekly")) }
+                    )
+                }
+                Spacer(Modifier.height(SpaceS))
+                if (autoTerakhir > 0) {
+                    Text(
+                        tr("Terakhir berjalan: ", "Last run: ") + formatBackupStamp(autoTerakhir) + if (autoNamaTerakhir.isNotBlank()) " • $autoNamaTerakhir" else "",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        tr("Belum pernah berjalan", "Never run yet"),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(SpaceM))
+                OutlinedButton(
+                    onClick = {
+                        jalankanBackupOtomatisSekali(context)
+                        msg = tr("Backup otomatis dimulai — periksa folder sebentar lagi.", "Automatic backup started — check the folder shortly.")
+                    },
+                    enabled = !autoFolderUri.isNullOrBlank(),
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                ) { Text(tr("Cadangkan Sekarang", "Back Up Now")) }
+                Spacer(Modifier.height(SpaceS))
+                Text(
+                    tr("File diberi nama tanggal dan menumpuk di folder pilihan — hapus file lama langsung dari folder bila perlu.", "Files are named by date and accumulate in the chosen folder — delete old files from the folder when needed."),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
         Spacer(Modifier.height(SpaceL))
