@@ -60,7 +60,7 @@ Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58
 | Database | Room 2.8.5 (SQLite), offline-first — database version 15 (sync columns + soft deletes for Online Mode; v14 retired the stored buy prices, v15 added the PBF supplier directory) |
 | Online sync (optional) | Firebase Auth + Cloud Firestore (Firebase BOM 33.5.1), WorkManager 2.9.1 periodic sync, last-write-wins merging |
 | Excel | Apache POI 5.5.1 (`.xlsx` import/export/template) |
-| Build | AGP 9.5.1, Gradle 9.3.1, compileSdk 37, targetSdk 36, minSdk 26 |
+| Build | AGP 9.5.1, Gradle 9.6.0, compileSdk 37, targetSdk 36, minSdk 26 |
 | CI | GitHub Actions — 32 JVM unit tests, Android Lint (report-only), debug + signed release builds |
 | Printing | Android PrintManager + ESC/POS over Bluetooth |
 

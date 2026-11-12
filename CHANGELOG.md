@@ -35,7 +35,7 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
 - Account-switch consolidation: signing in with a different account marks
   every local row dirty, so the full local data set uploads into that
   account's cloud tree.
-- Gradle wrapper (`gradlew` / `gradlew.bat`, Gradle 9.3.1) added, so the
+- Gradle wrapper (`gradlew` / `gradlew.bat`, Gradle 9.6.0) added, so the
   project also builds locally in Android Studio.
 - About screen shows live statistics: medicine and transaction counts.
 - Scheduled automatic backup: the same JSON backup written daily or
@@ -52,7 +52,7 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
 
 ### Changed
 
-- Toolchain upgraded: AGP 9.5.1, Gradle 9.3.1, Kotlin 2.4.21, compileSdk 37,
+- Toolchain upgraded: AGP 9.5.1, Gradle 9.6.0, Kotlin 2.4.21, compileSdk 37,
   targetSdk 36 (from 34), Compose BOM 2026.09.00 / Material 3 1.5.0-rc01,
   Apache POI 5.5.1, Navigation Compose 2.10.2, Lifecycle 2.11.0,
   Coroutines 1.11.0, Room 2.8.5, google-services 4.5.0.

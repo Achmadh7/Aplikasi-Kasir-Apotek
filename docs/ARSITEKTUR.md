@@ -26,7 +26,7 @@ supports dark/light mode, dark by default.
 - Firebase (BOM 33.5.1: Authentication + Cloud Firestore) — only for the
   optional Online Mode; the app never requires an account
 - Apache POI 5.5.1 for Excel (.xlsx) import/export
-- Android Gradle Plugin 9.5.1, Gradle 9.3.1, JDK 17
+- Android Gradle Plugin 9.5.1, Gradle 9.6.0, JDK 17
 - minSdk 26, targetSdk 36, compileSdk 37
 
 ## Project structure
@@ -144,6 +144,6 @@ GitHub Secrets, and builds the release APK (uploaded as the
 the `verifyReleaseSigning` guard fails the release build when signing is
 incomplete — a release APK can never silently ship signed with the debug
 key. The repo also carries the Gradle wrapper (`gradlew` / `gradlew.bat`,
-Gradle 9.3.1), so the project builds locally in Android Studio from the
+Gradle 9.6.0), so the project builds locally in Android Studio from the
 `kotlin-app` folder; a local release build needs the same
 `signing.properties` + keystore.
