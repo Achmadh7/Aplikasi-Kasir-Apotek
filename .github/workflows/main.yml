@@ -29,19 +29,6 @@ jobs:
       - name: Unit tests
         run: gradle :app:testDebugUnitTest --stacktrace
         working-directory: kotlin-app
-      - name: Lint (report only)
-        if: always()
-        continue-on-error: true
-        working-directory: kotlin-app
-        run: gradle :app:lintDebug --stacktrace
-
-      - name: Upload lint report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: lint-report
-          path: kotlin-app/app/build/reports/lint-results-debug.html
-          if-no-files-found: ignore
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
         working-directory: kotlin-app
