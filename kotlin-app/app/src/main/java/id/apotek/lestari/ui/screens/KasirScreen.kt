@@ -364,24 +364,13 @@ fun KasirScreen() {
                         }
                     }
                 ) {
-                    // Baris sangat padat KS6 (pilihan Achmad 2026-11-04):
-                    // dua baris saja — nama + harga, lalu kategori + stok
-                    // sebagai teks berwarna tanpa kotak lencana — supaya
-                    // 6-8 obat muat dalam satu layar saat stok bertambah
-                    // banyak. Ketuk kartu & animasi terbang tidak berubah.
-                    val stockKey = stockLabel(m.stock)
-                    val stockText = when (stockKey) {
-                        "Aman" -> tr("Stok ${m.stock} • Aman", "Stock ${m.stock} • Safe")
-                        "Sedang" -> tr("Stok ${m.stock} • Sedang", "Stock ${m.stock} • Medium")
-                        "Rendah" -> tr("Stok ${m.stock} • Rendah", "Stock ${m.stock} • Low")
-                        else -> tr("Stok ${m.stock} • Habis", "Stock ${m.stock} • Out of stock")
-                    }
-                    val stockColor = when (stockKey) {
-                        "Aman" -> MaterialTheme.colorScheme.primary
-                        "Sedang" -> MaterialTheme.colorScheme.tertiary
-                        "Rendah" -> warningAmber()
-                        else -> MaterialTheme.colorScheme.error
-                    }
+                    // KR1 (2026-11-13, pilihan Achmad dari papan KR1-KR6,
+                    // TANPA tombol + atas permintaannya): baris dua baris —
+                    // nama + pil status solid (ala ST1), lalu kategori +
+                    // harga. Ketuk kartu tetap menambah ke keranjang &
+                    // animasi terbang tidak berubah. Jumlah stok tidak
+                    // lagi tertulis di baris (pil warnanya yang bicara);
+                    // batas stok tetap dijaga saat menambah.
                     Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -391,13 +380,13 @@ fun KasirScreen() {
                                 modifier = Modifier.weight(1f)
                             )
                             Spacer(Modifier.width(12.dp))
-                            Text(formatIDR(m.sellPrice), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, textAlign = TextAlign.End)
+                            StockBadge(m.stock, showCount = false)
                         }
                         Spacer(Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("${m.category} • ${m.unit}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                             Spacer(Modifier.width(12.dp))
-                            Text(stockText, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = stockColor, textAlign = TextAlign.End)
+                            Text(formatIDR(m.sellPrice), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, textAlign = TextAlign.End)
                         }
                     }
                 }
