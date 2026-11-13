@@ -901,6 +901,10 @@ fun LainnyaScreen(
 // email hanya membuka risiko akun terbelah. Hanya tampil bila build
 // terkonfigurasi Firebase dan belum ada yang masuk.
 @OptIn(ExperimentalMaterial3Api::class)
+// LOGIN GATE L6 GELAP PREMIUM V2 (pilihan Achmad 2026-11-13 dari board
+// L1-L6, menggantikan M2): logo di ubin putih sudut membulat, "LESTARI"
+// cyan, aksen cyan di bawah nama, tombol Lewati jadi pil berbingkai cyan.
+// Tetap gelap premium di kedua tema; perilaku + string tr() tidak berubah.
 @Composable
 fun LayarLogin(
     googleSiap: Boolean,
@@ -923,9 +927,9 @@ fun LayarLogin(
             Box(
                 Modifier
                     .size(100.dp)
-                    .border(2.5.dp, cyan, CircleShape)
+                    .border(2.5.dp, cyan, RoundedCornerShape(24.dp))
                     .padding(4.dp)
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(24.dp))
                     .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
@@ -936,13 +940,6 @@ fun LayarLogin(
                 }
             }
             Spacer(Modifier.height(20.dp))
-            Box(
-                Modifier
-                    .width(48.dp)
-                    .height(3.dp)
-                    .background(cyan, RoundedCornerShape(2.dp))
-            )
-            Spacer(Modifier.height(18.dp))
             Text(
                 "APOTEK",
                 style = MaterialTheme.typography.headlineMedium,
@@ -955,9 +952,16 @@ fun LayarLogin(
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 2.sp,
-                color = Color(0xFFE8EEF5)
+                color = cyan
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(12.dp))
+            Box(
+                Modifier
+                    .width(48.dp)
+                    .height(3.dp)
+                    .background(cyan, RoundedCornerShape(2.dp))
+            )
+            Spacer(Modifier.height(14.dp))
             Text(
                 tr("Kasir Apotek", "Pharmacy Cashier"),
                 style = MaterialTheme.typography.bodyMedium,
@@ -1008,16 +1012,18 @@ fun LayarLogin(
                     textAlign = TextAlign.Center
                 )
             }
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider(color = Color.White.copy(alpha = 0.14f))
-            Spacer(Modifier.height(8.dp))
-            TextButton(
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(
                 onClick = onLewati,
                 enabled = !sibuk,
-                colors = ButtonDefaults.textButtonColors(contentColor = cyan)
+                border = BorderStroke(1.5.dp, cyan),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = cyan),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.fillMaxWidth(0.8f)
             ) {
-                Text(tr("Lewati \u2014 Pakai Tanpa Akun", "Skip \u2014 Use Without an Account"))
+                Text(tr("Lewati \u2014 Pakai Tanpa Akun", "Skip \u2014 Use Without an Account"), fontWeight = FontWeight.SemiBold)
             }
+            Spacer(Modifier.height(10.dp))
             Text(
                 tr("Mode tamu: data hanya tersimpan di HP ini", "Guest mode: data is only stored on this phone"),
                 style = MaterialTheme.typography.bodySmall,
