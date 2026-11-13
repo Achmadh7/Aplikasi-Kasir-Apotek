@@ -61,7 +61,7 @@ Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58
 | Online sync (optional) | Firebase Auth + Cloud Firestore (Firebase BOM 33.5.1), WorkManager 2.9.1 periodic sync, last-write-wins merging |
 | Excel | Apache POI 5.5.1 (`.xlsx` import/export/template) |
 | Build | AGP 9.5.1, Gradle 9.6.0, compileSdk 37, targetSdk 36, minSdk 26 |
-| CI | GitHub Actions — 32 JVM unit tests, Android Lint (report-only), debug + signed release builds |
+| CI | GitHub Actions — 32 JVM unit tests, debug + signed release builds |
 | Printing | Android PrintManager + ESC/POS over Bluetooth |
 
 ## How to build the APK

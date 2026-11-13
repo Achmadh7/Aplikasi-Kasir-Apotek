@@ -136,8 +136,8 @@ keeps the app fully local. Setup and details: `docs/ONLINE.md`.
 
 ## Build & release
 
-CI (`.github/workflows/main.yml`, run manually) runs the unit tests and
-Android Lint (report-only), builds the debug APK, then checks out the
+CI (`.github/workflows/main.yml`, run manually) runs the unit tests,
+builds the debug APK, then checks out the
 keystore from the private Sigkey repo, writes `signing.properties` from
 GitHub Secrets, and builds the release APK (uploaded as the
 `Apotek Lestari-<version>-Release` artifact). `app/build.gradle.kts` reads that `signing.properties`;
