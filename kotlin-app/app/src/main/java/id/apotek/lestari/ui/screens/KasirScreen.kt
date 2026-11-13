@@ -367,10 +367,10 @@ fun KasirScreen() {
                     // KR1 (2026-11-13, pilihan Achmad dari papan KR1-KR6,
                     // TANPA tombol + atas permintaannya): baris dua baris —
                     // nama + pil status solid (ala ST1), lalu kategori +
-                    // harga. Ketuk kartu tetap menambah ke keranjang &
-                    // animasi terbang tidak berubah. Jumlah stok tidak
-                    // lagi tertulis di baris (pil warnanya yang bicara);
-                    // batas stok tetap dijaga saat menambah.
+                    // harga. J1 (2026-11-13): pil membawa angka stok
+                    // ("Stok 24 • Aman") via showCount = true. Ketuk kartu
+                    // tetap menambah ke keranjang & animasi terbang tidak
+                    // berubah; batas stok tetap dijaga saat menambah.
                     Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -380,7 +380,7 @@ fun KasirScreen() {
                                 modifier = Modifier.weight(1f)
                             )
                             Spacer(Modifier.width(12.dp))
-                            StockBadge(m.stock, showCount = false)
+                            StockBadge(m.stock, showCount = true)
                         }
                         Spacer(Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
