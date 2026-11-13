@@ -451,22 +451,31 @@ fun StokScreen() {
                         )
                         Spacer(Modifier.width(8.dp))
                     }
+                    // ST1 Kartu Baris (2026-11-13, pilihan Achmad dari papan
+                    // ST1-ST6): nama + "kategori • satuan • harga" di kiri;
+                    // pil status solid + "Stok: N" di kanan. Tombol
+                    // Edit/Hapus tetap ada di ujung kanan (tidak digambar di
+                    // mock, tapi fungsinya harus tetap jalan).
                     Column(Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.width(8.dp))
-                            StockBadge(m.stock, showCount = false)
-                        }
+                        Text(
+                            m.name,
+                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
                         Spacer(Modifier.height(SpaceXS))
                         Text(
-                            tr("${m.category} • ${m.unit} • Jual ${formatIDR(m.sellPrice)}", "${m.category} • ${m.unit} • Sell ${formatIDR(m.sellPrice)}") +
-                                if (m.expiryDate != null) " • Exp ${formatDateID(m.expiryDate)}" else "",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                            "${m.category} • ${m.unit} • ${formatIDR(m.sellPrice)}",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("${m.stock}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = if (m.stock <= 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-                        Text(m.unit, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        StockBadge(m.stock, showCount = false)
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            tr("Stok: ${m.stock}", "Stock: ${m.stock}"),
+                            style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold
+                        )
                     }
                     if (!selectMode) {
                         IconButton(onClick = { editing = m; showForm = true }) { Icon(Icons.Default.Edit, tr("Edit obat", "Edit medicine")) }

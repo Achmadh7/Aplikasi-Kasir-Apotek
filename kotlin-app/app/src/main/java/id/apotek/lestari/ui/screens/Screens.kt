@@ -428,15 +428,15 @@ fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = false) {
         "Rendah" -> tr("Rendah", "Low")
         else -> tr("Habis", "Out of stock")
     }
-    // Gaya lembut (soft tonal) — pilihan Achmad 2026-11-01 dari gambar
-    // pratinjau chip: wadah netral surfaceContainerHigh untuk semua
-    // status; status dibaca dari warna teks + ikon kecil di depan.
-    // (Di skema Fidelity, wadah container berwarna tampil terlalu pekat.)
-    val fg = when (label) {
-        "Aman" -> MaterialTheme.colorScheme.primary
-        "Sedang" -> MaterialTheme.colorScheme.tertiary
-        "Rendah" -> warningAmber()
-        else -> MaterialTheme.colorScheme.error
+    // ST1 Kartu Baris (2026-11-13, pilihan Achmad dari papan ST1-ST6):
+    // pil SOLID berwarna status dengan teks putih — sesuai mock ST1.
+    // Warna dibuat tetap di kedua tema supaya kontras teks putih terjaga.
+    // Animasi pulseKritis saat stok habis tetap dipertahankan.
+    val bg = when (label) {
+        "Aman" -> Color(0xFF43A047)
+        "Sedang" -> Color(0xFF0284C7)
+        "Rendah" -> Color(0xFFE3B341)
+        else -> Color(0xFFD32F2F)
     }
     val statusIcon = when (label) {
         "Aman" -> Icons.Default.CheckCircle
@@ -444,30 +444,25 @@ fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = false) {
         "Rendah" -> Icons.Default.Warning
         else -> Icons.Default.Cancel
     }
-    AssistChip(
-        onClick = {},
-        enabled = false,
-        modifier = if (stock <= 0) Modifier.pulseKritis() else Modifier,
-        label = {
+    Surface(
+        color = bg,
+        shape = RoundedCornerShape(50),
+        modifier = if (stock <= 0) Modifier.pulseKritis() else Modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(statusIcon, null, tint = Color.White, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
             Text(
                 if (showCount) "${tr("Stok", "Stock")} $stock • $displayLabel" else displayLabel,
                 style = if (large) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
-        },
-        leadingIcon = {
-            Icon(statusIcon, null, modifier = Modifier.size(16.dp))
-        },
-        colors = AssistChipDefaults.assistChipColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            labelColor = fg,
-            leadingIconContentColor = fg,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            disabledLabelColor = fg,
-            disabledLeadingIconContentColor = fg
-        ),
-        border = null
-    )
+        }
+    }
 }
 
 // ---------- Beranda ----------
