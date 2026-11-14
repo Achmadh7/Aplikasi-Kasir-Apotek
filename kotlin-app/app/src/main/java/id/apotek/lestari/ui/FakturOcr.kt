@@ -21,9 +21,10 @@ import java.io.IOException
  *
  * JUJUR: format faktur tiap PBF beda-beda (letak kolom, singkatan, pemisah),
  * jadi parser ini heuristik — bukan pembaca sempurna. Formulir tetap jadi
- * layar periksa: semua hasil tebakan bisa dibetulkan sebelum Simpan. Bila
- * Achmad mengirim foto faktur asli dari PBF langganannya, parser ini yang
- * disesuaikan dulu (bukan ditebak buta).
+ * layar periksa: semua hasil tebakan bisa dibetulkan sebelum Simpan.
+ * Format APL (PT Anugerah Pharmindo Lestari) sudah disesuaikan dari foto
+ * faktur asli 15 Nov 2026: kode produk di depan nama, kolom UNIT
+ * (BLS/BTL/TUB), penanda (F), dan EXP DATE di baris item.
  */
 
 /** Satu baris obat hasil baca faktur. hargaSatuan dalam rupiah. */
@@ -51,7 +52,8 @@ private val KATA_LEWAT = listOf(
     "no.", "nomor", "faktur", "invoice", "kepada", "alamat", "telp",
     "phone", "npwp", "customer", "pelanggan", "sales", "kasir",
     "cabang", "item", "nama", "qty", "harga", "satuan",
-    "ongkir", "ongkos", "materai", "admin", "biaya", "layanan", "tempo", "terima"
+    "ongkir", "ongkos", "materai", "admin", "biaya", "layanan", "tempo",
+    "terima", "top", "dpf", "dpl"
 )
 
 private val BULAN = mapOf(
@@ -112,7 +114,12 @@ fun angkaUang(teks: String): List<Int> {
  */
 fun parseBarisItem(line: String): FakturItemHasil? {
     val tanpaNomor = line.trim().replace(Regex("""^\d+[.)]\s*"""), "")
-    val token = tanpaNomor.split(Regex("""\s+""")).filter { it.isNotEmpty() }
+    // Kode produk di depan nama (faktur APL: "SIIPDC1NBLS PANADOL ...") —
+    // token awal huruf besar+angka, minimal 6 karakter, ada huruf dan angka.
+    val tanpaKode = tanpaNomor.replace(
+        Regex("""^(?=[A-Z0-9]*\d)(?=[A-Z0-9]*[A-Z])[A-Z0-9]{6,}\s+"""), ""
+    )
+    val token = tanpaKode.split(Regex("""\s+""")).filter { it.isNotEmpty() }
     if (token.isEmpty()) return null
     // Kumpulkan token angka murni dari ujung baris ("x" di antara boleh).
     val angka = mutableListOf<Int>()
@@ -131,12 +138,27 @@ fun parseBarisItem(line: String): FakturItemHasil? {
         i--
     }
     if (angka.isEmpty()) return null
-    val nama = token.subList(0, i + 1).joinToString(" ")
-        .replace(Regex("""(?i)\brp\b"""), "")
-        .replace(Regex("""[xX\-–—]+\s*$"""), "")
-        .replace(Regex("""\s+"""), " ").trim()
+    // Jumlah dari kolom UNIT faktur ("10 BLS" / "2 BTL" / "6 TUB") bila ada —
+    // lebih bisa dipercaya daripada tebakan dari angka akhir baris.
+    val qtyUnit = Regex(
+        """(\d{1,4})\s+(BLS|BTL|TUB|BOX|DUS|PCS|STRIP|BOTOL|PACK)\b""",
+        RegexOption.IGNORE_CASE
+    ).find(tanpaKode)?.groupValues?.get(1)?.toIntOrNull()
+    // Nama: bila ada penanda "(F)" (faktur APL), nama = teks sebelum "(F)"
+    // (kolom batch/tanggal/unit sesudahnya bukan nama); bila tidak, nama =
+    // token sebelum angka akhir, seperti sebelumnya.
+    val nama = if (tanpaKode.contains("(F)")) {
+        tanpaKode.substringBefore("(F)")
+            .replace(Regex("""(?i)\brp\b"""), "")
+            .replace(Regex("""\s+"""), " ").trim()
+    } else {
+        token.subList(0, i + 1).joinToString(" ")
+            .replace(Regex("""(?i)\brp\b"""), "")
+            .replace(Regex("""[xX\-–—]+\s*$"""), "")
+            .replace(Regex("""\s+"""), " ").trim()
+    }
     if (nama.length < 2 || !nama.any { it.isLetter() }) return null
-    val (qty, harga) = when {
+    val (qtyTebak, harga) = when {
         angka.size >= 3 -> {
             val q = angka[angka.size - 3]
             val h = angka[angka.size - 2]
@@ -155,6 +177,7 @@ fun parseBarisItem(line: String): FakturItemHasil? {
         }
         else -> 1 to angka[0]
     }
+    val qty = qtyUnit ?: qtyTebak
     if (qty <= 0 || harga <= 0) return null
     return FakturItemHasil(nama = nama, qty = qty, hargaSatuan = harga)
 }
@@ -195,24 +218,32 @@ fun parseFaktur(baris: List<String>): FakturHasil {
         if (invoiceNo.isEmpty()) {
             noRegex.find(line)?.let { invoiceNo = it.groupValues[1].trimEnd('.', ',', ';', ')') }
         }
-        val t = parseTanggal(line)
-        if (t != null) {
-            if (tanggal.isEmpty()) tanggal = t
-            continue
-        }
-        if (low.contains("ppn") || low.contains("vat")) {
+        // "P.P.N" (dengan titik) tetap dikenali sebagai PPN.
+        if (low.replace(".", "").contains("ppn") || low.contains("vat")) {
             if (ppn == 0) {
                 angkaUang(line).filter { it >= 100 }.maxOrNull()?.let { ppn = it }
             }
             continue
         }
+        val t = parseTanggal(line)
+        if (t != null) {
+            // Baris tanggal murni -> jadikan tanggal faktur; baris item yang
+            // kebetulan memuat tanggal (kolom EXP DATE faktur APL) tetap
+            // diproses sebagai item di bawah.
+            if (parseBarisItem(line) == null) {
+                if (tanggal.isEmpty()) tanggal = t
+                continue
+            }
+        }
         if (KATA_LEWAT.any { low.contains(it) }) continue
         parseBarisItem(line)?.let { items.add(it) }
     }
     // Nama PBF: baris paling atas yang tampak seperti nama perusahaan.
+    // Panjang minimal 5 huruf supaya logo ("APL") dan cap ("ASLI") tidak
+    // ikut terpilih.
     val namaPbf = bersih.firstOrNull { l ->
         val low = l.lowercase()
-        l.length >= 3 && l.any { it.isLetter() } && angkaUang(l).isEmpty() &&
+        l.length >= 5 && l.any { it.isLetter() } && angkaUang(l).isEmpty() &&
             !low.contains("faktur") && !low.contains("invoice") &&
             !low.contains("tanggal") && !low.contains("total") &&
             !low.contains("ppn") && !low.contains("nomor") &&
@@ -234,9 +265,13 @@ private const val SISI_MAKS_OCR = 2000
  *  IOException bila berkas tidak bisa dibuka atau formatnya tak dikenal. */
 fun decodeFotoUntukOcr(context: Context, uri: Uri): Bitmap {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    context.contentResolver.openInputStream(uri)?.use {
-        BitmapFactory.decodeStream(it, null, bounds)
-    } ?: throw IOException("Tidak bisa membuka foto")
+    // decodeStream mengembalikan null bila inJustDecodeBounds true — itu
+    // normal, bukan gagal. Yang menandakan berkas tak bisa dibuka hanyalah
+    // stream yang null (dulu: null hasil decode ikut dianggap gagal, jadi
+    // SEMUA foto dilempar IOException).
+    val streamBounds = context.contentResolver.openInputStream(uri)
+        ?: throw IOException("Tidak bisa membuka foto")
+    streamBounds.use { BitmapFactory.decodeStream(it, null, bounds) }
     val sisiPanjang = if (bounds.outWidth > bounds.outHeight) bounds.outWidth else bounds.outHeight
     var sample = 1
     while (sisiPanjang / sample > SISI_MAKS_OCR) sample *= 2

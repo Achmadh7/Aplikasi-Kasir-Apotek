@@ -71,4 +71,38 @@ class FakturParserTest {
         )
         assertNull(cocokkanNama("Obat Tidak Ada", listOf("Paracetamol 500mg")))
     }
+
+    @Test
+    fun `faktur APL Anugerah Pharmindo Lestari terbaca`() {
+        // Baris-baris dari foto faktur asli 15 Nov 2026 (No. 211697802).
+        val hasil = parseFaktur(
+            listOf(
+                "PT ANUGERAH PHARMINDO LESTARI",
+                "No 211697802 (RIT)",
+                "8211742720 Normal 03.11.2026 03.12.2026 21PG02/01 1921TSD015 21D42 0,00",
+                "SIIPDC1NBLS PANADOL CAPLET 100S - BLISTER (F)-E0/07,860 4K6C 19.03.2029 10 BLS 9.780 97.800",
+                "SIIPDE1NBLS PANADOL EXTRA 100S - BLISTER (F)-E0/0/0,880 553P 25.03.2029 20 BLS 10.990 219.800",
+                "SBSEV4N SCOTT'S EMULSION VITA 400 ML (NEW) (F)-E0/0/2,000 6OJ147 29.09.2028 2 BTL 70.700 141.400",
+                "SZVEL10N VOLTAREN EMULGEL 10 GR NEW (F)-E0/0/4,000 GU2N 16.08.2028 6 TUB 50.800 304.800",
+                "TOTAL 1 POT. PENJUALAN POT. CASH TOTAL 2 P.P.N METERAI JUMLAH TAGIHAN",
+                "763.800 37.819 0 725.981 79.858 0 805.839"
+            )
+        )
+        assertEquals("PT ANUGERAH PHARMINDO LESTARI", hasil.pbfName)
+        assertEquals("211697802", hasil.invoiceNo)
+        assertEquals("2026-11-03", hasil.tanggal)
+        assertEquals(4, hasil.items.size)
+        assertEquals("PANADOL CAPLET 100S - BLISTER", hasil.items[0].nama)
+        assertEquals(10, hasil.items[0].qty)
+        assertEquals(9780, hasil.items[0].hargaSatuan)
+        assertEquals("PANADOL EXTRA 100S - BLISTER", hasil.items[1].nama)
+        assertEquals(20, hasil.items[1].qty)
+        assertEquals(10990, hasil.items[1].hargaSatuan)
+        assertEquals("SCOTT'S EMULSION VITA 400 ML (NEW)", hasil.items[2].nama)
+        assertEquals(2, hasil.items[2].qty)
+        assertEquals(70700, hasil.items[2].hargaSatuan)
+        assertEquals("VOLTAREN EMULGEL 10 GR NEW", hasil.items[3].nama)
+        assertEquals(6, hasil.items[3].qty)
+        assertEquals(50800, hasil.items[3].hargaSatuan)
+    }
 }
