@@ -717,29 +717,31 @@ fun RiwayatScreen() {
                                 enter = expandVertically(animationSpec = tween(150)) + fadeIn(animationSpec = tween(150)),
                                 exit = shrinkVertically(animationSpec = tween(150)) + fadeOut(animationSpec = tween(150))
                             ) {
-                                // Pratinjau isi (desain R2, pilihan Achmad
-                                // 2026-11-04): dua item pertama tampil tanpa
-                                // membuka kartu, sejajar kolom invoice; item
-                                // selebihnya diringkas "+N lainnya". Saat
-                                // kartu terbuka pratinjau hilang — rincian
-                                // lengkap sudah ditampilkan InvoiceDetailCard.
-                                Spacer(Modifier.height(SpaceS))
-                                Column(Modifier.padding(start = 52.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    s.items.take(2).forEach { item ->
-                                        Text(
-                                            "${item.medicineName} ×${item.qty}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    if (s.items.size > 2) {
-                                        Text(
-                                            tr("+${s.items.size - 2} lainnya", "+${s.items.size - 2} more"),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                Column {
+                                    // Pratinjau isi (desain R2, pilihan Achmad
+                                    // 2026-11-04): dua item pertama tampil tanpa
+                                    // membuka kartu, sejajar kolom invoice; item
+                                    // selebihnya diringkas "+N lainnya". Saat
+                                    // kartu terbuka pratinjau hilang — rincian
+                                    // lengkap sudah ditampilkan InvoiceDetailCard.
+                                    Spacer(Modifier.height(SpaceS))
+                                    Column(Modifier.padding(start = 52.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        s.items.take(2).forEach { item ->
+                                            Text(
+                                                "${item.medicineName} ×${item.qty}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        if (s.items.size > 2) {
+                                            Text(
+                                                tr("+${s.items.size - 2} lainnya", "+${s.items.size - 2} more"),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -751,10 +753,12 @@ fun RiwayatScreen() {
                                 enter = expandVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(250)),
                                 exit = shrinkVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) + fadeOut(animationSpec = tween(250))
                             ) {
-                                Spacer(Modifier.height(SpaceL))
-                                InvoiceDetailCard(sale = s, graphicsLayer = receiptLayer)
-                                Spacer(Modifier.height(SpaceM))
-                                ReceiptActionsRow(graphicsLayer = receiptLayer, invoiceNo = s.invoiceNo, sale = s)
+                                Column {
+                                    Spacer(Modifier.height(SpaceL))
+                                    InvoiceDetailCard(sale = s, graphicsLayer = receiptLayer)
+                                    Spacer(Modifier.height(SpaceM))
+                                    ReceiptActionsRow(graphicsLayer = receiptLayer, invoiceNo = s.invoiceNo, sale = s)
+                                }
                             }
                         }
                     }
