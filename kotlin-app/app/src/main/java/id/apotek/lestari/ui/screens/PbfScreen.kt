@@ -602,7 +602,7 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                     "Tidak bisa membuka foto ini. Coba pilih foto lain atau foto ulang.",
                     "Could not open this photo. Try another photo or take a new one."
                 )
-            } catch (e: com.google.mlkit.vision.common.MlKitException) {
+            } catch (e: com.google.mlkit.common.MlKitException) {
                 android.util.Log.w("FotoFaktur", "ML Kit gagal", e)
                 scanInfo = tr(
                     "Pengenalan teks gagal dijalankan. Coba lagi.",
