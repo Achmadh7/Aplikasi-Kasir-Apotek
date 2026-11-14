@@ -172,28 +172,41 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
             Spacer(Modifier.height(SpaceS))
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                 listOf(30, 60, 90).forEach { w ->
-                    FilterChip(selected = window == w, onClick = { window = w }, label = { Text(tr("$w Hari", "$w Days")) })
+                    FilterChip(
+                        selected = window == w, onClick = { window = w },
+                        label = { Text(tr("$w Hari", "$w Days")) },
+                        // Pil terpilih memakai warna primary (biru muda di
+                        // mode gelap), sama seperti pemilih periode Beranda
+                        // (T1, pilihan Achmad 2026-11-14) dan papan PG8.
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
                 }
             }
         }
         item {
-            // Ringkasan 2x2: empat kartu kecil (ikon + angka besar + label),
-            // supaya tiap angka lebih menonjol dan layarnya tidak monoton.
+            // PG8 (pilihan Achmad 2026-11-14): ringkasan 2x2 dengan latar
+            // warna penuh per kategori — merah untuk Expired, kuning untuk
+            // ≤ N hari, biru untuk Rendah, netral untuk Habis (merah bila
+            // ada yang habis). Angka dan ikon memakai warna kategorinya,
+            // supaya tingkat urgensi terbaca sekilas.
             Column(verticalArrangement = Arrangement.spacedBy(SpaceM)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM)) {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.weight(1f)) {
-                        ReminderCount(Icons.Default.EventBusy, "EXPIRED", "${expired.size}", if (expired.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.fillMaxWidth().padding(16.dp))
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.18f), modifier = Modifier.weight(1f)) {
+                        ReminderCount(Icons.Default.EventBusy, "EXPIRED", "${expired.size}", MaterialTheme.colorScheme.error, Modifier.fillMaxWidth().padding(16.dp))
                     }
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.weight(1f)) {
-                        ReminderCount(Icons.Default.Schedule, "≤ $window HARI", "${withinWindow.size}", MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = warningAmber().copy(alpha = 0.18f), modifier = Modifier.weight(1f)) {
+                        ReminderCount(Icons.Default.Schedule, "≤ $window HARI", "${withinWindow.size}", warningAmber(), Modifier.fillMaxWidth().padding(16.dp))
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM)) {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.weight(1f)) {
-                        ReminderCount(Icons.Default.Inventory, tr("RENDAH", "LOW"), "${low.size}", MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f), modifier = Modifier.weight(1f)) {
+                        ReminderCount(Icons.Default.Inventory, tr("RENDAH", "LOW"), "${low.size}", MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().padding(16.dp))
                     }
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.weight(1f)) {
-                        ReminderCount(Icons.Default.PriorityHigh, tr("HABIS", "OUT"), "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant, Modifier.fillMaxWidth().padding(16.dp))
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = if (critical.isNotEmpty()) MaterialTheme.colorScheme.error.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
+                        ReminderCount(Icons.Default.PriorityHigh, tr("HABIS", "OUT"), "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
                     }
                 }
             }
@@ -276,7 +289,13 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
             // dipertahankan sebagai cadangan untuk layar yang sangat sempit.
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 listOf("all" to tr("Semua", "All"), "expiry" to tr("Kadaluwarsa", "Expiry"), "low" to tr("Rendah", "Low"), "critical" to tr("Habis", "Out")).forEach { (k, l) ->
-                    FilterChip(selected = filter == k, onClick = { filter = k }, label = { Text(l) })
+                    FilterChip(
+                        selected = filter == k, onClick = { filter = k }, label = { Text(l) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
                 }
             }
         }
@@ -305,53 +324,62 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
             
             Column {
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(color = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                            Icon(
-                                if (isCritical) Icons.Default.ShoppingCart else Icons.Default.Inventory, null,
-                                tint = if (isCritical) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(10.dp).size(20.dp)
-                            )
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.width(8.dp))
-                                Surface(color = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(16.dp), modifier = if (isCritical) Modifier.pulseKritis() else Modifier) {
-                                    Text(
-                                        if (isCritical) tr("HABIS", "OUT") else tr("PANTAU", "WATCH"),
-                                        color = if (isCritical) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary,
-                                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                    )
-                                }
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+                    // PG8 (pilihan Achmad 2026-11-14): garis aksen di tepi
+                    // kiri kartu — merah bila stok habis, kuning bila
+                    // kadaluarsa atau stok rendah.
+                    Box(
+                        Modifier.width(6.dp).fillMaxHeight()
+                            .background(if (isCritical) MaterialTheme.colorScheme.error else warningAmber())
+                    )
+                    Column(Modifier.weight(1f).padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(color = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                                Icon(
+                                    if (isCritical) Icons.Default.ShoppingCart else Icons.Default.Inventory, null,
+                                    tint = if (isCritical) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(10.dp).size(20.dp)
+                                )
                             }
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                    Spacer(Modifier.width(8.dp))
+                                    Surface(color = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(16.dp), modifier = if (isCritical) Modifier.pulseKritis() else Modifier) {
+                                        Text(
+                                            if (isCritical) tr("HABIS", "OUT") else tr("PANTAU", "WATCH"),
+                                            color = if (isCritical) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary,
+                                            style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    "${m.category} • Stok ${m.stock} ${m.unit} • ${stockLabel(m.stock)}" +
+                                        if (m.expiryDate != null) {
+                                            " • Exp ${formatDateID(m.expiryDate)}" + if (d != null) {
+                                                if (d < 0) tr(" • Lewat ${-d} hari", " • ${-d} days overdue") else tr(" • Sisa $d hari", " • $d days left")
+                                            } else ""
+                                        } else " • Tanpa tanggal kadaluarsa",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            OutlinedButton(onClick = onGoStok, shape = RoundedCornerShape(20.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)) {
+                                Icon(Icons.Default.Inventory, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text(tr("Stok", "Stock"))
+                            }
+                        }
+                        Spacer(Modifier.height(SpaceS))
+                        Row(verticalAlignment = Alignment.Top) {
+                            Icon(Icons.Default.Lightbulb, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
                             Text(
-                                "${m.category} • Stok ${m.stock} ${m.unit} • ${stockLabel(m.stock)}" +
-                                    if (m.expiryDate != null) {
-                                        " • Exp ${formatDateID(m.expiryDate)}" + if (d != null) {
-                                            if (d < 0) tr(" • Lewat ${-d} hari", " • ${-d} days overdue") else tr(" • Sisa $d hari", " • $d days left")
-                                        } else ""
-                                    } else " • Tanpa tanggal kadaluarsa",
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                                advice,
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
-                        OutlinedButton(onClick = onGoStok, shape = RoundedCornerShape(20.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)) {
-                            Icon(Icons.Default.Inventory, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(tr("Stok", "Stock"))
-                        }
-                    }
-                    Spacer(Modifier.height(SpaceS))
-                    Row(verticalAlignment = Alignment.Top) {
-                        Icon(Icons.Default.Lightbulb, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            advice,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
                     }
                 }
             }
