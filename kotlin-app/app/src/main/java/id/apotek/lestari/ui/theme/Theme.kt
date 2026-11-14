@@ -198,9 +198,11 @@ private val SeedDarkColors = darkColorScheme(
     surfaceContainerHighest = Color(0xFF32353A),
     surfaceBright = Color(0xFF36393E),
     surfaceDim = Color(0xFF111418),
-    error = Color(0xFFFFB4AB),
+    // Merah disamakan dengan mode terang (permintaan Achmad 2026-11-14):
+    // semua elemen merah memakai #BA1A1A di kedua mode.
+    error = Color(0xFFBA1A1A),
     errorContainer = Color(0xFF93000A),
-    onError = Color(0xFF690005),
+    onError = Color(0xFFFFFFFF),
     onErrorContainer = Color(0xFFFFDAD6),
     onPrimary = Color(0xFF003258),
     inverseSurface = Color(0xFFE1E2E8),
