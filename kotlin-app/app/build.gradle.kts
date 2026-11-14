@@ -156,10 +156,6 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
-    // Foto Faktur (OCR): ML Kit Text Recognition v2, model Latin ikut di APK
-    // (bundled) — membaca huruf di HP, gratis, tanpa internet.
-    implementation("com.google.mlkit:text-recognition:16.0.1")
-
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
