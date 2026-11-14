@@ -12,16 +12,23 @@ import id.apotek.lestari.data.local.SaleEntity
 import id.apotek.lestari.data.local.SaleItemEntity
 import id.apotek.lestari.ui.screens.dueDaysLeft
 import id.apotek.lestari.ui.theme.dayKeyID
+import org.apache.poi.ss.usermodel.CellType
+import org.apache.poi.ss.usermodel.DateUtil
+import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.apache.poi.xssf.usermodel.XSSFSheet
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
+import java.util.TimeZone
 
 /**
  * Unit test JVM untuk logika uang & data (audit 2026-11-04, temuan S1):
@@ -203,6 +210,70 @@ class MoneyLogicTest {
         val parsed = ExcelHelper.parseImport(out.toByteArray())
         assertTrue(parsed.items.isEmpty())
         assertEquals(listOf(2), parsed.skippedRows)
+    }
+
+    @Test
+    fun excel_template_hasFrozenHeaderFilterFixedWidthsAndDropdowns() {
+        // X1+X2: lebar Kadaluarsa 18 (bukan 8), header dibekukan + filter,
+        // dropdown Kategori & Satuan.
+        val wb = WorkbookFactory.create(ByteArrayInputStream(ExcelHelper.templateBytes(emptyList())))
+        val sheet = wb.getSheet(ExcelHelper.SHEET_STOK)
+        assertEquals(18 * 256, sheet.getColumnWidth(6))
+        assertTrue(sheet.paneInformation?.isFreezePane == true)
+        val ct = (sheet as XSSFSheet).ctWorksheet
+        assertEquals("A1:G1", ct.autoFilter?.ref)
+        val validations = sheet.dataValidations
+        assertEquals(2, validations.size)
+        assertTrue(validations[0].validationConstraint.formula1.contains("Antibiotik"))
+        assertTrue(validations[1].validationConstraint.formula1.contains("Strip"))
+        wb.close()
+    }
+
+    @Test
+    fun excel_export_writesFormattedNumbersAndRealDates() {
+        // X3: harga/stok pakai format #,##0, kadaluarsa sel tanggal asli.
+        val wb = WorkbookFactory.create(ByteArrayInputStream(ExcelHelper.exportBytes(sampleMedicines())))
+        val sheet = wb.getSheet(ExcelHelper.SHEET_STOK)
+        val row = sheet.getRow(1)
+        assertEquals("#,##0", row.getCell(3).cellStyle.dataFormatString)
+        assertEquals("#,##0", row.getCell(5).cellStyle.dataFormatString)
+        val expiryCell = row.getCell(6)
+        assertEquals(CellType.NUMERIC, expiryCell.cellType)
+        assertTrue(DateUtil.isCellDateFormatted(expiryCell))
+        val formatted = SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Jakarta")
+        }.format(expiryCell.dateCellValue)
+        assertEquals("2027-12-31", formatted)
+        wb.close()
+    }
+
+    @Test
+    fun excel_groupedNumberCell_parsesAsFullValue() {
+        // S7: sel angka 12000 berformat #,##0 harus dibaca 12000, bukan 12 —
+        // parser dipaksa locale Indonesia (DataFormatter default di CI
+        // merendernya "12,000").
+        val wb = XSSFWorkbook()
+        val sheet = wb.createSheet(ExcelHelper.SHEET_STOK)
+        val headerRow = sheet.createRow(0)
+        ExcelHelper.HEADERS.forEachIndexed { i, h -> headerRow.createCell(i).setCellValue(h) }
+        val numberStyle = wb.createCellStyle().apply {
+            dataFormat = wb.createDataFormat().getFormat("#,##0")
+        }
+        val row = sheet.createRow(1)
+        row.createCell(0).setCellValue("Obat Format")
+        row.createCell(1).setCellValue("Umum")
+        row.createCell(2).setCellValue("Strip")
+        row.createCell(3).apply { setCellValue(12000.0); cellStyle = numberStyle }
+        row.createCell(4).setCellValue(0.0)
+        row.createCell(5).apply { setCellValue(50.0); cellStyle = numberStyle }
+        row.createCell(6).setCellValue("")
+        val out = ByteArrayOutputStream()
+        wb.write(out)
+        wb.close()
+        val parsed = ExcelHelper.parseImport(out.toByteArray())
+        assertEquals(1, parsed.items.size)
+        assertEquals(12000, parsed.items[0].sellPrice)
+        assertEquals(50, parsed.items[0].stock)
     }
 
     // ---------- Jatuh tempo PBF ----------

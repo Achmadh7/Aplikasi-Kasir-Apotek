@@ -6,6 +6,8 @@ import org.apache.poi.ss.usermodel.DateUtil
 import org.apache.poi.ss.usermodel.FillPatternType
 import org.apache.poi.ss.usermodel.IndexedColors
 import org.apache.poi.ss.usermodel.Row
+import org.apache.poi.ss.util.CellRangeAddress
+import org.apache.poi.ss.util.CellRangeAddressList
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.ByteArrayInputStream
@@ -13,8 +15,10 @@ import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.time.DateTimeException
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.ResolverStyle
+import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
@@ -27,6 +31,12 @@ import java.util.TimeZone
  * Harga Jual Grosir | Stok | Tanggal Kadaluarsa (YYYY-MM-DD)
  * (Harga Beli dihapus total 2026-11-10; file lama yang masih punya
  * kolom itu tetap bisa diimpor — kolomnya diabaikan.)
+ * Format (X1+X2+X3, 2026-11-14): lebar kolom diperbaiki (Kadaluarsa 18,
+ * bukan 8), baris judul dibekukan + filter otomatis, Kategori & Satuan
+ * punya dropdown validasi, angka tampil dengan pemisah ribuan (12.000)
+ * dan Kadaluarsa ditulis sebagai tanggal Excel asli (bukan teks).
+ * Import tetap membaca dari nama header (urutan bebas) dan menerima file
+ * lama apa adanya.
  */
 object ExcelHelper {
     const val MIME_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -36,6 +46,18 @@ object ExcelHelper {
     val HEADERS = arrayOf(
         "Nama Obat", "Kategori", "Satuan",
         "Harga Jual", "Harga Jual Grosir", "Stok", "Tanggal Kadaluarsa"
+    )
+
+    // Daftar kanonis — SAMA dengan CATEGORIES/UNITS di Screens.kt (dipakai
+    // dropdown validasi X2 dan teks Petunjuk, supaya ketiganya tidak melenceng).
+    val KATEGORI_LIST = arrayOf(
+        "Umum", "Obat Bebas", "Obat Bebas Terbatas", "Obat Keras", "Antibiotik",
+        "Vitamin", "Pereda Nyeri", "Obat Batuk & Flu", "Pencernaan", "Kulit",
+        "Mata", "Lainnya"
+    )
+    val SATUAN_LIST = arrayOf(
+        "Strip", "Botol", "Vial", "Ampul", "Box", "Tablet", "Kapsul", "Tube",
+        "Drop", "Sachet", "Pcs"
     )
 
     private val TEMPLATE_EXAMPLES = listOf(
@@ -51,12 +73,14 @@ object ExcelHelper {
         "2. Template ini sudah berisi stok obat saat ini (atau 3 baris contoh jika stok masih kosong).",
         "   Edit, tambah, atau hapus baris sesuai kebutuhan, lalu simpan sebelum import.",
         "3. Kolom wajib: Nama Obat. Kolom lain boleh kosong (akan diisi nilai bawaan).",
-        "   - Kategori: Umum, Obat Bebas, Obat Bebas Terbatas, Obat Keras, Antibiotik, Vitamin, Pereda Nyeri, Obat Batuk & Flu, Pencernaan, Kulit, Mata, Lainnya",
-        "   - Satuan: Strip, Botol, Vial, Ampul, Box, Tablet, Kapsul, Tube, Drop, Sachet, Pcs",
-        "   - Harga Jual: angka saja, contoh 12000 (tanpa Rp / titik)",
+        "   - Kategori: " + KATEGORI_LIST.joinToString(", "),
+        "   - Satuan: " + SATUAN_LIST.joinToString(", "),
+        "   - Harga Jual: angka saja, contoh 12000 atau 12.000 (boleh pakai titik ribuan)",
         "   - Harga Jual Grosir: harga khusus pembelian banyak (boleh kosong = tidak ada harga grosir)",
         "   - Stok: angka bulat",
         "   - Tanggal Kadaluarsa: format YYYY-MM-DD, contoh 2027-12-31 (boleh kosong)",
+        "   - Kategori dan Satuan punya daftar pilihan — ketuk panah di sel untuk memilih; nilai di luar daftar ditolak.",
+        "   - Baris judul kolom dibekukan (tetap terlihat saat menggulir) dan bisa difilter.",
         "4. Simpan file, lalu di aplikasi buka Stok > Import Excel dan pilih file ini.",
         "5. Jika obat dengan Nama + Kategori + Satuan yang sama sudah ada di stok, data obat itu diperbarui; jika belum ada, ditambahkan sebagai obat baru.",
     )
@@ -107,7 +131,10 @@ object ExcelHelper {
             val wb = WorkbookFactory.create(input)
             try {
                 val sheet = wb.getSheet(SHEET_STOK) ?: wb.getSheetAt(0)
-                val formatter = DataFormatter()
+                // S7 (audit 2026-11-14): paksa locale Indonesia — DataFormatter
+                // default (locale HP/CI) bisa merender angka 12000 berformat
+                // #,##0 sebagai "12,000" yang lalu diparse jadi 12.
+                val formatter = DataFormatter(Locale("id", "ID"))
                 val colIndex = mutableMapOf<String, Int>()
                 sheet.getRow(0)?.forEach { cell ->
                     val h = formatter.formatCellValue(cell).trim()
@@ -196,20 +223,60 @@ object ExcelHelper {
         HEADERS.forEachIndexed { i, h ->
             header.createCell(i).apply { setCellValue(h); cellStyle = headerStyle }
         }
+        // X3: angka (Harga Jual, Grosir, Stok) tampil dengan pemisah ribuan
+        // (12.000) dan Kadaluarsa ditulis sebagai tanggal Excel asli — bukan
+        // teks — supaya bisa diurutkan/difilter di Excel. Parser sudah menerima
+        // sel tanggal Excel (readExpiry) dan angka berformat Indonesia.
+        val numberStyle = wb.createCellStyle().apply {
+            dataFormat = wb.createDataFormat().getFormat("#,##0")
+        }
+        val dateStyle = wb.createCellStyle().apply {
+            dataFormat = wb.createDataFormat().getFormat("yyyy-mm-dd")
+        }
         rows.forEachIndexed { r, values ->
             val row = sheet.createRow(r + 1)
             values.forEachIndexed { c, v ->
                 val cell = row.createCell(c)
                 when (v) {
-                    is Int -> cell.setCellValue(v.toDouble())
-                    is Long -> cell.setCellValue(v.toDouble())
-                    else -> cell.setCellValue(v.toString())
+                    is Int -> { cell.setCellValue(v.toDouble()); cell.cellStyle = numberStyle }
+                    is Long -> { cell.setCellValue(v.toDouble()); cell.cellStyle = numberStyle }
+                    else -> {
+                        val s = v.toString()
+                        if (c == 6 && s.isNotBlank()) {
+                            // Kolom Kadaluarsa: tulis sebagai sel tanggal
+                            // (tengah malam WIB, sama seperti yang dibaca
+                            // readExpiry) bila formatnya tanggal valid.
+                            val parsed = runCatching { LocalDate.parse(s, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
+                            if (parsed != null) {
+                                cell.setCellValue(Date.from(parsed.atStartOfDay(ZoneId.of("Asia/Jakarta")).toInstant()))
+                                cell.cellStyle = dateStyle
+                            } else cell.setCellValue(s)
+                        } else cell.setCellValue(s)
+                    }
                 }
             }
         }
-        intArrayOf(30, 18, 10, 13, 13, 15, 8, 18).forEachIndexed { i, w ->
+        // X1: lebar kolom diperbaiki — Kadaluarsa 8 -> 18 (tanggal "2027-12-31"
+        // terpotong di lebar lama), dan nilai ke-8 yang mati (kolom H kosong)
+        // dihapus. Header dibekukan + filter otomatis.
+        intArrayOf(32, 20, 10, 14, 16, 10, 18).forEachIndexed { i, w ->
             sheet.setColumnWidth(i, w * 256)
         }
+        sheet.createFreezePane(0, 1)
+        sheet.setAutoFilter(CellRangeAddress(0, 0, 0, HEADERS.size - 1))
+        // X2: dropdown Kategori & Satuan dari daftar kanonis — cegah salah
+        // ketik jadi kategori nyasar. Berlaku untuk baris data 2..1001.
+        val validationHelper = sheet.dataValidationHelper
+        fun addDropdown(col: Int, items: Array<String>) {
+            val constraint = validationHelper.createExplicitListConstraint(items)
+            val range = CellRangeAddressList(1, 1000, col, col)
+            val validation = validationHelper.createValidation(constraint, range)
+            validation.showErrorBox = true
+            validation.suppressDropDownArrow = false
+            sheet.addValidationData(validation)
+        }
+        addDropdown(1, KATEGORI_LIST)
+        addDropdown(2, SATUAN_LIST)
     }
 
     private fun wbBytes(wb: XSSFWorkbook): ByteArray {
