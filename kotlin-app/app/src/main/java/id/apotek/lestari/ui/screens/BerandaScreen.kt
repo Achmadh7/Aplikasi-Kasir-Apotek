@@ -234,21 +234,33 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 val panelProfit = if (monthMode) d.monthProfit else d.todayProfit
                 val panelSales = if (monthMode) d.totalSalesMonth else d.totalSalesToday
                 Column {
-                    // T1 (pilihan Achmad 2026-11-14): dua pil FilterChip
-                    // terpisah, bukan segmen gabung. Pil terpilih memakai
-                    // warna primary supaya jelas (biru muda di mode gelap,
-                    // sesuai papan T1–T6).
+                    // T1 bentuk pil terpisah (pilihan Achmad 2026-11-14),
+                    // dengan ukuran besar + warna navy solid dari papan
+                    // T7–T12 (14 Nov): pil 64dp, teks 19sp; pil terpilih
+                    // navy #1B385C + teks putih + garis cyan — menggantikan
+                    // primary biru muda yang terlihat pucat di mode gelap.
                     Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                         listOf(tr("Hari Ini", "Today"), tr("Bulan Ini", "This Month")).forEachIndexed { index, label ->
+                            val selected = summaryPeriod == index
                             FilterChip(
-                                selected = summaryPeriod == index,
+                                selected = selected,
                                 onClick = { summaryPeriod = index },
-                                label = { Text(label, maxLines = 1) },
+                                label = {
+                                    Text(
+                                        label, maxLines = 1,
+                                        fontSize = 19.sp,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                    selectedContainerColor = Color(0xFF1B385C),
+                                    selectedLabelColor = Color.White
                                 ),
-                                modifier = Modifier.weight(1f)
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (selected) Color(0xFF40C4FF) else MaterialTheme.colorScheme.outlineVariant
+                                ),
+                                modifier = Modifier.weight(1f).height(64.dp)
                             )
                         }
                     }
