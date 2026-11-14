@@ -107,7 +107,6 @@ import java.util.TimeZone
 fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit, statusSync: StatusSync, onSyncTap: () -> Unit) {
     val gelap = LocalIsDarkTheme.current
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
-    var salesTab by remember { mutableIntStateOf(0) }
     // Periode panel ringkasan BR5 (pilihan Achmad 2026-11-04):
     // 0 = Hari Ini, 1 = Bulan Ini.
     var summaryPeriod by remember { mutableIntStateOf(0) }
@@ -323,116 +322,76 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             }
             item {
                 
+                // BR1 (pilihan Achmad 2026-11-14): kartu Pengingat
+                // dipadatkan jadi spanduk ringkas — garis aksen kuning di
+                // kiri, ringkasan jumlah per kelompok + obat/tagihan
+                // terdekat, dan tautan "Lihat Pengingat >" ke layar penuh.
+                // Isi lengkap tetap ada di layar Pengingat.
+                val reminderParts = buildList {
+                    if (outOfStockNames.isNotEmpty()) add(tr("${outOfStockNames.size} obat habis", "${outOfStockNames.size} medicines out of stock"))
+                    if (lowStockMeds.isNotEmpty()) add(tr("${lowStockMeds.size} obat stok menipis", "${lowStockMeds.size} medicines low on stock"))
+                    if (d.expiringCount > 0) add(tr("${d.expiringCount} obat dekat kadaluarsa", "${d.expiringCount} medicines expiring soon"))
+                    if (dueBills.isNotEmpty()) add(tr("${dueBills.size} tagihan PBF jatuh tempo", "${dueBills.size} PBF bills due"))
+                }
+                val hasReminders = reminderParts.isNotEmpty()
+                val reminderSummary = if (hasReminders) reminderParts.joinToString(" • ") else tr("Semua stok dan kadaluarsa aman.", "All stock and expiry dates are safe.")
+                val reminderDetail: String? = when {
+                    expiringMeds.isNotEmpty() -> {
+                        val (nm, exp) = expiringMeds.first()
+                        "$nm • ${formatDateID(exp)}"
+                    }
+                    lowStockMeds.isNotEmpty() -> {
+                        val (nm, st) = lowStockMeds.first()
+                        "$nm • ${tr("Sisa: $st", "Left: $st")}"
+                    }
+                    outOfStockNames.isNotEmpty() -> "${outOfStockNames.first()} • ${tr("Habis", "Out of stock")}"
+                    dueBills.isNotEmpty() -> {
+                        val p = dueBills.first()
+                        val daysLeft = dueDaysLeft(p.dueDate) ?: 0L
+                        val dueLabel = when {
+                            daysLeft < 0L -> tr("Lewat ${-daysLeft} hari", "${-daysLeft} days overdue")
+                            daysLeft == 0L -> tr("Jatuh tempo hari ini", "Due today")
+                            daysLeft == 1L -> tr("Besok jatuh tempo", "Due tomorrow")
+                            else -> tr("$daysLeft hari lagi", "Due in $daysLeft days")
+                        }
+                        "${p.pbfName} • $dueLabel"
+                    }
+                    else -> null
+                }
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                                Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
+                    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+                        Box(Modifier.width(6.dp).fillMaxHeight().background(warningAmber()))
+                        Column(Modifier.weight(1f).padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Warning, null, tint = warningAmber(), modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(reminderSummary, style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
                             }
-                            Spacer(Modifier.width(10.dp))
-                            Text(tr("Pengingat", "Reminders"), style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(Modifier.height(SpaceS))
-                        // Stok menipis: nama obat + sisa stok, ditulis sama seperti
-                        // stok habis (titik & nama merah) supaya sama-sama terlihat mendesak.
-                        if (lowStockMeds.isNotEmpty()) {
-                            lowStockMeds.take(5).forEach { (name, stock) ->
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                                    Box(Modifier.size(6.dp).background(MaterialTheme.colorScheme.error, CircleShape))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(name, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(tr("Sisa: $stock", "Left: $stock"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (reminderDetail != null) {
+                                Spacer(Modifier.height(SpaceXS))
+                                Text(reminderDetail, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 28.dp))
+                            }
+                            if (hasReminders) {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                    TextButton(onClick = onGoPengingat, contentPadding = PaddingValues(0.dp)) {
+                                        Text(tr("Lihat Pengingat >", "View Reminders >"), style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp))
+                                    }
                                 }
                             }
-                            if (lowStockMeds.size > 5) Text(tr("+${lowStockMeds.size - 5} lainnya", "+${lowStockMeds.size - 5} more"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
                         }
-                        // Stok habis: nama obat + keterangan "Habis".
-                        if (outOfStockNames.isNotEmpty()) {
-                            outOfStockNames.take(5).forEach { name ->
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                                    Box(Modifier.size(6.dp).background(MaterialTheme.colorScheme.error, CircleShape))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(name, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(tr("Habis", "Out of stock"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                            if (outOfStockNames.size > 5) Text(tr("+${outOfStockNames.size - 5} lainnya", "+${outOfStockNames.size - 5} more"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
-                        }
-                        if (d.expiringCount > 0) Text(tr("• ${d.expiringCount} obat dekat kadaluarsa", "• ${d.expiringCount} medicines expiring soon"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp))
-                        if (expiringMeds.isNotEmpty()) {
-                            expiringMeds.take(5).forEach { (name, exp) ->
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                                    Box(Modifier.size(6.dp).background(MaterialTheme.colorScheme.tertiary, CircleShape))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(name, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(formatDateID(exp), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                            if (expiringMeds.size > 5) Text(tr("+${expiringMeds.size - 5} lainnya", "+${expiringMeds.size - 5} more"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
-                        }
-                        // Tagihan PBF mendekati jatuh tempo: nama PBF ditulis
-                        // lengkap + sisa hari di kanan (permintaan Achmad
-                        // 2026-10-30 supaya informasinya lengkap), maks. 3.
-                        if (dueBills.isNotEmpty()) {
-                            Text(tr("• ${dueBills.size} tagihan PBF mendekati jatuh tempo", "• ${dueBills.size} PBF bills nearing due date"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp))
-                            dueBills.take(3).forEach { p ->
-                                val daysLeft = dueDaysLeft(p.dueDate) ?: 0L
-                                val (dueLabel, dueColor) = when {
-                                    daysLeft < 0L -> tr("Lewat ${-daysLeft} hari", "${-daysLeft} days overdue") to MaterialTheme.colorScheme.error
-                                    daysLeft == 0L -> tr("Jatuh tempo hari ini", "Due today") to MaterialTheme.colorScheme.error
-                                    daysLeft == 1L -> tr("Besok jatuh tempo", "Due tomorrow") to warningAmber()
-                                    else -> tr("$daysLeft hari lagi", "Due in $daysLeft days") to warningAmber()
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                                    Box(Modifier.size(6.dp).background(dueColor, CircleShape))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(p.pbfName, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(dueLabel, style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = dueColor)
-                                }
-                            }
-                            if (dueBills.size > 3) Text(tr("+${dueBills.size - 3} lainnya", "+${dueBills.size - 3} more"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 14.dp))
-                        }
-                        if (d.lowStockCount == 0 && d.expiringCount == 0 && dueBills.isEmpty()) Text(tr("Semua stok dan kadaluarsa aman.", "All stock and expiry dates are safe."), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp))
-                        if (d.lowStockCount > 0 || d.expiringCount > 0 || dueBills.isNotEmpty()) {
-                            Spacer(Modifier.height(SpaceS))
-                            TextButton(onClick = onGoPengingat) { Text(tr("Lihat Pengingat", "View Reminders"), style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp)) }
-                        }
-                        Spacer(Modifier.height(SpaceS))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        Spacer(Modifier.height(SpaceS))
-                        Text(tr("${d.totalMedicines} jenis obat terdaftar di Stok", "${d.totalMedicines} medicines registered in Stock"), style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 
             }
             item {
                 
-                // Penjualan Hari Ini: Obat Terjual dan Transaksi dalam satu kartu bertab (compact).
+                // BR1 (pilihan Achmad 2026-11-14): kartu Obat Terjual
+                // tanpa tab — tab Transaksi dihapus dari Beranda (riwayat
+                // lengkap tetap ada lewat pintasan Riwayat).
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                            listOf(tr("Obat Terjual", "Items Sold") to 0, tr("Transaksi", "Transactions") to 1).forEach { (label, idx) ->
-                                val selected = salesTab == idx
-                                Surface(
-                                    onClick = { salesTab = idx },
-                                    shape = RoundedCornerShape(18.dp),
-                                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(
-                                        label,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1,
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-                                    )
-                                }
-                            }
-                        }
+                        Text(tr("Obat Terjual", "Items Sold"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(SpaceS))
-                        if (salesTab == 0) {
                         if (d.bestSellers.isEmpty()) {
                             Text(tr("Belum ada obat terjual hari ini.", "No items sold today yet."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
@@ -444,22 +403,6 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                     Text("${b.qty} item • ${formatIDR(b.revenue)}", style = MaterialTheme.typography.bodyMedium)
                                 }
                             }
-                        }
-                        } else {
-                        if (d.recentSales.isEmpty()) {
-                            Text(tr("Belum ada penjualan hari ini.", "No sales today yet."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        } else {
-                            d.recentSales.forEachIndexed { index, s ->
-                                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 4.dp))
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text(s.invoiceNo, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(formatTimeID(s.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(formatIDR(s.total), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
                         }
                     }
                 }

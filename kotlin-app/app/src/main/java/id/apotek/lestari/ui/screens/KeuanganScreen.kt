@@ -213,50 +213,35 @@ fun KeuanganScreen() {
                 }
             }
             Spacer(Modifier.height(SpaceL))
-            // Kartu Saldo Kas — warna gradasi biru di-revert ke kartu datar seperti semula;
-            // bar proporsi + compact dipertahankan. Redesain Varian 1 (pilihan
+            // Kartu Saldo Kas — warna gradasi biru di-revert ke kartu datar seperti semula.
+            // Redesain Varian 1 (pilihan
             // Achmad 2026-11-04): tombol Catat Kas yang dulu berdiri sendiri di
             // atas kartu kini menyatu sebagai baris bawah kartu ini.
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                            Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Text(tr("SALDO KAS", "CASH BALANCE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    // KE1 (pilihan Achmad 2026-11-14): label saldo saja,
+                    // tanpa ikon dompet di sampingnya (sesuai papan BR/KE).
+                    Text(tr("SALDO KAS", "CASH BALANCE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(SpaceS))
                     AnimatedAmount(saldo, MaterialTheme.typography.headlineLarge, if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-                    Spacer(Modifier.height(SpaceS))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Spacer(Modifier.height(SpaceS))
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.SouthWest, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(4.dp))
+                    // KE1 (pilihan Achmad 2026-11-14): Masuk/Keluar dalam
+                    // dua kotak berdampingan (tanpa ikon panah, tanpa
+                    // pemisah vertikal, tanpa bar proporsi).
+                    Spacer(Modifier.height(SpaceM))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SpaceM)) {
+                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
+                            Column(Modifier.padding(12.dp)) {
                                 Text(tr("MASUK", "IN"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.height(4.dp))
+                                Text(formatIDR(saldoIn), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            Text(formatIDR(saldoIn), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
-                        Box(Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outlineVariant))
-                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.NorthEast, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(4.dp))
+                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
+                            Column(Modifier.padding(12.dp)) {
                                 Text(tr("KELUAR", "OUT"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.height(4.dp))
+                                Text(formatIDR(saldoOut), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            Text(formatIDR(saldoOut), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                    // Bar proporsi Masuk (biru) vs Keluar (merah) dari total keseluruhan — tipis (compact).
-                    Spacer(Modifier.height(SpaceS))
-                    val totalFlow = saldoIn + saldoOut
-                    Row(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.outlineVariant)) {
-                        if (totalFlow > 0) {
-                            if (saldoIn > 0) Box(Modifier.weight(saldoIn.toFloat()).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
-                            if (saldoOut > 0) Box(Modifier.weight(saldoOut.toFloat()).fillMaxHeight().background(MaterialTheme.colorScheme.error))
                         }
                     }
                     // Baris bawah kartu: tombol Catat Kas (menyatu, Varian 1).
