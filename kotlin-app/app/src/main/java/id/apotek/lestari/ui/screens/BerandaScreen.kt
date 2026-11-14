@@ -107,6 +107,12 @@ import java.util.TimeZone
 fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () -> Unit, onGoRiwayat: () -> Unit, statusSync: StatusSync, onSyncTap: () -> Unit) {
     val gelap = LocalIsDarkTheme.current
     var dashboard by remember { mutableStateOf<Dashboard?>(null) }
+    // Pesan kegagalan muat (S10): tanpa ini, kegagalan dashboard membuat
+    // LoadingIndicator berputar selamanya.
+    var loadError by remember { mutableStateOf<String?>(null) }
+    // Gagal muat daftar obat/pembelian — spanduk Pengingat tidak boleh
+    // menyimpulkan "Semua stok aman" dari daftar yang tidak termuat.
+    var reminderLoadFailed by remember { mutableStateOf(false) }
     // Periode panel ringkasan BR5 (pilihan Achmad 2026-11-04):
     // 0 = Hari Ini, 1 = Bulan Ini.
     var summaryPeriod by remember { mutableIntStateOf(0) }
@@ -127,8 +133,21 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(resumeKey) {
-        (repo.getDashboard() as? ApiResult.Success)?.let { dashboard = it.data }
-        val meds = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
+        when (val r = repo.getDashboard()) {
+            is ApiResult.Success -> { dashboard = r.data; loadError = null }
+            is ApiResult.Error -> loadError = r.message
+            // Loading tidak pernah dihasilkan repo (call() hanya Success/
+            // Error); cabang ini hanya untuk memenuhi exhaustive 'when'.
+            is ApiResult.Loading -> Unit
+        }
+        // Kegagalan muat daftar pengingat dilacak terpisah (S10): tanpa
+        // ini, daftar kosong disimpulkan "Semua stok aman" padahal data
+        // tidak termuat.
+        var gagalPengingat = false
+        val meds = when (val r = repo.listMedicines()) {
+            is ApiResult.Success -> r.data?.medicines.orEmpty()
+            else -> { gagalPengingat = true; emptyList() }
+        }
         outOfStockNames = meds.filter { it.stock <= 0 }.map { it.name }.sorted()
         // Stok menipis = Rendah (1-9 pada skala status baru) — diurutkan dari
         // yang paling sedikit supaya yang paling mendesak tampil duluan.
@@ -145,10 +164,14 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         // Tagihan PBF: pembelian Kredit yang jatuh temponya <= 7 hari lagi
         // atau sudah lewat (pilihan Achmad 2026-10-30, saran no. 1) —
         // diurutkan dari jatuh tempo paling awal.
-        val purchases = (repo.listPurchases() as? ApiResult.Success)?.data?.purchases.orEmpty()
+        val purchases = when (val r = repo.listPurchases()) {
+            is ApiResult.Success -> r.data?.purchases.orEmpty()
+            else -> { gagalPengingat = true; emptyList() }
+        }
         dueBills = purchases.filter { p ->
             p.paymentType == "KREDIT" && p.dueDate.isNotBlank() && (dueDaysLeft(p.dueDate) ?: Long.MAX_VALUE) <= 7L
         }.sortedBy { it.dueDate }
+        reminderLoadFailed = gagalPengingat
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -354,7 +377,11 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     if (dueBills.isNotEmpty()) add(tr("${dueBills.size} tagihan PBF jatuh tempo", "${dueBills.size} PBF bills due"))
                 }
                 val hasReminders = reminderParts.isNotEmpty()
-                val reminderSummary = if (hasReminders) reminderParts.joinToString(" • ") else tr("Semua stok dan kadaluarsa aman.", "All stock and expiry dates are safe.")
+                val reminderSummary = when {
+                    reminderLoadFailed -> tr("Gagal memuat data pengingat.", "Failed to load reminder data.")
+                    hasReminders -> reminderParts.joinToString(" • ")
+                    else -> tr("Semua stok dan kadaluarsa aman.", "All stock and expiry dates are safe.")
+                }
                 val reminderDetail: String? = when {
                     expiringMeds.isNotEmpty() -> {
                         val (nm, exp) = expiringMeds.first()
@@ -429,7 +456,20 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 
             }
         } ?: item {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
+            val err = loadError
+            if (err != null) {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(tr("Gagal memuat Beranda.", "Failed to load Home."), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(SpaceS))
+                    Text(err, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(SpaceS))
+                    Button(onClick = { loadError = null; resumeKey++ }) {
+                        Text(tr("Coba lagi", "Try again"))
+                    }
+                }
+            } else {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
+            }
         }
     }
 }
