@@ -55,8 +55,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -335,6 +337,23 @@ fun LabaScreen() {
 // ---------- Obat Terlaris ----------
 
 
+/** Pangsa tiap irisan donat dalam persen bulat; jumlahnya tepat 100
+ *  (largest remainder). Dipakai hero donat Terlaris (TL1). */
+private fun pangsaDonat(qtys: List<Int>): List<Int> {
+    val total = qtys.sum().coerceAtLeast(1)
+    val raw = qtys.map { it * 100.0 / total }
+    val base = raw.map { it.toInt() }.toMutableList()
+    var sisa = 100 - base.sum()
+    val order = raw.indices.sortedByDescending { raw[it] - base[it] }
+    var i = 0
+    while (sisa > 0) {
+        base[order[i % order.size]] += 1
+        sisa--
+        i++
+    }
+    return base
+}
+
 @Composable
 fun ObatTerlarisScreen() {
     var sellers by remember { mutableStateOf<List<BestSeller>?>(null) }
@@ -403,13 +422,67 @@ fun ObatTerlarisScreen() {
             } else {
                 val totalQty = list.sumOf { it.qty }
                 val maxQty = list.maxOf { it.qty }.coerceAtLeast(1)
+                // Donat TL1: 3 obat teratas + gabungan "Lainnya" bila daftar
+                // lebih panjang; pangsa dihitung largest remainder supaya
+                // jumlahnya tepat 100%.
+                val warnaDonat = listOf(
+                    Color(0xFF40C4FF),
+                    MaterialTheme.colorScheme.primary,
+                    warningAmber(),
+                    MaterialTheme.colorScheme.surfaceContainerHighest
+                )
+                val irisanQty = if (list.size > 3) {
+                    list.take(3).map { it.qty } + list.drop(3).sumOf { it.qty }
+                } else {
+                    list.map { it.qty }
+                }
+                val irisanNama = if (list.size > 3) {
+                    list.take(3).map { it.name } + tr("Lainnya", "Others")
+                } else {
+                    list.map { it.name }
+                }
+                val irisanPangsa = pangsaDonat(irisanQty)
                 item {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                            Column(Modifier.weight(1f)) {
-                                Text(tr("ITEM TERJUAL", "ITEMS SOLD"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(SpaceXS))
-                                AnimatedAmount(totalQty, MaterialTheme.typography.titleLarge, Color.White) { "$it item" }
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(120.dp), contentAlignment = Alignment.Center) {
+                                Canvas(Modifier.size(120.dp)) {
+                                    val stroke = 18.dp.toPx()
+                                    var start = -90f
+                                    irisanQty.forEachIndexed { i, qty ->
+                                        val sweep = 360f * qty / totalQty.coerceAtLeast(1)
+                                        if (sweep > 0f) {
+                                            drawArc(
+                                                color = warnaDonat[i],
+                                                startAngle = start,
+                                                sweepAngle = sweep,
+                                                useCenter = false,
+                                                topLeft = Offset(stroke / 2, stroke / 2),
+                                                size = Size(size.width - stroke, size.height - stroke),
+                                                style = Stroke(width = stroke, cap = StrokeCap.Butt)
+                                            )
+                                        }
+                                        start += sweep
+                                    }
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    AnimatedAmount(totalQty, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface) { "$it" }
+                                    Text(tr("item", "items"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                irisanNama.forEachIndexed { i, nama ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(Modifier.size(12.dp).background(warnaDonat[i], CircleShape))
+                                        Spacer(Modifier.width(8.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Text(nama, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(tr("${irisanQty[i]} item", "${irisanQty[i]} items"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        Text("${irisanPangsa[i]}%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
                             }
                         }
                     }
