@@ -239,6 +239,10 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     // T7–T12 (14 Nov): pil 64dp, teks 19sp; pil terpilih
                     // navy #1B385C + teks putih + garis cyan — menggantikan
                     // primary biru muda yang terlihat pucat di mode gelap.
+                    // Bentuk diubah 14 Nov (permintaan Achmad): kotak
+                    // bersudut membulat RoundedCornerShape(20.dp), SAMA
+                    // seperti kartu pintasan Laba/Pengingat/Riwayat
+                    // (ShortcutCard) — bukan lagi pill penuh.
                     Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                         listOf(tr("Hari Ini", "Today"), tr("Bulan Ini", "This Month")).forEachIndexed { index, label ->
                             val selected = summaryPeriod == index
@@ -252,6 +256,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                                     )
                                 },
+                                shape = RoundedCornerShape(20.dp),
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = Color(0xFF1B385C),
                                     selectedLabelColor = Color.White
