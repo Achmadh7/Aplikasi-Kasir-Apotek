@@ -425,12 +425,6 @@ fun ObatTerlarisScreen() {
                 // Donat TL1: 3 obat teratas + gabungan "Lainnya" bila daftar
                 // lebih panjang; pangsa dihitung largest remainder supaya
                 // jumlahnya tepat 100%.
-                val warnaDonat = listOf(
-                    Color(0xFF40C4FF),
-                    MaterialTheme.colorScheme.primary,
-                    warningAmber(),
-                    MaterialTheme.colorScheme.surfaceContainerHighest
-                )
                 val irisanQty = if (list.size > 3) {
                     list.take(3).map { it.qty } + list.drop(3).sumOf { it.qty }
                 } else {
@@ -443,6 +437,12 @@ fun ObatTerlarisScreen() {
                 }
                 val irisanPangsa = pangsaDonat(irisanQty)
                 item {
+                    val warnaDonat = listOf(
+                        Color(0xFF40C4FF),
+                        MaterialTheme.colorScheme.primary,
+                        warningAmber(),
+                        MaterialTheme.colorScheme.surfaceContainerHighest
+                    )
                     ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(120.dp), contentAlignment = Alignment.Center) {
