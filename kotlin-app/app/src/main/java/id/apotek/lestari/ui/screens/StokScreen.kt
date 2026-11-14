@@ -80,7 +80,6 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import id.apotek.lestari.data.*
 import id.apotek.lestari.ui.BtPrinter
-import id.apotek.lestari.ui.components.BarcodeScanner
 import id.apotek.lestari.ui.buildReceiptBytes
 import id.apotek.lestari.ui.getPairedPrinters
 import id.apotek.lestari.ui.hasBluetoothPermission
@@ -121,11 +120,6 @@ fun StokScreen() {
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
     var showForm by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Medicine?>(null) }
-    // Scan barcode (dikembalikan 2026-11-14): prefillBarcode menampung kode
-    // hasil scan yang belum terdaftar, supaya formulir Tambah membukanya
-    // dengan kolom Barcode sudah terisi.
-    var showScanner by remember { mutableStateOf(false) }
-    var prefillBarcode by remember { mutableStateOf("") }
     var msg by remember { mutableStateOf("") }
     var deleteTarget by remember { mutableStateOf<Medicine?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -256,27 +250,6 @@ fun StokScreen() {
         "low" -> shown.sortedWith(compareBy({ it.stock }, { it.name.lowercase() }))
         else -> shown.sortedBy { it.name.lowercase() }
     }
-    // Scan barcode — DIPERBAIKI dari versi lama (dulu ketemu cuma menampilkan
-    // pesan "Ditemukan" tanpa membuka formulir): ketemu -> buka formulir Edit
-    // dengan data obat itu sudah terisi; tidak ketemu -> buka formulir Tambah
-    // dengan kolom Barcode terisi kode hasil scan.
-    if (showScanner) BarcodeScanner(onDetected = { code ->
-        showScanner = false
-        scope.launch {
-            val med = (repo.findByBarcode(code) as? ApiResult.Success)?.data?.medicine
-            if (med != null) {
-                msg = tr("Ditemukan: ${med.name} — stok ${med.stock}", "Found: ${med.name} — stock ${med.stock}")
-                prefillBarcode = ""
-                editing = med
-                showForm = true
-            } else {
-                msg = tr("Barcode $code belum terdaftar — isi data obatnya", "Barcode $code not registered yet — fill in the medicine details")
-                prefillBarcode = code
-                editing = null
-                showForm = true
-            }
-        }
-    }, onClose = { showScanner = false })
     Box(Modifier.fillMaxSize()) {
     // Satu LazyColumn untuk seluruh layar (header + daftar) supaya layar bisa
     // digulir penuh saat lanskap — header tetap + LazyColumn weight(1f) membuat
@@ -292,22 +265,10 @@ fun StokScreen() {
             KartuHeaderPremium(tr("Stok", "Stock"), Icons.Default.Medication, tr("${medicines.size} jenis obat tercatat", "${medicines.size} medicines recorded"))
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                SearchField(
-                    value = search, onValueChange = { search = it },
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedButton(
-                    onClick = { showScanner = true },
-                    shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.height(44.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp)
-                ) {
-                    Icon(Icons.Default.QrCodeScanner, tr("Scan barcode stok", "Scan stock barcode"))
-                    Spacer(Modifier.width(8.dp))
-                    Text(tr("Scan", "Scan"))
-                }
-            }
+            SearchField(
+                value = search, onValueChange = { search = it },
+                modifier = Modifier.fillMaxWidth()
+            )
             if (msg.isNotEmpty()) {
                 Spacer(Modifier.height(SpaceS))
                 Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -538,7 +499,7 @@ fun StokScreen() {
             exit = ExitTransition.None
         ) {
             ExtendedFloatingActionButton(
-                onClick = { prefillBarcode = ""; editing = null; showForm = true },
+                onClick = { editing = null; showForm = true },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = RoundedCornerShape(28.dp),
@@ -548,7 +509,7 @@ fun StokScreen() {
         }
         SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
     }
-    if (showForm) MedicineFormDialog(editing = editing, prefillBarcode = prefillBarcode, onDismiss = { showForm = false; prefillBarcode = "" }, onSaved = { showForm = false; prefillBarcode = ""; reload() })
+    if (showForm) MedicineFormDialog(editing = editing, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
     if (showImportDialog && importSummary != null) {
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
@@ -682,11 +643,8 @@ fun OptionPickerSheet(
 
 
 @Composable
-fun MedicineFormDialog(editing: Medicine?, prefillBarcode: String = "", onDismiss: () -> Unit, onSaved: () -> Unit) {
+fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () -> Unit) {
     var name by remember(editing) { mutableStateOf(editing?.name ?: "") }
-    // Barcode: saat edit diisi dari obatnya; saat tambah dari hasil scan
-    // (prefillBarcode) bila ada — kalau tidak, kosong.
-    var barcode by remember(editing, prefillBarcode) { mutableStateOf(if (editing == null) prefillBarcode else (editing.barcode ?: "")) }
     var category by remember(editing) { mutableStateOf(editing?.category ?: "Umum") }
     var unit by remember(editing) { mutableStateOf(editing?.unit ?: "Strip") }
     var showCategorySheet by remember { mutableStateOf(false) }
@@ -737,7 +695,6 @@ fun MedicineFormDialog(editing: Medicine?, prefillBarcode: String = "", onDismis
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                     Text(tr("IDENTITAS", "IDENTITY"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     OutlinedTextField(name, { name = it }, label = { Text(tr("Nama Obat", "Medicine Name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(barcode, { barcode = it }, label = { Text(tr("Barcode (boleh kosong)", "Barcode (optional)")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                         OutlinedTextField(
                             value = category, onValueChange = {}, label = { Text(tr("Kategori", "Category")) },
@@ -794,10 +751,11 @@ fun MedicineFormDialog(editing: Medicine?, prefillBarcode: String = "", onDismis
                             val s = parseDecimal(sell.text)
                             val st = stock.toIntOrNull() ?: 0
                             val exp = expiry.ifBlank { null }
-                            // Barcode diisi lewat formulir (dikembalikan
-                            // 2026-11-14 bersama scan barcode); kosong = tanpa
-                            // barcode. Duplikat ditolak Repository.
-                            val bc = barcode.trim().ifBlank { null }
+                            // Barcode tidak lagi diisi lewat formulir (kolomnya
+                            // dihapus atas permintaan Achmad 2026-10-29); saat edit,
+                            // barcode lama (mis. dari impor Excel) dipertahankan
+                            // supaya pencocokan impor berikutnya tidak rusak.
+                            val bc = editing?.barcode
                             val result = if (editing == null) {
                                 repo.createMedicine(MedicineArgs(name, cat, unt, s, st, exp, bc, wholesalePrice = parseDecimal(grosir.text)))
                             } else {
