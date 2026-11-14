@@ -48,6 +48,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.positionInWindow
@@ -192,20 +193,23 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
             // ≤ N hari, biru untuk Rendah, netral untuk Habis (merah bila
             // ada yang habis). Angka dan ikon memakai warna kategorinya,
             // supaya tingkat urgensi terbaca sekilas.
+            // 2026-11-14: tanpa elevasi + warna opak (compositeOver) —
+            // warna 18% transparan di atas Card berelevasi menimbulkan
+            // persegi bayangan di belakang angka (lihat screenshot).
             Column(verticalArrangement = Arrangement.spacedBy(SpaceM)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM)) {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.18f), modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface), elevation = 0.dp, modifier = Modifier.weight(1f)) {
                         ReminderCount(Icons.Default.EventBusy, "EXPIRED", "${expired.size}", MaterialTheme.colorScheme.error, Modifier.fillMaxWidth().padding(16.dp))
                     }
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = warningAmber().copy(alpha = 0.18f), modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = warningAmber().copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface), elevation = 0.dp, modifier = Modifier.weight(1f)) {
                         ReminderCount(Icons.Default.Schedule, "≤ $window HARI", "${withinWindow.size}", warningAmber(), Modifier.fillMaxWidth().padding(16.dp))
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM)) {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f), modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface), elevation = 0.dp, modifier = Modifier.weight(1f)) {
                         ReminderCount(Icons.Default.Inventory, tr("RENDAH", "LOW"), "${low.size}", MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().padding(16.dp))
                     }
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = if (critical.isNotEmpty()) MaterialTheme.colorScheme.error.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = if (critical.isNotEmpty()) MaterialTheme.colorScheme.error.copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface) else MaterialTheme.colorScheme.surfaceContainerHigh, elevation = 0.dp, modifier = Modifier.weight(1f)) {
                         ReminderCount(Icons.Default.PriorityHigh, tr("HABIS", "OUT"), "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
                     }
                 }
