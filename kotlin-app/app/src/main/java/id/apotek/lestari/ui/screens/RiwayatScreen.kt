@@ -603,6 +603,9 @@ fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, sale: Sal
 fun RiwayatScreen() {
     var sales by remember { mutableStateOf<List<Sale>>(emptyList()) }
     var expanded by remember { mutableStateOf<Int?>(null) }
+    // Filter cara bayar (H6): "Semua" tampilkan semua; lainnya samakan
+    // paymentMethod tanpa peka huruf (audit LOW: "tunai" kecil pun Tunai).
+    var filterBayar by remember { mutableStateOf("Semua") }
     var salesLimit by remember { mutableIntStateOf(50) }
     var hasMore by remember { mutableStateOf(false) }
     val receiptLayer = rememberGraphicsLayer()
@@ -629,7 +632,17 @@ fun RiwayatScreen() {
         KartuHeaderPremium(tr("Riwayat", "History"), Icons.Default.ReceiptLong)
         Spacer(Modifier.height(SpaceL))
         DemoBanner()
+        Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+            listOf("Semua" to tr("Semua", "All"), "Tunai" to tr("Tunai", "Cash"), "QRIS" to "QRIS", "Transfer" to tr("Transfer", "Transfer")).forEach { (k, l) ->
+                FilterChip(selected = filterBayar == k, onClick = { expanded = null; filterBayar = k }, label = { Text(l) })
+            }
+        }
+        Spacer(Modifier.height(SpaceL))
+        // H6: saring dulu menurut cara bayar; hitungan "N transaksi • Rp X"
+        // di header hari ikut tersaring karena dihitung dari daySales.
+        val salesTampil = if (filterBayar == "Semua") sales else sales.filter { it.paymentMethod.equals(filterBayar, ignoreCase = true) }
         if (sales.isEmpty()) Text(tr("Belum ada penjualan tercatat.", "No sales recorded yet."))
+        else if (salesTampil.isEmpty()) Text(tr("Belum ada penjualan $filterBayar.", "No $filterBayar sales yet."))
         // Kelompokkan penjualan per hari (WIB): header tanggal + total omzet
         // harian, supaya riwayat lebih mudah dipindai daripada daftar datar.
         // dayKeyID/parseISODate sudah dipakai layar Keuangan untuk batas WIB.
@@ -640,7 +653,7 @@ fun RiwayatScreen() {
         }
         val todayKey = dayKeyID(todayCal.time)
         val yesterdayKey = dayKeyID((todayCal.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }.time)
-        val groupedSales = sales.groupBy { s -> parseISODate(s.createdAt)?.let { dayKeyID(it) } ?: "" }
+        val groupedSales = salesTampil.groupBy { s -> parseISODate(s.createdAt)?.let { dayKeyID(it) } ?: "" }
         // Urutkan grup dari hari terbaru (pakai createdAt terbesar di grup).
         val sortedGroups = groupedSales.entries.sortedByDescending { (_, list) ->
             list.maxOfOrNull { parseISODate(it.createdAt)?.time ?: 0L } ?: 0L
