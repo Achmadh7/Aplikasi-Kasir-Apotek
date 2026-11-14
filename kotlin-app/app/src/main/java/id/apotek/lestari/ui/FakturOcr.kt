@@ -206,6 +206,27 @@ fun cocokkanNama(nama: String, kandidat: List<String>): String? {
 }
 
 /** Tebak isi faktur dari baris-baris teks hasil OCR (urutan baca atas-bawah). */
+/**
+ * Tabel total dua baris (faktur APL): baris label di atas ("TOTAL 1 ...
+ * P.P.N ... JUMLAH TAGIHAN"), baris angka di bawah — PPN = angka pada
+ * posisi yang sama dengan label P.P.N. Bila jumlah label dan angka tidak
+ * sama (ML Kit menggabung/memecah baris lain), kembalikan null supaya
+ * pemanggil memakai cara lama.
+ */
+fun ppnDariTabelTotal(barisLabel: String, barisNilai: String?): Int? {
+    val label = Regex(
+        """(TOTAL\s*\d|POT\.\s*[A-Z]+|P\.P\.N|METERAI|JUMLAH\s+[A-Z]+)""",
+        RegexOption.IGNORE_CASE
+    ).findAll(barisLabel).map { it.value }.toList()
+    val nilai = (barisNilai ?: "").split(Regex("""\s+""")).mapNotNull { token ->
+        if (Regex("""^\d[\d.,]*$""").matches(token)) {
+            token.replace(".", "").substringBefore(",").toIntOrNull()
+        } else null
+    }
+    val posPpn = label.indexOfFirst { it.replace(".", "").equals("ppn", ignoreCase = true) }
+    return if (posPpn >= 0 && nilai.size == label.size) nilai[posPpn] else null
+}
+
 fun parseFaktur(baris: List<String>): FakturHasil {
     val bersih = baris.map { it.trim() }.filter { it.isNotEmpty() }
     var invoiceNo = ""
@@ -213,7 +234,7 @@ fun parseFaktur(baris: List<String>): FakturHasil {
     var ppn = 0
     val items = mutableListOf<FakturItemHasil>()
     val noRegex = Regex("""(?i)\b(?:no\.?|nomor|faktur|invoice|inv)\b[^A-Za-z0-9]{0,3}([A-Za-z0-9][A-Za-z0-9\-/]{2,})""")
-    for (line in bersih) {
+    for ((idx, line) in bersih.withIndex()) {
         val low = line.lowercase()
         if (invoiceNo.isEmpty()) {
             noRegex.find(line)?.let { invoiceNo = it.groupValues[1].trimEnd('.', ',', ';', ')') }
@@ -221,7 +242,11 @@ fun parseFaktur(baris: List<String>): FakturHasil {
         // "P.P.N" (dengan titik) tetap dikenali sebagai PPN.
         if (low.replace(".", "").contains("ppn") || low.contains("vat")) {
             if (ppn == 0) {
-                angkaUang(line).filter { it >= 100 }.maxOrNull()?.let { ppn = it }
+                val angkaBaris = angkaUang(line).filter { it >= 100 }
+                val dariTabel = if (angkaBaris.isEmpty()) {
+                    ppnDariTabelTotal(line, bersih.getOrNull(idx + 1))
+                } else null
+                (dariTabel ?: angkaBaris.maxOrNull())?.let { ppn = it }
             }
             continue
         }

@@ -91,6 +91,7 @@ class FakturParserTest {
         assertEquals("PT ANUGERAH PHARMINDO LESTARI", hasil.pbfName)
         assertEquals("211697802", hasil.invoiceNo)
         assertEquals("2026-11-03", hasil.tanggal)
+        assertEquals(79858, hasil.ppn)
         assertEquals(4, hasil.items.size)
         assertEquals("PANADOL CAPLET 100S - BLISTER", hasil.items[0].nama)
         assertEquals(10, hasil.items[0].qty)
