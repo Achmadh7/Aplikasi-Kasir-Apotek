@@ -488,9 +488,10 @@ fun StokScreen() {
             
         }
     }
-        // FAB Tambah Obat: melayang di kanan bawah; naik sedikit saat
-        // Snackbar tampil supaya tombol aksinya (mis. Urungkan) tidak
-        // tertutup.
+        // FAB Tambah Obat (TA1, pilihan Achmad 2026-11-15): tombol bulat
+        // 56dp berisi ikon + saja; tetap melayang di kanan bawah dan naik
+        // sedikit saat Snackbar tampil supaya tombol aksinya (mis. Urungkan)
+        // tidak tertutup.
         val fabBottomPadding = if (snackbarHostState.currentSnackbarData != null) 84.dp else 16.dp
         AnimatedVisibility(
             visible = fabVisible,
@@ -498,14 +499,14 @@ fun StokScreen() {
             enter = EnterTransition.None,
             exit = ExitTransition.None
         ) {
-            ExtendedFloatingActionButton(
+            FloatingActionButton(
                 onClick = { editing = null; showForm = true },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(28.dp),
-                icon = { Icon(Icons.Default.Add, null) },
-                text = { Text(tr("Tambah Obat", "Add Medicine"), style = MaterialTheme.typography.titleMedium) }
-            )
+                shape = CircleShape
+            ) {
+                Icon(Icons.Default.Add, tr("Tambah Obat", "Add Medicine"))
+            }
         }
         SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
     }
