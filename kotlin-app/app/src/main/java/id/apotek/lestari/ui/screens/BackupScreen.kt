@@ -499,6 +499,17 @@ fun TentangScreen() {
             }
         }
         item {
+            // Kartu deskripsi: pengantar singkat aplikasi (teks diperbarui
+            // 2026-11-14 — menyebut sinkronisasi + cadangan otomatis).
+            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    tr("Aplikasi kasir dan manajemen stok obat untuk Apotek Lestari. Bekerja penuh tanpa internet; masuk dengan Google untuk sinkronisasi dan cadangan otomatis.", "A cashier and medicine stock management app for Apotek Lestari. Works fully offline; sign in with Google for sync and automatic backup."),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+        item {
             // Kartu versi: versi aplikasi + versi database.
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.fillMaxWidth()) {
@@ -518,9 +529,11 @@ fun TentangScreen() {
                         tr("Kasir & struk (termasuk cetak Bluetooth)", "Cashier & receipts (incl. Bluetooth printing)"),
                         tr("Stok & pengingat kadaluwarsa", "Stock & expiry reminders"),
                         tr("Faktur PBF", "PBF purchase invoices"),
+                        tr("Daftar Pemasok", "Supplier list"),
                         tr("Laba & laporan kas", "Profit & cash reports"),
                         tr("Mode Online — sinkronisasi Google", "Online Mode — Google sync"),
-                        tr("Ekspor Excel & cadangan JSON", "Excel export & JSON backup")
+                        tr("Ekspor Excel & cadangan JSON", "Excel export & JSON backup"),
+                        tr("Cadangan otomatis (harian/mingguan)", "Automatic backup (daily/weekly)")
                     )
                     fitur.forEach { item ->
                         Row(verticalAlignment = Alignment.Top) {
