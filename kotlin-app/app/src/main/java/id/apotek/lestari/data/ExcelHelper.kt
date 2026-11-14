@@ -42,6 +42,8 @@ object ExcelHelper {
     const val MIME_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     const val SHEET_STOK = "Stok Obat"
     const val SHEET_PETUNJUK = "Petunjuk"
+    const val SHEET_REKAP_HARIAN = "Rekap Harian"
+    const val SHEET_REKAP_OBAT = "Per Obat"
 
     val HEADERS = arrayOf(
         "Nama Obat", "Kategori", "Satuan",
@@ -113,6 +115,106 @@ object ExcelHelper {
         }
         buildStockSheet(wb, rows)
         return wbBytes(wb)
+    }
+
+    /** Rekap penjualan (J5) ke .xlsx: sheet "Rekap Harian" (satu baris per
+     *  hari berisi penjualan + baris TOTAL) dan sheet "Per Obat" (satu baris
+     *  per obat + TOTAL). Format mengikuti template Stok (X1+X2+X3): judul
+     *  dibekukan + filter otomatis, angka #,##0, tanggal sel Excel asli. */
+    fun rekapPenjualanBytes(rekap: RekapPenjualan, judulPeriode: String): ByteArray {
+        val wb = XSSFWorkbook()
+        buildRekapSheet(
+            wb, SHEET_REKAP_HARIAN, "Rekap Penjualan \u2014 $judulPeriode",
+            arrayOf("Tanggal", "Transaksi", "Item Terjual", "Total Penjualan (Rp)"),
+            intArrayOf(18, 12, 14, 22),
+            rekap.daily.map { listOf<Any>(it.date, it.transactions, it.itemsSold, it.revenue) },
+            dateCol = 0,
+            totalRow = listOf<Any>("TOTAL", rekap.totalTransactions, rekap.totalItemsSold, rekap.totalRevenue)
+        )
+        buildRekapSheet(
+            wb, SHEET_REKAP_OBAT, "Per Obat \u2014 $judulPeriode",
+            arrayOf("Nama Obat", "Kategori", "Item Terjual", "Total Penjualan (Rp)"),
+            intArrayOf(32, 20, 14, 22),
+            rekap.byMedicine.map { listOf<Any>(it.name, it.category, it.qty, it.revenue) },
+            dateCol = -1,
+            totalRow = listOf<Any>("TOTAL", "", rekap.byMedicine.sumOf { it.qty }, rekap.byMedicine.sumOf { it.revenue })
+        )
+        return wbBytes(wb)
+    }
+
+    /** Satu sheet rekap: baris 0 judul (digabung), baris 1 header, lalu data
+     *  dan baris TOTAL tebal di akhir. Kolom tanggal ditulis sebagai sel
+     *  tanggal Excel asli (seperti X3), bukan teks. */
+    private fun buildRekapSheet(
+        wb: XSSFWorkbook,
+        sheetName: String,
+        title: String,
+        headers: Array<String>,
+        widths: IntArray,
+        rows: List<List<Any>>,
+        dateCol: Int,
+        totalRow: List<Any>
+    ) {
+        val sheet = wb.createSheet(sheetName)
+        val titleStyle = wb.createCellStyle().apply {
+            setFont(wb.createFont().apply { bold = true; fontHeightInPoints = 14 })
+        }
+        val titleRow = sheet.createRow(0)
+        titleRow.createCell(0).apply { setCellValue(title); cellStyle = titleStyle }
+        sheet.addMergedRegion(CellRangeAddress(0, 0, 0, headers.size - 1))
+        val headerStyle = wb.createCellStyle().apply {
+            setFont(wb.createFont().apply {
+                bold = true
+                color = IndexedColors.BLACK.index
+            })
+            fillForegroundColor = IndexedColors.PALE_BLUE.index
+            fillPattern = FillPatternType.SOLID_FOREGROUND
+        }
+        val header = sheet.createRow(1)
+        headers.forEachIndexed { i, h ->
+            header.createCell(i).apply { setCellValue(h); cellStyle = headerStyle }
+        }
+        val numberStyle = wb.createCellStyle().apply {
+            dataFormat = wb.createDataFormat().getFormat("#,##0")
+        }
+        val boldNumberStyle = wb.createCellStyle().apply {
+            setFont(wb.createFont().apply { bold = true })
+            dataFormat = wb.createDataFormat().getFormat("#,##0")
+        }
+        val boldStyle = wb.createCellStyle().apply {
+            setFont(wb.createFont().apply { bold = true })
+        }
+        val dateStyle = wb.createCellStyle().apply {
+            dataFormat = wb.createDataFormat().getFormat("yyyy-mm-dd")
+        }
+        fun writeRow(rowIdx: Int, values: List<Any>, bold: Boolean) {
+            val row = sheet.createRow(rowIdx)
+            values.forEachIndexed { c, v ->
+                val cell = row.createCell(c)
+                when (v) {
+                    is Int -> { cell.setCellValue(v.toDouble()); cell.cellStyle = if (bold) boldNumberStyle else numberStyle }
+                    is Long -> { cell.setCellValue(v.toDouble()); cell.cellStyle = if (bold) boldNumberStyle else numberStyle }
+                    else -> {
+                        val s = v.toString()
+                        if (c == dateCol) {
+                            val parsed = runCatching { LocalDate.parse(s, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
+                            if (parsed != null) {
+                                cell.setCellValue(Date.from(parsed.atStartOfDay(ZoneId.of("Asia/Jakarta")).toInstant()))
+                                cell.cellStyle = dateStyle
+                            } else cell.setCellValue(s)
+                        } else {
+                            cell.setCellValue(s)
+                            if (bold) cell.cellStyle = boldStyle
+                        }
+                    }
+                }
+            }
+        }
+        rows.forEachIndexed { i, values -> writeRow(i + 2, values, false) }
+        writeRow(rows.size + 2, totalRow, true)
+        widths.forEachIndexed { i, w -> sheet.setColumnWidth(i, w * 256) }
+        sheet.createFreezePane(0, 2)
+        sheet.setAutoFilter(CellRangeAddress(1, 1, 0, headers.size - 1))
     }
 
     data class ParsedImport(val items: List<MedicineArgs>, val skippedRows: List<Int>)

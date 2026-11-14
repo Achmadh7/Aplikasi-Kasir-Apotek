@@ -587,6 +587,32 @@ class Repository {
         )
     }
 
+    // ---- Rekap Penjualan Excel (J5) ----
+
+    /** Rekap penjualan per periode untuk diekspor ke Excel: harian +
+     *  per obat. Agregasinya murni di [agregatRekapPenjualan] supaya bisa
+     *  diuji unit tanpa database. */
+    suspend fun getRekapPenjualan(period: String = "month"): ApiResult<RekapPenjualan> = call {
+        val db = DatabaseProvider.db
+        val salesRows = db.saleDao().getAll()
+        val items = db.saleDao().getAllItems()
+        val meds = db.medicineDao().getAll()
+        val medById = meds.associateBy { it.id }
+        val startToday = jakartaDayStartMillis(0)
+        val endToday = jakartaDayStartMillis(1)
+        val startMonth = jakartaMonthStartMillis()
+        val startLast30 = jakartaDayStartMillis(-29)
+        val start = when (period) {
+            "today" -> startToday
+            "month" -> startMonth
+            "last30" -> startLast30
+            "all" -> 0L
+            else -> throw IllegalArgumentException(tr("Periode tidak dikenal: $period", "Unknown period: $period"))
+        }
+        val end = if (period == "all") Long.MAX_VALUE else endToday
+        agregatRekapPenjualan(salesRows, items, medById, start, end, period)
+    }
+
     // ---- Obat Terlaris (diurutkan jumlah terjual, terbanyak dulu) ----
 
     suspend fun getBestSellers(period: String = "month"): ApiResult<List<BestSeller>> = call {
@@ -1172,3 +1198,66 @@ class Repository {
     }
 }
 
+
+/** Agregasi murni rekap penjualan (J5) — tanpa database, bisa diuji unit.
+ *  Hanya penjualan dalam [start, end) yang dihitung; hari tanpa penjualan
+ *  tidak muncul di daftar harian. Nama/kategori obat diambil dari stok saat
+ *  ini, jatuh kembali ke snapshot item bila obatnya sudah dihapus. */
+fun agregatRekapPenjualan(
+    sales: List<SaleEntity>,
+    items: List<SaleItemEntity>,
+    medById: Map<Int, MedicineEntity>,
+    start: Long,
+    end: Long,
+    period: String
+): RekapPenjualan {
+    fun inPeriod(iso: String): Boolean {
+        val t = parseISODate(iso)?.time ?: return false
+        return t in start until end
+    }
+    val periodSales = sales.filter { inPeriod(it.createdAt) }
+    val periodSaleIds = periodSales.map { it.id }.toSet()
+    val periodItems = items.filter { it.saleId in periodSaleIds }
+    val saleById = periodSales.associateBy { it.id }
+
+    data class AggHarian(var transactions: Int = 0, var itemsSold: Int = 0, var revenue: Int = 0)
+    val harian = linkedMapOf<String, AggHarian>()
+    for (s in periodSales) {
+        val key = parseISODate(s.createdAt)?.let { dayKeyID(it) } ?: continue
+        harian.getOrPut(key) { AggHarian() }.transactions += 1
+    }
+    for (it in periodItems) {
+        val sale = saleById[it.saleId] ?: continue
+        val key = parseISODate(sale.createdAt)?.let { dayKeyID(it) } ?: continue
+        val a = harian.getOrPut(key) { AggHarian() }
+        a.itemsSold += it.qty
+        a.revenue += it.subtotal
+    }
+    val daily = harian.entries.sortedBy { it.key }.map { (date, a) ->
+        RekapHarian(date, a.transactions, a.itemsSold, a.revenue)
+    }
+
+    data class Agg(var qty: Int = 0, var revenue: Int = 0)
+    val medAgg = linkedMapOf<Int, Agg>()
+    val medName = mutableMapOf<Int, String>()
+    val medCategory = mutableMapOf<Int, String>()
+    for (it in periodItems) {
+        val cur = medAgg.getOrPut(it.medicineId) { Agg() }
+        cur.qty += it.qty; cur.revenue += it.subtotal
+        medName[it.medicineId] = medById[it.medicineId]?.name ?: it.medicineName
+        medCategory[it.medicineId] =
+            (medById[it.medicineId]?.category ?: it.category).ifBlank { "Lainnya" }
+    }
+    val byMedicine = medAgg.entries.map { (id, a) ->
+        ProfitByMedicine(medName[id] ?: "", medCategory[id] ?: "Lainnya", a.qty, a.revenue)
+    }.sortedByDescending { it.revenue }
+
+    return RekapPenjualan(
+        period = period,
+        daily = daily,
+        byMedicine = byMedicine,
+        totalTransactions = periodSales.size,
+        totalItemsSold = periodItems.sumOf { it.qty },
+        totalRevenue = periodItems.sumOf { it.subtotal }
+    )
+}

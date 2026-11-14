@@ -114,6 +114,54 @@ fun LabaScreen() {
     // laporan membuat LoadingIndicator berputar selamanya.
     var loadError by remember { mutableStateOf<String?>(null) }
     var period by remember { mutableStateOf("month") }
+    // Rekap penjualan Excel (J5): pesan hasil + file yang menunggu dipilih
+    // lewat SAF. Pola launcher sama seperti Export Stok (StokScreen).
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var msg by remember { mutableStateOf("") }
+    var pendingRekap by remember { mutableStateOf<ByteArray?>(null) }
+    val rekapLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(ExcelHelper.MIME_XLSX)) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val bytes = pendingRekap ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                        ?: throw IllegalStateException("Tidak bisa membuka file tujuan")
+                }.isSuccess
+            }
+            msg = if (ok) tr("Rekap penjualan Excel berhasil disimpan.", "Sales recap Excel saved.")
+            else tr("Gagal menyimpan rekap Excel.", "Failed to save the sales recap Excel.")
+        }
+    }
+    fun exportRekap() {
+        scope.launch {
+            when (val r = repo.getRekapPenjualan(period)) {
+                is ApiResult.Success -> {
+                    val label = when (period) {
+                        "today" -> tr("Hari Ini", "Today")
+                        "month" -> tr("Bulan Ini", "This Month")
+                        "last30" -> tr("30 Hari", "Last 30 Days")
+                        else -> tr("Semua", "All Time")
+                    }
+                    val slug = when (period) {
+                        "today" -> "hari-ini"
+                        "month" -> "bulan-ini"
+                        "last30" -> "30-hari"
+                        else -> "semua"
+                    }
+                    val bytes = withContext(Dispatchers.IO) {
+                        ExcelHelper.rekapPenjualanBytes(r.data, label)
+                    }
+                    pendingRekap = bytes
+                    val stamp = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).format(Date())
+                    rekapLauncher.launch("Rekap-Penjualan-$slug-$stamp.xlsx")
+                }
+                is ApiResult.Error -> msg = tr("Gagal memuat rekap: ", "Failed to load recap: ") + r.message
+                is ApiResult.Loading -> Unit
+            }
+        }
+    }
     // Muat ulang laporan setiap kali layar Laba kembali tampil (ON_RESUME),
     // supaya penjualan terbaru dari Kasir ikut terhitung — bukan hanya saat
     // periode berubah. Sebelumnya laporan hanya dimuat saat periode berubah,
@@ -151,6 +199,20 @@ fun LabaScreen() {
                 listOf("today" to tr("Hari Ini", "Today"), "month" to tr("Bulan Ini", "This Month"), "last30" to tr("30 Hari", "Last 30 Days"), "all" to tr("Semua", "All")).forEach { (k, l) ->
                     FilterChip(selected = period == k, onClick = { period = k }, label = { Text(l) })
                 }
+            }
+            Spacer(Modifier.height(SpaceM))
+            OutlinedButton(
+                onClick = { exportRekap() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(tr("Export Excel", "Export Excel"), maxLines = 1)
+            }
+            if (msg.isNotEmpty()) {
+                Spacer(Modifier.height(SpaceS))
+                Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
             }
             

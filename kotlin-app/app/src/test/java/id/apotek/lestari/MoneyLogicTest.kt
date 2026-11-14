@@ -4,6 +4,10 @@ import id.apotek.lestari.data.BackupData
 import id.apotek.lestari.data.BackupHelper
 import id.apotek.lestari.data.ExcelHelper
 import id.apotek.lestari.data.Medicine
+import id.apotek.lestari.data.ProfitByMedicine
+import id.apotek.lestari.data.RekapHarian
+import id.apotek.lestari.data.RekapPenjualan
+import id.apotek.lestari.data.agregatRekapPenjualan
 import id.apotek.lestari.data.local.CashEntryEntity
 import id.apotek.lestari.data.local.MedicineEntity
 import id.apotek.lestari.data.local.PurchaseEntity
@@ -12,6 +16,7 @@ import id.apotek.lestari.data.local.SaleEntity
 import id.apotek.lestari.data.local.SaleItemEntity
 import id.apotek.lestari.ui.screens.dueDaysLeft
 import id.apotek.lestari.ui.theme.dayKeyID
+import id.apotek.lestari.ui.theme.parseISODate
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.DateUtil
 import org.apache.poi.ss.usermodel.WorkbookFactory
@@ -292,5 +297,96 @@ class MoneyLogicTest {
         assertEquals(-3L, dueDaysLeft(dayKeyPlus(-3)))
         assertNull(dueDaysLeft(""))
         assertNull(dueDaysLeft("bukan-tanggal"))
+    }
+
+    // ---------- Rekap penjualan Excel (J5) ----------
+
+    @Test
+    fun rekap_aggregation_groupsByDayAndMedicine() {
+        val meds = mapOf(
+            1 to MedicineEntity(id = 1, name = "Paracetamol 500mg", category = "Pereda Nyeri", unit = "Strip", buyPrice = 0, sellPrice = 12000, stock = 37, expiryDate = "2027-12-31", barcode = null, createdAt = "2026-10-26T00:15:00.000Z"),
+            2 to MedicineEntity(id = 2, name = "Vitamin C 1000mg", category = "Vitamin", unit = "Botol", buyPrice = 0, sellPrice = 50000, stock = 13, expiryDate = null, barcode = null, createdAt = "2026-10-26T00:16:00.000Z")
+        )
+        val sales = listOf(
+            SaleEntity(id = 1, invoiceNo = "INV-1", total = 136000, paymentMethod = "Tunai", amountPaid = 136000, changeAmount = 0, createdAt = "2026-11-04T05:21:00.000Z"),
+            SaleEntity(id = 2, invoiceNo = "INV-2", total = 40000, paymentMethod = "Tunai", amountPaid = 40000, changeAmount = 0, createdAt = "2026-11-05T02:00:00.000Z"),
+            // Di luar jendela: tidak ikut rekap.
+            SaleEntity(id = 3, invoiceNo = "INV-0", total = 99999, paymentMethod = "Tunai", amountPaid = 99999, changeAmount = 0, createdAt = "2026-10-20T05:00:00.000Z")
+        )
+        val items = listOf(
+            SaleItemEntity(id = 1, saleId = 1, medicineId = 1, medicineName = "Paracetamol 500mg", category = "Pereda Nyeri", unit = "Strip", qty = 3, price = 12000, priceType = "ECER", buyPrice = 0, subtotal = 36000),
+            SaleItemEntity(id = 2, saleId = 1, medicineId = 2, medicineName = "Vitamin C 1000mg", category = "Vitamin", unit = "Botol", qty = 2, price = 50000, priceType = "GROSIR", buyPrice = 0, subtotal = 100000),
+            SaleItemEntity(id = 3, saleId = 2, medicineId = 1, medicineName = "Paracetamol 500mg", category = "Pereda Nyeri", unit = "Strip", qty = 1, price = 12000, priceType = "ECER", buyPrice = 0, subtotal = 12000),
+            // Obat sudah dihapus dari Stok: nama + kategori dari snapshot item.
+            SaleItemEntity(id = 4, saleId = 2, medicineId = 99, medicineName = "Obat Hilang", category = "Umum", unit = "Strip", qty = 4, price = 7000, priceType = "ECER", buyPrice = 0, subtotal = 28000),
+            SaleItemEntity(id = 5, saleId = 3, medicineId = 1, medicineName = "Paracetamol 500mg", category = "Pereda Nyeri", unit = "Strip", qty = 9, price = 12000, priceType = "ECER", buyPrice = 0, subtotal = 108000)
+        )
+        val start = parseISODate("2026-11-01T00:00:00.000Z")!!.time
+        val end = parseISODate("2026-12-01T00:00:00.000Z")!!.time
+        val rekap = agregatRekapPenjualan(sales, items, meds, start, end, "month")
+        assertEquals(
+            listOf(
+                RekapHarian("2026-11-04", 1, 5, 136000),
+                RekapHarian("2026-11-05", 1, 5, 40000)
+            ),
+            rekap.daily
+        )
+        assertEquals(2, rekap.totalTransactions)
+        assertEquals(10, rekap.totalItemsSold)
+        assertEquals(176000, rekap.totalRevenue)
+        assertEquals(
+            listOf(
+                ProfitByMedicine("Vitamin C 1000mg", "Vitamin", 2, 100000),
+                ProfitByMedicine("Paracetamol 500mg", "Pereda Nyeri", 4, 48000),
+                ProfitByMedicine("Obat Hilang", "Umum", 4, 28000)
+            ),
+            rekap.byMedicine
+        )
+    }
+
+    @Test
+    fun rekap_bytes_hasTwoSheetsWithHeadersTotalsAndRealDates() {
+        val rekap = RekapPenjualan(
+            period = "month",
+            daily = listOf(
+                RekapHarian("2026-11-04", 1, 5, 136000),
+                RekapHarian("2026-11-05", 1, 5, 40000)
+            ),
+            byMedicine = listOf(
+                ProfitByMedicine("Vitamin C 1000mg", "Vitamin", 2, 100000),
+                ProfitByMedicine("Paracetamol 500mg", "Pereda Nyeri", 4, 48000)
+            ),
+            totalTransactions = 2, totalItemsSold = 10, totalRevenue = 176000
+        )
+        val wb = WorkbookFactory.create(ByteArrayInputStream(ExcelHelper.rekapPenjualanBytes(rekap, "Bulan Ini")))
+        // Sheet 1: Rekap Harian.
+        val harian = wb.getSheet(ExcelHelper.SHEET_REKAP_HARIAN)
+        assertEquals("Rekap Penjualan \u2014 Bulan Ini", harian.getRow(0).getCell(0).stringCellValue)
+        assertEquals("Tanggal", harian.getRow(1).getCell(0).stringCellValue)
+        assertEquals("Total Penjualan (Rp)", harian.getRow(1).getCell(3).stringCellValue)
+        val dayRow = harian.getRow(2)
+        assertEquals(CellType.NUMERIC, dayRow.getCell(0).cellType)
+        assertTrue(DateUtil.isCellDateFormatted(dayRow.getCell(0)))
+        val day = SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Jakarta")
+        }.format(dayRow.getCell(0).dateCellValue)
+        assertEquals("2026-11-04", day)
+        assertEquals(1.0, dayRow.getCell(1).numericCellValue, 0.0)
+        assertEquals("#,##0", dayRow.getCell(3).cellStyle.dataFormatString)
+        val totalRow = harian.getRow(4)
+        assertEquals("TOTAL", totalRow.getCell(0).stringCellValue)
+        assertEquals(2.0, totalRow.getCell(1).numericCellValue, 0.0)
+        assertEquals(10.0, totalRow.getCell(2).numericCellValue, 0.0)
+        assertEquals(176000.0, totalRow.getCell(3).numericCellValue, 0.0)
+        assertTrue(harian.paneInformation?.isFreezePane == true)
+        // Sheet 2: Per Obat.
+        val obat = wb.getSheet(ExcelHelper.SHEET_REKAP_OBAT)
+        assertEquals("Nama Obat", obat.getRow(1).getCell(0).stringCellValue)
+        assertEquals("Vitamin C 1000mg", obat.getRow(2).getCell(0).stringCellValue)
+        assertEquals(100000.0, obat.getRow(2).getCell(3).numericCellValue, 0.0)
+        val obatTotal = obat.getRow(4)
+        assertEquals("TOTAL", obatTotal.getCell(0).stringCellValue)
+        assertEquals(148000.0, obatTotal.getCell(3).numericCellValue, 0.0)
+        wb.close()
     }
 }
