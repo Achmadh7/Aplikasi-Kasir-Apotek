@@ -4,6 +4,9 @@ package id.apotek.lestari.ui.screens
 
 import android.content.res.Configuration
 import android.widget.Toast
+import android.net.Uri
+import androidx.core.content.FileProvider
+import java.io.File
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -78,6 +81,9 @@ import kotlin.math.roundToInt
 import id.apotek.lestari.data.*
 import id.apotek.lestari.ui.BtPrinter
 import id.apotek.lestari.ui.buildReceiptBytes
+import id.apotek.lestari.ui.FakturHasil
+import id.apotek.lestari.ui.bacaFakturDariUri
+import id.apotek.lestari.ui.cocokkanNama
 import id.apotek.lestari.ui.getPairedPrinters
 import id.apotek.lestari.ui.hasBluetoothPermission
 import id.apotek.lestari.ui.isBluetoothEnabled
@@ -537,6 +543,80 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    // Foto Faktur (OCR): isi formulir dari foto, lalu periksa sebelum simpan.
+    val context = LocalContext.current
+    var scanInfo by remember { mutableStateOf("") }
+    var sedangMembaca by remember { mutableStateOf(false) }
+    var pilihSumberFoto by remember { mutableStateOf(false) }
+    var fotoUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Terapkan hasil baca ke formulir — hanya field yang terbaca yang diisi;
+    // baris obat lama diganti bila masih kosong, ditambah bila sudah terisi.
+    fun terapkanHasilFaktur(hasil: FakturHasil) {
+        if (hasil.pbfName.isNotBlank()) pbfName = hasil.pbfName
+        if (hasil.invoiceNo.isNotBlank()) invoiceNo = hasil.invoiceNo
+        if (hasil.tanggal.isNotBlank()) date = hasil.tanggal
+        if (hasil.ppn > 0) ppn = formatDecimalFieldValue(TextFieldValue(hasil.ppn.toString()))
+        val terisiHeader = hasil.pbfName.isNotBlank() || hasil.invoiceNo.isNotBlank() || hasil.tanggal.isNotBlank()
+        if (hasil.items.isNotEmpty()) {
+            var cocok = 0
+            val baru = hasil.items.map { item ->
+                val namaCocok = cocokkanNama(item.nama, meds.map { it.name })
+                val med = namaCocok?.let { c -> meds.firstOrNull { it.name == c } }
+                if (med != null) cocok++
+                PurchaseItemRow().apply {
+                    name = med?.name ?: item.nama
+                    unit = med?.unit ?: if (item.satuan.isNotBlank()) item.satuan else "Strip"
+                    qty = item.qty.toString()
+                    price = formatDecimalFieldValue(TextFieldValue(item.hargaSatuan.toString()))
+                }
+            }
+            rows = if (rows.all { it.name.isBlank() }) baru else rows + baru
+            scanInfo = tr(
+                "Terbaca ${hasil.items.size} obat (${cocok} cocok dengan Stok) — periksa sebelum simpan.",
+                "Read ${hasil.items.size} items ($cocok matched in Stock) — please check before saving."
+            )
+        } else if (terisiHeader) {
+            scanInfo = tr(
+                "Nama/nomor faktur terisi, tapi tidak ada baris obat yang terbaca — coba foto lebih terang dan lurus.",
+                "Invoice header was filled, but no medicine rows were read — try a brighter, straighter photo."
+            )
+        } else {
+            scanInfo = tr(
+                "Tidak ada yang terbaca dari foto ini — coba foto lebih terang dan lurus.",
+                "Nothing could be read from this photo — try a brighter, straighter photo."
+            )
+        }
+    }
+
+    fun prosesFoto(uri: Uri) {
+        scope.launch {
+            sedangMembaca = true
+            scanInfo = ""
+            try {
+                val hasil = withContext(Dispatchers.Default) { bacaFakturDariUri(context, uri) }
+                terapkanHasilFaktur(hasil)
+            } catch (e: Exception) {
+                scanInfo = tr("Gagal membaca foto. Coba foto lebih jelas.", "Could not read the photo. Try a clearer photo.")
+            } finally {
+                sedangMembaca = false
+            }
+        }
+    }
+
+    fun buatUriFoto(): Uri {
+        val dir = File(context.cacheDir, "faktur").apply { mkdirs() }
+        val file = File(dir, "faktur-${System.currentTimeMillis()}.jpg")
+        return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    }
+
+    val galeriLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) prosesFoto(uri)
+    }
+    val kameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        if (ok) fotoUri?.let { prosesFoto(it) }
+    }
+
     // Saran nama obat dari data Stok (hanya saran ketik — memilihnya TIDAK
     // mengubah stok obat yang bersangkutan). Memilih saran juga mengisi
     // satuan baris ini dengan satuan obat itu di Stok.
@@ -583,6 +663,18 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            // Foto Faktur: baca foto, isi formulir, periksa sebelum simpan.
+            OutlinedButton(
+                onClick = { pilihSumberFoto = true },
+                enabled = !sedangMembaca,
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(if (sedangMembaca) tr("Membaca foto…", "Reading photo…") else tr("Foto Faktur — isi otomatis", "Photo Invoice — auto-fill"))
+            }
+            if (scanInfo.isNotEmpty()) Text(scanInfo, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             // Formulir berbagian kartu (desain F1, pilihan Achmad
             // 2026-11-04): FAKTUR, ITEM BELANJA, RINGKASAN.
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
@@ -796,6 +888,26 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 DatePicker(state = duePickerState)
             }
         }
+    }
+    // Pilih sumber foto faktur (kamera/galeri) — pola OptionPickerSheet yang
+    // sama seperti pemilih satuan.
+    if (pilihSumberFoto) {
+        OptionPickerSheet(
+            title = tr("Foto Faktur", "Photo Invoice"),
+            options = listOf(tr("Kamera", "Camera"), tr("Galeri", "Gallery")),
+            selected = "",
+            onSelect = { pilihan ->
+                pilihSumberFoto = false
+                if (pilihan == tr("Kamera", "Camera")) {
+                    val uri = buatUriFoto()
+                    fotoUri = uri
+                    kameraLauncher.launch(uri)
+                } else {
+                    galeriLauncher.launch("image/*")
+                }
+            },
+            onDismiss = { pilihSumberFoto = false }
+        )
     }
     // Pemilih satuan untuk baris yang diketuk — daftar UNITS yang sama
     // persis dengan formulir Stok (keputusan Achmad 2026-10-29: satuan PBF
