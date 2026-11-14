@@ -34,6 +34,13 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -703,7 +710,13 @@ fun RiwayatScreen() {
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            if (!isOpen && s.items.isNotEmpty()) {
+                            // B2 Geser + fade (pilihan Achmad 2026-11-14):
+                            // pratinjau 2 item mengembang/menyusut + fade 150ms.
+                            AnimatedVisibility(
+                                visible = !isOpen && s.items.isNotEmpty(),
+                                enter = expandVertically(animationSpec = tween(150)) + fadeIn(animationSpec = tween(150)),
+                                exit = shrinkVertically(animationSpec = tween(150)) + fadeOut(animationSpec = tween(150))
+                            ) {
                                 // Pratinjau isi (desain R2, pilihan Achmad
                                 // 2026-11-04): dua item pertama tampil tanpa
                                 // membuka kartu, sejajar kolom invoice; item
@@ -730,7 +743,14 @@ fun RiwayatScreen() {
                                     }
                                 }
                             }
-                            if (isOpen) {
+                            // B2 Geser + fade (pilihan Achmad 2026-11-14):
+                            // detail struk meluncur turun dari header +
+                            // fade 250ms saat dibuka, sebaliknya saat ditutup.
+                            AnimatedVisibility(
+                                visible = isOpen,
+                                enter = expandVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(250)),
+                                exit = shrinkVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) + fadeOut(animationSpec = tween(250))
+                            ) {
                                 Spacer(Modifier.height(SpaceL))
                                 InvoiceDetailCard(sale = s, graphicsLayer = receiptLayer)
                                 Spacer(Modifier.height(SpaceM))
