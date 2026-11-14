@@ -202,6 +202,12 @@ interface MedicineDao {
     @Query("SELECT * FROM medicines WHERE remoteId = :remoteId LIMIT 1")
     suspend fun getByRemoteId(remoteId: String): MedicineEntity?
 
+    // Cari obat hidup dengan identitas nama+kategori+satuan yang sama
+    // (pencocokan dedup sinkron — huruf besar/kecil dan spasi diabaikan;
+    // baris terbaru didahulukan).
+    @Query("SELECT * FROM medicines WHERE LOWER(TRIM(name)) = LOWER(TRIM(:nama)) AND LOWER(TRIM(category)) = LOWER(TRIM(:kategori)) AND LOWER(TRIM(unit)) = LOWER(TRIM(:satuan)) AND terhapus = 0 ORDER BY updatedAt DESC, id ASC LIMIT 1")
+    suspend fun cariDuplikat(nama: String, kategori: String, satuan: String): MedicineEntity?
+
     @Query("SELECT * FROM medicines WHERE id = :id")
     suspend fun getByIdAny(id: Int): MedicineEntity?
 
@@ -228,6 +234,12 @@ interface MedicineDao {
 
     @Query("DELETE FROM medicines WHERE terhapus = 1 AND kotor = 0")
     suspend fun purge(): Int
+
+    // Hapus fisik satu baris (penggabungan duplikat): riwayat penjualan
+    // tetap utuh karena item menyimpan snapshot nama, dan item sudah
+    // dialihkan ke baris yang dipertahankan sebelum baris ini dihapus.
+    @Query("DELETE FROM medicines WHERE id = :id")
+    suspend fun hapusFisik(id: Int): Int
 
     @Query("DELETE FROM medicines")
     suspend fun deleteAll()
@@ -285,6 +297,11 @@ interface SaleDao {
 
     @Query("UPDATE sale_items SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
     suspend fun tandaiBersihItem(remoteId: String, updatedAt: Long): Int
+
+    // Alihkan item penjualan dari obat yang digabung ke obat yang
+    // dipertahankan (penggabungan duplikat).
+    @Query("UPDATE sale_items SET medicineId = :keId WHERE medicineId = :dariId")
+    suspend fun alihkanObatItem(dariId: Int, keId: Int): Int
 
     @Query("UPDATE sale_items SET kotor = 1")
     suspend fun tandaiSemuaKotorItem(): Int

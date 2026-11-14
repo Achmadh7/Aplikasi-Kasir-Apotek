@@ -942,12 +942,23 @@ class Repository {
     suspend fun pembelianByIdSync(id: Int): PurchaseEntity? =
         DatabaseProvider.db.purchaseDao().getByIdAny(id)
 
-    /** Terapkan satu baris dari awan: sisipkan bila belum ada, timpa bila
-     *  versi awan menang (last-write-wins), tandai bersih. */
-    suspend fun terapkanRemoteObat(e: MedicineEntity) {
+    /** Terapkan satu baris obat dari awan: sisipkan bila belum ada, timpa
+     *  bila versi awan menang (last-write-wins), tandai bersih.
+     *  Bila remoteId belum dikenal tapi ada obat lokal dengan identitas
+     *  nama+kategori+satuan yang sama, gabungkan ke baris itu (bukan
+     *  sisipkan duplikat) dan kembalikan remoteId dokumen awan yang
+     *  digabung, supaya pemanggil menghapus dokumennya. */
+    suspend fun terapkanRemoteObat(e: MedicineEntity): String? {
         val dao = DatabaseProvider.db.medicineDao()
         val ada = dao.getByRemoteId(e.remoteId)
-        if (ada == null) {
+        if (ada != null) {
+            if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
+                dao.update(e.copy(id = ada.id, kotor = 0))
+            }
+            return null
+        }
+        val kembar = dao.cariDuplikat(e.name, e.category, e.unit)
+        if (kembar == null) {
             val bc = e.barcode
             val tabrak = if (bc != null) dao.findByBarcodeAny(bc) else null
             if (tabrak != null && tabrak.remoteId != e.remoteId) {
@@ -957,9 +968,47 @@ class Repository {
             } else {
                 dao.insert(e.copy(id = 0, kotor = 0))
             }
-        } else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
-            dao.update(e.copy(id = ada.id, kotor = 0))
+            return null
         }
+        // Kembaran lokal ditemukan: gabungkan ke baris itu dan pertahankan
+        // remoteId lokal. Bila versi awan lebih baru, ambil isinya dan
+        // tandai kotor supaya hasil gabungan naik ke awan.
+        if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, kembar.updatedAt, kembar.terhapus == 1)) {
+            var barcodeBaru = e.barcode
+            if (barcodeBaru != null) {
+                val pemilik = dao.findByBarcodeAny(barcodeBaru)
+                if (pemilik != null && pemilik.remoteId != kembar.remoteId) barcodeBaru = null
+            }
+            dao.update(e.copy(id = kembar.id, remoteId = kembar.remoteId, barcode = barcodeBaru, kotor = 1))
+        }
+        return e.remoteId
+    }
+
+    /** Gabungkan obat duplikat lokal (identitas nama+kategori+satuan
+     *  sama — mis. dari sinkron dua akun): pertahankan baris terbaru
+     *  (updatedAt terbesar, seri = id terkecil), alihkan item penjualan
+     *  ke baris itu, lalu hapus fisik baris lainnya. Mengembalikan
+     *  remoteId baris yang dihapus supaya SyncManager bisa menghapus
+     *  dokumen awannya. Idempotent — tanpa duplikat, list kosong. */
+    suspend fun gabungkanObatDuplikat(): List<String> {
+        val db = DatabaseProvider.db
+        val dihapus = mutableListOf<String>()
+        db.withTransaction {
+            val grup = db.medicineDao().getAll().groupBy {
+                Triple(it.name.trim().lowercase(), it.category.trim().lowercase(), it.unit.trim().lowercase())
+            }
+            for ((_, baris) in grup) {
+                if (baris.size < 2) continue
+                val dipertahankan = baris.sortedWith(compareByDescending<MedicineEntity> { it.updatedAt }.thenBy { it.id }).first()
+                for (lain in baris) {
+                    if (lain.id == dipertahankan.id) continue
+                    db.saleDao().alihkanObatItem(lain.id, dipertahankan.id)
+                    db.medicineDao().hapusFisik(lain.id)
+                    if (lain.remoteId.isNotBlank()) dihapus.add(lain.remoteId)
+                }
+            }
+        }
+        return dihapus
     }
 
     suspend fun terapkanRemotePenjualan(e: SaleEntity) {

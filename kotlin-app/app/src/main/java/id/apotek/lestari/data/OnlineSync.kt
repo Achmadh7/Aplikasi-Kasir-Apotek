@@ -122,6 +122,13 @@ class SyncManager(private val repository: Repository) {
             var ditarik = 0
             val akar = fs.collection("users").document(uid)
 
+            // 0) Gabungkan obat duplikat lokal (nama+kategori+satuan sama,
+            //    mis. dari sinkron dua akun), lalu hapus dokumen awan baris
+            //    yang digabung supaya tidak turun lagi saat tarikan.
+            for (remoteId in repository.gabungkanObatDuplikat()) {
+                akar.collection("obat").document(remoteId).delete().await()
+            }
+
             // 1) Dorong baris kotor: induk (obat, penjualan, pembelian,
             // kas) lebih dulu, item sesudahnya karena item menunjuk
             // remoteId induknya.
@@ -182,7 +189,12 @@ class SyncManager(private val repository: Repository) {
             // diputuskan di Repository.terapkanRemote* (last-write-wins).
             for (doc in akar.collection("obat").get().await().documents) {
                 val e = SyncLogic.obatDariPeta(doc.data ?: continue) ?: continue
-                repository.terapkanRemoteObat(e)
+                val digabung = repository.terapkanRemoteObat(e)
+                if (digabung != null) {
+                    // Dokumen ini digabung ke baris lokal lain: hapus
+                    // dokumennya supaya tidak turun dan berduplikat lagi.
+                    akar.collection("obat").document(digabung).delete().await()
+                }
                 ditarik++
             }
             for (doc in akar.collection("penjualan").get().await().documents) {
