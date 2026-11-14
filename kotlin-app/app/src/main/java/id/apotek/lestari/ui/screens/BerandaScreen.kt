@@ -224,8 +224,9 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 // Pemasukan dan kartu uang lama digabung menjadi SATU
                 // panel bertab periode Hari Ini / Bulan Ini, supaya angka
                 // harian dan bulanan tidak tampil berulang dalam dua kartu
-                // terpisah. Tab memakai SingleChoiceSegmentedButtonRow
-                // resmi Material 3 (sama seperti pemilih metode bayar).
+                // terpisah. Pemilih periode memakai dua FilterChip
+                // terpisah (T1, pilihan Achmad 2026-11-14), bukan segmen
+                // gabung lagi.
                 val monthMode = summaryPeriod == 1
                 val diff = d.todayIn - d.yesterdayIn
                 val panelIn = if (monthMode) d.monthIn else d.todayIn
@@ -233,20 +234,22 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 val panelProfit = if (monthMode) d.monthProfit else d.todayProfit
                 val panelSales = if (monthMode) d.totalSalesMonth else d.totalSalesToday
                 Column {
-                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    // T1 (pilihan Achmad 2026-11-14): dua pil FilterChip
+                    // terpisah, bukan segmen gabung. Pil terpilih memakai
+                    // warna primary supaya jelas (biru muda di mode gelap,
+                    // sesuai papan T1–T6).
+                    Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                         listOf(tr("Hari Ini", "Today"), tr("Bulan Ini", "This Month")).forEachIndexed { index, label ->
-                            SegmentedButton(
+                            FilterChip(
                                 selected = summaryPeriod == index,
                                 onClick = { summaryPeriod = index },
-                                shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
-                                // Tanpa ikon centang bawaan: slot ikonnya
-                                // menyisakan celah lebar di samping label
-                                // terpilih dan membuat label tidak lagi
-                                // tengah (laporan Achmad 2026-11-10). Pilihan
-                                // aktif sudah jelas dari warna wadahnya.
-                                icon = {},
+                                label = { Text(label, maxLines = 1) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                ),
                                 modifier = Modifier.weight(1f)
-                            ) { Text(label, maxLines = 1) }
+                            )
                         }
                     }
                     Spacer(Modifier.height(SpaceM))
