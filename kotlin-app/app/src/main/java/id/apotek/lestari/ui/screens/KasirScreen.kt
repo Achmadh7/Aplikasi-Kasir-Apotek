@@ -85,6 +85,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import id.apotek.lestari.data.*
 import id.apotek.lestari.ui.BtPrinter
+import id.apotek.lestari.ui.components.BarcodeScanner
 import id.apotek.lestari.ui.buildReceiptBytes
 import id.apotek.lestari.ui.getPairedPrinters
 import id.apotek.lestari.ui.hasBluetoothPermission
@@ -169,9 +170,11 @@ fun KasirScreen() {
     var search by rememberSaveable { mutableStateOf("") }
     var sortAz by remember { mutableStateOf(true) }
     // Pesan umpan balik di bawah kolom cari (mis. stok tidak cukup saat obat
-    // diketuk). Dulu juga dipakai hasil scan barcode; scan kamera dihapus
-    // atas permintaan Achmad 2026-10-29.
+    // diketuk, atau hasil scan barcode).
     var cartMsg by remember { mutableStateOf("") }
+    // Scan barcode (dikembalikan 2026-11-14): baca barcode obat, cocokkan ke
+    // Stok, langsung masuk keranjang bila ketemu.
+    var showScanner by remember { mutableStateOf(false) }
     var method by rememberSaveable { mutableStateOf("Tunai") }
     // TextFieldValue (bukan Int) + formatDecimalFieldValue supaya kursor tidak
     // meloncat saat mengetik nominal; TextFieldValue punya Saver bawaan.
@@ -295,6 +298,27 @@ fun KasirScreen() {
             lastSale = (repo.listSales() as? ApiResult.Success)?.data?.sales?.firstOrNull { it.id == lastSaleId }
         }
     }
+    if (showScanner) BarcodeScanner(onDetected = { code ->
+        showScanner = false
+        scope.launch {
+            val r = repo.findByBarcode(code)
+            val med = (r as? ApiResult.Success)?.data?.medicine
+            if (med != null) {
+                val ex = cart.firstOrNull { it.medicine.id == med.id }
+                if (med.stock <= 0) {
+                    cartMsg = tr("${med.name} stok habis", "${med.name} is out of stock")
+                } else if (ex != null && ex.qty >= med.stock) {
+                    cartMsg = tr("Stok ${med.name} hanya ${med.stock} — tidak bisa ditambah lagi", "Only ${med.stock} of ${med.name} in stock — can't add more")
+                } else {
+                    lastSale = null
+                    lastSaleId = 0
+                    payMsg = ""
+                    if (ex != null) ex.qty++ else cart.add(CartItem(med, 1))
+                    cartMsg = tr("${med.name} ditambahkan", "${med.name} added")
+                }
+            } else cartMsg = tr("Barcode $code tidak ditemukan", "Barcode $code not found")
+        }
+    }, onClose = { showScanner = false })
     val filtered = medicines.filter { search.isBlank() || it.name.contains(search, true) || it.category.contains(search, true) || (it.barcode?.contains(search) == true) }
     val sorted = if (sortAz) filtered.sortedBy { it.name.lowercase() } else filtered.sortedByDescending { it.name.lowercase() }
     val total = cart.sumOf { it.unitPrice * it.qty }
@@ -315,10 +339,20 @@ fun KasirScreen() {
         KartuHeaderPremium(tr("Kasir", "Cashier"), Icons.Default.PointOfSale)
         Spacer(Modifier.height(SpaceL))
         DemoBanner()
-        SearchField(
-            value = search, onValueChange = { search = it },
-            modifier = Modifier.fillMaxWidth()
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            SearchField(
+                value = search, onValueChange = { search = it },
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedButton(
+                onClick = { showScanner = true },
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.height(44.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp)
+            ) {
+                Icon(Icons.Default.QrCodeScanner, tr("Scan barcode", "Scan barcode"))
+            }
+        }
         if (cartMsg.isNotEmpty()) {
             Spacer(Modifier.height(SpaceS))
             Text(cartMsg, style = MaterialTheme.typography.bodySmall)

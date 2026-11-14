@@ -160,6 +160,14 @@ dependencies {
     // (bundled) — membaca huruf di HP, gratis, tanpa internet.
     implementation("com.google.mlkit:text-recognition:16.0.1")
 
+    // Scan barcode (dikembalikan 2026-11-14): CameraX + ML Kit Barcode
+    // Scanning — versi yang sama seperti sebelum dihapus 2026-10-29.
+    implementation("androidx.camera:camera-core:1.3.4")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
