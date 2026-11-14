@@ -299,9 +299,17 @@ interface SaleDao {
     suspend fun tandaiBersihItem(remoteId: String, updatedAt: Long): Int
 
     // Alihkan item penjualan dari obat yang digabung ke obat yang
-    // dipertahankan (penggabungan duplikat).
-    @Query("UPDATE sale_items SET medicineId = :keId WHERE medicineId = :dariId")
-    suspend fun alihkanObatItem(dariId: Int, keId: Int): Int
+    // dipertahankan (penggabungan duplikat). Tandai kotor + cap waktu
+    // baru supaya pengalihan ikut terdorong ke awan (S3) — tanpa ini,
+    // dokumen item di awan selamanya menunjuk remoteId obat yang
+    // sudah dihapus.
+    @Query("UPDATE sale_items SET medicineId = :keId, kotor = 1, updatedAt = :now WHERE medicineId = :dariId")
+    suspend fun alihkanObatItem(dariId: Int, keId: Int, now: Long): Int
+
+    // Total qty penjualan yang masih berlaku untuk satu obat — dipakai
+    // rekonsiliasi stok saat menggabung duplikat (S1).
+    @Query("SELECT COALESCE(SUM(qty), 0) FROM sale_items WHERE medicineId = :medicineId AND terhapus = 0")
+    suspend fun totalQtyTerjual(medicineId: Int): Int
 
     @Query("UPDATE sale_items SET kotor = 1")
     suspend fun tandaiSemuaKotorItem(): Int

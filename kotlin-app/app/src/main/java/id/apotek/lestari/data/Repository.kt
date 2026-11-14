@@ -927,6 +927,12 @@ class Repository {
     suspend fun obatByRemoteId(remoteId: String): MedicineEntity? =
         DatabaseProvider.db.medicineDao().getByRemoteId(remoteId)
 
+    /** Cari obat hidup dari identitas nama+kategori+satuan (dipakai
+     *  fallback tarik item penjualan saat remoteId obatnya sudah tidak
+     *  dikenal lagi, S3). */
+    suspend fun obatByNama(nama: String, kategori: String, satuan: String): MedicineEntity? =
+        DatabaseProvider.db.medicineDao().cariDuplikat(nama, kategori, satuan)
+
     suspend fun penjualanByRemoteId(remoteId: String): SaleEntity? =
         DatabaseProvider.db.saleDao().getByRemoteId(remoteId)
 
@@ -954,6 +960,11 @@ class Repository {
         if (ada != null) {
             if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
                 dao.update(e.copy(id = ada.id, kotor = 0))
+            } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
+                // Versi lokal lebih baru tapi awan masih menyimpan versi
+                // lama (mis. pernah tertimpa dorongan buta, S4): tandai
+                // kotor supaya versi yang menang naik kembali.
+                dao.update(ada.copy(kotor = 1))
             }
             return null
         }
@@ -979,7 +990,12 @@ class Repository {
                 val pemilik = dao.findByBarcodeAny(barcodeBaru)
                 if (pemilik != null && pemilik.remoteId != kembar.remoteId) barcodeBaru = null
             }
-            dao.update(e.copy(id = kembar.id, remoteId = kembar.remoteId, barcode = barcodeBaru, kotor = 1))
+            // Rekonsiliasi stok (S1): kurangi stok versi awan dengan
+            // penjualan yang tercatat pada baris lokal kembar — penjualan
+            // itu belum tercermin di stok awan.
+            val terjualLokal = DatabaseProvider.db.saleDao().totalQtyTerjual(kembar.id)
+            val stokGabungan = (e.stock - terjualLokal).coerceAtLeast(0)
+            dao.update(e.copy(id = kembar.id, remoteId = kembar.remoteId, barcode = barcodeBaru, stock = stokGabungan, kotor = 1))
         }
         return e.remoteId
     }
@@ -993,6 +1009,7 @@ class Repository {
     suspend fun gabungkanObatDuplikat(): List<String> {
         val db = DatabaseProvider.db
         val dihapus = mutableListOf<String>()
+        val sekarang = nowMillis()
         db.withTransaction {
             val grup = db.medicineDao().getAll().groupBy {
                 Triple(it.name.trim().lowercase(), it.category.trim().lowercase(), it.unit.trim().lowercase())
@@ -1000,11 +1017,30 @@ class Repository {
             for ((_, baris) in grup) {
                 if (baris.size < 2) continue
                 val dipertahankan = baris.sortedWith(compareByDescending<MedicineEntity> { it.updatedAt }.thenBy { it.id }).first()
+                var stokBerjalan = dipertahankan.stock
+                var stokBerubah = false
                 for (lain in baris) {
                     if (lain.id == dipertahankan.id) continue
-                    db.saleDao().alihkanObatItem(lain.id, dipertahankan.id)
+                    // Rekonsiliasi stok (S1): penjualan pada baris kalah
+                    // belum tentu tercermin di stok baris yang
+                    // dipertahankan. Kurangkan seluruh penjualan baris
+                    // kalah dari stok berjalan (dibatasi >= 0). Bila
+                    // baris kalah adalah baris aslinya, penjualan
+                    // sebelum duplikasi ikut terkurang — stok bisa lebih
+                    // rendah dari fisik; itu arah yang aman (lebih baik
+                    // menampilkan stok menipis daripada menjual stok kosong).
+                    val terjualKalah = db.saleDao().totalQtyTerjual(lain.id)
+                    val stokBaru = (stokBerjalan - terjualKalah).coerceAtLeast(0)
+                    if (stokBaru != stokBerjalan) {
+                        stokBerjalan = stokBaru
+                        stokBerubah = true
+                    }
+                    db.saleDao().alihkanObatItem(lain.id, dipertahankan.id, sekarang)
                     db.medicineDao().hapusFisik(lain.id)
                     if (lain.remoteId.isNotBlank()) dihapus.add(lain.remoteId)
+                }
+                if (stokBerubah) {
+                    db.medicineDao().update(dipertahankan.copy(stock = stokBerjalan, updatedAt = sekarang, kotor = 1))
                 }
             }
         }
@@ -1017,6 +1053,11 @@ class Repository {
         if (ada == null) dao.insert(e.copy(id = 0, kotor = 0))
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.update(e.copy(id = ada.id, kotor = 0))
+        } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
+            // Versi lokal lebih baru tapi awan masih menyimpan versi lama
+            // (mis. pernah tertimpa dorongan buta, S4): tandai kotor
+            // supaya versi yang menang naik kembali.
+            dao.update(ada.copy(kotor = 1))
         }
     }
 
@@ -1026,6 +1067,11 @@ class Repository {
         if (ada == null) dao.insertItems(listOf(e.copy(id = 0, kotor = 0)))
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.updateItem(e.copy(id = ada.id, kotor = 0))
+        } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
+            // Versi lokal lebih baru tapi awan masih menyimpan versi lama
+            // (mis. pernah tertimpa dorongan buta, S4): tandai kotor
+            // supaya versi yang menang naik kembali.
+            dao.updateItem(ada.copy(kotor = 1))
         }
     }
 
@@ -1035,6 +1081,11 @@ class Repository {
         if (ada == null) dao.insert(e.copy(id = 0, kotor = 0))
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.update(e.copy(id = ada.id, kotor = 0))
+        } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
+            // Versi lokal lebih baru tapi awan masih menyimpan versi lama
+            // (mis. pernah tertimpa dorongan buta, S4): tandai kotor
+            // supaya versi yang menang naik kembali.
+            dao.update(ada.copy(kotor = 1))
         }
     }
 
@@ -1044,6 +1095,11 @@ class Repository {
         if (ada == null) dao.insert(e.copy(id = 0, kotor = 0))
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.update(e.copy(id = ada.id, kotor = 0))
+        } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
+            // Versi lokal lebih baru tapi awan masih menyimpan versi lama
+            // (mis. pernah tertimpa dorongan buta, S4): tandai kotor
+            // supaya versi yang menang naik kembali.
+            dao.update(ada.copy(kotor = 1))
         }
     }
 
@@ -1053,6 +1109,11 @@ class Repository {
         if (ada == null) dao.insertItems(listOf(e.copy(id = 0, kotor = 0)))
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.updateItem(e.copy(id = ada.id, kotor = 0))
+        } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
+            // Versi lokal lebih baru tapi awan masih menyimpan versi lama
+            // (mis. pernah tertimpa dorongan buta, S4): tandai kotor
+            // supaya versi yang menang naik kembali.
+            dao.updateItem(ada.copy(kotor = 1))
         }
     }
 
@@ -1062,6 +1123,11 @@ class Repository {
         if (ada == null) dao.insert(e.copy(id = 0, kotor = 0))
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.update(e.copy(id = ada.id, kotor = 0))
+        } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
+            // Versi lokal lebih baru tapi awan masih menyimpan versi lama
+            // (mis. pernah tertimpa dorongan buta, S4): tandai kotor
+            // supaya versi yang menang naik kembali.
+            dao.update(ada.copy(kotor = 1))
         }
     }
 

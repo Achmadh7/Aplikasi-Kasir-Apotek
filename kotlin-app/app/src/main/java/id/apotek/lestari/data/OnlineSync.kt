@@ -17,6 +17,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.DocumentReference
 import id.apotek.lestari.data.local.DatabaseProvider
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.tasks.await
@@ -113,6 +114,20 @@ sealed interface HasilSync {
  */
 class SyncManager(private val repository: Repository) {
 
+    /** True bila dokumen awan untuk baris ini lebih baru daripada baris
+     *  lokal (S4): dorongan harus dilewati supaya data awan yang lebih
+     *  baru tidak tertimpa. Dokumen yang tidak ada = tidak lebih baru. */
+    private suspend fun awanLebihBaru(
+        akar: DocumentReference,
+        koleksi: String,
+        remoteId: String,
+        lokalUpdatedAt: Long
+    ): Boolean {
+        val doc = akar.collection(koleksi).document(remoteId).get().await()
+        if (!doc.exists()) return false
+        return (doc.getLong("updatedAt") ?: 0L) > lokalUpdatedAt
+    }
+
     suspend fun sinkronSekarang(context: Context): HasilSync {
         if (!FirebaseKit.siap(context)) return HasilSync.BelumDikonfigurasi
         val uid = FirebaseKit.auth()?.currentUser?.uid ?: return HasilSync.BelumMasuk
@@ -134,6 +149,7 @@ class SyncManager(private val repository: Repository) {
             // remoteId induknya.
             for (e in repository.obatKotor()) {
                 if (e.remoteId.isBlank()) continue
+                if (awanLebihBaru(akar, "obat", e.remoteId, e.updatedAt)) continue
                 akar.collection("obat").document(e.remoteId)
                     .set(SyncLogic.obatKePeta(e)).await()
                 repository.tandaiBersihObat(e.remoteId, e.updatedAt)
@@ -141,6 +157,7 @@ class SyncManager(private val repository: Repository) {
             }
             for (e in repository.penjualanKotor()) {
                 if (e.remoteId.isBlank()) continue
+                if (awanLebihBaru(akar, "penjualan", e.remoteId, e.updatedAt)) continue
                 akar.collection("penjualan").document(e.remoteId)
                     .set(SyncLogic.penjualanKePeta(e)).await()
                 repository.tandaiBersihPenjualan(e.remoteId, e.updatedAt)
@@ -148,6 +165,7 @@ class SyncManager(private val repository: Repository) {
             }
             for (e in repository.pbfKotor()) {
                 if (e.remoteId.isBlank()) continue
+                if (awanLebihBaru(akar, "pbf", e.remoteId, e.updatedAt)) continue
                 akar.collection("pbf").document(e.remoteId)
                     .set(SyncLogic.pbfKePeta(e)).await()
                 repository.tandaiBersihPbf(e.remoteId, e.updatedAt)
@@ -155,6 +173,7 @@ class SyncManager(private val repository: Repository) {
             }
             for (e in repository.kasKotor()) {
                 if (e.remoteId.isBlank()) continue
+                if (awanLebihBaru(akar, "kas", e.remoteId, e.updatedAt)) continue
                 akar.collection("kas").document(e.remoteId)
                     .set(SyncLogic.kasKePeta(e)).await()
                 repository.tandaiBersihKas(e.remoteId, e.updatedAt)
@@ -162,6 +181,7 @@ class SyncManager(private val repository: Repository) {
             }
             for (e in repository.pemasokKotor()) {
                 if (e.remoteId.isBlank()) continue
+                if (awanLebihBaru(akar, "pemasok", e.remoteId, e.updatedAt)) continue
                 akar.collection("pemasok").document(e.remoteId)
                     .set(SyncLogic.pemasokKePeta(e)).await()
                 repository.tandaiBersihPemasok(e.remoteId, e.updatedAt)
@@ -171,6 +191,7 @@ class SyncManager(private val repository: Repository) {
                 if (e.remoteId.isBlank()) continue
                 val induk = repository.penjualanByIdSync(e.saleId) ?: continue
                 val obat = repository.obatByIdSync(e.medicineId)
+                if (awanLebihBaru(akar, "penjualan_item", e.remoteId, e.updatedAt)) continue
                 akar.collection("penjualan_item").document(e.remoteId)
                     .set(SyncLogic.itemJualKePeta(e, induk.remoteId, obat?.remoteId ?: "")).await()
                 repository.tandaiBersihItemJual(e.remoteId, e.updatedAt)
@@ -179,6 +200,7 @@ class SyncManager(private val repository: Repository) {
             for (e in repository.itemPbfKotor()) {
                 if (e.remoteId.isBlank()) continue
                 val induk = repository.pembelianByIdSync(e.purchaseId) ?: continue
+                if (awanLebihBaru(akar, "pbf_item", e.remoteId, e.updatedAt)) continue
                 akar.collection("pbf_item").document(e.remoteId)
                     .set(SyncLogic.itemPbfKePeta(e, induk.remoteId)).await()
                 repository.tandaiBersihItemPbf(e.remoteId, e.updatedAt)
@@ -222,8 +244,15 @@ class SyncManager(private val repository: Repository) {
                 val indukRemote = SyncLogic.itemJualIndukRemoteId(data) ?: continue
                 val induk = repository.penjualanByRemoteId(indukRemote) ?: continue
                 val obatRemote = SyncLogic.itemJualObatRemoteId(data)
-                val obat = if (obatRemote != null) repository.obatByRemoteId(obatRemote) else null
-                val e = SyncLogic.itemJualDariPeta(data, induk.id, obat?.id ?: 0) ?: continue
+                val sementara = SyncLogic.itemJualDariPeta(data, induk.id, 0) ?: continue
+                var obat = if (obatRemote != null) repository.obatByRemoteId(obatRemote) else null
+                if (obat == null && obatRemote != null) {
+                    // Dokumen obatnya sudah digabung/dihapus (dedup): coba
+                    // selesaikan lewat nama+kategori+satuan (S3), jangan
+                    // langsung 0.
+                    obat = repository.obatByNama(sementara.medicineName, sementara.category, sementara.unit)
+                }
+                val e = sementara.copy(medicineId = obat?.id ?: 0)
                 repository.terapkanRemoteItemJual(e)
                 ditarik++
             }
