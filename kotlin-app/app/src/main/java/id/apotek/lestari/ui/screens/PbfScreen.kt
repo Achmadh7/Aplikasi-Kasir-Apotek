@@ -596,7 +596,20 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
             try {
                 val hasil = withContext(Dispatchers.Default) { bacaFakturDariUri(context, uri) }
                 terapkanHasilFaktur(hasil)
+            } catch (e: java.io.IOException) {
+                android.util.Log.w("FotoFaktur", "tidak bisa membuka foto", e)
+                scanInfo = tr(
+                    "Tidak bisa membuka foto ini. Coba pilih foto lain atau foto ulang.",
+                    "Could not open this photo. Try another photo or take a new one."
+                )
+            } catch (e: com.google.mlkit.vision.common.MlKitException) {
+                android.util.Log.w("FotoFaktur", "ML Kit gagal", e)
+                scanInfo = tr(
+                    "Pengenalan teks gagal dijalankan. Coba lagi.",
+                    "Text recognition failed to run. Try again."
+                )
             } catch (e: Exception) {
+                android.util.Log.w("FotoFaktur", "gagal membaca foto", e)
                 scanInfo = tr("Gagal membaca foto. Coba foto lebih jelas.", "Could not read the photo. Try a clearer photo.")
             } finally {
                 sedangMembaca = false

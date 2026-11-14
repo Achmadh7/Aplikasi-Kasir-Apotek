@@ -1,11 +1,16 @@
 package id.apotek.lestari.ui
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.tasks.await
+import java.io.IOException
 
 /**
  * Foto Faktur PBF (OCR) — baca foto faktur lalu isi formulir pembelian.
@@ -218,10 +223,55 @@ fun parseFaktur(baris: List<String>): FakturHasil {
     return FakturHasil(pbfName = namaPbf, invoiceNo = invoiceNo, tanggal = tanggal, items = items, ppn = ppn)
 }
 
+/** Sisi panjang maksimal foto yang dikirim ke ML Kit. Foto kamera HP
+ *  (12 MP ke atas) diperkecil dulu ke batas ini — selain lebih cepat,
+ *  bitmap raksasa tidak lagi menggagalkan pembacaan. */
+private const val SISI_MAKS_OCR = 2000
+
+/** Decode foto ke bitmap yang sisi panjangnya <= [SISI_MAKS_OCR], sudah
+ *  diputar sesuai orientasi EXIF (foto portrait dari kamera punya EXIF
+ *  rotate yang wajib diterapkan — tanpa ini ML Kit membaca foto miring).
+ *  IOException bila berkas tidak bisa dibuka atau formatnya tak dikenal. */
+fun decodeFotoUntukOcr(context: Context, uri: Uri): Bitmap {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    context.contentResolver.openInputStream(uri)?.use {
+        BitmapFactory.decodeStream(it, null, bounds)
+    } ?: throw IOException("Tidak bisa membuka foto")
+    val sisiPanjang = if (bounds.outWidth > bounds.outHeight) bounds.outWidth else bounds.outHeight
+    var sample = 1
+    while (sisiPanjang / sample > SISI_MAKS_OCR) sample *= 2
+    val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+    val mentah = context.contentResolver.openInputStream(uri)?.use {
+        BitmapFactory.decodeStream(it, null, opts)
+    } ?: throw IOException("Tidak bisa membuka foto")
+    val orientasi = try {
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            ExifInterface(stream).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+        } ?: ExifInterface.ORIENTATION_NORMAL
+    } catch (e: Exception) {
+        ExifInterface.ORIENTATION_NORMAL
+    }
+    val derajat = when (orientasi) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+        ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+        ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+        else -> 0f
+    }
+    if (derajat == 0f) return mentah
+    val matrix = Matrix().apply { postRotate(derajat) }
+    val diputar = Bitmap.createBitmap(mentah, 0, 0, mentah.width, mentah.height, matrix, true)
+    if (diputar != mentah) mentah.recycle()
+    return diputar
+}
+
 /** Baca satu foto faktur (kamera/galeri) lewat ML Kit, kembalikan hasil parse.
  *  Model Latin ikut di APK (bundled) — tanpa internet, tanpa biaya. */
 suspend fun bacaFakturDariUri(context: Context, uri: Uri): FakturHasil {
-    val image = InputImage.fromFilePath(context, uri)
+    val bitmap = decodeFotoUntukOcr(context, uri)
+    val image = InputImage.fromBitmap(bitmap, 0)
     val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     try {
         val result = recognizer.process(image).await()
@@ -232,5 +282,6 @@ suspend fun bacaFakturDariUri(context: Context, uri: Uri): FakturHasil {
         return parseFaktur(baris)
     } finally {
         recognizer.close()
+        bitmap.recycle()
     }
 }
