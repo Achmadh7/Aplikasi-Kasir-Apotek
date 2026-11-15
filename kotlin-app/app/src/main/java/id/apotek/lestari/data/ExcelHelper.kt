@@ -29,6 +29,8 @@ import java.util.TimeZone
  *
  * Kolom: Nama Obat | Kategori | Satuan | Harga Jual |
  * Harga Jual Grosir | Stok | Tanggal Kadaluarsa (YYYY-MM-DD)
+ * (Export menambah kolom Barcode di ujung — R6, audit 2026-11-15;
+ * template impor tetap 7 kolom.)
  * (Harga Beli dihapus total 2026-11-10; file lama yang masih punya
  * kolom itu tetap bisa diimpor — kolomnya diabaikan.)
  * Format (X1+X2+X3, 2026-11-14): lebar kolom diperbaiki (Kadaluarsa 18,
@@ -104,16 +106,19 @@ object ExcelHelper {
         return wbBytes(wb)
     }
 
-    /** Export seluruh stok saat ini ke .xlsx (satu sheet, tanpa Petunjuk). */
+    /** Export seluruh stok saat ini ke .xlsx (satu sheet, tanpa Petunjuk).
+     *  R6 (audit 2026-11-15): kolom "Barcode" ditambahkan di ujung (kolom
+     *  ke-8) — template impor TIDAK berubah (keputusan sengaja 2026-10-29),
+     *  jadi indeks kolom lama (termasuk tanggal di 6) tetap sama. */
     fun exportBytes(medicines: List<Medicine>): ByteArray {
         val wb = XSSFWorkbook()
         val rows = medicines.map { m ->
             arrayOf<Any>(
                 m.name, m.category, m.unit,
-                m.sellPrice, m.wholesalePrice, m.stock, m.expiryDate ?: ""
+                m.sellPrice, m.wholesalePrice, m.stock, m.expiryDate ?: "", m.barcode ?: ""
             )
         }
-        buildStockSheet(wb, rows)
+        buildStockSheet(wb, rows, HEADERS + "Barcode", intArrayOf(32, 20, 10, 14, 16, 10, 18, 20))
         return wbBytes(wb)
     }
 
@@ -308,7 +313,14 @@ object ExcelHelper {
         return ParsedImport(items, skipped)
     }
 
-    private fun buildStockSheet(wb: XSSFWorkbook, rows: List<Array<Any>>) {
+    // R6: header + lebar kolom bisa ditimpa pemanggil (export menambah
+    // kolom Barcode di ujung); template memakai default 7 kolom.
+    private fun buildStockSheet(
+        wb: XSSFWorkbook,
+        rows: List<Array<Any>>,
+        headers: Array<String> = HEADERS,
+        widths: IntArray = intArrayOf(32, 20, 10, 14, 16, 10, 18)
+    ) {
         val sheet = wb.createSheet(SHEET_STOK)
         // Header: tebal + warna hitam eksplisit + latar biru muda, supaya judul kolom
         // jelas terlihat di semua penampil Excel (beberapa penampil menampilkan
@@ -322,7 +334,7 @@ object ExcelHelper {
             fillPattern = FillPatternType.SOLID_FOREGROUND
         }
         val header = sheet.createRow(0)
-        HEADERS.forEachIndexed { i, h ->
+        headers.forEachIndexed { i, h ->
             header.createCell(i).apply { setCellValue(h); cellStyle = headerStyle }
         }
         // X3: angka (Harga Jual, Grosir, Stok) tampil dengan pemisah ribuan
@@ -361,11 +373,11 @@ object ExcelHelper {
         // X1: lebar kolom diperbaiki — Kadaluarsa 8 -> 18 (tanggal "2027-12-31"
         // terpotong di lebar lama), dan nilai ke-8 yang mati (kolom H kosong)
         // dihapus. Header dibekukan + filter otomatis.
-        intArrayOf(32, 20, 10, 14, 16, 10, 18).forEachIndexed { i, w ->
+        widths.forEachIndexed { i, w ->
             sheet.setColumnWidth(i, w * 256)
         }
         sheet.createFreezePane(0, 1)
-        sheet.setAutoFilter(CellRangeAddress(0, 0, 0, HEADERS.size - 1))
+        sheet.setAutoFilter(CellRangeAddress(0, 0, 0, headers.size - 1))
         // X2: dropdown Kategori & Satuan dari daftar kanonis — cegah salah
         // ketik jadi kategori nyasar. Berlaku untuk baris data 2..1001.
         val validationHelper = sheet.dataValidationHelper

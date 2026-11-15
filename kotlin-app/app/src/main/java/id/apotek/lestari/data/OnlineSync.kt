@@ -114,6 +114,27 @@ sealed interface HasilSync {
  */
 class SyncManager(private val repository: Repository) {
 
+    // R50 (audit 2026-11-15): cache updatedAt per koleksi untuk satu
+    // putaran sinkron. awanLebihBaru() dulu melakukan satu get() Firestore
+    // per baris kotor (N+1 read + latensi per sinkron). Sekarang tiap
+    // koleksi diambil sekali — malas, hanya bila ada baris kotor di
+    // koleksi itu — dan guard membaca peta. Semantik LWW tidak berubah:
+    // yang dibandingkan tetap updatedAt dokumen yang sama. Instans
+    // SyncManager selalu dibuat baru per sinkron; cache juga dibersihkan
+    // di awal sinkronSekarang supaya peta basi tidak pernah dipakai.
+    private val cacheAwan = mutableMapOf<String, Map<String, Long>>()
+
+    private suspend fun petaAwan(akar: DocumentReference, koleksi: String): Map<String, Long> {
+        // getOrPut tidak bisa dipakai di sini: lambdanya bukan suspend,
+        // jadi await() di dalamnya tidak compile.
+        cacheAwan[koleksi]?.let { return it }
+        val peta = akar.collection(koleksi).get().await().documents.associate { doc ->
+            doc.id to (doc.getLong("updatedAt") ?: 0L)
+        }
+        cacheAwan[koleksi] = peta
+        return peta
+    }
+
     /** True bila dokumen awan untuk baris ini lebih baru daripada baris
      *  lokal (S4): dorongan harus dilewati supaya data awan yang lebih
      *  baru tidak tertimpa. Dokumen yang tidak ada = tidak lebih baru. */
@@ -123,15 +144,15 @@ class SyncManager(private val repository: Repository) {
         remoteId: String,
         lokalUpdatedAt: Long
     ): Boolean {
-        val doc = akar.collection(koleksi).document(remoteId).get().await()
-        if (!doc.exists()) return false
-        return (doc.getLong("updatedAt") ?: 0L) > lokalUpdatedAt
+        val remoteUpdatedAt = petaAwan(akar, koleksi)[remoteId] ?: return false
+        return remoteUpdatedAt > lokalUpdatedAt
     }
 
     suspend fun sinkronSekarang(context: Context): HasilSync {
         if (!FirebaseKit.siap(context)) return HasilSync.BelumDikonfigurasi
         val uid = FirebaseKit.auth()?.currentUser?.uid ?: return HasilSync.BelumMasuk
         val fs = FirebaseKit.firestore() ?: return HasilSync.BelumDikonfigurasi
+        cacheAwan.clear() // R50: peta guard selalu segar per sinkron.
         return try {
             var didorong = 0
             var ditarik = 0

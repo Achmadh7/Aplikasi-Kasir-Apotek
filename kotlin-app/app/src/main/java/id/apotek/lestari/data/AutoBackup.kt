@@ -14,6 +14,7 @@ import id.apotek.lestari.data.local.DatabaseProvider
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -72,9 +73,14 @@ fun bacaPengaturanBackupOtomatis(context: Context): PengaturanBackupOtomatis {
     )
 }
 
-/** Nama file backup otomatis, mis. "backup-otomatis-2026-11-12.json". */
+/** Nama file backup otomatis, mis. "backup-otomatis-2026-11-12-143022.json".
+ *  R5 (audit 2026-11-15): stempel jam-menit-detik supaya dua backup di
+ *  hari yang sama tidak menimpa/menduplikasi nama; zona Asia/Jakarta
+ *  seperti stempel nama file rekap Excel (R32). */
 fun namaFileBackupOtomatis(tanggal: Date = Date()): String =
-    "backup-otomatis-" + SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).format(tanggal) + ".json"
+    "backup-otomatis-" + SimpleDateFormat("yyyy-MM-dd-HHmmss", Locale("id", "ID")).apply {
+        timeZone = TimeZone.getTimeZone("Asia/Jakarta")
+    }.format(tanggal) + ".json"
 
 /**
  * Jadwalkan (atau batalkan) backup otomatis sesuai pengaturan tersimpan.
@@ -126,12 +132,32 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) :
         if (hasil !is ApiResult.Success) return Result.retry()
         return try {
             val nama = namaFileBackupOtomatis()
-            val fileUri = DocumentsContract.createDocument(
-                applicationContext.contentResolver, folderUri, "application/json", nama
+            // R5 (audit 2026-11-15): tulis ke file temp dulu, lalu rename
+            // ke nama akhir — bila tulis/rename gagal, file parsial dihapus
+            // dan tidak ada backup rusak yang tertinggal di folder.
+            val tempUri = DocumentsContract.createDocument(
+                applicationContext.contentResolver, folderUri, "application/json", "$nama.tmp"
             ) ?: return Result.retry()
-            applicationContext.contentResolver.openOutputStream(fileUri)?.use {
-                it.write(hasil.data.toByteArray(Charsets.UTF_8))
-            } ?: return Result.retry()
+            val tulisOk = try {
+                applicationContext.contentResolver.openOutputStream(tempUri)?.use {
+                    it.write(hasil.data.toByteArray(Charsets.UTF_8))
+                } != null
+            } catch (e: Exception) {
+                false
+            }
+            if (!tulisOk) {
+                runCatching { DocumentsContract.deleteDocument(applicationContext.contentResolver, tempUri) }
+                return Result.retry()
+            }
+            val finalUri = try {
+                DocumentsContract.renameDocument(applicationContext.contentResolver, tempUri, nama)
+            } catch (e: Exception) {
+                null
+            }
+            if (finalUri == null) {
+                runCatching { DocumentsContract.deleteDocument(applicationContext.contentResolver, tempUri) }
+                return Result.retry()
+            }
             val stamp = System.currentTimeMillis()
             prefs.edit()
                 .putLong(PREF_AUTO_BACKUP_TERAKHIR, stamp)

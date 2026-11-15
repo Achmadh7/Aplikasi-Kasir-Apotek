@@ -7,19 +7,25 @@ import org.junit.Test
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 /** Backup otomatis terjadwal (G6): nama file + pemetaan frekuensi. */
 class AutoBackupTest {
 
     @Test
-    fun namaFile_memakaiTanggalDanAkhiranJson() {
-        val tanggal = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).parse("2026-11-12")!!
-        assertEquals("backup-otomatis-2026-11-12.json", namaFileBackupOtomatis(tanggal))
+    fun namaFile_memakaiTanggalJamDanAkhiranJson() {
+        val tanggal = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Jakarta")
+        }.parse("2026-11-12")!!
+        // R5 (audit 2026-11-15): stempel jam-menit-detik ditambahkan.
+        assertEquals("backup-otomatis-2026-11-12-000000.json", namaFileBackupOtomatis(tanggal))
     }
 
     @Test
     fun namaFile_tanpaArgumen_memakaiHariIni() {
-        val hariIni = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).format(Date())
+        val hariIni = SimpleDateFormat("yyyy-MM-dd-HHmmss", Locale("id", "ID")).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Jakarta")
+        }.format(Date())
         assertEquals("backup-otomatis-$hariIni.json", namaFileBackupOtomatis())
     }
 

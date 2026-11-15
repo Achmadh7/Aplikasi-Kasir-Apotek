@@ -223,7 +223,10 @@ interface MedicineDao {
     // Hapus lunak sejak DB v13: baris menjadi tombstone supaya penghapusan
     // ikut tersinkron; penghapusan fisik terjadi lewat purge() setelah
     // tombstone terkirim.
-    @Query("UPDATE medicines SET terhapus = 1, kotor = 1, updatedAt = :now WHERE id = :id")
+    // R47 (audit 2026-11-15): guard terhapus = 0 — menghapus ulang
+    // tombstone menaikkan updatedAt dan menandai kotor = 1 lagi, mendorong
+    // ulang tombstone dan membiarkannya menang di race LWW berikutnya.
+    @Query("UPDATE medicines SET terhapus = 1, kotor = 1, updatedAt = :now WHERE id = :id AND terhapus = 0")
     suspend fun deleteById(id: Int, now: Long): Int
 
     @Query("UPDATE medicines SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
@@ -342,7 +345,8 @@ interface CashDao {
     suspend fun getKotor(): List<CashEntryEntity>
 
     // Hapus lunak sejak DB v13 (tombstone ikut tersinkron).
-    @Query("UPDATE cash_entries SET terhapus = 1, kotor = 1, updatedAt = :now WHERE id = :id")
+    // R47 (audit 2026-11-15): guard terhapus = 0, seperti deleteById obat.
+    @Query("UPDATE cash_entries SET terhapus = 1, kotor = 1, updatedAt = :now WHERE id = :id AND terhapus = 0")
     suspend fun deleteById(id: Int, now: Long): Int
 
     @Query("UPDATE cash_entries SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
@@ -400,10 +404,11 @@ interface PurchaseDao {
     suspend fun getKotorItems(): List<PurchaseItemEntity>
 
     // Hapus lunak sejak DB v13 (tombstone ikut tersinkron).
-    @Query("UPDATE purchases SET terhapus = 1, kotor = 1, updatedAt = :now WHERE id = :id")
+    // R47 (audit 2026-11-15): guard terhapus = 0 di kedua query.
+    @Query("UPDATE purchases SET terhapus = 1, kotor = 1, updatedAt = :now WHERE id = :id AND terhapus = 0")
     suspend fun deleteById(id: Int, now: Long): Int
 
-    @Query("UPDATE purchase_items SET terhapus = 1, kotor = 1, updatedAt = :now WHERE purchaseId = :purchaseId")
+    @Query("UPDATE purchase_items SET terhapus = 1, kotor = 1, updatedAt = :now WHERE purchaseId = :purchaseId AND terhapus = 0")
     suspend fun deleteItemsForPurchase(purchaseId: Int, now: Long): Int
 
     @Query("UPDATE purchases SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
@@ -424,10 +429,12 @@ interface PurchaseDao {
     @Query("DELETE FROM purchase_items WHERE terhapus = 1 AND kotor = 0")
     suspend fun purgeItems(): Int
 
-    @Query("UPDATE purchases SET paymentType = :paymentType, kotor = 1, updatedAt = :now WHERE id = :id")
+    // R47 (audit 2026-11-15): guard terhapus = 0 — jangan ubah tombstone
+    // (menaikkan updatedAt + kotor = 1 lagi akan mendorong ulang hapusan).
+    @Query("UPDATE purchases SET paymentType = :paymentType, kotor = 1, updatedAt = :now WHERE id = :id AND terhapus = 0")
     suspend fun updatePaymentType(id: Int, paymentType: String, now: Long): Int
 
-    @Query("UPDATE purchases SET dueDate = :dueDate, kotor = 1, updatedAt = :now WHERE id = :id")
+    @Query("UPDATE purchases SET dueDate = :dueDate, kotor = 1, updatedAt = :now WHERE id = :id AND terhapus = 0")
     suspend fun updateDueDate(id: Int, dueDate: String, now: Long): Int
 
     @Query("DELETE FROM purchases")
@@ -462,7 +469,8 @@ interface SupplierDao {
 
     // Hapus lunak (tombstone ikut tersinkron), pola yang sama seperti
     // tabel lain sejak DB v13.
-    @Query("UPDATE suppliers SET terhapus = 1, kotor = 1, updatedAt = :now WHERE id = :id")
+    // R47 (audit 2026-11-15): guard terhapus = 0.
+    @Query("UPDATE suppliers SET terhapus = 1, kotor = 1, updatedAt = :now WHERE id = :id AND terhapus = 0")
     suspend fun deleteById(id: Int, now: Long): Int
 
     @Query("UPDATE suppliers SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
