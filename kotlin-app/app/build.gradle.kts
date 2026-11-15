@@ -140,8 +140,11 @@ dependencies {
     implementation("androidx.room:room-ktx:2.8.5")
     ksp("androidx.room:room-compiler:2.8.5")
 
-    // Excel (.xlsx) untuk Import / Export / Template Stok — Apache POI
-    implementation("org.apache.poi:poi-ooxml:6.0.0")
+    // Excel (.xlsx) untuk Import / Export / Template Stok — Apache POI.
+    // DIPIN 5.5.1: POI 6.0.0 (bump Dependabot 2026-11-15) gagal di-dex D8
+    // (poi-ooxml-lite: nest host STTLTriggerEvent tidak ketemu) — jangan
+    // naikkan ke 6.x sebelum ada versi perbaikan.
+    implementation("org.apache.poi:poi-ooxml:5.5.1")
 
     // Mode Online (Firebase): autentikasi + cadangan awan Firestore.
     // Semua pemakaian dijaga FirebaseKit — tanpa google-services.json

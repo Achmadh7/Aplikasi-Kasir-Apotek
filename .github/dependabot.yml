@@ -24,6 +24,11 @@ updates:
         patterns:
           - "com.google.firebase*"
           - "com.google.gms*"
+    ignore:
+      # POI 6.0.0 breaks the Android dex step (D8 nest-host error in
+      # poi-ooxml-lite) — stay on 5.5.1 until a fixed 6.x release exists.
+      - dependency-name: "org.apache.poi:poi-ooxml"
+        versions: [">= 6.0.0"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
