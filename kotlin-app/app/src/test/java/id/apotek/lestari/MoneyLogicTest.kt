@@ -8,6 +8,7 @@ import id.apotek.lestari.data.ProfitByMedicine
 import id.apotek.lestari.data.RekapHarian
 import id.apotek.lestari.data.RekapPenjualan
 import id.apotek.lestari.data.agregatRekapPenjualan
+import id.apotek.lestari.data.hitungLaba
 import id.apotek.lestari.data.local.CashEntryEntity
 import id.apotek.lestari.data.local.MedicineEntity
 import id.apotek.lestari.data.local.PurchaseEntity
@@ -170,10 +171,12 @@ class MoneyLogicTest {
         assertEquals("Strip", first.unit)
         assertEquals(12000, first.sellPrice)
         assertEquals(10500, first.wholesalePrice)
+        assertEquals(8000, first.buyPrice)
         assertEquals(37, first.stock)
         assertEquals("2027-12-31", first.expiryDate)
         // Grosir 0 (belum diatur) tetap 0, bukan terisi nilai lain.
         assertEquals(0, parsed.items[1].wholesalePrice)
+        assertEquals(35000, parsed.items[1].buyPrice)
         assertNull(parsed.items[1].expiryDate)
     }
 
@@ -244,7 +247,8 @@ class MoneyLogicTest {
         assertEquals(18 * 256, sheet.getColumnWidth(6))
         assertTrue(sheet.paneInformation?.isFreezePane == true)
         val ct = (sheet as XSSFSheet).ctWorksheet
-        assertEquals("A1:G1", ct.autoFilter?.ref)
+        assertEquals("A1:H1", ct.autoFilter?.ref)
+        assertEquals(14 * 256, sheet.getColumnWidth(7))
         val validations = sheet.dataValidations
         assertEquals(2, validations.size)
         assertTrue(validations[0].validationConstraint.formula1.contains("Antibiotik"))
@@ -430,5 +434,63 @@ class MoneyLogicTest {
         assertEquals("TOTAL", obatTotal.getCell(0).stringCellValue)
         assertEquals(148000.0, obatTotal.getCell(3).numericCellValue, 0.0)
         wb.close()
+    }
+
+    // ---------- Hitung laba (HPP kembali 2026-11-15) ----------
+
+    @Test
+    fun laba_hitung_dasar_dariAngkaNyata() {
+        // Angka nyata 2026-11-04: Penjualan 1.056.000, HPP 726.000,
+        // Biaya Operasional 150.000 -> Laba Kotor 330.000, Bersih 180.000.
+        val hasil = hitungLaba(1056000, 726000, 150000)
+        assertEquals(726000, hasil.hpp)
+        assertEquals(330000, hasil.grossProfit)
+        assertEquals(180000, hasil.netProfit)
+        assertEquals(31.3, hasil.grossMarginPct, 0.001)
+        assertEquals(17.0, hasil.marginPct, 0.001)
+    }
+
+    @Test
+    fun laba_tanpaHpp_labaKotorSamaDenganPenjualan() {
+        val hasil = hitungLaba(500000, 0, 100000)
+        assertEquals(500000, hasil.grossProfit)
+        assertEquals(400000, hasil.netProfit)
+        assertEquals(100.0, hasil.grossMarginPct, 0.001)
+        assertEquals(80.0, hasil.marginPct, 0.001)
+    }
+
+    @Test
+    fun laba_revenueNol_marginNolTanpaCrash() {
+        val hasil = hitungLaba(0, 0, 50000)
+        assertEquals(0, hasil.grossProfit)
+        assertEquals(-50000, hasil.netProfit)
+        assertEquals(0.0, hasil.grossMarginPct, 0.001)
+        assertEquals(0.0, hasil.marginPct, 0.001)
+    }
+
+    @Test
+    fun excel_legacyFileWithoutBuyPrice_getsZeroBuyPrice() {
+        // File lama 7 kolom (tanpa "Harga Beli"): obat tetap terimpor
+        // dengan Harga Beli 0 (belum diatur), bukan nilai karangan.
+        val wb = XSSFWorkbook()
+        val sheet = wb.createSheet(ExcelHelper.SHEET_STOK)
+        val headers = listOf("Nama Obat", "Kategori", "Satuan", "Harga Jual", "Harga Jual Grosir", "Stok", "Tanggal Kadaluarsa")
+        val headerRow = sheet.createRow(0)
+        headers.forEachIndexed { i, h -> headerRow.createCell(i).setCellValue(h) }
+        val row = sheet.createRow(1)
+        row.createCell(0).setCellValue("Obat Lama")
+        row.createCell(1).setCellValue("Umum")
+        row.createCell(2).setCellValue("Strip")
+        row.createCell(3).setCellValue(9000.0)
+        row.createCell(4).setCellValue(0.0)
+        row.createCell(5).setCellValue(25.0)
+        row.createCell(6).setCellValue("2027-01-31")
+        val out = ByteArrayOutputStream()
+        wb.write(out)
+        wb.close()
+        val parsed = ExcelHelper.parseImport(out.toByteArray())
+        assertEquals(1, parsed.items.size)
+        assertEquals(9000, parsed.items[0].sellPrice)
+        assertEquals(0, parsed.items[0].buyPrice)
     }
 }

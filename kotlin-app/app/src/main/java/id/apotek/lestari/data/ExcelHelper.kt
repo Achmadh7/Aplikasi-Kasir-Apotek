@@ -28,11 +28,11 @@ import java.util.TimeZone
  * file bisa dipakai di keduanya.
  *
  * Kolom: Nama Obat | Kategori | Satuan | Harga Jual |
- * Harga Jual Grosir | Stok | Tanggal Kadaluarsa (YYYY-MM-DD)
- * (Export menambah kolom Barcode di ujung — R6, audit 2026-11-15;
- * template impor tetap 7 kolom.)
- * (Harga Beli dihapus total 2026-11-10; file lama yang masih punya
- * kolom itu tetap bisa diimpor — kolomnya diabaikan.)
+ * Harga Jual Grosir | Stok | Tanggal Kadaluarsa (YYYY-MM-DD) |
+ * Harga Beli (kolom terakhir; kembali 2026-11-15 untuk HPP)
+ * (Export menambah kolom Barcode sebelum Harga Beli — R6, audit
+ * 2026-11-15; urutan kolom lain tidak berubah. File lama tanpa kolom
+ * Harga Beli tetap bisa diimpor — Harga Beli dibaca 0.)
  * Format (X1+X2+X3, 2026-11-14): lebar kolom diperbaiki (Kadaluarsa 18,
  * bukan 8), baris judul dibekukan + filter otomatis, Kategori & Satuan
  * punya dropdown validasi, angka tampil dengan pemisah ribuan (12.000)
@@ -49,7 +49,7 @@ object ExcelHelper {
 
     val HEADERS = arrayOf(
         "Nama Obat", "Kategori", "Satuan",
-        "Harga Jual", "Harga Jual Grosir", "Stok", "Tanggal Kadaluarsa"
+        "Harga Jual", "Harga Jual Grosir", "Stok", "Tanggal Kadaluarsa", "Harga Beli"
     )
 
     // Daftar kanonis — SAMA dengan CATEGORIES/UNITS di Screens.kt (dipakai
@@ -65,9 +65,9 @@ object ExcelHelper {
     )
 
     private val TEMPLATE_EXAMPLES = listOf(
-        arrayOf<Any>("Paracetamol 500mg", "Pereda Nyeri", "Strip", 12000, 10500, 50, "2027-12-31"),
-        arrayOf<Any>("Amoxicillin 500mg", "Antibiotik", "Strip", 22000, 19000, 30, "2026-11-30"),
-        arrayOf<Any>("Vitamin C 1000mg", "Vitamin", "Botol", 50000, 42000, 20, "2028-06-30"),
+        arrayOf<Any>("Paracetamol 500mg", "Pereda Nyeri", "Strip", 12000, 10500, 50, "2027-12-31", 8000),
+        arrayOf<Any>("Amoxicillin 500mg", "Antibiotik", "Strip", 22000, 19000, 30, "2026-11-30", 15000),
+        arrayOf<Any>("Vitamin C 1000mg", "Vitamin", "Botol", 50000, 42000, 20, "2028-06-30", 35000),
     )
 
     private val PETUNJUK = listOf(
@@ -81,6 +81,7 @@ object ExcelHelper {
         "   - Satuan: " + SATUAN_LIST.joinToString(", "),
         "   - Harga Jual: angka saja, contoh 12000 atau 12.000 (boleh pakai titik ribuan)",
         "   - Harga Jual Grosir: harga khusus pembelian banyak (boleh kosong = tidak ada harga grosir)",
+        "   - Harga Beli: harga modal per satuan, dipakai menghitung HPP dan Laba Kotor (boleh kosong = 0)",
         "   - Stok: angka bulat",
         "   - Tanggal Kadaluarsa: format YYYY-MM-DD, contoh 2027-12-31 (boleh kosong)",
         "   - Kategori dan Satuan punya daftar pilihan — ketuk panah di sel untuk memilih; nilai di luar daftar ditolak.",
@@ -96,7 +97,7 @@ object ExcelHelper {
         val rows = if (medicines.isEmpty()) TEMPLATE_EXAMPLES else medicines.map { m ->
             arrayOf<Any>(
                 m.name, m.category, m.unit,
-                m.sellPrice, m.wholesalePrice, m.stock, m.expiryDate ?: ""
+                m.sellPrice, m.wholesalePrice, m.stock, m.expiryDate ?: "", m.buyPrice
             )
         }
         buildStockSheet(wb, rows)
@@ -107,18 +108,20 @@ object ExcelHelper {
     }
 
     /** Export seluruh stok saat ini ke .xlsx (satu sheet, tanpa Petunjuk).
-     *  R6 (audit 2026-11-15): kolom "Barcode" ditambahkan di ujung (kolom
-     *  ke-8) — template impor TIDAK berubah (keputusan sengaja 2026-10-29),
-     *  jadi indeks kolom lama (termasuk tanggal di 6) tetap sama. */
+     *  R6 (audit 2026-11-15): kolom "Barcode" ditambahkan sebelum kolom
+     *  terakhir; "Harga Beli" (HPP, 2026-11-15) selalu paling ujung.
+     *  Indeks kolom lama (termasuk tanggal di 6) tetap sama. */
     fun exportBytes(medicines: List<Medicine>): ByteArray {
         val wb = XSSFWorkbook()
         val rows = medicines.map { m ->
             arrayOf<Any>(
                 m.name, m.category, m.unit,
-                m.sellPrice, m.wholesalePrice, m.stock, m.expiryDate ?: "", m.barcode ?: ""
+                m.sellPrice, m.wholesalePrice, m.stock, m.expiryDate ?: "", m.barcode ?: "", m.buyPrice
             )
         }
-        buildStockSheet(wb, rows, HEADERS + "Barcode", intArrayOf(32, 20, 10, 14, 16, 10, 18, 20))
+        // "Harga Beli" selalu paling ujung (setelah Barcode); urutan kolom
+        // lama tidak berubah, jadi tanggal tetap di indeks 6.
+        buildStockSheet(wb, rows, (HEADERS.dropLast(1) + "Barcode" + HEADERS.last()).toTypedArray(), intArrayOf(32, 20, 10, 14, 16, 10, 18, 20, 14))
         return wbBytes(wb)
     }
 
@@ -262,7 +265,7 @@ object ExcelHelper {
                     if (row.rowNum == 0) continue
                     val name = text(row, "Nama Obat", 0)
                     if (name.isBlank()) {
-                        val anyValue = (0..6).any { text(row, HEADERS[it], it).isNotEmpty() }
+                        val anyValue = HEADERS.indices.any { text(row, HEADERS[it], it).isNotEmpty() }
                         if (anyValue) skipped.add(row.rowNum + 1)
                         continue
                     }
@@ -292,6 +295,15 @@ object ExcelHelper {
                     } else {
                         0
                     }
+                    // Harga Beli OPSIONAL seperti grosir: dibaca HANYA bila
+                    // header-nya ada (pola yang sama — jangan pakai fallback
+                    // posisi, supaya file lama tidak terisi nilai palsu).
+                    // Kosong / rusak -> 0 (belum diatur).
+                    val beli = if (colIndex.containsKey("harga beli")) {
+                        text(row, "Harga Beli", 7).toIntOrNullStrict() ?: 0
+                    } else {
+                        0
+                    }
                     // C7: tanggal terisi tapi tidak bisa diparse -> baris dilewati;
                     // tanggal kosong -> null (boleh).
                     val expiryRaw = text(row, "Tanggal Kadaluarsa", 6)
@@ -304,7 +316,7 @@ object ExcelHelper {
                         skipped.add(row.rowNum + 1)
                         continue
                     }
-                    items.add(MedicineArgs(name, category, unit, sell, stock, expiry, wholesalePrice = grosir))
+                    items.add(MedicineArgs(name, category, unit, sell, stock, expiry, wholesalePrice = grosir, buyPrice = beli))
                 }
             } finally {
                 wb.close()
@@ -319,7 +331,7 @@ object ExcelHelper {
         wb: XSSFWorkbook,
         rows: List<Array<Any>>,
         headers: Array<String> = HEADERS,
-        widths: IntArray = intArrayOf(32, 20, 10, 14, 16, 10, 18)
+        widths: IntArray = intArrayOf(32, 20, 10, 14, 16, 10, 18, 14)
     ) {
         val sheet = wb.createSheet(SHEET_STOK)
         // Header: tebal + warna hitam eksplisit + latar biru muda, supaya judul kolom

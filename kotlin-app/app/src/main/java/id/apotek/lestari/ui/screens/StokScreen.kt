@@ -579,7 +579,8 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                                                 target.name, target.category, target.unit,
                                                 target.sellPrice, target.stock,
                                                 target.expiryDate, target.barcode,
-                                                wholesalePrice = target.wholesalePrice
+                                                wholesalePrice = target.wholesalePrice,
+                                                buyPrice = target.buyPrice
                                             )
                                         )) {
                                             is ApiResult.Success -> {
@@ -650,7 +651,8 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                                             it.name, it.category, it.unit,
                                             it.sellPrice, it.stock,
                                             it.expiryDate, it.barcode,
-                                            wholesalePrice = it.wholesalePrice
+                                            wholesalePrice = it.wholesalePrice,
+                                            buyPrice = it.buyPrice
                                         )
                                     )) {
                                         is ApiResult.Success -> Unit
@@ -739,6 +741,9 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
     // Harga jual grosir: boleh kosong (= belum diatur, nilai 0); ditampilkan
     // kosong bila 0 supaya tidak tertukar dengan harga beneran.
     var grosir by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.wholesalePrice?.takeIf { it > 0 }?.toString() ?: ""))) }
+    // Harga beli: boleh kosong (= belum diatur, nilai 0); ditampilkan
+    // kosong bila 0 supaya tidak tertukar dengan harga beneran.
+    var beli by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.buyPrice?.takeIf { it > 0 }?.toString() ?: ""))) }
     var stock by remember(editing) { mutableStateOf(editing?.stock?.toString() ?: "") }
     var expiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
     var formError by remember { mutableStateOf("") }
@@ -788,6 +793,7 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                     Text(tr("HARGA", "PRICE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     OutlinedTextField(sell, { sell = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Jual", "Sell Price")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(grosir, { grosir = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Jual Grosir (boleh kosong)", "Wholesale Sell Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(beli, { beli = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Beli (boleh kosong)", "Buy Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
             }
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
@@ -827,9 +833,9 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                             // supaya pencocokan impor berikutnya tidak rusak.
                             val bc = editing?.barcode
                             val result = if (editing == null) {
-                                repo.createMedicine(MedicineArgs(name, cat, unt, s, st, exp, bc, wholesalePrice = parseDecimal(grosir.text)))
+                                repo.createMedicine(MedicineArgs(name, cat, unt, s, st, exp, bc, wholesalePrice = parseDecimal(grosir.text), buyPrice = parseDecimal(beli.text)))
                             } else {
-                                repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, s, st, exp, bc, wholesalePrice = parseDecimal(grosir.text)))
+                                repo.updateMedicine(UpdateMedicineArgs(editing.id, name, cat, unt, s, st, exp, bc, wholesalePrice = parseDecimal(grosir.text), buyPrice = parseDecimal(beli.text)))
                             }
                             if (result is ApiResult.Success) {
                                 onSaved()

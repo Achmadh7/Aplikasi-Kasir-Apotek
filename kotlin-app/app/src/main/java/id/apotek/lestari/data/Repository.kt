@@ -98,9 +98,6 @@ class Repository {
     private fun dayDateLabelID(date: Date): String =
         SimpleDateFormat("d MMM", Locale("id", "ID")).apply { timeZone = jakarta }.format(date)
 
-    private fun marginPctOf(revenue: Int, profit: Int): Double =
-        if (revenue > 0) Math.round(profit.toDouble() / revenue * 1000) / 10.0 else 0.0
-
     // ---- Pemetaan Entity -> Model UI ----
 
     private fun MedicineEntity.toModel() = Medicine(
@@ -215,6 +212,7 @@ class Repository {
         // valid — tolak di sini supaya tidak masuk lewat jalur tulis mana pun.
         if (args.stock < 0) throw IllegalArgumentException(tr("Stok tidak boleh negatif", "Stock must not be negative"))
         if (args.wholesalePrice < 0) throw IllegalArgumentException(tr("Harga grosir tidak boleh negatif", "Wholesale price must not be negative"))
+        if (args.buyPrice < 0) throw IllegalArgumentException(tr("Harga beli tidak boleh negatif", "Buy price must not be negative"))
         val dao = DatabaseProvider.db.medicineDao()
         val barcode = args.barcode?.trim().orEmpty().ifBlank { null }
         if (barcode != null) {
@@ -230,6 +228,7 @@ class Repository {
                     dup.copy(
                         name = args.name, category = args.category, unit = args.unit,
                         sellPrice = args.sellPrice,
+                        buyPrice = args.buyPrice,
                         wholesalePrice = args.wholesalePrice, stock = args.stock,
                         expiryDate = args.expiryDate, terhapus = 0,
                         updatedAt = nowMillis(), kotor = 1
@@ -241,7 +240,7 @@ class Repository {
         val id = dao.insert(
             MedicineEntity(
                 name = args.name, category = args.category, unit = args.unit,
-                buyPrice = 0, sellPrice = args.sellPrice,
+                buyPrice = args.buyPrice, sellPrice = args.sellPrice,
                 wholesalePrice = args.wholesalePrice,
                 stock = args.stock,
                 expiryDate = args.expiryDate, barcode = barcode, createdAt = nowIso(),
@@ -257,6 +256,7 @@ class Repository {
         // R52 (audit 2026-11-15): lihat createMedicine.
         if (args.stock < 0) throw IllegalArgumentException(tr("Stok tidak boleh negatif", "Stock must not be negative"))
         if (args.wholesalePrice < 0) throw IllegalArgumentException(tr("Harga grosir tidak boleh negatif", "Wholesale price must not be negative"))
+        if (args.buyPrice < 0) throw IllegalArgumentException(tr("Harga beli tidak boleh negatif", "Buy price must not be negative"))
         val dao = DatabaseProvider.db.medicineDao()
         val barcode = args.barcode?.trim().orEmpty().ifBlank { null }
         if (barcode != null) {
@@ -272,7 +272,7 @@ class Repository {
         val changed = dao.update(
             MedicineEntity(
                 id = args.id, name = args.name, category = args.category, unit = args.unit,
-                buyPrice = old?.buyPrice ?: 0, sellPrice = args.sellPrice,
+                buyPrice = args.buyPrice, sellPrice = args.sellPrice,
                 wholesalePrice = args.wholesalePrice,
                 stock = args.stock,
                 expiryDate = args.expiryDate, barcode = barcode,
@@ -310,8 +310,8 @@ class Repository {
                     continue
                 }
                 // R52 (audit 2026-11-15): baris impor dengan stok/harga
-                // grosir negatif dilewati, bukan disimpan.
-                if (item.stock < 0 || item.wholesalePrice < 0) {
+                // grosir/harga beli negatif dilewati, bukan disimpan.
+                if (item.stock < 0 || item.wholesalePrice < 0 || item.buyPrice < 0) {
                     skipped++
                     continue
                 }
@@ -339,6 +339,10 @@ class Repository {
                             // file lama tanpa kolom itu / sel kosong TIDAK
                             // menghapus harga grosir yang sudah tersimpan.
                             wholesalePrice = if (item.wholesalePrice > 0) item.wholesalePrice else existing.wholesalePrice,
+                            // Harga beli dari file dipakai bila terisi (> 0);
+                            // file lama tanpa kolom itu / sel kosong TIDAK
+                            // menghapus harga beli yang sudah tersimpan.
+                            buyPrice = if (item.buyPrice > 0) item.buyPrice else existing.buyPrice,
                             stock = item.stock,
                             // Baris impor tanpa barcode: pertahankan barcode lama
                             // (jangan ditimpa null — obat jadi tidak bisa dipindai).
@@ -354,7 +358,7 @@ class Repository {
                     dao.insert(
                         MedicineEntity(
                             name = item.name, category = item.category, unit = item.unit,
-                            buyPrice = 0, sellPrice = item.sellPrice,
+                            buyPrice = item.buyPrice, sellPrice = item.sellPrice,
                             wholesalePrice = item.wholesalePrice,
                             stock = item.stock,
                             expiryDate = item.expiryDate, barcode = barcode, createdAt = nowIso(),
@@ -436,7 +440,7 @@ class Repository {
                 lines.map {
                     SaleItemEntity(
                         saleId = saleId, medicineId = it.med.id, medicineName = it.med.name,
-                        qty = it.qty, price = it.unitPrice, priceType = it.priceType, buyPrice = 0,
+                        qty = it.qty, price = it.unitPrice, priceType = it.priceType, buyPrice = it.med.buyPrice,
                         subtotal = it.subtotal.toInt(), category = it.med.category, unit = it.med.unit,
                         remoteId = genRemoteId("jualitem"), updatedAt = nowMillis()
                     )
@@ -547,17 +551,23 @@ class Repository {
         val periodSaleIds = periodSales.map { it.id }.toSet()
         val periodItems = items.filter { it.saleId in periodSaleIds }
 
-        // Sejak Harga Beli dihapus total (permintaan Achmad
-        // 2026-11-10), laporan ini tanpa modal/HPP: Laba Bersih =
-        // Penjualan - Biaya Operasional, dan marginPct = margin bersih.
+        // HPP kembali (permintaan Achmad 2026-11-15): tiap item penjualan
+        // membawa snapshot Harga Beli saat transaksi, jadi HPP periode =
+        // jumlah (qty x Harga Beli snapshot). Laba Kotor = Penjualan - HPP;
+        // Laba Bersih = Laba Kotor - Biaya Operasional. Penjualan lama
+        // (snapshot-nya di-nol-kan 2026-11-10) tetap ber-HPP 0.
         val revenue = periodItems.sumOf { it.subtotal }
         val itemsSold = periodItems.sumOf { it.qty }
+        // Jumlah qty x Harga Beli sebagai Long supaya tidak meluber
+        // diam-diam sebelum dijepit ke Int (pola R1).
+        val hpp = periodItems.sumOf { it.qty.toLong() * it.buyPrice.toLong() }.toIntClamped()
 
         val periodOut = entries.filter { it.type == "out" && inPeriod(it.createdAt) }
         val operationalExpense = periodOut.filter { !it.category.trim().equals("Beli Stok", ignoreCase = true) }.sumOf { it.amount }
         val stockPurchaseExpense = periodOut.filter { it.category.trim().equals("Beli Stok", ignoreCase = true) }.sumOf { it.amount }
-        val netProfit = revenue - operationalExpense
-        val marginPct = marginPctOf(revenue, netProfit)
+        val laba = hitungLaba(revenue, hpp, operationalExpense)
+        val netProfit = laba.netProfit
+        val marginPct = laba.marginPct
 
         data class Agg(var qty: Int = 0, var revenue: Int = 0)
         val medAgg = linkedMapOf<Int, Agg>()
@@ -621,20 +631,31 @@ class Repository {
             val key = dayKeyID(Date(t))
             opxByDay[key] = (opxByDay[key] ?: 0) + e.amount
         }
+        // R46: bucket HPP harian dengan pola yang sama (satu pemindaian).
+        val hppByDay = mutableMapOf<String, Int>()
+        for (it in items) {
+            val sale = saleById[it.saleId] ?: continue
+            val t = parseISODate(sale.createdAt)?.time ?: continue
+            val key = dayKeyID(Date(t))
+            hppByDay[key] = (hppByDay[key] ?: 0) + it.qty * it.buyPrice
+        }
         val daily = (dayCount - 1 downTo 0).map { offset ->
             val dayStart = jakartaDayStartMillis(-offset)
             val date = Date(dayStart)
             val key = dayKeyID(date)
             val rev = revByDay[key] ?: 0
             val opx = opxByDay[key] ?: 0
+            val hppDay = hppByDay[key] ?: 0
             // Label tanggal ("27 Okt") supaya tidak ambigu bila grafik panjang
             // (nama hari saja berulang); Keuangan tetap pakai dayLabelID.
-            ProfitDaily(key, dayDateLabelID(date), rev, rev - opx)
+            ProfitDaily(key, dayDateLabelID(date), rev, rev - hppDay - opx)
         }
 
         ProfitReport(
             period = period, revenue = revenue,
-            marginPct = marginPct, operationalExpense = operationalExpense,
+            marginPct = marginPct, hpp = laba.hpp,
+            grossProfit = laba.grossProfit, grossMarginPct = laba.grossMarginPct,
+            operationalExpense = operationalExpense,
             stockPurchaseExpense = stockPurchaseExpense, netProfit = netProfit,
             transactionCount = periodSales.size, itemsSold = itemsSold,
             byMedicine = byMedicine,
@@ -1310,6 +1331,37 @@ class Repository {
         db.supplierDao().purge()
     }
 }
+
+
+/** Margin persen (satu desimal); 0 bila tidak ada penjualan. */
+private fun marginPctOf(revenue: Int, profit: Int): Double =
+    if (revenue > 0) Math.round(profit.toDouble() / revenue * 1000) / 10.0 else 0.0
+
+/** Hasil hitung laba dari angka periode — murni, bisa diuji unit tanpa database. */
+data class HasilLaba(
+    val hpp: Int,
+    val grossProfit: Int,
+    val netProfit: Int,
+    val grossMarginPct: Double,
+    val marginPct: Double
+)
+
+/** Laba Kotor = Penjualan - HPP; Laba Bersih = Laba Kotor - Biaya Operasional. */
+fun hitungLaba(revenue: Int, hpp: Int, operationalExpense: Int): HasilLaba {
+    val grossProfit = revenue - hpp
+    val netProfit = grossProfit - operationalExpense
+    return HasilLaba(
+        hpp = hpp,
+        grossProfit = grossProfit,
+        netProfit = netProfit,
+        grossMarginPct = marginPctOf(revenue, grossProfit),
+        marginPct = marginPctOf(revenue, netProfit)
+    )
+}
+
+/** Long -> Int dengan jepit (bukan bungkus) bila di luar rentang Int. */
+private fun Long.toIntClamped(): Int =
+    coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
 
 
 /** Agregasi murni rekap penjualan (J5) — tanpa database, bisa diuji unit.

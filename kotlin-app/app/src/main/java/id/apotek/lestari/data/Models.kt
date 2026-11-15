@@ -113,6 +113,9 @@ data class ProfitReport(
     val period: String = "month",
     val revenue: Int = 0,
     val marginPct: Double = 0.0,
+    val hpp: Int = 0,
+    val grossProfit: Int = 0,
+    val grossMarginPct: Double = 0.0,
     val operationalExpense: Int = 0,
     val stockPurchaseExpense: Int = 0,
     val netProfit: Int = 0,
@@ -137,8 +140,8 @@ data class RekapPenjualan(
 )
 
 // ---- Per-action request args ----
-data class MedicineArgs(val name: String, val category: String, val unit: String, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null, val wholesalePrice: Int = 0)
-data class UpdateMedicineArgs(val id: Int, val name: String, val category: String, val unit: String, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null, val wholesalePrice: Int = 0)
+data class MedicineArgs(val name: String, val category: String, val unit: String, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null, val wholesalePrice: Int = 0, val buyPrice: Int = 0)
+data class UpdateMedicineArgs(val id: Int, val name: String, val category: String, val unit: String, val sellPrice: Int, val stock: Int, val expiryDate: String? = null, val barcode: String? = null, val wholesalePrice: Int = 0, val buyPrice: Int = 0)
 data class BulkImportArgs(val items: List<MedicineArgs>)
 data class CreateSaleItemArgs(val medicineId: Int, val qty: Int, val useWholesale: Boolean = false)
 data class CreateSaleArgs(val items: List<CreateSaleItemArgs>, val paymentMethod: String, val amountPaid: Int)

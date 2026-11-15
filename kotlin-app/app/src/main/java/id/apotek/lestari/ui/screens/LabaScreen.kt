@@ -231,10 +231,10 @@ fun LabaScreen() {
             item {
                 
                 // Desain LP4 (pilihan Achmad 2026-11-04): DUA kartu hero
-                // sejajar, biru primer dan hijau. Sejak Harga Beli dihapus
-                // total (2026-11-10) kartu biru berisi PENJUALAN (bukan lagi
-                // Laba Kotor) dan kartu hijau LABA BERSIH = Penjualan -
-                // Biaya Operasional. Angka formatIDR penuh lewat
+                // sejajar, biru primer dan hijau. Kartu biru PENJUALAN;
+                // kartu hijau LABA BERSIH = Laba Kotor - Biaya
+                // Operasional, dengan Laba Kotor = Penjualan - HPP (HPP
+                // kembali 2026-11-15). Angka formatIDR penuh lewat
                 // AnimatedAmount (headlineSmall supaya muat).
                 val netMarginPct = if (r.revenue > 0) r.netProfit * 100.0 / r.revenue else 0.0
                 val bersihDark = LocalIsDarkTheme.current
@@ -268,11 +268,13 @@ fun LabaScreen() {
                 
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        // Rincian LP4: baris label-nilai (Penjualan,
-                        // Biaya Operasional). Laba Bersih tidak diulang di
-                        // sini, sudah naik ke kartu hero hijau.
+                        // Rincian LP4: baris label-nilai (Penjualan, HPP,
+                        // Laba Kotor, Biaya Operasional). Laba Bersih tidak
+                        // diulang di sini, sudah naik ke kartu hero hijau.
                         val detailRows = listOf(
                             tr("Penjualan", "Revenue") to formatIDR(r.revenue),
+                            tr("HPP", "Cost of Goods Sold") to formatIDR(r.hpp),
+                            tr("Laba Kotor", "Gross Profit") to formatIDR(r.grossProfit),
                             tr("Biaya Operasional", "Operating Costs") to formatIDR(r.operationalExpense)
                         )
                         detailRows.forEachIndexed { index, (label, value) ->
@@ -284,6 +286,7 @@ fun LabaScreen() {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 12.dp))
                             }
                         }
+                        Text(tr("Margin Kotor ${marginTextID(r.grossMarginPct)}% \u2022 Margin Bersih ${marginTextID(r.marginPct)}%", "Gross Margin ${marginTextID(r.grossMarginPct)}% \u2022 Net Margin ${marginTextID(r.marginPct)}%"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(SpaceM))
                         Text(tr("${r.transactionCount} transaksi \u2022 ${r.itemsSold} item terjual", "${r.transactionCount} transactions \u2022 ${r.itemsSold} items sold"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
