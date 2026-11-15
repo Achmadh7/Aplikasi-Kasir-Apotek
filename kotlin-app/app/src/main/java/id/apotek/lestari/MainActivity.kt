@@ -46,6 +46,7 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.PointOfSale
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -59,6 +60,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.rememberScrollState
@@ -726,13 +728,32 @@ private fun BarisGrupLainnya(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
-            Icon(ikon, null, tint = warnaIkon ?: MaterialTheme.colorScheme.primary, modifier = Modifier.padding(9.dp).fillMaxSize())
+            // A4 (animasi Lainnya, 2026-11-15): ikon crossfade saat berganti
+            // (tema bulan<->matahari) — fade 250ms, tanpa geser/skala.
+            AnimatedContent(
+                targetState = ikon,
+                transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(250)) },
+                label = "ikonBarisLainnya"
+            ) { ikonAnim ->
+                Icon(ikonAnim, null, tint = warnaIkon ?: MaterialTheme.colorScheme.primary, modifier = Modifier.padding(9.dp).fillMaxSize())
+            }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(judul, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            if (sub != null) {
-                Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // A4: subjudul crossfade saat berganti (tema Aktif<->Nonaktif,
+            // bahasa English<->Bahasa Indonesia, status sinkronisasi).
+            // sizeTransform = null: lebar kotak langsung pas (teks baru bisa
+            // lebih lebar dari yang lama), hanya fade yang beranimasi.
+            AnimatedContent(
+                targetState = sub,
+                transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(250)) },
+                sizeTransform = null,
+                label = "subBarisLainnya"
+            ) { subAnim ->
+                if (subAnim != null) {
+                    Text(subAnim, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
         trailing()
