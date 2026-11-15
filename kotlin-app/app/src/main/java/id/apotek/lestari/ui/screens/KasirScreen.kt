@@ -17,9 +17,7 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -319,8 +317,13 @@ fun KasirScreen() {
             }
     ) {
         // Daftar obat memenuhi layar; keranjang & pembayaran pindah ke bottom sheet.
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(16.dp)) {
-
+        // S12 (audit 2026-11-15): LazyColumn menggantikan Column+verticalScroll
+        // supaya daftar panjang tidak dirender sekaligus.
+        LazyColumn(
+            Modifier.fillMaxSize().imePadding().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item {
         KartuHeaderPremium(tr("Kasir", "Cashier"), Icons.Default.PointOfSale)
         Spacer(Modifier.height(SpaceL))
         DemoBanner()
@@ -351,9 +354,8 @@ fun KasirScreen() {
             SortToggle(sortAz = sortAz, onToggle = { sortAz = !sortAz })
         }
         Spacer(Modifier.height(SpaceS))
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            sorted.forEachIndexed { index, m ->
-                
+            }
+            itemsIndexed(sorted, key = { _, m -> m.id }) { _, m ->
                 val out = m.stock <= 0
                 ExpressiveCard(
                     shape = MaterialTheme.shapes.large,
@@ -412,11 +414,11 @@ fun KasirScreen() {
                         }
                     }
                 }
-                
             }
-        }
             // Ruang untuk bar keranjang yang nempel di bawah, supaya obat terakhir tetap bisa digulir ke atasnya.
-            if (cart.isNotEmpty()) Spacer(Modifier.height(96.dp))
+            if (cart.isNotEmpty()) {
+                item { Spacer(Modifier.height(96.dp)) }
+            }
         }
 
         // Bar keranjang nempel di bawah: total + tombol Bayar (membuka bottom sheet).
