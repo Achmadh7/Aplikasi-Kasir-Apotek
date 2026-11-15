@@ -255,19 +255,28 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
     val countSedang = medicines.count { stockLabel(it.stock) == "Sedang" }
     val countRendah = medicines.count { stockLabel(it.stock) == "Rendah" }
     val countHabis = medicines.count { stockLabel(it.stock) == "Habis" }
-    val shown = when (statusFilter) {
-        "aman" -> medicines.filter { stockLabel(it.stock) == "Aman" }
-        "sedang" -> medicines.filter { stockLabel(it.stock) == "Sedang" }
-        "rendah" -> medicines.filter { stockLabel(it.stock) == "Rendah" }
-        "habis" -> medicines.filter { stockLabel(it.stock) == "Habis" }
-        else -> medicines
+    // Filter HANYA dihitung ulang saat data/filter berubah (bukan tiap recomposition).
+    val shown by remember {
+        derivedStateOf {
+            when (statusFilter) {
+                "aman" -> medicines.filter { stockLabel(it.stock) == "Aman" }
+                "sedang" -> medicines.filter { stockLabel(it.stock) == "Sedang" }
+                "rendah" -> medicines.filter { stockLabel(it.stock) == "Rendah" }
+                "habis" -> medicines.filter { stockLabel(it.stock) == "Habis" }
+                else -> medicines
+            }
+        }
     }
-    val sorted = when (sortMode) {
-        "za" -> shown.sortedByDescending { it.name.lowercase() }
-        // Stok terendah dulu (habis/menipis paling atas); nama A-Z sebagai
-        // penyeimbang supaya urutan stabil bila stoknya sama.
-        "low" -> shown.sortedWith(compareBy({ it.stock }, { it.name.lowercase() }))
-        else -> shown.sortedBy { it.name.lowercase() }
+    val sorted by remember {
+        derivedStateOf {
+            when (sortMode) {
+                "za" -> shown.sortedByDescending { it.name.lowercase() }
+                // Stok terendah dulu (habis/menipis paling atas); nama A-Z sebagai
+                // penyeimbang supaya urutan stabil bila stoknya sama.
+                "low" -> shown.sortedWith(compareBy({ it.stock }, { it.name.lowercase() }))
+                else -> shown.sortedBy { it.name.lowercase() }
+            }
+        }
     }
     Box(Modifier.fillMaxSize()) {
     // Satu LazyColumn untuk seluruh layar (header + daftar) supaya layar bisa

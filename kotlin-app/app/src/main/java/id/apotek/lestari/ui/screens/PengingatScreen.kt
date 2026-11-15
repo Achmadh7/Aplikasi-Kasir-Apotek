@@ -156,25 +156,35 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
         }
         loadError = gagal
     }
-    val expired = medicines.filter { (daysUntilExpiry(it.expiryDate) ?: Int.MAX_VALUE) < 0 }
-    val withinWindow = medicines.filter { val d = daysUntilExpiry(it.expiryDate); d != null && d >= 0 && d <= window }
-    val low = medicines.filter { it.stock in 1..9 }
-    val critical = medicines.filter { it.stock == 0 }
-    val priority = medicines.filter { m ->
-        val d = daysUntilExpiry(m.expiryDate)
-        m.stock < 10 || (d != null && d <= window)
-    }.sortedWith(
-        compareBy<Medicine> { if (it.stock == 0) 0 else 1 }
-            .thenBy { daysUntilExpiry(it.expiryDate) ?: Int.MAX_VALUE }
-            .thenBy { it.stock }
-    )
-    val shown = priority.filter { m ->
-        val d = daysUntilExpiry(m.expiryDate)
-        when (filter) {
-            "expiry" -> d != null && d <= window
-            "low" -> m.stock in 1..9
-            "critical" -> m.stock == 0
-            else -> true
+    val expired by remember { derivedStateOf { medicines.filter { (daysUntilExpiry(it.expiryDate) ?: Int.MAX_VALUE) < 0 } } }
+    val withinWindow by remember { derivedStateOf { medicines.filter { val d = daysUntilExpiry(it.expiryDate); d != null && d >= 0 && d <= window } } }
+    val low by remember { derivedStateOf { medicines.filter { it.stock in 1..9 } } }
+    val critical by remember { derivedStateOf { medicines.filter { it.stock == 0 } } }
+    // Daftar prioritas HANYA dihitung ulang saat data/jendela berubah —
+    // sortedWith memanggil daysUntilExpiry (parse tanggal) tiap perbandingan.
+    val priority by remember {
+        derivedStateOf {
+            medicines.filter { m ->
+                val d = daysUntilExpiry(m.expiryDate)
+                m.stock < 10 || (d != null && d <= window)
+            }.sortedWith(
+                compareBy<Medicine> { if (it.stock == 0) 0 else 1 }
+                    .thenBy { daysUntilExpiry(it.expiryDate) ?: Int.MAX_VALUE }
+                    .thenBy { it.stock }
+            )
+        }
+    }
+    val shown by remember {
+        derivedStateOf {
+            priority.filter { m ->
+                val d = daysUntilExpiry(m.expiryDate)
+                when (filter) {
+                    "expiry" -> d != null && d <= window
+                    "low" -> m.stock in 1..9
+                    "critical" -> m.stock == 0
+                    else -> true
+                }
+            }
         }
     }
     LazyColumn(

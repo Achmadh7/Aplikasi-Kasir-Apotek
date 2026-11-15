@@ -95,10 +95,24 @@ fun PbfScreen() {
     // Ringkasan belanja hanya menghitung pembelian CASH (permintaan Achmad
     // 2026-10-30): pembelian Kredit belum masuk total Hari Ini/Bulan Ini.
     // Daftar riwayat di bawah tetap menampilkan semuanya.
-    val todayPurchases = purchases.filter { it.date == todayKey && it.paymentType == "CASH" }
-    val todayTotal = todayPurchases.sumOf { it.total }
-    val monthTotal = purchases.filter { it.date.startsWith(monthPrefix) && it.paymentType == "CASH" }.sumOf { it.total }
-    val sortedGroups = purchases.groupBy { it.date }.entries.sortedByDescending { it.key }
+    // Ringkasan HANYA dihitung ulang saat data berubah (bukan tiap recomposition).
+    val todayPurchases by remember {
+        derivedStateOf { purchases.filter { it.date == todayKey && it.paymentType == "CASH" } }
+    }
+    val todayTotal by remember { derivedStateOf { todayPurchases.sumOf { it.total } } }
+    val monthTotal by remember {
+        derivedStateOf { purchases.filter { it.date.startsWith(monthPrefix) && it.paymentType == "CASH" }.sumOf { it.total } }
+    }
+    val sortedGroups by remember {
+        derivedStateOf { purchases.groupBy { it.date }.entries.sortedByDescending { it.key } }
+    }
+    // Kredit belum lunas juga naik ke sini: scope LazyColumn di bawah bukan
+    // @Composable, jadi remember() tidak bisa dipanggil di sana.
+    val outstanding by remember { derivedStateOf { purchases.filter { it.paymentType == "KREDIT" } } }
+    val outstandingTotal by remember { derivedStateOf { outstanding.sumOf { it.total } } }
+    val outstandingSorted by remember {
+        derivedStateOf { outstanding.sortedWith(compareBy({ it.dueDate.isBlank() }, { it.dueDate })) }
+    }
 
     // R24a (audit 2026-11-15): state daftar untuk menggulir ke kartu yang
     // dibuka dari "Kredit Belum Lunas".
@@ -155,11 +169,8 @@ fun PbfScreen() {
             // 2026-11-04): total pembelian Kredit yang belum dilunasi
             // (paymentType masih KREDIT) + rincian terdekat jatuh temponya.
             // Hanya tampil bila memang ada kredit yang belum lunas.
-            val outstanding = purchases.filter { it.paymentType == "KREDIT" }
             if (outstanding.isNotEmpty()) {
                 item {
-                    val outstandingTotal = outstanding.sumOf { it.total }
-                    val outstandingSorted = outstanding.sortedWith(compareBy({ it.dueDate.isBlank() }, { it.dueDate }))
                     ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {

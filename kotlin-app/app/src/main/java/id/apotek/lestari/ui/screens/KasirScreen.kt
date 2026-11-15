@@ -229,10 +229,10 @@ fun KasirScreen() {
     // dari kartu obat yang diketuk ke bar keranjang. Posisi dicatat dalam
     // koordinat window lalu diubah ke koordinat lokal Box root (dikurangi
     // posisi window Box root). cardCenters = pusat kartu obat per id obat.
-    var rootWindowPos by remember { mutableStateOf(Offset.Zero) }
-    var rootSizePx by remember { mutableStateOf(IntSize.Zero) }
-    var cartBarCenter by remember { mutableStateOf<Offset?>(null) }
-    val cardCenters = remember { mutableStateMapOf<Int, Offset>() }
+    // Posisi-posisi ini HANYA dibaca di click handler — disimpan di holder
+    // biasa (bukan state), supaya onGloballyPositioned saat scroll tidak
+    // menulis snapshot di tiap frame (jitter).
+    val layoutPos = remember { LayoutPos() }
     var flyFrom by remember { mutableStateOf<Offset?>(null) }
     var flyTo by remember { mutableStateOf(Offset.Zero) }
     var flyId by remember { mutableIntStateOf(0) }
@@ -305,8 +305,14 @@ fun KasirScreen() {
             lastSale = (repo.listSales() as? ApiResult.Success)?.data?.sales?.firstOrNull { it.id == lastSaleId }
         }
     }
-    val filtered = medicines.filter { search.isBlank() || it.name.contains(search, true) || it.category.contains(search, true) || (it.barcode?.contains(search) == true) }
-    val sorted = if (sortAz) filtered.sortedBy { it.name.lowercase() } else filtered.sortedByDescending { it.name.lowercase() }
+    // Filter+urut HANYA dihitung ulang saat data/pencarian/urutan berubah
+    // (bukan tiap recomposition — mis. tiap ketuk + di keranjang).
+    val filtered by remember {
+        derivedStateOf { medicines.filter { search.isBlank() || it.name.contains(search, true) || it.category.contains(search, true) || (it.barcode?.contains(search) == true) } }
+    }
+    val sorted by remember {
+        derivedStateOf { if (sortAz) filtered.sortedBy { it.name.lowercase() } else filtered.sortedByDescending { it.name.lowercase() } }
+    }
     // R44 (audit 2026-11-15): total dihitung dengan Long supaya harga x qty
     // tidak meluber diam-diam menjadi negatif; repo (dan entity Room) tetap
     // Int, jadi total di atas Int.MAX_VALUE ditolak lewat canPay.
@@ -318,8 +324,8 @@ fun KasirScreen() {
     Box(
         Modifier.fillMaxSize()
             .onGloballyPositioned {
-                rootWindowPos = it.positionInWindow()
-                rootSizePx = it.size
+                layoutPos.rootPos = it.positionInWindow()
+                layoutPos.rootSize = it.size
             }
     ) {
         // Daftar obat memenuhi layar; keranjang & pembayaran pindah ke bottom sheet.
@@ -366,7 +372,7 @@ fun KasirScreen() {
                 ExpressiveCard(
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth()
-                        .onGloballyPositioned { cardCenters[m.id] = it.boundsInWindow().center }
+                        .onGloballyPositioned { layoutPos.cardCenters[m.id] = it.boundsInWindow().center }
                         .clickable(enabled = !out) {
                         val ex = cart.firstOrNull { it.medicine.id == m.id }
                         if (ex != null && ex.qty >= m.stock) {
@@ -381,14 +387,14 @@ fun KasirScreen() {
                             // Kalau posisi bar keranjang belum tercatat (keranjang
                             // masih kosong saat obat pertama ditambah), pakai
                             // perkiraan tengah-bawah layar sebagai target.
-                            val start = cardCenters[m.id]
+                            val start = layoutPos.cardCenters[m.id]
                             if (start != null) {
                                 val fallbackTarget = Offset(
-                                    rootSizePx.width / 2f,
-                                    rootSizePx.height - with(flyDensity) { 64.dp.toPx() }
+                                    layoutPos.rootSize.width / 2f,
+                                    layoutPos.rootSize.height - with(flyDensity) { 64.dp.toPx() }
                                 )
-                                flyFrom = start - rootWindowPos
-                                flyTo = (cartBarCenter ?: fallbackTarget) - rootWindowPos
+                                flyFrom = start - layoutPos.rootPos
+                                flyTo = (layoutPos.cartCenter ?: fallbackTarget) - layoutPos.rootPos
                                 flyId++
                             }
                         }
@@ -437,7 +443,7 @@ fun KasirScreen() {
             ExpressiveCard(
                 shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
-                    .onGloballyPositioned { cartBarCenter = it.boundsInWindow().center }
+                    .onGloballyPositioned { layoutPos.cartCenter = it.boundsInWindow().center }
                     .clickable { showSheet = true }
             ) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -899,3 +905,12 @@ fun KasirScreen() {
 }
 
 // ---------- Stok Obat ----------
+
+// Holder posisi layout tanpa snapshot: hanya dibaca dari event handler
+// (animasi terbang ke keranjang), jadi tidak perlu memicu recomposition.
+private class LayoutPos {
+    var rootPos: Offset = Offset.Zero
+    var rootSize: IntSize = IntSize.Zero
+    var cartCenter: Offset? = null
+    val cardCenters: MutableMap<Int, Offset> = mutableMapOf()
+}

@@ -662,15 +662,18 @@ fun RiwayatScreen() {
         }
         // H6: saring dulu menurut cara bayar; hitungan "N transaksi • Rp X"
         // di header hari ikut tersaring karena dihitung dari daySales.
-        val salesTampil = if (filterBayar == "Semua") sales else sales.filter { it.paymentMethod.equals(filterBayar, ignoreCase = true) }
+        // Saring+kelompokkan HANYA dihitung ulang saat data/filter/limit berubah.
+        val salesTampil by remember {
+            derivedStateOf { if (filterBayar == "Semua") sales else sales.filter { it.paymentMethod.equals(filterBayar, ignoreCase = true) } }
+        }
         // R8+R29 (audit 2026-11-15): tampilkan hanya `salesLimit` pertama
         // SETELAH filter; hasMore dihitung dari daftar tersaring (melebihi
         // limit = pasti ada lagi) ATAU dari jendela muat yang belum habis
         // (baris terambil > limit) supaya filter sempit pun bisa memuat
         // halaman berikut — aproksimasi, karena repo tidak punya paging
         // terfilter; tombol memperbaiki diri saat jendela habis.
-        val salesTampilBatas = salesTampil.take(salesLimit)
-        val hasMore = salesTampil.size > salesLimit || sales.size > salesLimit
+        val salesTampilBatas by remember { derivedStateOf { salesTampil.take(salesLimit) } }
+        val hasMore by remember { derivedStateOf { salesTampil.size > salesLimit || sales.size > salesLimit } }
         if (sales.isEmpty()) Text(tr("Belum ada penjualan tercatat.", "No sales recorded yet."))
         else if (salesTampil.isEmpty()) Text(tr("Belum ada penjualan $filterBayar.", "No $filterBayar sales yet."))
         // Kelompokkan penjualan per hari (WIB): header tanggal + total omzet
@@ -683,10 +686,14 @@ fun RiwayatScreen() {
         }
         val todayKey = dayKeyID(todayCal.time)
         val yesterdayKey = dayKeyID((todayCal.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }.time)
-        val groupedSales = salesTampilBatas.groupBy { s -> parseISODate(s.createdAt)?.let { dayKeyID(it) } ?: "" }
         // Urutkan grup dari hari terbaru (pakai createdAt terbesar di grup).
-        val sortedGroups = groupedSales.entries.sortedByDescending { (_, list) ->
-            list.maxOfOrNull { parseISODate(it.createdAt)?.time ?: 0L } ?: 0L
+        val sortedGroups by remember {
+            derivedStateOf {
+                salesTampilBatas.groupBy { s -> parseISODate(s.createdAt)?.let { dayKeyID(it) } ?: "" }
+                    .entries.sortedByDescending { (_, list) ->
+                        list.maxOfOrNull { parseISODate(it.createdAt)?.time ?: 0L } ?: 0L
+                    }
+            }
         }
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SpaceM)) {
             var offset = 0
