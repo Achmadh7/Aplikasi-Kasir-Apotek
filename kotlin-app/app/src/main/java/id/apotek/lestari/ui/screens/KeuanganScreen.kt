@@ -280,14 +280,14 @@ fun KeuanganScreen() {
                             Column(Modifier.padding(12.dp)) {
                                 Text(tr("MASUK", "IN"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.height(4.dp))
-                                Text(formatIDR(saldoIn), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                AnimatedAmount(saldoIn, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                         Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
                             Column(Modifier.padding(12.dp)) {
                                 Text(tr("KELUAR", "OUT"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.height(4.dp))
-                                Text(formatIDR(saldoOut), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                AnimatedAmount(saldoOut, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }

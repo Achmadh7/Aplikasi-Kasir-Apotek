@@ -203,9 +203,11 @@ fun KartuHeaderPremium(judul: String, ikon: ImageVector, subjudul: String? = nul
 // centang sukses, denyut KRITIS; selebihnya aplikasi tanpa animasi) ----------
 
 
-/** Angka berhitung naik dari 0 (dipakai Pemasukan Hari Ini & Laba). */
+/** Angka berhitung naik dari 0 (dipakai Pemasukan Hari Ini, Saldo Kas &
+ *  Masuk/Keluar Keuangan, Laba). maxLines/overflow opsional untuk angka
+ *  di kotak sempit (Ellipsis seperti Text polos sebelumnya). */
 @Composable
-fun AnimatedAmount(value: Int, style: TextStyle, color: Color, format: (Int) -> String = { formatIDR(it) }) {
+fun AnimatedAmount(value: Int, style: TextStyle, color: Color, format: (Int) -> String = { formatIDR(it) }, maxLines: Int = Int.MAX_VALUE, overflow: TextOverflow = TextOverflow.Clip) {
     // rememberSaveable: nilai terakhir ikut tersimpan bersama state
     // tujuan navigasi, jadi saat kembali ke tab ini angka tampil utuh
     // seketika (tidak menghitung naik dari 0 lagi).
@@ -216,7 +218,7 @@ fun AnimatedAmount(value: Int, style: TextStyle, color: Color, format: (Int) -> 
         label = "amount"
     )
     LaunchedEffect(value) { shown = value }
-    Text(format(animated), color = color, style = style, fontWeight = FontWeight.Bold)
+    Text(format(animated), color = color, style = style, fontWeight = FontWeight.Bold, maxLines = maxLines, overflow = overflow)
 }
 
 
