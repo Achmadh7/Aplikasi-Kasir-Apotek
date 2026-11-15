@@ -62,7 +62,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
@@ -70,7 +69,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
@@ -407,12 +405,8 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             pesanStatus = null
         }
     }
-    // Urutan tab untuk swipe (kiri ke kanan): Beranda, Stok, Kasir, Keuangan,
-    // Lainnya. Geser ke kiri dari Keuangan membuka halaman Lainnya (sama
-    // seperti mengetuk tab Lainnya).
-    val swipeableTabs = listOf("beranda", "stok", "kasir", "keuangan", "lainnya")
     // Arah navigasi antar tab (1 = maju/ke kanan, -1 = mundur/ke kiri) —
-    // dipakai transisi NavHost supaya layar mengikuti arah geser/ketukan.
+    // dipakai transisi NavHost supaya layar mengikuti arah ketukan.
     var navDirection by remember { mutableIntStateOf(1) }
     // R24 (audit 2026-11-15): query pencarian awal Stok saat dibuka dari
     // Pengingat — nonce membuat ketukan pada obat yang sama dua kali tetap
@@ -450,31 +444,10 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             restoreState = true
         }
     }
-    // Geser kiri/kanan di konten untuk pindah tab (hanya di tab utama;
-    // dimatikan di sub-menu Lainnya supaya tidak bentrok dengan gulir horizontal).
+    // (Swipe pindah tab DIHAPUS 2026-11-15 atas permintaan Achmad — pindah
+    // tab hanya lewat ketukan bar bawah. density di bawah tetap dipakai
+    // transisi S3 (geserSumbuX).)
     val density = LocalDensity.current
-    val swipeThresholdPx = with(density) { 80.dp.toPx() }
-    var swipeOffset by remember { mutableFloatStateOf(0f) }
-    val swipeModifier = if (current in swipeableTabs) {
-        Modifier.pointerInput(current) {
-            detectHorizontalDragGestures(
-                onDragEnd = {
-                    val currentIndex = swipeableTabs.indexOf(current)
-                    if (swipeOffset < -swipeThresholdPx && currentIndex < swipeableTabs.lastIndex) {
-                        goToTab(swipeableTabs[currentIndex + 1]) // Geser ke kiri -> tab berikutnya
-                    } else if (swipeOffset > swipeThresholdPx && currentIndex > 0) {
-                        goToTab(swipeableTabs[currentIndex - 1]) // Geser ke kanan -> tab sebelumnya
-                    }
-                    swipeOffset = 0f
-                },
-                onHorizontalDrag = { _, dragAmount ->
-                    swipeOffset += dragAmount
-                }
-            )
-        }
-    } else {
-        Modifier
-    }
     if (perluLogin) {
         LayarLogin(
             googleSiap = FirebaseKit.googleSiap(context),
@@ -536,8 +509,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     ) { padding ->
         // Lebar konten dibatasi ~840.dp dan dipusatkan di layar lebar (tablet/landscape),
         // supaya daftar tidak merentang dari ujung ke ujung. Navigasi bawah tetap selebar layar.
-        // swipeModifier: geser kiri/kanan di konten untuk pindah tab (hanya di tab utama).
-        Box(modifier = Modifier.padding(padding).fillMaxSize().then(swipeModifier), contentAlignment = Alignment.TopCenter) {
+        Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
             // Transisi sub-halaman S3 SUMBU-X MATERIAL (pilihan Achmad
             // 2026-11-12 dari demo S1-S6): ketujuh sub-halaman dari
             // Lainnya (laba, pengingat, riwayat, backup, terlaris, pbf,
