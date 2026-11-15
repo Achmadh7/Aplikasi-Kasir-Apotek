@@ -11,4 +11,7 @@ plugins {
     // Mode Online (Firebase): plugin google-services HANYA diterapkan di
     // modul app bila file google-services.json ada (lihat app/build).
     id("com.google.gms.google-services") version "4.6.0" apply false
+    // Baseline Profile (optimasi startup, 2026-11-15): plugin generator
+    // profil; dipakai modul :baseline-profile + modul app.
+    id("androidx.baselineprofile") version "1.5.0" apply false
 }

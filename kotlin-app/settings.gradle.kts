@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "ApotikLestari"
 include(":app")
+include(":baseline-profile")

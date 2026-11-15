@@ -21,7 +21,7 @@ import java.util.Locale
 
 // ---- Entities: data tersimpan di HP (SQLite via Room) ----
 
-@Entity(tableName = "medicines", indices = [Index(value = ["barcode"], unique = true)])
+@Entity(tableName = "medicines", indices = [Index(value = ["barcode"], unique = true), Index(value = ["remoteId"]), Index(value = ["kotor"])])
 data class MedicineEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
@@ -46,7 +46,7 @@ data class MedicineEntity(
     @ColumnInfo(defaultValue = "1") val kotor: Int = 1
 )
 
-@Entity(tableName = "sales", indices = [Index(value = ["invoiceNo"])])
+@Entity(tableName = "sales", indices = [Index(value = ["invoiceNo"]), Index(value = ["remoteId"]), Index(value = ["kotor"])])
 data class SaleEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val invoiceNo: String,
@@ -65,7 +65,7 @@ data class SaleEntity(
     @ColumnInfo(defaultValue = "1") val kotor: Int = 1
 )
 
-@Entity(tableName = "sale_items")
+@Entity(tableName = "sale_items", indices = [Index(value = ["saleId"]), Index(value = ["remoteId"]), Index(value = ["kotor"])])
 data class SaleItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val saleId: Int,
@@ -90,7 +90,7 @@ data class SaleItemEntity(
     @ColumnInfo(defaultValue = "1") val kotor: Int = 1
 )
 
-@Entity(tableName = "cash_entries")
+@Entity(tableName = "cash_entries", indices = [Index(value = ["remoteId"]), Index(value = ["kotor"])])
 data class CashEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val type: String, // "in" | "out"
@@ -111,7 +111,7 @@ data class CashEntryEntity(
 
 // Catatan pembelian dari PBF — MURNI catatan (keputusan Achmad 2026-10-29):
 // tidak mengubah stok obat, tidak membuat entri kas, tidak mengubah harga.
-@Entity(tableName = "purchases")
+@Entity(tableName = "purchases", indices = [Index(value = ["remoteId"]), Index(value = ["kotor"])])
 data class PurchaseEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val pbfName: String, // nama perusahaan PBF (distributor)
@@ -140,7 +140,7 @@ data class PurchaseEntity(
     @ColumnInfo(defaultValue = "1") val kotor: Int = 1
 )
 
-@Entity(tableName = "purchase_items")
+@Entity(tableName = "purchase_items", indices = [Index(value = ["purchaseId"]), Index(value = ["remoteId"]), Index(value = ["kotor"])])
 data class PurchaseItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val purchaseId: Int,
@@ -166,7 +166,7 @@ data class PurchaseItemEntity(
 // daftar, bukan mengetik nama yang sama berulang kali. Catatan pembelian
 // tetap menyimpan pbfName sebagai teks (snapshot) — menghapus pemasok
 // tidak mengubah catatan yang sudah ada.
-@Entity(tableName = "suppliers")
+@Entity(tableName = "suppliers", indices = [Index(value = ["remoteId"]), Index(value = ["kotor"])])
 data class SupplierEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String, // nama perusahaan PBF (distributor)
@@ -648,10 +648,37 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
     }
 }
 
+val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Indeks optimasi (2026-11-15): tanpa mengubah satu baris data.
+        // Nama mengikuti konvensi Room (index_<tabel>_<kolom>) supaya
+        // validasi skema saat database dibuka lolos.
+        // - saleId / purchaseId: muat item per struk & per faktur.
+        // - remoteId: cari baris lokal saat sinkronisasi (per baris).
+        // - kotor: ambil baris belum tersinkron (baris kotor jarang).
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_medicines_remoteId` ON `medicines` (`remoteId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_medicines_kotor` ON `medicines` (`kotor`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_sales_remoteId` ON `sales` (`remoteId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_sales_kotor` ON `sales` (`kotor`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_sale_items_saleId` ON `sale_items` (`saleId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_sale_items_remoteId` ON `sale_items` (`remoteId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_sale_items_kotor` ON `sale_items` (`kotor`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_cash_entries_remoteId` ON `cash_entries` (`remoteId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_cash_entries_kotor` ON `cash_entries` (`kotor`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchases_remoteId` ON `purchases` (`remoteId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchases_kotor` ON `purchases` (`kotor`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_items_purchaseId` ON `purchase_items` (`purchaseId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_items_remoteId` ON `purchase_items` (`remoteId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_purchase_items_kotor` ON `purchase_items` (`kotor`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_suppliers_remoteId` ON `suppliers` (`remoteId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_suppliers_kotor` ON `suppliers` (`kotor`)")
+    }
+}
+
 // R22 (audit 2026-11-15): versi skema sebagai satu sumber — anotasi Room
 // dan layar Tentang membaca konstanta yang sama, jadi migrasi berikutnya
 // tidak bisa membuat angka di Tentang basi.
-const val DATABASE_VERSION = 15
+const val DATABASE_VERSION = 16
 
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class, SupplierEntity::class],
@@ -720,7 +747,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16).build()
                 }
             }
         }

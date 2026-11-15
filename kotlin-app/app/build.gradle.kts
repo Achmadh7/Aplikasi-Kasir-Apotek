@@ -7,6 +7,8 @@ plugins {
     // tidak dipasang lagi; versinya dipatok di build root.
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
+    // Baseline Profile (optimasi startup, 2026-11-15).
+    id("androidx.baselineprofile")
 }
 
 // Mode Online (Firebase): plugin google-services hanya diterapkan bila
@@ -158,6 +160,12 @@ dependencies {
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.2.1")
+
+    // Baseline Profile (optimasi startup, 2026-11-15): ProfileInstaller
+    // memasang profil dari APK sideload (bukan dari Play) saat aplikasi
+    // pertama dibuka; baselineProfile() menautkan modul generator.
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    baselineProfile(project(":baseline-profile"))
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
