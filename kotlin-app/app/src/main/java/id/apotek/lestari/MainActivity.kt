@@ -51,7 +51,6 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -68,23 +67,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.IntSize
-import androidx.core.view.drawToBitmap
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -201,53 +189,8 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     // tengah baris tema itu sendiri — lingkaran membesar dari persis yang
     // diketuk; ikon tab tetap jadi cadangan bila baris belum terukur.
     // Bila tangkapan gagal, tema berganti seketika seperti sebelumnya.
-    // Dihapus 2026-11-10 (semua animasi dicabut), dikembalikan 2026-11-15
-    // atas permintaan Achmad — implementasi di bawah (gantiTemaReveal +
-    // overlay lubang lingkaran di akhir Box akar).
     val rootView = LocalView.current
     val appScope = rememberCoroutineScope()
-    // ---- Animasi lingkaran tema AN3 (lihat komentar di atas) ----
-    // Skema gerak Expressive dari tema (MaterialTheme.motionScheme) —
-    // reveal memakai spec default-nya (slowSpatialSpec), bukan tween
-    // hardcode. Dibaca di sini (saat komposisi) karena motionScheme
-    // adalah @ReadOnlyComposable get() — tidak bisa dibaca dari lambda
-    // biasa seperti gantiTemaReveal di bawah.
-    val skemaGerak = MaterialTheme.motionScheme
-    // Bitmap tema lama + pusat lubang + ukuran layar (px). radiusReveal
-    // dianimasikan 0 -> radiusMaks saat saklar diketuk.
-    var temaLama by remember { mutableStateOf<ImageBitmap?>(null) }
-    var pusatTema by remember { mutableStateOf<Offset?>(null) }
-    var ukuranAkar by remember { mutableStateOf(IntSize.Zero) }
-    val radiusReveal = remember { Animatable(0f) }
-    // Pusat lubang: tengah baris tema bila sudah terukur, kalau belum
-    // tengah layar. Radius maks: jarak terjauh ke sudut layar.
-    val pusatReveal = pusatTema ?: Offset(ukuranAkar.width / 2f, ukuranAkar.height / 2f)
-    val radiusMaks = remember(pusatReveal, ukuranAkar) {
-        if (ukuranAkar == IntSize.Zero) 0f else listOf(
-            Offset.Zero, Offset(ukuranAkar.width.toFloat(), 0f),
-            Offset(0f, ukuranAkar.height.toFloat()),
-            Offset(ukuranAkar.width.toFloat(), ukuranAkar.height.toFloat())
-        ).maxOf { (it - pusatReveal).getDistance() }
-    }
-    // Ganti tema dengan reveal: tangkap layar lama DULU (sebelum isDark
-    // dibalik), lalu balik tema dan besarkan lubang. Selama reveal
-    // berjalan, ketukan saklar diabaikan supaya tidak menumpuk.
-    val gantiTemaReveal: () -> Unit = {
-        if (temaLama == null) {
-            val bmp = runCatching { rootView.drawToBitmap().asImageBitmap() }.getOrNull()
-            if (bmp != null && radiusMaks > 0f) {
-                temaLama = bmp
-                onToggleTheme()
-                appScope.launch {
-                    radiusReveal.snapTo(0f)
-                    radiusReveal.animateTo(radiusMaks, skemaGerak.slowSpatialSpec<Float>())
-                    temaLama = null
-                }
-            } else {
-                onToggleTheme()
-            }
-        }
-    }
     // ---- Mode Online (Firebase): gerbang login + status sinkronisasi.
     // onlineSiap hanya benar bila build memuat google-services.json;
     // tanpa itu seluruh lapisan ini diam dan aplikasi murni offline.
@@ -514,7 +457,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             onLewati = { lewatiLogin = true }
         )
     } else {
-    Box(Modifier.fillMaxSize().onSizeChanged { ukuranAkar = it }) {
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
@@ -625,7 +568,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 // mendarat di Beranda, bukan di Lainnya (laporan Achmad
                 // 2026-11-04). Dengan tumpukan biasa, Kembali dari
                 // Laba/Pengingat/dll. kembali ke halaman Lainnya.
-                composable("lainnya", enterTransition = lainnyaMasuk, exitTransition = lainnyaKeluar, popEnterTransition = lainnyaPopMasuk, popExitTransition = lainnyaPopKeluar) { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = gantiTemaReveal, appLang = appLang, onLanguageChange = onLanguageChange, onlineSiap = onlineSiap, emailOnline = emailOnline, statusSync = statusSync, syncTerakhir = syncTerakhir, onSinkronTap = { aksiSinkronTap() }, onKeluarTap = { tampilKonfirmasiKeluar = true }, onResetTap = { tampilKonfirmasiReset = true }, onTemaRowPositioned = { pusatTema = it }) }
+                composable("lainnya", enterTransition = lainnyaMasuk, exitTransition = lainnyaKeluar, popEnterTransition = lainnyaPopMasuk, popExitTransition = lainnyaPopKeluar) { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = onToggleTheme, appLang = appLang, onLanguageChange = onLanguageChange, onlineSiap = onlineSiap, emailOnline = emailOnline, statusSync = statusSync, syncTerakhir = syncTerakhir, onSinkronTap = { aksiSinkronTap() }, onKeluarTap = { tampilKonfirmasiKeluar = true }, onResetTap = { tampilKonfirmasiReset = true }) }
                 composable("laba", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { LabaScreen() }
                 composable("pengingat", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { PengingatScreen(onGoStok = { nama -> stokCariAwal = nama; stokCariNonce++; goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
                 composable("riwayat", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { RiwayatScreen() }
@@ -748,22 +691,6 @@ if (tampilKonfirmasiReset) {
             }
         )
     }
-    // Overlay AN3: bitmap tema lama di atas tema baru, dilubangi
-    // lingkaran yang membesar dari tengah baris tema. Anak terakhir Box
-    // akar supaya menutupi Scaffold, bar bawah, dan lencana sinkron.
-    if (temaLama != null) {
-        Box(
-            Modifier.fillMaxSize().drawWithContent {
-                val bmp = temaLama ?: return@drawWithContent
-                val lubang = Path().apply {
-                    addOval(Rect(center = pusatReveal, radius = radiusReveal.value))
-                }
-                clipPath(lubang, clipOp = ClipOp.Difference) {
-                    drawImage(bmp, dstSize = IntSize(size.width.toInt(), size.height.toInt()))
-                }
-            }
-        )
-    }
     }
     }
 }
@@ -785,11 +712,10 @@ private fun BarisGrupLainnya(
     sub: String?,
     warnaIkon: Color? = null,
     onClick: (() -> Unit)? = null,
-    trailing: @Composable () -> Unit = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-    modifier: Modifier = Modifier
+    trailing: @Composable () -> Unit = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
 ) {
     Row(
-        modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable { onClick() } else Modifier).padding(horizontal = 16.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable { onClick() } else Modifier).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
@@ -850,8 +776,7 @@ fun LainnyaScreen(
     syncTerakhir: Long,
     onSinkronTap: () -> Unit,
     onKeluarTap: () -> Unit,
-    onResetTap: () -> Unit,
-    onTemaRowPositioned: (Offset) -> Unit = {}
+    onResetTap: () -> Unit
 ) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp)) {
         // Identitas tengah: cakram navy berisi lingkaran putih berlogo.
@@ -950,8 +875,7 @@ fun LainnyaScreen(
                     if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
                     tr("Mode Gelap", "Dark Mode"),
                     if (isDark) tr("Aktif", "On") else tr("Nonaktif", "Off"),
-                    trailing = { Switch(checked = isDark, onCheckedChange = { onToggleTheme() }) },
-                    modifier = Modifier.onGloballyPositioned { onTemaRowPositioned(it.boundsInRoot().center) }
+                    trailing = { Switch(checked = isDark, onCheckedChange = { onToggleTheme() }) }
                 )
                 PemisahGrup()
                 BarisGrupLainnya(
