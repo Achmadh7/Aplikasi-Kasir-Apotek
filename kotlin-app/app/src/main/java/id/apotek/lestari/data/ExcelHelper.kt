@@ -121,7 +121,7 @@ object ExcelHelper {
         }
         // "Harga Beli" di samping Harga Jual Grosir (indeks 5);
         // "Barcode" paling ujung; tanggal kadaluarsa di indeks 7.
-        buildStockSheet(wb, rows, (HEADERS + "Barcode").toTypedArray(), intArrayOf(32, 20, 10, 14, 16, 14, 10, 18, 20))
+        buildStockSheet(wb, rows, HEADERS + "Barcode", intArrayOf(32, 20, 10, 14, 16, 14, 10, 18, 20))
         return wbBytes(wb)
     }
 
