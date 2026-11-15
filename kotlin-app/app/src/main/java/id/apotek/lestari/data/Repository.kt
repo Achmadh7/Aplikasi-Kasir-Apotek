@@ -386,8 +386,8 @@ class Repository {
         // sama dua kali, jadi cek stok harus atas total qty gabungan.
         val qtyById = args.items.groupBy { it.medicineId }
             .mapValues { (_, list) -> list.sumOf { it.qty } }
-        var total = 0
-        data class Line(val med: MedicineEntity, val qty: Int, val unitPrice: Int, val priceType: String, val subtotal: Int)
+        var total = 0L
+        data class Line(val med: MedicineEntity, val qty: Int, val unitPrice: Int, val priceType: String, val subtotal: Long)
         val lines = args.items.map { item ->
             val med = db.medicineDao().getById(item.medicineId)
                 ?: throw IllegalStateException("Obat tidak ditemukan")
@@ -396,10 +396,15 @@ class Repository {
             // Jenisnya disimpan juga (priceType) untuk keterangan di invoice.
             val wholesale = item.useWholesale && med.wholesalePrice > 0
             val unitPrice = if (wholesale) med.wholesalePrice else med.sellPrice
-            val subtotal = unitPrice * item.qty
+            // R1 (audit 2026-11-15): kalikan sebagai Long supaya harga x qty
+            // tidak meluber diam-diam menjadi negatif.
+            val subtotal = unitPrice.toLong() * item.qty
             total += subtotal
             Line(med, item.qty, unitPrice, if (wholesale) "GROSIR" else "ECER", subtotal)
         }
+        // R1: total di atas Int.MAX_VALUE ditolak dengan pesan jelas, bukan
+        // disimpan negatif (entity Room dan response tetap Int).
+        if (total > Int.MAX_VALUE) throw IllegalArgumentException(tr("Total penjualan terlalu besar", "The sale total is too large"))
         // Kurang bayar ditolak sebagai Error (bukan lunas dengan kembalian 0).
         if (args.amountPaid < total) throw IllegalArgumentException(tr("Uang dibayar kurang dari total", "The amount paid is less than the total"))
         val change = args.amountPaid - total
@@ -422,8 +427,8 @@ class Repository {
             }
             val saleId = db.saleDao().insert(
                 SaleEntity(
-                    invoiceNo = invoiceNo, total = total, paymentMethod = args.paymentMethod,
-                    amountPaid = args.amountPaid, changeAmount = change, createdAt = createdAt,
+                    invoiceNo = invoiceNo, total = total.toInt(), paymentMethod = args.paymentMethod,
+                    amountPaid = args.amountPaid, changeAmount = change.toInt(), createdAt = createdAt,
                     remoteId = genRemoteId("jual"), updatedAt = nowMillis()
                 )
             ).toInt()
@@ -432,7 +437,7 @@ class Repository {
                     SaleItemEntity(
                         saleId = saleId, medicineId = it.med.id, medicineName = it.med.name,
                         qty = it.qty, price = it.unitPrice, priceType = it.priceType, buyPrice = 0,
-                        subtotal = it.subtotal, category = it.med.category, unit = it.med.unit,
+                        subtotal = it.subtotal.toInt(), category = it.med.category, unit = it.med.unit,
                         remoteId = genRemoteId("jualitem"), updatedAt = nowMillis()
                     )
                 }
@@ -441,11 +446,11 @@ class Repository {
             db.cashDao().insert(
                 CashEntryEntity(
                     type = "in", category = "Penjualan", description = "Penjualan $invoiceNo",
-                    amount = total, source = "sale", createdAt = createdAt,
+                    amount = total.toInt(), source = "sale", createdAt = createdAt,
                     remoteId = genRemoteId("kas"), updatedAt = nowMillis()
                 )
             )
-            CreateSaleResponse(saleId, invoiceNo, total, change)
+            CreateSaleResponse(saleId, invoiceNo, total.toInt(), change.toInt())
         }
     }
 
@@ -455,8 +460,12 @@ class Repository {
     // padahal Laba tetap menghitungnya.
     suspend fun listSales(limit: Int = Int.MAX_VALUE): ApiResult<ListSalesResponse> = call {
         val db = DatabaseProvider.db
+        // R45 (audit 2026-11-15): dulu N+1 — satu getItemsForSale per
+        // penjualan. Sekarang satu getAllItems() lalu dikelompokkan per
+        // saleId (pola yang sama seperti getProfitReport).
+        val itemsBySale = db.saleDao().getAllItems().groupBy { it.saleId }
         val sales = db.saleDao().getAll().take(limit).map { s ->
-            val items = db.saleDao().getItemsForSale(s.id).map {
+            val items = itemsBySale[s.id].orEmpty().map {
                 SaleItem(it.medicineName, it.qty, it.price, it.subtotal, it.category, it.unit, it.priceType)
             }
             Sale(s.id, s.invoiceNo, s.total, s.paymentMethod, s.amountPaid, s.changeAmount, s.createdAt, items)
@@ -480,6 +489,14 @@ class Repository {
     }
 
     suspend fun createCashEntry(args: CreateCashEntryArgs): ApiResult<IdResponse> = call {
+        // R2 (audit 2026-11-15): validasi seperti createMedicine — jangan
+        // simpan entri kas bertipe/angka/tanggal sembarangan.
+        if (args.type != "in" && args.type != "out")
+            throw IllegalArgumentException(tr("Jenis kas harus \"in\" atau \"out\"", "Cash type must be \"in\" or \"out\""))
+        if (args.amount < 0)
+            throw IllegalArgumentException(tr("Jumlah kas tidak boleh negatif", "Cash amount must not be negative"))
+        if (args.createdAt != null && parseISODate(args.createdAt) == null)
+            throw IllegalArgumentException(tr("Tanggal kas tidak valid", "Invalid cash date"))
         val id = DatabaseProvider.db.cashDao().insert(
             CashEntryEntity(
                 type = args.type, category = args.category, description = args.description,
@@ -584,28 +601,35 @@ class Repository {
             else -> startToday
         }
         val dayCount = ((endToday - firstDayStart) / (24L * 60 * 60 * 1000)).toInt().coerceAtLeast(1).coerceAtMost(365)
+        // R46 (audit 2026-11-15): dulu grafik harian O(hari x item) — setiap
+        // hari memindai semua item penjualan dan entri kas. Sekarang satu
+        // pemindaian: item dan entri dikelompokkan per kunci hari dulu, lalu
+        // tiap hari tinggal membaca bucket-nya (hasil agregasi sama, karena
+        // kunci hari dihitung di zona Asia/Jakarta seperti batas harinya).
+        val revByDay = mutableMapOf<String, Int>()
+        for (it in items) {
+            val sale = saleById[it.saleId] ?: continue
+            val t = parseISODate(sale.createdAt)?.time ?: continue
+            val key = dayKeyID(Date(t))
+            revByDay[key] = (revByDay[key] ?: 0) + it.subtotal
+        }
+        val opxByDay = mutableMapOf<String, Int>()
+        for (e in entries) {
+            if (e.type != "out") continue
+            if (e.category.trim().equals("Beli Stok", ignoreCase = true)) continue
+            val t = parseISODate(e.createdAt)?.time ?: continue
+            val key = dayKeyID(Date(t))
+            opxByDay[key] = (opxByDay[key] ?: 0) + e.amount
+        }
         val daily = (dayCount - 1 downTo 0).map { offset ->
             val dayStart = jakartaDayStartMillis(-offset)
-            val next = dayStart + 24L * 60 * 60 * 1000
-            var rev = 0
-            for (it in items) {
-                val sale = saleById[it.saleId] ?: continue
-                val t = parseISODate(sale.createdAt)?.time ?: continue
-                if (t in dayStart until next) {
-                    rev += it.subtotal
-                }
-            }
-            var opx = 0
-            for (e in entries) {
-                if (e.type != "out") continue
-                if (e.category.trim().equals("Beli Stok", ignoreCase = true)) continue
-                val t = parseISODate(e.createdAt)?.time ?: continue
-                if (t in dayStart until next) opx += e.amount
-            }
             val date = Date(dayStart)
+            val key = dayKeyID(date)
+            val rev = revByDay[key] ?: 0
+            val opx = opxByDay[key] ?: 0
             // Label tanggal ("27 Okt") supaya tidak ambigu bila grafik panjang
             // (nama hari saja berulang); Keuangan tetap pakai dayLabelID.
-            ProfitDaily(dayKeyID(date), dayDateLabelID(date), rev, rev - opx)
+            ProfitDaily(key, dayDateLabelID(date), rev, rev - opx)
         }
 
         ProfitReport(
@@ -725,13 +749,18 @@ class Repository {
         val dao = db.purchaseDao()
         var newId = 0
         db.withTransaction {
-            val total = args.items.sumOf { it.qty * it.buyPrice } + args.ppn
+            // R1 (audit 2026-11-15): hitung dengan Long supaya qty x harga
+            // tidak meluber diam-diam menjadi negatif.
+            val total = args.items.sumOf { it.qty.toLong() * it.buyPrice } + args.ppn
+            // R1: total di atas Int.MAX_VALUE ditolak dengan pesan jelas,
+            // bukan disimpan negatif (entity Room tetap Int).
+            if (total > Int.MAX_VALUE) throw IllegalArgumentException(tr("Total pembelian terlalu besar", "The purchase total is too large"))
             newId = dao.insert(
                 PurchaseEntity(
                     pbfName = args.pbfName.trim(),
                     invoiceNo = args.invoiceNo.trim(),
                     date = args.date,
-                    total = total,
+                    total = total.toInt(),
                     ppn = args.ppn,
                     paymentType = args.paymentType,
                     // Jatuh tempo hanya berlaku untuk Kredit; selain itu
@@ -748,7 +777,7 @@ class Repository {
                     qty = it.qty,
                     unit = it.unit.ifBlank { "Strip" },
                     buyPrice = it.buyPrice,
-                    subtotal = it.qty * it.buyPrice,
+                    subtotal = (it.qty.toLong() * it.buyPrice).toInt(),
                     remoteId = genRemoteId("pbfitem"), updatedAt = nowMillis()
                 )
             })

@@ -14,6 +14,7 @@ import id.apotek.lestari.data.local.DatabaseProvider
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 /**
@@ -96,13 +97,21 @@ fun jadwalkanBackupOtomatis(context: Context) {
     )
 }
 
-/** Jalankan satu kali sekarang (tombol "Cadangkan Sekarang" di layar Backup). */
-fun jalankanBackupOtomatisSekali(context: Context) {
+/**
+ * Jalankan satu kali sekarang (tombol "Cadangkan Sekarang" di layar Backup).
+ * Mengembalikan id permintaan supaya layar bisa mengamati hasilnya (R49,
+ * audit 2026-11-15); bila ada pekerjaan sekali yang masih antre, kebijakan
+ * KEEP memakai yang lama dan id baru ini tidak berjalan — layar hanya
+ * mengamatinya bila belum ada pengamatan berjalan.
+ */
+fun jalankanBackupOtomatisSekali(context: Context): UUID {
+    val permintaan = OneTimeWorkRequestBuilder<AutoBackupWorker>().build()
     WorkManager.getInstance(context).enqueueUniqueWork(
         AUTO_BACKUP_ONETIME_NAME,
         ExistingWorkPolicy.KEEP,
-        OneTimeWorkRequestBuilder<AutoBackupWorker>().build()
+        permintaan
     )
+    return permintaan.id
 }
 
 class AutoBackupWorker(context: Context, params: WorkerParameters) :

@@ -159,14 +159,14 @@ fun KeuanganScreen() {
             else -> true
         }
     }
-    val masuk = periodEntries.filter { it.type == "in" }.sumOf { it.amount }
-    val keluar = periodEntries.filter { it.type == "out" }.sumOf { it.amount }
     val shown = periodEntries.filter { typeFilter == "all" || it.type == typeFilter }
-    // Saldo hero memakai total agregat (semua entri); bila gagal dimuat, pakai
-    // jumlah periode terpilih sebagai fallback supaya layar tetap menampilkan angka.
-    val saldoIn = cashBalance?.totalIn ?: masuk
-    val saldoOut = cashBalance?.totalOut ?: keluar
-    val saldo = cashBalance?.balance ?: (masuk - keluar)
+    // R18 (audit 2026-11-15): saldo hero memakai total agregat (semua
+    // entri); bila agregat gagal dimuat, JANGAN diam-diam memakai jumlah
+    // periode terpilih — tampilkan 0 dengan keterangan di kartu (di bawah),
+    // karena kartu galat S11 sudah menjelaskan kegagalannya.
+    val saldoIn = cashBalance?.totalIn ?: 0
+    val saldoOut = cashBalance?.totalOut ?: 0
+    val saldo = cashBalance?.balance ?: 0
     // Arus kas mengikuti periode yang dipilih, kecuali "Hari Ini" yang tetap
     // menampilkan 7 hari terakhir supaya jelas (1 batang saja di tengah kartu
     // terlihat kosong dan tidak memberi konteks tren).
@@ -193,7 +193,11 @@ fun KeuanganScreen() {
             (((todayStartMillis - firstDay) / (24L * 60 * 60 * 1000)).toInt() + 1).coerceIn(1, 365)
         }
     }
-    val dailyFlow = (dayCount - 1 downTo 0).map { back ->
+    // R19 (audit 2026-11-15): dailyFlow dulu dihitung ulang tiap
+    // recomposition (O(hari x entri)); sekarang diingat sampai entri,
+    // periode, hari, bulan, atau bahasa berubah.
+    val dailyFlow = remember(entries, period, todayKey, monthKey, AppLang.code) {
+        (dayCount - 1 downTo 0).map { back ->
         val c = (cal.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -back) }
         val key = dayKeyID(c.time)
         // Label: nama hari ("Sen") bila grafik pendek (<= 7 batang, tiap hari
@@ -205,6 +209,7 @@ fun KeuanganScreen() {
         }
         val dayEntries = entries.filter { e -> parseISODate(e.createdAt)?.let { dayKeyID(it) == key } == true }
         Triple(label, dayEntries.filter { it.type == "in" }.sumOf { it.amount }, dayEntries.filter { it.type == "out" }.sumOf { it.amount })
+        }
     }
     val periodIn = dailyFlow.sumOf { it.second }
     val periodOut = dailyFlow.sumOf { it.third }
@@ -252,6 +257,13 @@ fun KeuanganScreen() {
                     Text(tr("SALDO KAS", "CASH BALANCE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(SpaceS))
                     AnimatedAmount(saldo, MaterialTheme.typography.headlineLarge, if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+                    // R18: bila agregat saldo gagal dimuat, angka 0 di atas
+                    // bukan saldo sebenarnya — beri keterangan (hanya saat
+                    // gagal, bukan saat muat pertama: loadError != null).
+                    if (cashBalance == null && loadError != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(tr("Saldo tidak tersedia — gagal memuat.", "Balance unavailable — failed to load."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
                     // KE1 (pilihan Achmad 2026-11-14): Masuk/Keluar dalam
                     // dua kotak berdampingan (tanpa ikon panah, tanpa
                     // pemisah vertikal, tanpa bar proporsi).

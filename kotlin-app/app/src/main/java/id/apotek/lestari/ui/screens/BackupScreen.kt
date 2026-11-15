@@ -63,6 +63,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -110,6 +113,7 @@ import id.apotek.lestari.ui.shareReceiptBitmap
 import id.apotek.lestari.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -119,6 +123,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.util.UUID
 
 // Layar Backup & Restore dan Tentang Aplikasi.
 
@@ -144,6 +149,33 @@ fun BackupScreen() {
     var autoTerakhir by remember { mutableStateOf(prefs.getLong(PREF_AUTO_BACKUP_TERAKHIR, 0L)) }
     var autoNamaTerakhir by remember { mutableStateOf(prefs.getString(PREF_AUTO_BACKUP_NAMA_TERAKHIR, "") ?: "") }
     var mintaAktifkan by remember { mutableStateOf(false) }
+    // R49 (audit 2026-11-15): id pekerjaan "Cadangkan Sekarang" yang sedang
+    // diamati hasilnya; null bila tidak ada yang berjalan.
+    var autoWorkId by remember { mutableStateOf<UUID?>(null) }
+
+    // R49: amati hasil "Cadangkan Sekarang" — dulu hanya ada pesan "dimulai"
+    // dan hasil (berhasil/gagal) tidak pernah dilaporkan, begitu juga stempel
+    // terakhirnya tidak diperbarui sampai layar dibuka ulang.
+    val autoWorkFlow = remember(autoWorkId) {
+        autoWorkId?.let { WorkManager.getInstance(context).getWorkInfoByIdFlow(it) } ?: flowOf(null)
+    }
+    val autoWorkInfo by autoWorkFlow.collectAsStateWithLifecycle(initialValue = null)
+    LaunchedEffect(autoWorkInfo) {
+        val info = autoWorkInfo ?: return@LaunchedEffect
+        if (!info.state.isFinished) return@LaunchedEffect
+        // Worker menulis stempel terakhir ke prefs saat sukses — baca ulang
+        // supaya kartu langsung menampilkannya tanpa buka ulang layar.
+        autoTerakhir = prefs.getLong(PREF_AUTO_BACKUP_TERAKHIR, 0L)
+        autoNamaTerakhir = prefs.getString(PREF_AUTO_BACKUP_NAMA_TERAKHIR, "") ?: ""
+        lastBackupAt = prefs.getLong("last_backup_at", 0L)
+        lastBackupName = prefs.getString("last_backup_name", "") ?: ""
+        msg = when (info.state) {
+            WorkInfo.State.SUCCEEDED -> if (autoNamaTerakhir.isNotBlank()) tr("Backup otomatis berhasil: $autoNamaTerakhir.", "Automatic backup succeeded: $autoNamaTerakhir.") else tr("Backup otomatis berhasil.", "Automatic backup succeeded.")
+            WorkInfo.State.FAILED -> tr("Backup otomatis gagal — periksa izin folder.", "Automatic backup failed — check the folder permission.")
+            else -> tr("Backup otomatis tidak selesai.", "Automatic backup did not finish.")
+        }
+        autoWorkId = null
+    }
 
     // Pilih folder tujuan backup otomatis (SAF): izin baca+tulis disimpan
     // permanen supaya worker latar belakang bisa menulis tanpa aplikasi dibuka.
@@ -362,7 +394,10 @@ fun BackupScreen() {
                 Spacer(Modifier.height(SpaceM))
                 OutlinedButton(
                     onClick = {
-                        jalankanBackupOtomatisSekali(context)
+                        // R49: hanya amati bila belum ada pengamatan berjalan —
+                        // ketukan kedua saat pekerjaan masih antre/berjalan tidak
+                        // boleh menimpa pengamatan pertama dengan id yang KEEP.
+                        if (autoWorkId == null) autoWorkId = jalankanBackupOtomatisSekali(context)
                         msg = tr("Backup otomatis dimulai — periksa folder sebentar lagi.", "Automatic backup started — check the folder shortly.")
                     },
                     enabled = !autoFolderUri.isNullOrBlank(),

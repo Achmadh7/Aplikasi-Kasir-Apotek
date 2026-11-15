@@ -304,11 +304,14 @@ fun KasirScreen() {
     }
     val filtered = medicines.filter { search.isBlank() || it.name.contains(search, true) || it.category.contains(search, true) || (it.barcode?.contains(search) == true) }
     val sorted = if (sortAz) filtered.sortedBy { it.name.lowercase() } else filtered.sortedByDescending { it.name.lowercase() }
-    val total = cart.sumOf { it.unitPrice * it.qty }
+    // R44 (audit 2026-11-15): total dihitung dengan Long supaya harga x qty
+    // tidak meluber diam-diam menjadi negatif; repo (dan entity Room) tetap
+    // Int, jadi total di atas Int.MAX_VALUE ditolak lewat canPay.
+    val total = cart.sumOf { it.unitPrice.toLong() * it.qty }
     val cartQty = cart.sumOf { it.qty }
     val paid = parseDecimal(uangDiterima.text)
     val change = if (method == "Tunai") (paid - total).coerceAtLeast(0) else 0
-    val canPay = cart.isNotEmpty() && (method != "Tunai" || paid >= total)
+    val canPay = cart.isNotEmpty() && total <= Int.MAX_VALUE && (method != "Tunai" || paid >= total)
     Box(
         Modifier.fillMaxSize()
             .onGloballyPositioned {
@@ -618,7 +621,9 @@ fun KasirScreen() {
                             nominalOptions.chunked(2).forEach { rowOptions ->
                                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                                     rowOptions.forEach { amount ->
-                                        val selectedCard = paid == amount
+                                        // R44: amount Long — bandingkan sebagai
+                                        // Long (Int == Long selalu false).
+                                        val selectedCard = paid.toLong() == amount
                                         Surface(
                                             onClick = {
                                                 val formatted = formatDecimal(amount.toString())
@@ -688,7 +693,7 @@ fun KasirScreen() {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(ci.medicine.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                                 Spacer(Modifier.width(8.dp))
-                                Text(formatIDR(ci.unitPrice * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.End)
+                                Text(formatIDR(ci.unitPrice.toLong() * ci.qty), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.End)
                             }
                             Spacer(Modifier.height(SpaceXS))
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -751,10 +756,17 @@ fun KasirScreen() {
                             items = cart,
                             total = total,
                             method = method,
-                            paid = paid,
+                            paid = paid.toLong(),
                             change = change
                         )
                     }
+                }
+                // R44: total di atas Int.MAX_VALUE tidak bisa diproses
+                // (entity Room tetap Int; repo juga menolaknya) — beri tahu
+                // pengguna, jangan cuma menonaktifkan tombol Bayar.
+                if (total > Int.MAX_VALUE) {
+                    Text(tr("Total terlalu besar untuk diproses (melebihi batas Rp 2,1 miliar).", "The total is too large to process (over the Rp 2.1 billion limit)."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(SpaceS))
                 }
                 Spacer(Modifier.height(SpaceL))
                 val bayarInteraction = remember { MutableInteractionSource() }
@@ -762,14 +774,16 @@ fun KasirScreen() {
                 Button(
                     onClick = {
                         scope.launch {
-                            val amt = if (method == "Tunai") paid else total
+                            // R44: amt Long -> Int; aman karena canPay
+                            // menjamin total <= Int.MAX_VALUE (paid pun Int).
+                            val amt = (if (method == "Tunai") paid.toLong() else total).toInt()
                             val result = repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty, it.useWholesale) }, method, amt))
                             if (result is ApiResult.Success) {
                                 // Masuk fase sukses besar: tangkap rincian
                                 // pembayaran SEBELUM keranjang dikosongkan.
                                 successMethod = method
-                                successTotal = total
-                                successChange = change
+                                successTotal = total.toInt()
+                                successChange = change.toInt()
                                 successPhase = true
                                 payMsg = ""
                                 payCount++

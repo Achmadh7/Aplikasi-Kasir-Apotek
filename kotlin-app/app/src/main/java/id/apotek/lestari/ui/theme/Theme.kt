@@ -235,6 +235,10 @@ fun ApotikLestariTheme(darkTheme: Boolean = true, content: @Composable () -> Uni
 
 fun formatIDR(n: Int): String = "Rp " + "%,d".format(java.util.Locale("id", "ID"), n).replace(',', '.')
 
+// R44 (audit 2026-11-15): overload Long — total keranjang dihitung dengan
+// Long supaya harga x qty tidak meluber; pemakaian Int lama tidak berubah.
+fun formatIDR(n: Long): String = "Rp " + "%,d".format(java.util.Locale("id", "ID"), n).replace(',', '.')
+
 /** "100000" -> "100.000" — pemisah ribuan (titik) untuk input nominal. */
 fun formatDecimal(digits: String): String {
     val d = digits.filter { it.isDigit() }
@@ -277,6 +281,18 @@ fun parseDecimal(formatted: String): Int {
 /** "150rb" / "2,5jt" — nilai ringkas untuk label diagram. */
 fun formatCompactIDR(n: Int): String {
     if (n == 0) return "0"
+    val abs = kotlin.math.abs(n)
+    val sign = if (n < 0) "-" else ""
+    if (abs < 1000) return "$sign$abs"
+    val (v, suffix) = if (abs < 1_000_000) abs / 1000.0 to "rb" else abs / 1_000_000.0 to "jt"
+    val s = String.format(java.util.Locale("id", "ID"), "%.1f", v).trimEnd('0').trimEnd(',')
+    return "$sign$s$suffix"
+}
+
+// R44 (audit 2026-11-15): overload Long untuk selisih/kembalian yang
+// dihitung dari total Long (mis. pilihan nominal di sheet Kasir).
+fun formatCompactIDR(n: Long): String {
+    if (n == 0L) return "0"
     val abs = kotlin.math.abs(n)
     val sign = if (n < 0) "-" else ""
     if (abs < 1000) return "$sign$abs"

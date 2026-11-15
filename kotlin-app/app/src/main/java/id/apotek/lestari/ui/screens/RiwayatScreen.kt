@@ -169,10 +169,10 @@ fun InvoiceInfoBox(label: String, value: String, modifier: Modifier = Modifier) 
 @Composable
 fun ReceiptPreviewCard(
     items: List<CartItem>,
-    total: Int,
+    total: Long,
     method: String,
-    paid: Int,
-    change: Int,
+    paid: Long,
+    change: Long,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -225,7 +225,7 @@ fun ReceiptPreviewCard(
                         Text("${ci.qty} × ${formatIDR(ci.unitPrice)} • ${if (ci.useWholesale && ci.medicine.wholesalePrice > 0) tr("Grosir", "Wholesale") else tr("Ecer", "Retail")}", color = InvoiceMuted, style = MaterialTheme.typography.bodySmall)
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(formatIDR(ci.unitPrice * ci.qty), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    Text(formatIDR(ci.unitPrice.toLong() * ci.qty), color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 }
             }
             Spacer(Modifier.height(SpaceL))

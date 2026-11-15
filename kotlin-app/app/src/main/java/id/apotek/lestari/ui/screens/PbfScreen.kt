@@ -584,8 +584,9 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     }
 
     // Total Belanja = subtotal semua obat + PPN (PPN diketik sebagai nominal
-    // rupiah; kosong = 0).
-    val itemsTotal = rows.sumOf { (it.qty.toIntOrNull() ?: 0) * parseDecimal(it.price.text) }
+    // rupiah; kosong = 0). R44 (audit 2026-11-15): hitung dengan Long supaya
+    // qty x harga tidak meluber diam-diam menjadi negatif.
+    val itemsTotal = rows.sumOf { (it.qty.toIntOrNull() ?: 0).toLong() * parseDecimal(it.price.text) }
     val total = itemsTotal + parseDecimal(ppn.text)
     val valid = pbfName.isNotBlank() && rows.all {
         it.name.isNotBlank() && (it.qty.toIntOrNull() ?: 0) > 0 && parseDecimal(it.price.text) > 0
@@ -719,7 +720,8 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                                 modifier = Modifier.weight(2f)
                             )
                         }
-                        val rowSubtotal = (row.qty.toIntOrNull() ?: 0) * parseDecimal(row.price.text)
+                        // R44: subtotal baris dihitung Long seperti total.
+                        val rowSubtotal = (row.qty.toIntOrNull() ?: 0).toLong() * parseDecimal(row.price.text)
                         if (rowSubtotal > 0) {
                             Text("Subtotal: ${formatIDR(rowSubtotal)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = TextAlign.End)
                         }
