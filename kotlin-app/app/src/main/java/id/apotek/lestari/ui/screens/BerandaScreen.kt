@@ -398,10 +398,11 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             }
             item {
                 
-                // BR1 (pilihan Achmad 2026-11-14): kartu Pengingat
-                // dipadatkan jadi spanduk ringkas — garis aksen kuning di
-                // kiri, ringkasan jumlah per kelompok + obat/tagihan
-                // terdekat, dan tautan "Lihat Pengingat >" ke layar penuh.
+                // BR1 (pilihan Achmad 2026-11-14, diubah 15 Nov 2026 jadi
+                // "3 obat + '+N lainnya'"): kartu Pengingat tetap spanduk
+                // ringkas — garis aksen kuning di kiri, ringkasan jumlah per
+                // kelompok + maks. 3 obat paling mendesak + "+N lainnya",
+                // dan tautan "Lihat Pengingat >" ke layar penuh.
                 // Isi lengkap tetap ada di layar Pengingat.
                 val reminderParts = buildList {
                     if (outOfStockNames.isNotEmpty()) add(tr("${outOfStockNames.size} obat habis", "${outOfStockNames.size} medicines out of stock"))
@@ -417,32 +418,31 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     !remindersLoaded -> tr("Memuat data pengingat...", "Loading reminder data...")
                     else -> tr("Semua stok dan kadaluarsa aman.", "All stock and expiry dates are safe.")
                 }
-                // R15 (audit 2026-11-15): detail pengingat menampilkan yang
-                // paling mendesak dulu — habis, lalu rendah, lalu kadaluarsa,
-                // lalu jatuh tempo (sebelumnya kadaluarsa mendahului habis).
-                val reminderDetail: String? = when {
-                    outOfStockNames.isNotEmpty() -> "${outOfStockNames.first()} • ${tr("Habis", "Out of stock")}"
-                    lowStockMeds.isNotEmpty() -> {
-                        val (nm, st) = lowStockMeds.first()
-                        "$nm • ${tr("Sisa: $st", "Left: $st")}"
-                    }
-                    expiringMeds.isNotEmpty() -> {
-                        val (nm, exp) = expiringMeds.first()
-                        "$nm • ${formatDateID(exp)}"
-                    }
-                    dueBills.isNotEmpty() -> {
-                        val p = dueBills.first()
-                        val daysLeft = dueDaysLeft(p.dueDate) ?: 0L
-                        val dueLabel = when {
-                            daysLeft < 0L -> tr("Lewat ${-daysLeft} hari", "${-daysLeft} days overdue")
-                            daysLeft == 0L -> tr("Jatuh tempo hari ini", "Due today")
-                            daysLeft == 1L -> tr("Besok jatuh tempo", "Due tomorrow")
-                            else -> tr("$daysLeft hari lagi", "Due in $daysLeft days")
-                        }
-                        "${p.pbfName} • $dueLabel"
-                    }
-                    else -> null
+                // R15 (audit 2026-11-15) + pilihan Achmad 15 Nov 2026
+                // ("3 obat + '+N lainnya'"): kartu menampilkan maks. 3 obat
+                // paling mendesak — habis, lalu menipis (stok paling sedikit
+                // dulu), lalu kadaluarsa (paling dekat dulu); sisanya
+                // diringkas "+N lainnya". Tagihan PBF bukan obat: tetap
+                // dihitung di ringkasan, dan satu baris tagihan paling
+                // mendesak tetap tampil di bawah daftar obat.
+                val reminderObat = buildList {
+                    outOfStockNames.forEach { add("$it • ${tr("Habis", "Out of stock")}") }
+                    lowStockMeds.forEach { (nm, st) -> add("$nm • ${tr("Sisa: $st", "Left: $st")}") }
+                    expiringMeds.forEach { (nm, exp) -> add("$nm • ${formatDateID(exp)}") }
                 }
+                val reminderTampil = reminderObat.take(3)
+                val reminderSisa = reminderObat.size - reminderTampil.size
+                val reminderTagihan: String? = if (dueBills.isNotEmpty()) {
+                    val p = dueBills.first()
+                    val daysLeft = dueDaysLeft(p.dueDate) ?: 0L
+                    val dueLabel = when {
+                        daysLeft < 0L -> tr("Lewat ${-daysLeft} hari", "${-daysLeft} days overdue")
+                        daysLeft == 0L -> tr("Jatuh tempo hari ini", "Due today")
+                        daysLeft == 1L -> tr("Besok jatuh tempo", "Due tomorrow")
+                        else -> tr("$daysLeft hari lagi", "Due in $daysLeft days")
+                    }
+                    "${p.pbfName} • $dueLabel"
+                } else null
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
                         Box(Modifier.width(6.dp).fillMaxHeight().background(warningAmber()))
@@ -452,9 +452,19 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 Spacer(Modifier.width(8.dp))
                                 Text(reminderSummary, style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
                             }
-                            if (reminderDetail != null) {
+                            if (reminderTampil.isNotEmpty() || reminderTagihan != null) {
                                 Spacer(Modifier.height(SpaceXS))
-                                Text(reminderDetail, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 28.dp))
+                                Column(Modifier.padding(start = 28.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    reminderTampil.forEach { baris ->
+                                        Text(baris, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    if (reminderSisa > 0) {
+                                        Text(tr("+$reminderSisa lainnya", "+$reminderSisa more"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.primary)
+                                    }
+                                    if (reminderTagihan != null) {
+                                        Text(reminderTagihan, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
                             }
                             if (hasReminders) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
