@@ -1,5 +1,6 @@
 package id.apotek.lestari.data
 
+import android.util.Log
 import id.apotek.lestari.data.local.CashEntryEntity
 import id.apotek.lestari.data.local.DatabaseProvider
 import id.apotek.lestari.data.local.MedicineEntity
@@ -80,6 +81,14 @@ class Repository {
 
     /** Identitas awan acak untuk baris baru (awalan menandai tabelnya). */
     private fun genRemoteId(awalan: String): String = awalan + "-" + UUID.randomUUID().toString()
+
+    /** Barcode cocok bila keduanya kosong, atau sama setelah trim dan
+     *  abaikan huruf besar/kecil (S2, audit 2026-11-15). */
+    private fun barcodeCocok(a: String?, b: String?): Boolean {
+        val na = a?.trim()?.lowercase()?.ifBlank { null }
+        val nb = b?.trim()?.lowercase()?.ifBlank { null }
+        return na == nb
+    }
 
     /** Label hari Indonesia: "Sen", "Sel", ... "Min". */
     private fun dayLabelID(date: Date): String =
@@ -251,7 +260,10 @@ class Repository {
         val dao = DatabaseProvider.db.medicineDao()
         val barcode = args.barcode?.trim().orEmpty().ifBlank { null }
         if (barcode != null) {
-            val dup = dao.findByBarcode(barcode)
+            // S6 (audit 2026-11-15): pakai findByBarcodeAny supaya
+            // barcode milik tombstone baris LAIN juga ditolak — bukan
+            // menabrak indeks unik SQLite saat update.
+            val dup = dao.findByBarcodeAny(barcode)
             if (dup != null && dup.id != args.id) {
                 throw IllegalStateException("Barcode $barcode sudah dipakai untuk ${dup.name}")
             }
@@ -307,7 +319,10 @@ class Repository {
                 // Baris tanpa barcode: cocokkan juga via nama (+ kategori/satuan,
                 // case-insensitive) supaya impor ulang tidak menggandakan obat.
                 val existing = if (barcode != null) {
-                    dao.findByBarcode(barcode)
+                    // S5 (audit 2026-11-15): findByBarcodeAny supaya
+                    // barcode milik tombstone ditemukan dan dihidupkan
+                    // lagi, bukan disisipkan baru menabrak indeks unik.
+                    dao.findByBarcodeAny(barcode)
                 } else {
                     dao.getAll().firstOrNull {
                         it.name.trim().equals(item.name.trim(), ignoreCase = true) &&
@@ -328,6 +343,9 @@ class Repository {
                             // Baris impor tanpa barcode: pertahankan barcode lama
                             // (jangan ditimpa null — obat jadi tidak bisa dipindai).
                             expiryDate = item.expiryDate, barcode = barcode ?: existing.barcode,
+                            // S5: hidupkan lagi bila yang cocok adalah
+                            // tombstone (tanpa ini baris tetap terhapus).
+                            terhapus = 0,
                             updatedAt = nowMillis(), kotor = 1
                         )
                     )
@@ -990,9 +1008,9 @@ class Repository {
     /** Terapkan satu baris obat dari awan: sisipkan bila belum ada, timpa
      *  bila versi awan menang (last-write-wins), tandai bersih.
      *  Bila remoteId belum dikenal tapi ada obat lokal dengan identitas
-     *  nama+kategori+satuan yang sama, gabungkan ke baris itu (bukan
-     *  sisipkan duplikat) dan kembalikan remoteId dokumen awan yang
-     *  digabung, supaya pemanggil menghapus dokumennya. */
+     *  nama+kategori+satuan+barcode yang sama, gabungkan ke baris itu
+     *  (bukan sisipkan duplikat) dan kembalikan remoteId dokumen awan
+     *  yang digabung, supaya pemanggil menghapus dokumennya. */
     suspend fun terapkanRemoteObat(e: MedicineEntity): String? {
         val dao = DatabaseProvider.db.medicineDao()
         val ada = dao.getByRemoteId(e.remoteId)
@@ -1007,7 +1025,12 @@ class Repository {
             }
             return null
         }
-        val kembar = dao.cariDuplikat(e.name, e.category, e.unit)
+        // S2 (audit 2026-11-15): identitas dedup dipersempit — nama+
+        // kategori+satuan saja tidak cukup; barcode juga harus cocok
+        // (keduanya kosong, atau sama setelah trim/ignoreCase). Bila
+        // barcode berbeda, jangan gabung: sisipkan baris baru.
+        val calonKembar = dao.cariDuplikat(e.name, e.category, e.unit)
+        val kembar = if (calonKembar != null && barcodeCocok(e.barcode, calonKembar.barcode)) calonKembar else null
         if (kembar == null) {
             // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —
             // jangan sisipkan sebagai tombstone lokal baru; purge()
@@ -1019,6 +1042,8 @@ class Repository {
             if (tabrak != null && tabrak.remoteId != e.remoteId) {
                 // Barcode unik sudah dipakai baris lokal lain: terapkan
                 // tanpa barcode supaya indeks unik tidak menabrak.
+                // R7 (audit 2026-11-15): jangan buang diam-diam.
+                Log.w("Repository", "terapkanRemoteObat: barcode ${e.barcode} sudah dipakai ${tabrak.name} (remoteId ${e.remoteId}), disisipkan tanpa barcode")
                 dao.insert(e.copy(id = 0, barcode = null, kotor = 0))
             } else {
                 dao.insert(e.copy(id = 0, kotor = 0))
@@ -1032,7 +1057,11 @@ class Repository {
             var barcodeBaru = e.barcode
             if (barcodeBaru != null) {
                 val pemilik = dao.findByBarcodeAny(barcodeBaru)
-                if (pemilik != null && pemilik.remoteId != kembar.remoteId) barcodeBaru = null
+                if (pemilik != null && pemilik.remoteId != kembar.remoteId) {
+                    // R7 (audit 2026-11-15): jangan buang diam-diam.
+                    Log.w("Repository", "terapkanRemoteObat: barcode $barcodeBaru sudah dipakai ${pemilik.name}, dibuang saat gabung ke ${kembar.name}")
+                    barcodeBaru = null
+                }
             }
             // Rekonsiliasi stok (S1): kurangi stok versi awan dengan
             // penjualan yang tercatat pada baris lokal kembar — penjualan
@@ -1044,19 +1073,26 @@ class Repository {
         return e.remoteId
     }
 
-    /** Gabungkan obat duplikat lokal (identitas nama+kategori+satuan
-     *  sama — mis. dari sinkron dua akun): pertahankan baris terbaru
-     *  (updatedAt terbesar, seri = id terkecil), alihkan item penjualan
-     *  ke baris itu, lalu hapus fisik baris lainnya. Mengembalikan
-     *  remoteId baris yang dihapus supaya SyncManager bisa menghapus
-     *  dokumen awannya. Idempotent — tanpa duplikat, list kosong. */
+    /** Gabungkan obat duplikat lokal (identitas nama+kategori+satuan+
+     *  barcode sama — mis. dari sinkron dua akun): pertahankan baris
+     *  terbaru (updatedAt terbesar, seri = id terkecil), alihkan item
+     *  penjualan ke baris itu, lalu hapus fisik baris lainnya.
+     *  Mengembalikan remoteId baris yang dihapus supaya SyncManager bisa
+     *  menghapus dokumen awannya. Idempotent — tanpa duplikat, list kosong. */
     suspend fun gabungkanObatDuplikat(): List<String> {
         val db = DatabaseProvider.db
         val dihapus = mutableListOf<String>()
         val sekarang = nowMillis()
         db.withTransaction {
             val grup = db.medicineDao().getAll().groupBy {
-                Triple(it.name.trim().lowercase(), it.category.trim().lowercase(), it.unit.trim().lowercase())
+                // S2 (audit 2026-11-15): identitas dedup dipersempit —
+                // barcode ikut jadi pembeda (ternormalisasi; null =
+                // kunci sendiri), jadi obat berbarcode berbeda tidak
+                // digabung walau nama+kategori+satuan sama.
+                Pair(
+                    Triple(it.name.trim().lowercase(), it.category.trim().lowercase(), it.unit.trim().lowercase()),
+                    it.barcode?.trim()?.lowercase()?.ifBlank { null }
+                )
             }
             for ((_, baris) in grup) {
                 if (baris.size < 2) continue
