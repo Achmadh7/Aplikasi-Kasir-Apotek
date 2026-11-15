@@ -126,26 +126,27 @@ object ExcelHelper {
     }
 
     /** Rekap penjualan (J5) ke .xlsx: sheet "Rekap Harian" (satu baris per
-     *  hari berisi penjualan + baris TOTAL) dan sheet "Per Obat" (satu baris
-     *  per obat + TOTAL). Format mengikuti template Stok (X1+X2+X3): judul
-     *  dibekukan + filter otomatis, angka #,##0, tanggal sel Excel asli. */
+     *  hari berisi penjualan + HPP + Laba Kotor + baris TOTAL) dan sheet
+     *  "Per Obat" (satu baris per obat + TOTAL). Laba Kotor = Total Penjualan
+     *  - HPP. Format mengikuti template Stok (X1+X2+X3): judul dibekukan +
+     *  filter otomatis, angka #,##0, tanggal sel Excel asli. */
     fun rekapPenjualanBytes(rekap: RekapPenjualan, judulPeriode: String): ByteArray {
         val wb = XSSFWorkbook()
         buildRekapSheet(
             wb, SHEET_REKAP_HARIAN, "Rekap Penjualan \u2014 $judulPeriode",
-            arrayOf("Tanggal", "Transaksi", "Item Terjual", "Total Penjualan (Rp)"),
-            intArrayOf(18, 12, 14, 22),
-            rekap.daily.map { listOf<Any>(it.date, it.transactions, it.itemsSold, it.revenue) },
+            arrayOf("Tanggal", "Transaksi", "Item Terjual", "Total Penjualan (Rp)", "HPP (Rp)", "Laba Kotor (Rp)"),
+            intArrayOf(18, 12, 14, 22, 22, 22),
+            rekap.daily.map { listOf<Any>(it.date, it.transactions, it.itemsSold, it.revenue, it.hpp, it.revenue - it.hpp) },
             dateCol = 0,
-            totalRow = listOf<Any>("TOTAL", rekap.totalTransactions, rekap.totalItemsSold, rekap.totalRevenue)
+            totalRow = listOf<Any>("TOTAL", rekap.totalTransactions, rekap.totalItemsSold, rekap.totalRevenue, rekap.totalHpp, rekap.totalRevenue - rekap.totalHpp)
         )
         buildRekapSheet(
             wb, SHEET_REKAP_OBAT, "Per Obat \u2014 $judulPeriode",
-            arrayOf("Nama Obat", "Kategori", "Item Terjual", "Total Penjualan (Rp)"),
-            intArrayOf(32, 20, 14, 22),
-            rekap.byMedicine.map { listOf<Any>(it.name, it.category, it.qty, it.revenue) },
+            arrayOf("Nama Obat", "Kategori", "Item Terjual", "Total Penjualan (Rp)", "HPP (Rp)", "Laba Kotor (Rp)"),
+            intArrayOf(32, 20, 14, 22, 22, 22),
+            rekap.byMedicine.map { listOf<Any>(it.name, it.category, it.qty, it.revenue, it.hpp, it.revenue - it.hpp) },
             dateCol = -1,
-            totalRow = listOf<Any>("TOTAL", "", rekap.byMedicine.sumOf { it.qty }, rekap.byMedicine.sumOf { it.revenue })
+            totalRow = listOf<Any>("TOTAL", "", rekap.byMedicine.sumOf { it.qty }, rekap.byMedicine.sumOf { it.revenue }, rekap.byMedicine.sumOf { it.hpp }, rekap.byMedicine.sumOf { it.revenue - it.hpp })
         )
         return wbBytes(wb)
     }

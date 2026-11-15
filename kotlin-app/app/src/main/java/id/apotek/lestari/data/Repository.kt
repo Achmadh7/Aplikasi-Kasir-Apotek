@@ -1385,7 +1385,7 @@ fun agregatRekapPenjualan(
     val periodItems = items.filter { it.saleId in periodSaleIds }
     val saleById = periodSales.associateBy { it.id }
 
-    data class AggHarian(var transactions: Int = 0, var itemsSold: Int = 0, var revenue: Int = 0)
+    data class AggHarian(var transactions: Int = 0, var itemsSold: Int = 0, var revenue: Int = 0, var hpp: Int = 0)
     val harian = linkedMapOf<String, AggHarian>()
     for (s in periodSales) {
         val key = parseISODate(s.createdAt)?.let { dayKeyID(it) } ?: continue
@@ -1397,12 +1397,14 @@ fun agregatRekapPenjualan(
         val a = harian.getOrPut(key) { AggHarian() }
         a.itemsSold += it.qty
         a.revenue += it.subtotal
+        // HPP harian: qty * buyPrice snapshot per item (0 untuk item lama).
+        a.hpp += it.qty * it.buyPrice
     }
     val daily = harian.entries.sortedBy { it.key }.map { (date, a) ->
-        RekapHarian(date, a.transactions, a.itemsSold, a.revenue)
+        RekapHarian(date, a.transactions, a.itemsSold, a.revenue, a.hpp)
     }
 
-    data class Agg(var qty: Int = 0, var revenue: Int = 0)
+    data class Agg(var qty: Int = 0, var revenue: Int = 0, var hpp: Int = 0)
     // R30 (audit 2026-11-15): kelompokkan per (medicineId, nama tampil) —
     // dulu hanya per medicineId, jadi semua item medicineId == 0 (atau dua
     // nama berbeda yang berbagi satu id) runtuh jadi satu baris salah label.
@@ -1412,12 +1414,12 @@ fun agregatRekapPenjualan(
         val nama = medById[it.medicineId]?.name ?: it.medicineName
         val key = it.medicineId to nama
         val cur = medAgg.getOrPut(key) { Agg() }
-        cur.qty += it.qty; cur.revenue += it.subtotal
+        cur.qty += it.qty; cur.revenue += it.subtotal; cur.hpp += it.qty * it.buyPrice
         medCategory[key] =
             (medById[it.medicineId]?.category ?: it.category).ifBlank { "Lainnya" }
     }
     val byMedicine = medAgg.entries.map { (key, a) ->
-        ProfitByMedicine(key.second, medCategory[key] ?: "Lainnya", a.qty, a.revenue)
+        ProfitByMedicine(key.second, medCategory[key] ?: "Lainnya", a.qty, a.revenue, a.hpp)
     }.sortedByDescending { it.revenue }
 
     return RekapPenjualan(
@@ -1426,6 +1428,7 @@ fun agregatRekapPenjualan(
         byMedicine = byMedicine,
         totalTransactions = periodSales.size,
         totalItemsSold = periodItems.sumOf { it.qty },
-        totalRevenue = periodItems.sumOf { it.subtotal }
+        totalRevenue = periodItems.sumOf { it.subtotal },
+        totalHpp = periodItems.sumOf { it.qty * it.buyPrice }
     )
 }

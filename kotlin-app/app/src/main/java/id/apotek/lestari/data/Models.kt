@@ -105,7 +105,7 @@ data class Dashboard(
     val recentSales: List<RecentSale> = emptyList()
 )
 
-data class ProfitByMedicine(val name: String = "", val category: String = "", val qty: Int = 0, val revenue: Int = 0)
+data class ProfitByMedicine(val name: String = "", val category: String = "", val qty: Int = 0, val revenue: Int = 0, val hpp: Int = 0)
 data class ProfitByCategory(val category: String = "", val qty: Int = 0, val revenue: Int = 0)
 data class ProfitDaily(val date: String = "", val label: String = "", val revenue: Int = 0, val profit: Int = 0)
 
@@ -127,16 +127,19 @@ data class ProfitReport(
 )
 
 // Rekap penjualan per periode untuk export Excel (J5): satu baris per hari
-// berisi penjualan + satu baris per obat. Dibangun murni dari penjualan
-// dalam periode (lihat agregatRekapPenjualan di Repository.kt).
-data class RekapHarian(val date: String = "", val transactions: Int = 0, val itemsSold: Int = 0, val revenue: Int = 0)
+// berisi penjualan + HPP + satu baris per obat. Dibangun murni dari
+// penjualan dalam periode (lihat agregatRekapPenjualan di Repository.kt).
+// HPP = jumlah qty * buyPrice snapshot per item (0 untuk penjualan lama
+// sebelum HPP dikembalikan 10 Nov 2026).
+data class RekapHarian(val date: String = "", val transactions: Int = 0, val itemsSold: Int = 0, val revenue: Int = 0, val hpp: Int = 0)
 data class RekapPenjualan(
     val period: String = "month",
     val daily: List<RekapHarian> = emptyList(),
     val byMedicine: List<ProfitByMedicine> = emptyList(),
     val totalTransactions: Int = 0,
     val totalItemsSold: Int = 0,
-    val totalRevenue: Int = 0
+    val totalRevenue: Int = 0,
+    val totalHpp: Int = 0
 )
 
 // ---- Per-action request args ----
