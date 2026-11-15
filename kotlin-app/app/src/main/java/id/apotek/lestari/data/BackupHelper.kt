@@ -416,6 +416,51 @@ object BackupHelper {
             }
         }
 
+        // R3 (audit 2026-11-15): tolak nilai negatif di seluruh tabel.
+        // Cek konsistensi subtotal saja tidak menangkapnya: qty -1 x
+        // harga 10 = subtotal -10 tetap "konsisten". File yang dibuat
+        // aplikasi sendiri tidak pernah negatif; ini untuk file yang
+        // diedit tangan.
+        fun nonNeg(nilai: Int, kolom: String, label: String) {
+            if (nilai < 0) throw IllegalArgumentException(
+                tr("$label rusak: $kolom tidak boleh negatif ($nilai)", "$label is invalid: $kolom must not be negative ($nilai)")
+            )
+        }
+        for ((i, m) in medicines.withIndex()) {
+            val l = tr("Baris obat ke-${i + 1}", "Medicine row ${i + 1}")
+            nonNeg(m.buyPrice, "buyPrice", l)
+            nonNeg(m.sellPrice, "sellPrice", l)
+            nonNeg(m.wholesalePrice, "wholesalePrice", l)
+            nonNeg(m.stock, "stock", l)
+        }
+        for ((i, s) in sales.withIndex()) {
+            val l = tr("Baris penjualan ke-${i + 1}", "Sale row ${i + 1}")
+            nonNeg(s.total, "total", l)
+            nonNeg(s.amountPaid, "amountPaid", l)
+            nonNeg(s.changeAmount, "changeAmount", l)
+        }
+        for ((i, it) in items.withIndex()) {
+            val l = tr("Baris item penjualan ke-${i + 1}", "Sale item row ${i + 1}")
+            nonNeg(it.qty, "qty", l)
+            nonNeg(it.price, "price", l)
+            nonNeg(it.subtotal, "subtotal", l)
+        }
+        for ((i, e) in entries.withIndex()) {
+            val l = tr("Baris kas ke-${i + 1}", "Cash row ${i + 1}")
+            nonNeg(e.amount, "amount", l)
+        }
+        for ((i, p) in purchases.withIndex()) {
+            val l = tr("Baris pembelian ke-${i + 1}", "Purchase row ${i + 1}")
+            nonNeg(p.total, "total", l)
+            nonNeg(p.ppn, "ppn", l)
+        }
+        for ((i, pi) in purchaseItems.withIndex()) {
+            val l = tr("Baris item pembelian ke-${i + 1}", "Purchase item row ${i + 1}")
+            nonNeg(pi.qty, "qty", l)
+            nonNeg(pi.buyPrice, "buyPrice", l)
+            nonNeg(pi.subtotal, "subtotal", l)
+        }
+
         // A5 (audit 2026-11-02, M7): tolak duplikat sejak di sini. ID/barcode
         // kembar pasti menabrak indeks unik saat restore dan menggagalkan
         // seluruh proses dengan pesan SQLite yang tidak menjelaskan baris
@@ -449,6 +494,27 @@ object BackupHelper {
         for (supplier in suppliers) {
             if (!seenSupplierIds.add(supplier.id)) {
                 throw IllegalArgumentException(tr("ID pemasok duplikat di file backup: ${supplier.id} (${supplier.name})", "Duplicate supplier ID in the backup file: ${supplier.id} (${supplier.name})"))
+            }
+        }
+        // S9 (audit 2026-11-15): ID kas/item juga harus unik — tanpa cek
+        // ini, duplikat menabrak primary key saat restore dengan pesan
+        // SQLite yang tidak menjelaskan baris bermasalah.
+        val seenCashIds = HashSet<Int>()
+        for (entry in entries) {
+            if (!seenCashIds.add(entry.id)) {
+                throw IllegalArgumentException(tr("ID kas duplikat di file backup: ${entry.id} (${entry.description})", "Duplicate cash ID in the backup file: ${entry.id} (${entry.description})"))
+            }
+        }
+        val seenSaleItemIds = HashSet<Int>()
+        for (item in items) {
+            if (!seenSaleItemIds.add(item.id)) {
+                throw IllegalArgumentException(tr("ID item penjualan duplikat di file backup: ${item.id} (${item.medicineName})", "Duplicate sale item ID in the backup file: ${item.id} (${item.medicineName})"))
+            }
+        }
+        val seenPurchaseItemIds = HashSet<Int>()
+        for (pItem in purchaseItems) {
+            if (!seenPurchaseItemIds.add(pItem.id)) {
+                throw IllegalArgumentException(tr("ID item pembelian duplikat di file backup: ${pItem.id} (${pItem.medicineName})", "Duplicate purchase item ID in the backup file: ${pItem.id} (${pItem.medicineName})"))
             }
         }
 

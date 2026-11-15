@@ -93,6 +93,24 @@ class MoneyLogicTest {
     }
 
     @Test
+    fun backup_rejectsNegativeValues() {
+        // R3 (audit 2026-11-15): stok negatif ditolak.
+        val root = JSONObject(BackupHelper.buildJson(sampleBackup()))
+        root.getJSONArray("medicines").getJSONObject(0).put("stock", -5)
+        assertThrows(IllegalArgumentException::class.java) {
+            BackupHelper.parseJson(root.toString())
+        }
+        // qty -1 x harga 12000 = subtotal -12000 tetap "konsisten",
+        // jadi cek subtotal saja tidak menangkapnya — cek negatif yang menangkap.
+        val root2 = JSONObject(BackupHelper.buildJson(sampleBackup()))
+        root2.getJSONArray("saleItems").getJSONObject(0).put("qty", -1)
+        root2.getJSONArray("saleItems").getJSONObject(0).put("subtotal", -12000)
+        assertThrows(IllegalArgumentException::class.java) {
+            BackupHelper.parseJson(root2.toString())
+        }
+    }
+
+    @Test
     fun backup_rejectsDuplicateMedicineId() {
         val root = JSONObject(BackupHelper.buildJson(sampleBackup()))
         val meds = root.getJSONArray("medicines")

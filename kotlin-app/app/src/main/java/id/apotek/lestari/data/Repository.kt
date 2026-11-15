@@ -202,6 +202,10 @@ class Repository {
     suspend fun createMedicine(args: MedicineArgs): ApiResult<IdResponse> = call {
         if (args.name.isBlank()) throw IllegalArgumentException(tr("Nama obat tidak boleh kosong", "Medicine name must not be empty"))
         if (args.sellPrice <= 0) throw IllegalArgumentException(tr("Harga jual harus lebih dari 0", "Sell price must be more than 0"))
+        // R52 (audit 2026-11-15): stok/harga grosir negatif tidak pernah
+        // valid — tolak di sini supaya tidak masuk lewat jalur tulis mana pun.
+        if (args.stock < 0) throw IllegalArgumentException(tr("Stok tidak boleh negatif", "Stock must not be negative"))
+        if (args.wholesalePrice < 0) throw IllegalArgumentException(tr("Harga grosir tidak boleh negatif", "Wholesale price must not be negative"))
         val dao = DatabaseProvider.db.medicineDao()
         val barcode = args.barcode?.trim().orEmpty().ifBlank { null }
         if (barcode != null) {
@@ -241,6 +245,9 @@ class Repository {
     suspend fun updateMedicine(args: UpdateMedicineArgs): ApiResult<OkResponse> = call {
         if (args.name.isBlank()) throw IllegalArgumentException(tr("Nama obat tidak boleh kosong", "Medicine name must not be empty"))
         if (args.sellPrice <= 0) throw IllegalArgumentException(tr("Harga jual harus lebih dari 0", "Sell price must be more than 0"))
+        // R52 (audit 2026-11-15): lihat createMedicine.
+        if (args.stock < 0) throw IllegalArgumentException(tr("Stok tidak boleh negatif", "Stock must not be negative"))
+        if (args.wholesalePrice < 0) throw IllegalArgumentException(tr("Harga grosir tidak boleh negatif", "Wholesale price must not be negative"))
         val dao = DatabaseProvider.db.medicineDao()
         val barcode = args.barcode?.trim().orEmpty().ifBlank { null }
         if (barcode != null) {
@@ -287,6 +294,12 @@ class Repository {
                     continue
                 }
                 if (item.sellPrice <= 0) {
+                    skipped++
+                    continue
+                }
+                // R52 (audit 2026-11-15): baris impor dengan stok/harga
+                // grosir negatif dilewati, bukan disimpan.
+                if (item.stock < 0 || item.wholesalePrice < 0) {
                     skipped++
                     continue
                 }
@@ -887,21 +900,21 @@ class Repository {
             db.purchaseDao().deleteAll()
             db.purchaseDao().deleteAllItems()
             db.supplierDao().deleteAll()
-            data.medicines.map { it.copy(remoteId = it.remoteId.ifBlank { "obat-" + it.id }, kotor = 1) }
+            data.medicines.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("obat") }, kotor = 1) }
                 .forEach { db.medicineDao().insert(it) }
-            data.sales.map { it.copy(remoteId = it.remoteId.ifBlank { "jual-" + it.id }, kotor = 1) }
+            data.sales.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("jual") }, kotor = 1) }
                 .forEach { db.saleDao().insert(it) }
             if (data.saleItems.isNotEmpty()) db.saleDao().insertItems(
-                data.saleItems.map { it.copy(remoteId = it.remoteId.ifBlank { "jualitem-" + it.id }, kotor = 1) }
+                data.saleItems.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("jualitem") }, kotor = 1) }
             )
-            data.cashEntries.map { it.copy(remoteId = it.remoteId.ifBlank { "kas-" + it.id }, kotor = 1) }
+            data.cashEntries.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("kas") }, kotor = 1) }
                 .forEach { db.cashDao().insert(it) }
-            data.purchases.map { it.copy(remoteId = it.remoteId.ifBlank { "pbf-" + it.id }, kotor = 1) }
+            data.purchases.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("pbf") }, kotor = 1) }
                 .forEach { db.purchaseDao().insert(it) }
             if (data.purchaseItems.isNotEmpty()) db.purchaseDao().insertItems(
-                data.purchaseItems.map { it.copy(remoteId = it.remoteId.ifBlank { "pbfitem-" + it.id }, kotor = 1) }
+                data.purchaseItems.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("pbfitem") }, kotor = 1) }
             )
-            data.suppliers.map { it.copy(remoteId = it.remoteId.ifBlank { "pemasok-" + it.id }, kotor = 1) }
+            data.suppliers.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("pemasok") }, kotor = 1) }
                 .forEach { db.supplierDao().insert(it) }
         }
         tr("Dipulihkan: ${data.medicines.size} obat, ${data.sales.size} penjualan, ${data.saleItems.size} item, ${data.cashEntries.size} kas, ${data.purchases.size} pembelian PBF.", "Restored: ${data.medicines.size} medicines, ${data.sales.size} sales, ${data.saleItems.size} items, ${data.cashEntries.size} cash entries, ${data.purchases.size} PBF purchases.")
@@ -996,6 +1009,11 @@ class Repository {
         }
         val kembar = dao.cariDuplikat(e.name, e.category, e.unit)
         if (kembar == null) {
+            // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —
+            // jangan sisipkan sebagai tombstone lokal baru; purge()
+            // akan membuangnya lalu tarikan berikutnya menyisipkannya
+            // lagi tanpa henti.
+            if (e.terhapus == 1) return null
             val bc = e.barcode
             val tabrak = if (bc != null) dao.findByBarcodeAny(bc) else null
             if (tabrak != null && tabrak.remoteId != e.remoteId) {
@@ -1076,7 +1094,12 @@ class Repository {
     suspend fun terapkanRemotePenjualan(e: SaleEntity) {
         val dao = DatabaseProvider.db.saleDao()
         val ada = dao.getByRemoteId(e.remoteId)
-        if (ada == null) dao.insert(e.copy(id = 0, kotor = 0))
+        if (ada == null) {
+            // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —
+            // jangan sisipkan; lihat terapkanRemoteObat.
+            if (e.terhapus == 1) return
+            dao.insert(e.copy(id = 0, kotor = 0))
+        }
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.update(e.copy(id = ada.id, kotor = 0))
         } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
@@ -1090,7 +1113,12 @@ class Repository {
     suspend fun terapkanRemoteItemJual(e: SaleItemEntity) {
         val dao = DatabaseProvider.db.saleDao()
         val ada = dao.getItemByRemoteId(e.remoteId)
-        if (ada == null) dao.insertItems(listOf(e.copy(id = 0, kotor = 0)))
+        if (ada == null) {
+            // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —
+            // jangan sisipkan; lihat terapkanRemoteObat.
+            if (e.terhapus == 1) return
+            dao.insertItems(listOf(e.copy(id = 0, kotor = 0)))
+        }
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.updateItem(e.copy(id = ada.id, kotor = 0))
         } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
@@ -1104,7 +1132,12 @@ class Repository {
     suspend fun terapkanRemoteKas(e: CashEntryEntity) {
         val dao = DatabaseProvider.db.cashDao()
         val ada = dao.getByRemoteId(e.remoteId)
-        if (ada == null) dao.insert(e.copy(id = 0, kotor = 0))
+        if (ada == null) {
+            // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —
+            // jangan sisipkan; lihat terapkanRemoteObat.
+            if (e.terhapus == 1) return
+            dao.insert(e.copy(id = 0, kotor = 0))
+        }
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.update(e.copy(id = ada.id, kotor = 0))
         } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
@@ -1118,7 +1151,12 @@ class Repository {
     suspend fun terapkanRemotePbf(e: PurchaseEntity) {
         val dao = DatabaseProvider.db.purchaseDao()
         val ada = dao.getByRemoteId(e.remoteId)
-        if (ada == null) dao.insert(e.copy(id = 0, kotor = 0))
+        if (ada == null) {
+            // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —
+            // jangan sisipkan; lihat terapkanRemoteObat.
+            if (e.terhapus == 1) return
+            dao.insert(e.copy(id = 0, kotor = 0))
+        }
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.update(e.copy(id = ada.id, kotor = 0))
         } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
@@ -1132,7 +1170,12 @@ class Repository {
     suspend fun terapkanRemoteItemPbf(e: PurchaseItemEntity) {
         val dao = DatabaseProvider.db.purchaseDao()
         val ada = dao.getItemByRemoteId(e.remoteId)
-        if (ada == null) dao.insertItems(listOf(e.copy(id = 0, kotor = 0)))
+        if (ada == null) {
+            // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —
+            // jangan sisipkan; lihat terapkanRemoteObat.
+            if (e.terhapus == 1) return
+            dao.insertItems(listOf(e.copy(id = 0, kotor = 0)))
+        }
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.updateItem(e.copy(id = ada.id, kotor = 0))
         } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
@@ -1146,7 +1189,12 @@ class Repository {
     suspend fun terapkanRemotePemasok(e: SupplierEntity) {
         val dao = DatabaseProvider.db.supplierDao()
         val ada = dao.getByRemoteId(e.remoteId)
-        if (ada == null) dao.insert(e.copy(id = 0, kotor = 0))
+        if (ada == null) {
+            // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —
+            // jangan sisipkan; lihat terapkanRemoteObat.
+            if (e.terhapus == 1) return
+            dao.insert(e.copy(id = 0, kotor = 0))
+        }
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.update(e.copy(id = ada.id, kotor = 0))
         } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {

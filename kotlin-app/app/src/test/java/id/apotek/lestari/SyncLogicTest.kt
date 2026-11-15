@@ -146,6 +146,23 @@ class SyncLogicTest {
     }
 
     @Test
+    fun int_dariPeta_dijepitKeRentangValid() {
+        // S13 (audit 2026-11-15): nilai awan > Int.MAX_VALUE dijepit
+        // (bukan terpotong jadi negatif), nilai negatif dijepit ke 0.
+        val peta = SyncLogic.obatKePeta(
+            MedicineEntity(name = "X", category = "Umum", unit = "Strip",
+                buyPrice = 0, sellPrice = 100, wholesalePrice = 0, stock = 5,
+                expiryDate = null, barcode = null, createdAt = "", remoteId = "obat-1")
+        ).toMutableMap().apply {
+            put("sellPrice", Int.MAX_VALUE.toLong() + 1000L)
+            put("stock", -7L)
+        }
+        val hasil = SyncLogic.obatDariPeta(peta)!!
+        assertEquals(Int.MAX_VALUE, hasil.sellPrice)
+        assertEquals(0, hasil.stock)
+    }
+
+    @Test
     fun pemasok_bolakBalikPeta_danTanpaRemoteIdDitolak() {
         val pemasok = SupplierEntity(
             id = 3, name = "PBF Sehat", contact = "0812-3456-7890",

@@ -37,7 +37,14 @@ object SyncLogic {
     private fun Map<String, Any?>.teksWajib(kunci: String): String = this[kunci] as? String ?: ""
     private fun Map<String, Any?>.angka(kunci: String): Long =
         (this[kunci] as? Number)?.toLong() ?: 0L
-    private fun Map<String, Any?>.int(kunci: String): Int = angka(kunci).toInt()
+    // S13 (audit 2026-11-15): angka awan disimpan sebagai Long; toInt()
+    // mentah memotong nilai > Int.MAX_VALUE jadi negatif/sampah dan
+    // menerima nilai negatif diam-diam. Semua field uang/stok/qty di sini
+    // tidak pernah negatif, jadi jepit ke [0, Int.MAX_VALUE]. Modul ini
+    // murni JVM (tanpa Android), jadi tidak ada Log — penjepitan adalah
+    // perlindungannya.
+    private fun Map<String, Any?>.int(kunci: String): Int =
+        angka(kunci).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
     private fun Map<String, Any?>.terhapus(): Int =
         if (this["terhapus"] as? Boolean == true) 1 else 0
 
