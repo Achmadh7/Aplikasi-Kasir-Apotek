@@ -207,7 +207,9 @@ fun KartuHeaderPremium(judul: String, ikon: ImageVector, subjudul: String? = nul
  *  Masuk/Keluar Keuangan, Laba). maxLines/overflow opsional untuk angka
  *  di kotak sempit (Ellipsis seperti Text polos sebelumnya). */
 @Composable
-fun AnimatedAmount(value: Int, style: TextStyle, color: Color, format: (Int) -> String = { formatIDR(it) }, maxLines: Int = Int.MAX_VALUE, overflow: TextOverflow = TextOverflow.Clip) {
+fun AnimatedAmount(value: Int, style: TextStyle, color: Color, maxLines: Int = Int.MAX_VALUE, overflow: TextOverflow = TextOverflow.Clip, format: (Int) -> String = { formatIDR(it) }) {
+    // format HARUS tetap jadi param terakhir: LabaScreen memakai trailing
+    // lambda `{ "$it" }` untuk format — param baru ditaruh SEBELUM format.
     // rememberSaveable: nilai terakhir ikut tersimpan bersama state
     // tujuan navigasi, jadi saat kembali ke tab ini angka tampil utuh
     // seketika (tidak menghitung naik dari 0 lagi).

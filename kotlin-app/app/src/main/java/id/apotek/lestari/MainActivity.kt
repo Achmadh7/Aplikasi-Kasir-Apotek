@@ -73,13 +73,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.onSizeChanged
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntSize
 import androidx.core.view.drawToBitmap
@@ -756,8 +758,9 @@ if (tampilKonfirmasiReset) {
                 val lubang = Path().apply {
                     addOval(Rect(center = pusatReveal, radius = radiusReveal.value))
                 }
-                clipPath(lubang, clipOp = ClipOp.Difference)
-                drawImage(bmp, dstSize = IntSize(size.width.toInt(), size.height.toInt()))
+                clipPath(lubang, clipOp = ClipOp.Difference) {
+                    drawImage(bmp, dstSize = IntSize(size.width.toInt(), size.height.toInt()))
+                }
             }
         )
     }
