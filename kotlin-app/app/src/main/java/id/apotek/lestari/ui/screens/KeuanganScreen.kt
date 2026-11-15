@@ -263,7 +263,7 @@ fun KeuanganScreen() {
                     // tanpa ikon dompet di sampingnya (sesuai papan BR/KE).
                     Text(tr("SALDO KAS", "CASH BALANCE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(SpaceS))
-                    AnimatedAmount(saldo, MaterialTheme.typography.headlineLarge, if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+                    AnimatedAmount(saldo, MaterialTheme.typography.headlineLarge, if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface, sekaliSaja = true, kunciSekali = "keuanganSaldo")
                     // R18: bila agregat saldo gagal dimuat, angka 0 di atas
                     // bukan saldo sebenarnya — beri keterangan (hanya saat
                     // gagal, bukan saat muat pertama: loadError != null).
@@ -280,14 +280,14 @@ fun KeuanganScreen() {
                             Column(Modifier.padding(12.dp)) {
                                 Text(tr("MASUK", "IN"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.height(4.dp))
-                                AnimatedAmount(saldoIn, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                AnimatedAmount(saldoIn, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis, sekaliSaja = true, kunciSekali = "keuanganMasuk")
                             }
                         }
                         Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
                             Column(Modifier.padding(12.dp)) {
                                 Text(tr("KELUAR", "OUT"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.height(4.dp))
-                                AnimatedAmount(saldoOut, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                AnimatedAmount(saldoOut, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis, sekaliSaja = true, kunciSekali = "keuanganKeluar")
                             }
                         }
                     }

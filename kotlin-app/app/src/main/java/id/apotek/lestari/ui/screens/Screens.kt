@@ -203,24 +203,42 @@ fun KartuHeaderPremium(judul: String, ikon: ImageVector, subjudul: String? = nul
 // centang sukses, denyut KRITIS; selebihnya aplikasi tanpa animasi) ----------
 
 
+// Kunci animasi hitung-naik yang sudah pernah jalan di proses ini
+// (dipakai AnimatedAmount dengan sekaliSaja = true). Komposisi layar
+// tab dimusnahkan saat pindah tab, jadi rememberSaveable di dalam
+// AnimatedAmount tidak cukup: nilai sempat 0 saat data dimuat ulang
+// (mis. cashBalance null) sehingga LaunchedEffect(0) me-reset `shown`.
+private val animasiSekaliJalan = mutableSetOf<String>()
+
 /** Angka berhitung naik dari 0 (dipakai Pemasukan Hari Ini, Saldo Kas &
  *  Masuk/Keluar Keuangan, Laba). maxLines/overflow opsional untuk angka
  *  di kotak sempit (Ellipsis seperti Text polos sebelumnya). */
 @Composable
-fun AnimatedAmount(value: Int, style: TextStyle, color: Color, maxLines: Int = Int.MAX_VALUE, overflow: TextOverflow = TextOverflow.Clip, format: (Int) -> String = { formatIDR(it) }) {
+fun AnimatedAmount(value: Int, style: TextStyle, color: Color, maxLines: Int = Int.MAX_VALUE, overflow: TextOverflow = TextOverflow.Clip, sekaliSaja: Boolean = false, kunciSekali: String = "", format: (Int) -> String = { formatIDR(it) }) {
     // format HARUS tetap jadi param terakhir: LabaScreen memakai trailing
     // lambda `{ "$it" }` untuk format — param baru ditaruh SEBELUM format.
     // rememberSaveable: nilai terakhir ikut tersimpan bersama state
     // tujuan navigasi, jadi saat kembali ke tab ini angka tampil utuh
     // seketika (tidak menghitung naik dari 0 lagi).
+    // sekaliSaja: bila kunci sudah tercatat (pernah beranimasi di proses
+    // ini), tampilkan angka final langsung tanpa hitung naik — berlaku
+    // juga saat nilai sempat 0 selama muat ulang data.
+    val sudahJalan = sekaliSaja && kunciSekali.isNotEmpty() && kunciSekali in animasiSekaliJalan
     var shown by rememberSaveable { mutableStateOf(0) }
     val animated by animateIntAsState(
         targetValue = shown,
         animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
         label = "amount"
     )
-    LaunchedEffect(value) { shown = value }
-    Text(format(animated), color = color, style = style, fontWeight = FontWeight.Bold, maxLines = maxLines, overflow = overflow)
+    LaunchedEffect(value) {
+        if (sekaliSaja && kunciSekali.isNotEmpty()) animasiSekaliJalan += kunciSekali
+        shown = value
+    }
+    if (sudahJalan) {
+        Text(format(value), color = color, style = style, fontWeight = FontWeight.Bold, maxLines = maxLines, overflow = overflow)
+    } else {
+        Text(format(animated), color = color, style = style, fontWeight = FontWeight.Bold, maxLines = maxLines, overflow = overflow)
+    }
 }
 
 
