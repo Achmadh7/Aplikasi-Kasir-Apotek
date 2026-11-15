@@ -41,6 +41,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -112,7 +113,8 @@ fun KeuanganScreen() {
     // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
     // muat entri/saldo diam-diam menampilkan angka periode.
     var loadError by remember { mutableStateOf<String?>(null) }
-    var period by remember { mutableStateOf("today") } // today | month | all — awalnya "Hari Ini" (permintaan Achmad 2026-10-31), bukan "Semua"
+    // R10 (audit 2026-11-15): pilihan periode selamat dari rotasi.
+    var period by rememberSaveable { mutableStateOf("today") } // today | month | all — awalnya "Hari Ini" (permintaan Achmad 2026-10-31), bukan "Semua"
     var typeFilter by remember { mutableStateOf("all") } // all | in | out
     var showForm by remember { mutableStateOf(false) }
     var formType by remember { mutableStateOf("in") }
@@ -425,7 +427,7 @@ fun KeuanganScreen() {
             }
             }
         }
-        itemsIndexed(shown) { index, e ->
+        itemsIndexed(shown, key = { _, e -> e.id }) { index, e ->
             
             val isIn = e.type == "in"
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
@@ -494,7 +496,7 @@ fun CashEntryFormCard(type: String, onDismiss: () -> Unit, onSaved: () -> Unit) 
             )
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 kasTypes.forEachIndexed { index, (t, label, icon) ->
-                    val activeColor = if (t == "in") KasMasukBlue else KasKeluarRed
+                    val activeColor = if (t == "in") KasMasukBlue else MaterialTheme.colorScheme.error
                     SegmentedButton(
                         selected = entryType == t,
                         onClick = { entryType = t },
@@ -551,7 +553,7 @@ fun CashEntryFormCard(type: String, onDismiss: () -> Unit, onSaved: () -> Unit) 
                     },
                     enabled = parseDecimal(amount.text) > 0,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isIn) KasMasukBlue else KasKeluarRed,
+                        containerColor = if (isIn) KasMasukBlue else MaterialTheme.colorScheme.error,
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(28.dp),

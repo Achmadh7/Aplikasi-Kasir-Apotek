@@ -38,6 +38,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -104,15 +105,16 @@ import java.util.TimeZone
 // Layar Pengingat (stok menipis/habis, kedaluwarsa, tagihan PBF).
 
 @Composable
-fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
+fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var dueBills by remember { mutableStateOf<List<Purchase>>(emptyList()) }
     var noDateBills by remember { mutableStateOf<List<Purchase>>(emptyList()) }
     // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
     // muat diam-diam menampilkan ringkasan 0 yang menyesatkan.
     var loadError by remember { mutableStateOf<String?>(null) }
-    var window by remember { mutableStateOf(90) }
-    var filter by remember { mutableStateOf("all") } // all | expiry | low | critical
+    // R10 (audit 2026-11-15): jendela + filter selamat dari rotasi.
+    var window by rememberSaveable { mutableIntStateOf(90) }
+    var filter by rememberSaveable { mutableStateOf("all") } // all | expiry | low | critical
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME, pola yang sama
     // seperti Laba) supaya tagihan yang baru ditandai lunas di Faktur PBF
     // langsung hilang dari sini.
@@ -331,7 +333,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                 }
             }
         }
-        itemsIndexed(shown) { index, m ->
+        itemsIndexed(shown, key = { _, m -> m.id }) { index, m ->
             val d = daysUntilExpiry(m.expiryDate)
             val isCritical = m.stock == 0
             // Saran restock: jumlah untuk mencapai batas Aman (16) pada skala
@@ -397,7 +399,9 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            OutlinedButton(onClick = onGoStok, shape = RoundedCornerShape(20.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)) {
+                            // R24 (audit 2026-11-15): teruskan nama obat ke
+                            // Stok supaya kolom pencariannya langsung terisi.
+                            OutlinedButton(onClick = { onGoStok(m.name) }, shape = RoundedCornerShape(20.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)) {
                                 Icon(Icons.Default.Inventory, null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(4.dp))
                                 Text(tr("Stok", "Stock"))

@@ -176,9 +176,14 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     var lewatiLogin by remember { mutableStateOf(false) }
     var statusSync by remember {
         mutableStateOf(
+            // R13 (audit 2026-11-15): jangan BERHASIL sebelum sinkron
+            // pertama sesi ini. PROSES pun tidak bisa dipakai sebagai
+            // nilai awal — guard jalankanSync menolak jalan bila status
+            // sudah PROSES, jadi sinkron pertama tidak akan pernah
+            // berjalan. BELUM_MASUK netral sampai hasil pertama tiba
+            // (efek startup langsung memanggil jalankanSync).
             when {
                 !onlineSiap -> StatusSync.NONAKTIF
-                emailOnline != null -> StatusSync.BERHASIL
                 else -> StatusSync.BELUM_MASUK
             }
         )
@@ -197,7 +202,11 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     // yang dipulihkan - diminta Achmad eksplisit 2026-11-11
     // ("implement kaya gini" mengikuti Kasir).
     var tampilLencanaSync by remember { mutableStateOf(false) }
-    LaunchedEffect(tampilLencanaSync) {
+    // R12 (audit 2026-11-15): nonce naik tiap kali lencana ditampilkan
+    // supaya timer 2,6 detik restart walau lencana sudah tampil saat
+    // sinkron kedua berhasil (kunci Boolean saja tidak me-rekey efek).
+    var lencanaSyncKey by remember { mutableIntStateOf(0) }
+    LaunchedEffect(lencanaSyncKey) {
         if (tampilLencanaSync) {
             delay(2600)
             tampilLencanaSync = false
@@ -227,7 +236,8 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                     statusSync = StatusSync.BERHASIL
                     syncTerakhir = System.currentTimeMillis()
                     onlinePrefs.edit().putLong("online_sync_terakhir", syncTerakhir).apply()
-                    if (!senyap) tampilLencanaSync = true
+                    // R12: naikkan nonce supaya timer lencana restart.
+                    if (!senyap) { tampilLencanaSync = true; lencanaSyncKey++ }
                 }
                 is HasilSync.Gagal -> {
                     statusSync = StatusSync.GAGAL
@@ -376,6 +386,11 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     // Arah navigasi antar tab (1 = maju/ke kanan, -1 = mundur/ke kiri) —
     // dipakai transisi NavHost supaya layar mengikuti arah geser/ketukan.
     var navDirection by remember { mutableIntStateOf(1) }
+    // R24 (audit 2026-11-15): query pencarian awal Stok saat dibuka dari
+    // Pengingat — nonce membuat ketukan pada obat yang sama dua kali tetap
+    // diterapkan (kunci LaunchedEffect di StokScreen harus berubah).
+    var stokCariAwal by remember { mutableStateOf("") }
+    var stokCariNonce by remember { mutableIntStateOf(0) }
     // Sub-menu yang ditumpuk di atas tab (dari Beranda/Lainnya) — dipakai
     // logika Kembali di goToTab dan penyama durasi transisi NavHost.
     val subRoutes = listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf", "pemasok")
@@ -526,7 +541,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             ) {
                 composable("beranda") { BerandaScreen(onGoStok = { goToTab("stok") }, onGoPengingat = { goToTab("pengingat") }, onGoLaba = { goToTab("laba") }, onGoRiwayat = { goToTab("riwayat") }, statusSync = statusSync, onSyncTap = { aksiSinkronTap() }) }
                 composable("kasir") { KasirScreen() }
-                composable("stok") { StokScreen() }
+                composable("stok") { StokScreen(cariAwal = stokCariAwal, cariNonce = stokCariNonce) }
                 composable("keuangan") { KeuanganScreen() }
                 // Petak Lainnya memakai navigate() biasa (tumpuk), BUKAN goToTab:
                 // goToTab me-popUpTo("beranda") sehingga halaman Lainnya ikut
@@ -536,7 +551,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 // Laba/Pengingat/dll. kembali ke halaman Lainnya.
                 composable("lainnya") { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = onToggleTheme, appLang = appLang, onLanguageChange = onLanguageChange, onlineSiap = onlineSiap, emailOnline = emailOnline, statusSync = statusSync, syncTerakhir = syncTerakhir, onSinkronTap = { aksiSinkronTap() }, onKeluarTap = { tampilKonfirmasiKeluar = true }, onResetTap = { tampilKonfirmasiReset = true }) }
                 composable("laba", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { LabaScreen() }
-                composable("pengingat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { PengingatScreen(onGoStok = { goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
+                composable("pengingat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { PengingatScreen(onGoStok = { nama -> stokCariAwal = nama; stokCariNonce++; goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
                 composable("riwayat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { RiwayatScreen() }
                 composable("backup", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { BackupScreen() }
                 composable("terlaris", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { ObatTerlarisScreen() }
@@ -917,120 +932,129 @@ fun LayarLogin(
 ) {
     val cyan = Color(0xFF40C4FF)
     Surface(Modifier.fillMaxSize(), color = Color(0xFF070A0E)) {
-        Column(
+        // R11 (audit 2026-11-15): Column + verticalScroll mengukur tinggi
+        // tak terbatas, jadi fillMaxSize + Arrangement.Center tidak
+        // memusatkan apa-apa. Box yang bisa digulir + contentAlignment
+        // Center memusatkan konten pendek dan tetap bisa digulir bila
+        // konten lebih tinggi dari layar.
+        Box(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            contentAlignment = Alignment.Center
         ) {
-            val logoGate = rememberLogoBitmap()
-            Box(
-                Modifier
-                    .size(100.dp)
-                    .border(2.5.dp, cyan, RoundedCornerShape(24.dp))
-                    .padding(4.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color.White),
-                contentAlignment = Alignment.Center
+            Column(
+                Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (logoGate != null) {
-                    Image(logoGate, null, contentScale = ContentScale.Fit, modifier = Modifier.padding(8.dp).fillMaxSize())
-                } else {
-                    Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF0A2A5C), modifier = Modifier.padding(22.dp).fillMaxSize())
-                }
-            }
-            Spacer(Modifier.height(20.dp))
-            Text(
-                "APOTEK",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 2.sp,
-                color = Color(0xFFE8EEF5)
-            )
-            Text(
-                "LESTARI",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 2.sp,
-                color = cyan
-            )
-            Spacer(Modifier.height(12.dp))
-            Box(
-                Modifier
-                    .width(48.dp)
-                    .height(3.dp)
-                    .background(cyan, RoundedCornerShape(2.dp))
-            )
-            Spacer(Modifier.height(14.dp))
-            Text(
-                tr("Kasir Apotek", "Pharmacy Cashier"),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF93A5B8)
-            )
-            Spacer(Modifier.height(48.dp))
-            Text(
-                tr("Masuk untuk mencadangkan data ke akunmu", "Sign in to back up your data to your account"),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFFC7D2DE),
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(20.dp))
-            if (googleSiap) {
-                Button(
-                    onClick = onGoogle,
-                    enabled = !sibuk,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White,
-                        contentColor = Color(0xFF1F1F1F)
-                    ),
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                val logoGate = rememberLogoBitmap()
+                Box(
+                    Modifier
+                        .size(100.dp)
+                        .border(2.5.dp, cyan, RoundedCornerShape(24.dp))
+                        .padding(4.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
                 ) {
-                    if (sibuk) {
-                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFF1F1F1F))
+                    if (logoGate != null) {
+                        Image(logoGate, null, contentScale = ContentScale.Fit, modifier = Modifier.padding(8.dp).fillMaxSize())
                     } else {
-                        LogoGoogle(Modifier.size(18.dp))
+                        Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF0A2A5C), modifier = Modifier.padding(22.dp).fillMaxSize())
                     }
-                    Spacer(Modifier.width(10.dp))
-                    Text(tr("Masuk dengan Google", "Sign in with Google"), fontWeight = FontWeight.SemiBold)
                 }
-            } else {
+                Spacer(Modifier.height(20.dp))
                 Text(
-                    tr("Masuk dengan Google belum tersedia di build ini.", "Google sign-in is not available in this build."),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF93A5B8),
-                    textAlign = TextAlign.Center
+                    "APOTEK",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 2.sp,
+                    color = Color(0xFFE8EEF5)
                 )
-            }
-            if (pesan != null) {
+                Text(
+                    "LESTARI",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 2.sp,
+                    color = cyan
+                )
                 Spacer(Modifier.height(12.dp))
+                Box(
+                    Modifier
+                        .width(48.dp)
+                        .height(3.dp)
+                        .background(cyan, RoundedCornerShape(2.dp))
+                )
+                Spacer(Modifier.height(14.dp))
                 Text(
-                    pesan,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFFFB4AB),
+                    tr("Kasir Apotek", "Pharmacy Cashier"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF93A5B8)
+                )
+                Spacer(Modifier.height(48.dp))
+                Text(
+                    tr("Masuk untuk mencadangkan data ke akunmu", "Sign in to back up your data to your account"),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFC7D2DE),
                     textAlign = TextAlign.Center
                 )
+                Spacer(Modifier.height(20.dp))
+                if (googleSiap) {
+                    Button(
+                        onClick = onGoogle,
+                        enabled = !sibuk,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = Color(0xFF1F1F1F)
+                        ),
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.fillMaxWidth().height(50.dp)
+                    ) {
+                        if (sibuk) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFF1F1F1F))
+                        } else {
+                            LogoGoogle(Modifier.size(18.dp))
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text(tr("Masuk dengan Google", "Sign in with Google"), fontWeight = FontWeight.SemiBold)
+                    }
+                } else {
+                    Text(
+                        tr("Masuk dengan Google belum tersedia di build ini.", "Google sign-in is not available in this build."),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF93A5B8),
+                        textAlign = TextAlign.Center
+                    )
+                }
+                if (pesan != null) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        pesan,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFFFB4AB),
+                        textAlign = TextAlign.Center
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = onLewati,
+                    enabled = !sibuk,
+                    border = BorderStroke(1.5.dp, cyan),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = cyan),
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier.fillMaxWidth(0.8f)
+                ) {
+                    Text(tr("Lewati \u2014 Pakai Tanpa Akun", "Skip \u2014 Use Without an Account"), fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    tr("Mode tamu: data hanya tersimpan di HP ini", "Guest mode: data is only stored on this phone"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF6E7C8C)
+                )
             }
-            Spacer(Modifier.height(16.dp))
-            OutlinedButton(
-                onClick = onLewati,
-                enabled = !sibuk,
-                border = BorderStroke(1.5.dp, cyan),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = cyan),
-                shape = RoundedCornerShape(50),
-                modifier = Modifier.fillMaxWidth(0.8f)
-            ) {
-                Text(tr("Lewati \u2014 Pakai Tanpa Akun", "Skip \u2014 Use Without an Account"), fontWeight = FontWeight.SemiBold)
-            }
-            Spacer(Modifier.height(10.dp))
-            Text(
-                tr("Mode tamu: data hanya tersimpan di HP ini", "Guest mode: data is only stored on this phone"),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6E7C8C)
-            )
         }
     }
 }

@@ -363,6 +363,30 @@ class MoneyLogicTest {
     }
 
     @Test
+    fun rekap_aggregation_zeroMedicineIdGroupsByName() {
+        // R30 (audit 2026-11-15): dua item medicineId == 0 dengan nama
+        // berbeda harus jadi dua baris, bukan satu baris salah label.
+        val meds = emptyMap<Int, MedicineEntity>()
+        val sales = listOf(
+            SaleEntity(id = 1, invoiceNo = "INV-1", total = 30000, paymentMethod = "Tunai", amountPaid = 30000, changeAmount = 0, createdAt = "2026-11-04T05:21:00.000Z")
+        )
+        val items = listOf(
+            SaleItemEntity(id = 1, saleId = 1, medicineId = 0, medicineName = "Obat A", category = "Umum", unit = "Strip", qty = 2, price = 10000, priceType = "ECER", buyPrice = 0, subtotal = 20000),
+            SaleItemEntity(id = 2, saleId = 1, medicineId = 0, medicineName = "Obat B", category = "Umum", unit = "Strip", qty = 1, price = 10000, priceType = "ECER", buyPrice = 0, subtotal = 10000)
+        )
+        val start = parseISODate("2026-11-01T00:00:00.000Z")!!.time
+        val end = parseISODate("2026-12-01T00:00:00.000Z")!!.time
+        val rekap = agregatRekapPenjualan(sales, items, meds, start, end, "month")
+        assertEquals(
+            listOf(
+                ProfitByMedicine("Obat A", "Umum", 2, 20000),
+                ProfitByMedicine("Obat B", "Umum", 1, 10000)
+            ),
+            rekap.byMedicine
+        )
+    }
+
+    @Test
     fun rekap_bytes_hasTwoSheetsWithHeadersTotalsAndRealDates() {
         val rekap = RekapPenjualan(
             period = "month",

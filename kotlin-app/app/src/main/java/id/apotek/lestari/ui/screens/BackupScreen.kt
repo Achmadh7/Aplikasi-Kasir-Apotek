@@ -99,6 +99,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import id.apotek.lestari.BuildConfig
 import id.apotek.lestari.data.*
+import id.apotek.lestari.data.local.DATABASE_VERSION
 import id.apotek.lestari.ui.BtPrinter
 import id.apotek.lestari.ui.buildReceiptBytes
 import id.apotek.lestari.ui.getPairedPrinters
@@ -187,7 +188,15 @@ fun BackupScreen() {
             return@rememberLauncherForActivityResult
         }
         val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-        runCatching { context.contentResolver.takePersistableUriPermission(uri, flags) }
+        // R23b (audit 2026-11-15): bila izin persisten gagal diambil,
+        // JANGAN simpan URI folder dan jangan aktifkan jadwal — worker
+        // latar belakang nanti gagal menulis tanpa penjelasan.
+        val izinOk = runCatching { context.contentResolver.takePersistableUriPermission(uri, flags) }.isSuccess
+        if (!izinOk) {
+            mintaAktifkan = false
+            msg = tr("Gagal menyimpan izin folder — backup otomatis tidak diaktifkan.", "Failed to save the folder permission — automatic backup was not enabled.")
+            return@rememberLauncherForActivityResult
+        }
         val nama = runCatching {
             context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
         }.getOrNull()?.takeIf { it.isNotBlank() } ?: tr("Folder pilihan", "Chosen folder")
@@ -260,6 +269,13 @@ fun BackupScreen() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         KartuHeaderPremium("Backup", Icons.Default.Backup, tr("Simpan dan pulihkan semua data apotek.", "Save and restore all of the pharmacy's data."))
         Spacer(Modifier.height(SpaceL))
+        // R23a (audit 2026-11-15): pesan hasil dulu di ujung bawah kolom
+        // yang bisa digulir, sehingga tidak terlihat tanpa menggulir.
+        // Sekarang tepat di bawah header supaya langsung terbaca.
+        if (msg.isNotEmpty()) {
+            Text(msg, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(SpaceL))
+        }
         ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -437,10 +453,6 @@ fun BackupScreen() {
                 ) { Text("Restore Data") }
             }
         }
-        if (msg.isNotEmpty()) {
-            Spacer(Modifier.height(SpaceL))
-            Text(msg, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-        }
     }
     preview?.let { (fileData, current) ->
         AlertDialog(
@@ -504,8 +516,9 @@ fun TentangScreen() {
     // audit R2 (2026-11-04) buildConfig diaktifkan, jadi angka ini selalu
     // mengikuti rilis dan tidak perlu disamakan manual lagi.
     val version = BuildConfig.VERSION_NAME
-    // Versi skema Room saat ini (AppDatabase) — samakan bila migrasi menaikkannya.
-    val dbVersion = 15
+    // Versi skema Room saat ini — dibaca dari konstanta yang sama dengan
+    // anotasi @Database (R22, audit 2026-11-15), bukan literal.
+    val dbVersion = DATABASE_VERSION
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 20.dp),

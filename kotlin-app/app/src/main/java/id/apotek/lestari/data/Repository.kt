@@ -1351,18 +1351,21 @@ fun agregatRekapPenjualan(
     }
 
     data class Agg(var qty: Int = 0, var revenue: Int = 0)
-    val medAgg = linkedMapOf<Int, Agg>()
-    val medName = mutableMapOf<Int, String>()
-    val medCategory = mutableMapOf<Int, String>()
+    // R30 (audit 2026-11-15): kelompokkan per (medicineId, nama tampil) —
+    // dulu hanya per medicineId, jadi semua item medicineId == 0 (atau dua
+    // nama berbeda yang berbagi satu id) runtuh jadi satu baris salah label.
+    val medAgg = linkedMapOf<Pair<Int, String>, Agg>()
+    val medCategory = mutableMapOf<Pair<Int, String>, String>()
     for (it in periodItems) {
-        val cur = medAgg.getOrPut(it.medicineId) { Agg() }
+        val nama = medById[it.medicineId]?.name ?: it.medicineName
+        val key = it.medicineId to nama
+        val cur = medAgg.getOrPut(key) { Agg() }
         cur.qty += it.qty; cur.revenue += it.subtotal
-        medName[it.medicineId] = medById[it.medicineId]?.name ?: it.medicineName
-        medCategory[it.medicineId] =
+        medCategory[key] =
             (medById[it.medicineId]?.category ?: it.category).ifBlank { "Lainnya" }
     }
-    val byMedicine = medAgg.entries.map { (id, a) ->
-        ProfitByMedicine(medName[id] ?: "", medCategory[id] ?: "Lainnya", a.qty, a.revenue)
+    val byMedicine = medAgg.entries.map { (key, a) ->
+        ProfitByMedicine(key.second, medCategory[key] ?: "Lainnya", a.qty, a.revenue)
     }.sortedByDescending { it.revenue }
 
     return RekapPenjualan(

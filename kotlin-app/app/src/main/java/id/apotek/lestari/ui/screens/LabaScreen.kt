@@ -136,29 +136,39 @@ fun LabaScreen() {
     }
     fun exportRekap() {
         scope.launch {
-            when (val r = repo.getRekapPenjualan(period)) {
-                is ApiResult.Success -> {
-                    val label = when (period) {
-                        "today" -> tr("Hari Ini", "Today")
-                        "month" -> tr("Bulan Ini", "This Month")
-                        "last30" -> tr("30 Hari", "Last 30 Days")
-                        else -> tr("Semua", "All Time")
+            // R31 (audit 2026-11-15): pembuatan byte Excel (POI) dulu tidak
+            // terlindungi — exception lolos tanpa pesan. Seluruh badan export
+            // kini di-runCatching dan kegagalan dilaporkan lewat msg.
+            runCatching {
+                when (val r = repo.getRekapPenjualan(period)) {
+                    is ApiResult.Success -> {
+                        val label = when (period) {
+                            "today" -> tr("Hari Ini", "Today")
+                            "month" -> tr("Bulan Ini", "This Month")
+                            "last30" -> tr("30 Hari", "Last 30 Days")
+                            else -> tr("Semua", "All Time")
+                        }
+                        val slug = when (period) {
+                            "today" -> "hari-ini"
+                            "month" -> "bulan-ini"
+                            "last30" -> "30-hari"
+                            else -> "semua"
+                        }
+                        val bytes = withContext(Dispatchers.IO) {
+                            ExcelHelper.rekapPenjualanBytes(r.data, label)
+                        }
+                        pendingRekap = bytes
+                        // R32: stempel nama file di zona Asia/Jakarta seperti
+                        // semua logika periode/hari lainnya (bukan zona
+                        // default perangkat).
+                        val stamp = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).apply { timeZone = TimeZone.getTimeZone("Asia/Jakarta") }.format(Date())
+                        rekapLauncher.launch("Rekap-Penjualan-$slug-$stamp.xlsx")
                     }
-                    val slug = when (period) {
-                        "today" -> "hari-ini"
-                        "month" -> "bulan-ini"
-                        "last30" -> "30-hari"
-                        else -> "semua"
-                    }
-                    val bytes = withContext(Dispatchers.IO) {
-                        ExcelHelper.rekapPenjualanBytes(r.data, label)
-                    }
-                    pendingRekap = bytes
-                    val stamp = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).format(Date())
-                    rekapLauncher.launch("Rekap-Penjualan-$slug-$stamp.xlsx")
+                    is ApiResult.Error -> msg = tr("Gagal memuat rekap: ", "Failed to load recap: ") + r.message
+                    is ApiResult.Loading -> Unit
                 }
-                is ApiResult.Error -> msg = tr("Gagal memuat rekap: ", "Failed to load recap: ") + r.message
-                is ApiResult.Loading -> Unit
+            }.onFailure { e ->
+                msg = tr("Gagal membuat rekap Excel: ", "Failed to create the sales recap Excel: ") + (e.message ?: tr("tidak diketahui", "unknown"))
             }
         }
     }
@@ -402,9 +412,14 @@ fun LabaScreen() {
 
 
 /** Pangsa tiap irisan donat dalam persen bulat; jumlahnya tepat 100
- *  (largest remainder). Dipakai hero donat Terlaris (TL1). */
+ *  (largest remainder). Dipakai hero donat Terlaris (TL1).
+ *  R27 (audit 2026-11-15): daftar kosong atau semua qty nol -> semua
+ *  pangsa nol (bukan 100% yang dibagikan rata secara fiktif); pemanggil
+ *  menyembunyikan donat bila totalQty == 0. */
 private fun pangsaDonat(qtys: List<Int>): List<Int> {
-    val total = qtys.sum().coerceAtLeast(1)
+    if (qtys.isEmpty()) return emptyList()
+    val total = qtys.sum()
+    if (total <= 0) return List(qtys.size) { 0 }
     val raw = qtys.map { it * 100.0 / total }
     val base = raw.map { it.toInt() }.toMutableList()
     var sisa = 100 - base.sum()
@@ -502,51 +517,54 @@ fun ObatTerlarisScreen() {
                     list.map { it.name }
                 }
                 val irisanPangsa = pangsaDonat(irisanQty)
-                item {
-                    val warnaDonat = listOf(
-                        Color(0xFF40C4FF),
-                        MaterialTheme.colorScheme.primary,
-                        warningAmber(),
-                        MaterialTheme.colorScheme.surfaceContainerHighest
-                    )
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(120.dp), contentAlignment = Alignment.Center) {
-                                Canvas(Modifier.size(120.dp)) {
-                                    val stroke = 18.dp.toPx()
-                                    var start = -90f
-                                    irisanQty.forEachIndexed { i, qty ->
-                                        val sweep = 360f * qty / totalQty.coerceAtLeast(1)
-                                        if (sweep > 0f) {
-                                            drawArc(
-                                                color = warnaDonat[i],
-                                                startAngle = start,
-                                                sweepAngle = sweep,
-                                                useCenter = false,
-                                                topLeft = Offset(stroke / 2, stroke / 2),
-                                                size = Size(size.width - stroke, size.height - stroke),
-                                                style = Stroke(width = stroke, cap = StrokeCap.Butt)
-                                            )
+                // R27: donat disembunyikan bila tidak ada item terjual
+                if (totalQty > 0) {
+                    item {
+                        val warnaDonat = listOf(
+                            Color(0xFF40C4FF),
+                            MaterialTheme.colorScheme.primary,
+                            warningAmber(),
+                            MaterialTheme.colorScheme.surfaceContainerHighest
+                        )
+                        ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(120.dp), contentAlignment = Alignment.Center) {
+                                    Canvas(Modifier.size(120.dp)) {
+                                        val stroke = 18.dp.toPx()
+                                        var start = -90f
+                                        irisanQty.forEachIndexed { i, qty ->
+                                            val sweep = 360f * qty / totalQty.coerceAtLeast(1)
+                                            if (sweep > 0f) {
+                                                drawArc(
+                                                    color = warnaDonat[i],
+                                                    startAngle = start,
+                                                    sweepAngle = sweep,
+                                                    useCenter = false,
+                                                    topLeft = Offset(stroke / 2, stroke / 2),
+                                                    size = Size(size.width - stroke, size.height - stroke),
+                                                    style = Stroke(width = stroke, cap = StrokeCap.Butt)
+                                                )
+                                            }
+                                            start += sweep
                                         }
-                                        start += sweep
+                                    }
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        AnimatedAmount(totalQty, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface) { "$it" }
+                                        Text(tr("item", "items"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    AnimatedAmount(totalQty, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface) { "$it" }
-                                    Text(tr("item", "items"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                            Spacer(Modifier.width(16.dp))
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                irisanNama.forEachIndexed { i, nama ->
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(Modifier.size(12.dp).background(warnaDonat[i], CircleShape))
-                                        Spacer(Modifier.width(8.dp))
-                                        Column(Modifier.weight(1f)) {
-                                            Text(nama, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            Text(tr("${irisanQty[i]} item", "${irisanQty[i]} items"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.width(16.dp))
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    irisanNama.forEachIndexed { i, nama ->
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(Modifier.size(12.dp).background(warnaDonat[i], CircleShape))
+                                            Spacer(Modifier.width(8.dp))
+                                            Column(Modifier.weight(1f)) {
+                                                Text(nama, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                Text(tr("${irisanQty[i]} item", "${irisanQty[i]} items"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                            Text("${irisanPangsa[i]}%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                         }
-                                        Text("${irisanPangsa[i]}%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                     }
                                 }
                             }

@@ -45,6 +45,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -602,16 +603,16 @@ fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, sale: Sal
 @Composable
 fun RiwayatScreen() {
     var sales by remember { mutableStateOf<List<Sale>>(emptyList()) }
-    var expanded by remember { mutableStateOf<Int?>(null) }
+    // R10 (audit 2026-11-15): expanded + salesLimit + filterBayar selamat
+    // dari rotasi (Int?/Int/String semuanya saveable).
+    var expanded by rememberSaveable { mutableStateOf<Int?>(null) }
     // Filter cara bayar (H6): "Semua" tampilkan semua; lainnya samakan
     // paymentMethod tanpa peka huruf (audit LOW: "tunai" kecil pun Tunai).
-    var filterBayar by remember { mutableStateOf("Semua") }
-    var salesLimit by remember { mutableIntStateOf(50) }
-    var hasMore by remember { mutableStateOf(false) }
+    var filterBayar by rememberSaveable { mutableStateOf("Semua") }
+    var salesLimit by rememberSaveable { mutableIntStateOf(50) }
     // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
     // muat riwayat diam-diam menampilkan daftar kosong.
     var loadError by remember { mutableStateOf<String?>(null) }
-    val receiptLayer = rememberGraphicsLayer()
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME) — pola yang
     // sama seperti Laba/Obat Terlaris/Pengingat/Faktur PBF, supaya data
     // selalu segar setelah ada perubahan dari menu lain.
@@ -625,12 +626,12 @@ fun RiwayatScreen() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(salesLimit, resumeKey) {
-        when (val r = repo.listSales(salesLimit)) {
+        // R8 (audit 2026-11-15): muat limit+1 baris; baris ekstra hanya
+        // penanda "ada lagi", tidak ditampilkan (lihat salesTampilBatas).
+        when (val r = repo.listSales(salesLimit + 1)) {
             is ApiResult.Success -> {
                 sales = r.data.sales
                 loadError = null
-                // Hasil penuh (= limit) berarti kemungkinan masih ada penjualan lama.
-                hasMore = r.data.sales.size >= salesLimit
             }
             is ApiResult.Error -> loadError = r.message
             is ApiResult.Loading -> Unit
@@ -662,6 +663,14 @@ fun RiwayatScreen() {
         // H6: saring dulu menurut cara bayar; hitungan "N transaksi • Rp X"
         // di header hari ikut tersaring karena dihitung dari daySales.
         val salesTampil = if (filterBayar == "Semua") sales else sales.filter { it.paymentMethod.equals(filterBayar, ignoreCase = true) }
+        // R8+R29 (audit 2026-11-15): tampilkan hanya `salesLimit` pertama
+        // SETELAH filter; hasMore dihitung dari daftar tersaring (melebihi
+        // limit = pasti ada lagi) ATAU dari jendela muat yang belum habis
+        // (baris terambil > limit) supaya filter sempit pun bisa memuat
+        // halaman berikut — aproksimasi, karena repo tidak punya paging
+        // terfilter; tombol memperbaiki diri saat jendela habis.
+        val salesTampilBatas = salesTampil.take(salesLimit)
+        val hasMore = salesTampil.size > salesLimit || sales.size > salesLimit
         if (sales.isEmpty()) Text(tr("Belum ada penjualan tercatat.", "No sales recorded yet."))
         else if (salesTampil.isEmpty()) Text(tr("Belum ada penjualan $filterBayar.", "No $filterBayar sales yet."))
         // Kelompokkan penjualan per hari (WIB): header tanggal + total omzet
@@ -674,7 +683,7 @@ fun RiwayatScreen() {
         }
         val todayKey = dayKeyID(todayCal.time)
         val yesterdayKey = dayKeyID((todayCal.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }.time)
-        val groupedSales = salesTampil.groupBy { s -> parseISODate(s.createdAt)?.let { dayKeyID(it) } ?: "" }
+        val groupedSales = salesTampilBatas.groupBy { s -> parseISODate(s.createdAt)?.let { dayKeyID(it) } ?: "" }
         // Urutkan grup dari hari terbaru (pakai createdAt terbesar di grup).
         val sortedGroups = groupedSales.entries.sortedByDescending { (_, list) ->
             list.maxOfOrNull { parseISODate(it.createdAt)?.time ?: 0L } ?: 0L
@@ -706,7 +715,12 @@ fun RiwayatScreen() {
                         )
                     }
                 }
-                itemsIndexed(daySales) { index, s ->
+                // R9 (audit 2026-11-15): key per penjualan supaya state
+                // baris (mis. pemilih printer) tidak menempel ke baris lain
+                // saat daftar berubah; R17: GraphicsLayer per kartu supaya
+                // bitmap struk yang dibagikan/dicetak selalu milik kartu ini.
+                itemsIndexed(daySales, key = { _, s -> s.id }) { index, s ->
+                    val receiptLayer = rememberGraphicsLayer()
                     val globalIndex = groupOffset + index
                     val isOpen = expanded == s.id
                     

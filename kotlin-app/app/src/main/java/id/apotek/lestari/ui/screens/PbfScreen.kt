@@ -2,14 +2,7 @@
 
 package id.apotek.lestari.ui.screens
 
-import android.content.res.Configuration
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,84 +14,33 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.Spring
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.positionInWindow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.layer.GraphicsLayer
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.rememberGraphicsLayer
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.layer.drawLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.util.lerp
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.sp
-import kotlin.math.roundToInt
 import id.apotek.lestari.data.*
-import id.apotek.lestari.ui.BtPrinter
-import id.apotek.lestari.ui.buildReceiptBytes
-import id.apotek.lestari.ui.getPairedPrinters
-import id.apotek.lestari.ui.hasBluetoothPermission
-import id.apotek.lestari.ui.isBluetoothEnabled
-import id.apotek.lestari.ui.loadSavedPrinter
-import id.apotek.lestari.ui.printReceiptBitmap
-import id.apotek.lestari.ui.printReceiptToPrinter
-import id.apotek.lestari.ui.rememberLogoBitmap
-import id.apotek.lestari.ui.savePrinter
-import id.apotek.lestari.ui.shareReceiptBitmap
 import id.apotek.lestari.ui.theme.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 
 // Layar Faktur PBF dan formulir catat pembelian.
 
@@ -113,7 +55,8 @@ class PurchaseItemRow {
 @Composable
 fun PbfScreen() {
     var purchases by remember { mutableStateOf<List<Purchase>>(emptyList()) }
-    var expanded by remember { mutableStateOf<Int?>(null) }
+    // R10 (audit 2026-11-15): kartu yang terbuka selamat dari rotasi.
+    var expanded by rememberSaveable { mutableStateOf<Int?>(null) }
     // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
     // muat faktur diam-diam menampilkan ringkasan 0.
     var loadError by remember { mutableStateOf<String?>(null) }
@@ -157,8 +100,13 @@ fun PbfScreen() {
     val monthTotal = purchases.filter { it.date.startsWith(monthPrefix) && it.paymentType == "CASH" }.sumOf { it.total }
     val sortedGroups = purchases.groupBy { it.date }.entries.sortedByDescending { it.key }
 
+    // R24a (audit 2026-11-15): state daftar untuk menggulir ke kartu yang
+    // dibuka dari "Kredit Belum Lunas".
+    val listState = rememberLazyListState()
+
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
             contentPadding = PaddingValues(top = 20.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(SpaceL)
@@ -221,7 +169,24 @@ fun PbfScreen() {
                             Spacer(Modifier.height(SpaceS))
                             outstandingSorted.take(3).forEach { p ->
                                 Row(
-                                    Modifier.fillMaxWidth().clickable { expanded = p.id }.padding(vertical = 4.dp),
+                                    Modifier.fillMaxWidth().clickable {
+                                        expanded = p.id
+                                        // R24a: gulir daftar ke kartu itu
+                                        // supaya terlihat, bukan cuma dibuka.
+                                        // Indeks datar = 1 item header atas +
+                                        // tiap grup sebelumnya (1 header +
+                                        // jumlah itemnya) + 1 header grup ini.
+                                        scope.launch {
+                                            var flatIndex = 1
+                                            var found = -1
+                                            for ((_, dayPurchases) in sortedGroups) {
+                                                val idx = dayPurchases.indexOfFirst { it.id == p.id }
+                                                if (idx >= 0) { found = flatIndex + 1 + idx; break }
+                                                flatIndex += 1 + dayPurchases.size
+                                            }
+                                            if (found >= 0) listState.animateScrollToItem(found)
+                                        }
+                                    }.padding(vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Box(Modifier.size(8.dp).background(warningAmber(), CircleShape))
@@ -300,7 +265,10 @@ fun PbfScreen() {
                                 Column(Modifier.weight(1f)) {
                                     Text(p.pbfName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                     val namesPreview = p.items.take(3).joinToString(", ") { it.medicineName }
-                                    val suffix = if (p.items.size > 3) " +${p.items.size - 3} lagi" else ""
+                                    // R14 (audit 2026-11-15): sufiks ikut
+                                    // diterjemahkan (sebelumnya "lagi" mentah
+                                    // di dalam string Inggris).
+                                    val suffix = if (p.items.size > 3) tr(" +${p.items.size - 3} lagi", " +${p.items.size - 3} more") else ""
                                     Text(tr("${p.items.size} obat • $namesPreview$suffix", "${p.items.size} medicines • $namesPreview$suffix"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                                 Spacer(Modifier.width(8.dp))
@@ -325,7 +293,9 @@ fun PbfScreen() {
                                         daysLeft == 0L -> tr("Jatuh tempo hari ini", "Due today") to MaterialTheme.colorScheme.error
                                         daysLeft == 1L -> tr("Besok jatuh tempo", "Due tomorrow") to warningAmber()
                                         daysLeft <= 7L -> tr("$daysLeft hari lagi", "Due in $daysLeft days") to warningAmber()
-                                        else -> "$daysLeft hari lagi" to MaterialTheme.colorScheme.onSurfaceVariant
+                                        // R14: cabang > 7 hari ikut tr()
+                                        // (sebelumnya string Indonesia mentah).
+                                        else -> tr("$daysLeft hari lagi", "Due in $daysLeft days") to MaterialTheme.colorScheme.onSurfaceVariant
                                     }
                                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                                         Icon(Icons.Default.Schedule, null, tint = dueColor, modifier = Modifier.size(14.dp))

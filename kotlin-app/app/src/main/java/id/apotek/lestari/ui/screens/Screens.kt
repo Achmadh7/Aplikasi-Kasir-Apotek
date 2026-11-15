@@ -402,13 +402,11 @@ fun Modifier.pulseKritis(): Modifier {
 
 // Warna aksen layar memakai peran colorScheme resmi tema (lihat Theme.kt).
 // Satu pengecualian atas permintaan Achmad (2026-11-01): pilihan Kas
-// Masuk/Keluar di sheet Catat Kas memakai biru tua & merah tua pekat
-// (peran skema terlalu pucat di mode gelap untuk penanda masuk/keluar),
-// dengan teks putih di atasnya.
+// Masuk di sheet Catat Kas memakai biru tua pekat (peran skema terlalu
+// pucat di mode gelap untuk penanda masuk), dengan teks putih di atasnya.
+// Kas Keluar memakai colorScheme.error (R28, audit 2026-11-15 — unifikasi
+// merah #BA1A1A, 2026-11-14), bukan lagi merah hardcode.
 val KasMasukBlue = Color(0xFF0061A4)
-
-
-val KasKeluarRed = Color(0xFFD32F2F)
 
 
 @Composable
@@ -430,13 +428,15 @@ fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = false) {
     }
     // ST1 Kartu Baris (2026-11-13, pilihan Achmad dari papan ST1-ST6):
     // pil SOLID berwarna status dengan teks putih — sesuai mock ST1.
-    // Warna dibuat tetap di kedua tema supaya kontras teks putih terjaga.
+    // Warna dibuat tetap di kedua tema supaya kontras teks putih terjaga
+    // (error tema #BA1A1A di kedua mode); "Habis" memakai
+    // colorScheme.error (R28, audit 2026-11-15), bukan merah hardcode.
     // Animasi pulseKritis saat stok habis tetap dipertahankan.
     val bg = when (label) {
         "Aman" -> Color(0xFF43A047)
         "Sedang" -> Color(0xFF0284C7)
         "Rendah" -> Color(0xFFE3B341)
-        else -> Color(0xFFD32F2F)
+        else -> MaterialTheme.colorScheme.error
     }
     val statusIcon = when (label) {
         "Aman" -> Icons.Default.CheckCircle

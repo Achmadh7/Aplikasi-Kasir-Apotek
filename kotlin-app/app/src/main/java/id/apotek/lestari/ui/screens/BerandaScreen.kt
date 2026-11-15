@@ -38,6 +38,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -119,7 +120,8 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
     var remindersLoaded by remember { mutableStateOf(false) }
     // Periode panel ringkasan BR5 (pilihan Achmad 2026-11-04):
     // 0 = Hari Ini, 1 = Bulan Ini.
-    var summaryPeriod by remember { mutableIntStateOf(0) }
+    // R10 (audit 2026-11-15): pilihan periode selamat dari rotasi.
+    var summaryPeriod by rememberSaveable { mutableIntStateOf(0) }
     var outOfStockNames by remember { mutableStateOf<List<String>>(emptyList()) }
     var lowStockMeds by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
     var expiringMeds by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
@@ -225,7 +227,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             shape = CircleShape,
                             border = BorderStroke(
                                 1.5.dp,
-                                if (statusSync == StatusSync.GAGAL) (if (gelap) Color(0xFFFFB4AB) else Color(0xFFB3261E)) else (if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7))
+                                if (statusSync == StatusSync.GAGAL) MaterialTheme.colorScheme.error else (if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7))
                             ),
                             modifier = Modifier.size(38.dp).clickable { onSyncTap() }
                         ) {
@@ -233,7 +235,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 when (statusSync) {
                                     StatusSync.PROSES -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7))
                                     StatusSync.BERHASIL -> Icon(Icons.Default.CloudDone, tr("Tersinkron", "Synced"), tint = if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7), modifier = Modifier.size(20.dp))
-                                    StatusSync.GAGAL -> Icon(Icons.Default.CloudOff, tr("Gagal", "Failed"), tint = if (gelap) Color(0xFFFFB4AB) else Color(0xFFB3261E), modifier = Modifier.size(20.dp))
+                                    StatusSync.GAGAL -> Icon(Icons.Default.CloudOff, tr("Gagal", "Failed"), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                                     else -> Icon(Icons.Default.CloudOff, tr("Mode Tamu", "Guest mode"), tint = if (gelap) Color.White else WarnaHeaderN2, modifier = Modifier.size(20.dp))
                                 }
                             }
@@ -408,16 +410,19 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     !remindersLoaded -> tr("Memuat data pengingat...", "Loading reminder data...")
                     else -> tr("Semua stok dan kadaluarsa aman.", "All stock and expiry dates are safe.")
                 }
+                // R15 (audit 2026-11-15): detail pengingat menampilkan yang
+                // paling mendesak dulu — habis, lalu rendah, lalu kadaluarsa,
+                // lalu jatuh tempo (sebelumnya kadaluarsa mendahului habis).
                 val reminderDetail: String? = when {
-                    expiringMeds.isNotEmpty() -> {
-                        val (nm, exp) = expiringMeds.first()
-                        "$nm • ${formatDateID(exp)}"
-                    }
+                    outOfStockNames.isNotEmpty() -> "${outOfStockNames.first()} • ${tr("Habis", "Out of stock")}"
                     lowStockMeds.isNotEmpty() -> {
                         val (nm, st) = lowStockMeds.first()
                         "$nm • ${tr("Sisa: $st", "Left: $st")}"
                     }
-                    outOfStockNames.isNotEmpty() -> "${outOfStockNames.first()} • ${tr("Habis", "Out of stock")}"
+                    expiringMeds.isNotEmpty() -> {
+                        val (nm, exp) = expiringMeds.first()
+                        "$nm • ${formatDateID(exp)}"
+                    }
                     dueBills.isNotEmpty() -> {
                         val p = dueBills.first()
                         val daysLeft = dueDaysLeft(p.dueDate) ?: 0L

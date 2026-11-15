@@ -41,6 +41,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -106,11 +107,12 @@ import java.util.TimeZone
 // Layar Stok Obat dan formulir tambah/edit obat.
 
 @Composable
-fun StokScreen() {
+fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
-    var search by remember { mutableStateOf("") }
-    var statusFilter by remember { mutableStateOf("all") }
-    var sortMode by remember { mutableStateOf("az") } // az | za | low (stok terendah)
+    // R10 (audit 2026-11-15): pencarian + filter + urutan selamat dari rotasi.
+    var search by rememberSaveable { mutableStateOf("") }
+    var statusFilter by rememberSaveable { mutableStateOf("all") }
+    var sortMode by rememberSaveable { mutableStateOf("az") } // az | za | low (stok terendah)
     // Mode pilih banyak (hapus massal): kartu menampilkan checkbox, ketuk kartu
     // untuk centang; tombol Hapus muncul di bar seleksi. Disimpan sebagai
     // Map id -> obat (bukan cuma id) supaya hapus massal + Urungkan tetap
@@ -231,6 +233,12 @@ fun StokScreen() {
     // Muat awal + setiap kali layar kembali tampil (resumeKey): langsung
     // tanpa menunggu. Dulu muat awal ikut antre di debounce pencarian di
     // bawah, jadi menu Stok terasa delay saat dibuka (perbaikan 2026-11-01).
+    // R24 (audit 2026-11-15): dibuka dari Pengingat dengan nama obat — isi
+    // kolom pencarian dengan nama itu. Nonce membuat ketukan pada obat yang
+    // sama dua kali tetap diterapkan (kunci LaunchedEffect harus berubah).
+    LaunchedEffect(cariAwal, cariNonce) {
+        if (cariAwal.isNotBlank()) search = cariAwal
+    }
     LaunchedEffect(resumeKey) { reload() }
     // Pencarian di-debounce: satu reload 300ms setelah ketikan terakhir,
     // supaya coroutine pencarian lama tidak saling mendahului hasil terbaru.
@@ -242,7 +250,7 @@ fun StokScreen() {
         reload()
     }
     // Daftar muncul bertahap begitu data pertama kali tiba; tidak berulang saat scroll.
-    // Ringkasan + filter status stok (Aman >20, Sedang ==20, Rendah <20, Habis 0).
+    // Ringkasan + filter status stok (Habis 0, Rendah 1–9, Sedang 10–15, Aman 16+).
     val countAman = medicines.count { stockLabel(it.stock) == "Aman" }
     val countSedang = medicines.count { stockLabel(it.stock) == "Sedang" }
     val countRendah = medicines.count { stockLabel(it.stock) == "Rendah" }
@@ -453,7 +461,7 @@ fun StokScreen() {
                 )
             }
         }
-        itemsIndexed(sorted) { index, m ->
+        itemsIndexed(sorted, key = { _, m -> m.id }) { index, m ->
             
             ExpressiveCard(
                 shape = MaterialTheme.shapes.extraLarge,
@@ -554,24 +562,43 @@ fun StokScreen() {
                     onClick = {
                         deleteTarget = null
                         scope.launch {
-                            repo.deleteMedicine(target.id)
-                            reload()
-                            val result = snackbarHostState.showSnackbar(
-                                message = tr("Obat ${target.name} dihapus.", "${target.name} deleted."),
-                                actionLabel = tr("Urungkan", "Undo"),
-                                duration = SnackbarDuration.Long
-                            )
-                            if (result == SnackbarResult.ActionPerformed) {
-                                repo.createMedicine(
-                                    MedicineArgs(
-                                        target.name, target.category, target.unit,
-                                        target.sellPrice, target.stock,
-                                        target.expiryDate, target.barcode,
-                                        wholesalePrice = target.wholesalePrice
+                            // R48 (audit 2026-11-15): periksa hasil hapus —
+                            // jangan klaim "dihapus" bila gagal; begitu juga
+                            // hasil Urungkan harus dilaporkan bila gagal.
+                            when (val del = repo.deleteMedicine(target.id)) {
+                                is ApiResult.Success -> {
+                                    reload()
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = tr("Obat ${target.name} dihapus.", "${target.name} deleted."),
+                                        actionLabel = tr("Urungkan", "Undo"),
+                                        duration = SnackbarDuration.Long
                                     )
-                                )
-                                reload()
-                                msg = "Obat ${target.name} dikembalikan."
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        when (val undo = repo.createMedicine(
+                                            MedicineArgs(
+                                                target.name, target.category, target.unit,
+                                                target.sellPrice, target.stock,
+                                                target.expiryDate, target.barcode,
+                                                wholesalePrice = target.wholesalePrice
+                                            )
+                                        )) {
+                                            is ApiResult.Success -> {
+                                                reload()
+                                                msg = "Obat ${target.name} dikembalikan."
+                                            }
+                                            is ApiResult.Error -> {
+                                                reload()
+                                                msg = tr("Gagal mengembalikan ${target.name}: ${undo.message}", "Failed to restore ${target.name}: ${undo.message}")
+                                            }
+                                            is ApiResult.Loading -> Unit
+                                        }
+                                    }
+                                }
+                                is ApiResult.Error -> {
+                                    reload()
+                                    msg = tr("Gagal menghapus ${target.name}: ${del.message}", "Failed to delete ${target.name}: ${del.message}")
+                                }
+                                is ApiResult.Loading -> Unit
                             }
                         }
                     }
@@ -596,26 +623,44 @@ fun StokScreen() {
                         selectMode = false
                         selectedMeds = emptyMap()
                         scope.launch {
-                            toDelete.forEach { repo.deleteMedicine(it.id) }
+                            // R48: hapus per item dengan pelaporan parsial —
+                            // Urungkan hanya membuat ulang yang benar-benar
+                            // terhapus, dan kegagalannya ikut dilaporkan.
+                            val deleted = mutableListOf<Medicine>()
+                            var gagal = 0
+                            toDelete.forEach {
+                                when (repo.deleteMedicine(it.id)) {
+                                    is ApiResult.Success -> deleted.add(it)
+                                    is ApiResult.Error -> gagal++
+                                    is ApiResult.Loading -> Unit
+                                }
+                            }
                             reload()
                             val result = snackbarHostState.showSnackbar(
-                                message = tr("${toDelete.size} obat dihapus.", "${toDelete.size} medicines deleted."),
-                                actionLabel = tr("Urungkan", "Undo"),
+                                message = if (gagal == 0) tr("${deleted.size} obat dihapus.", "${deleted.size} medicines deleted.")
+                                else tr("${deleted.size} obat dihapus, $gagal gagal.", "${deleted.size} medicines deleted, $gagal failed."),
+                                actionLabel = if (deleted.isNotEmpty()) tr("Urungkan", "Undo") else null,
                                 duration = SnackbarDuration.Long
                             )
                             if (result == SnackbarResult.ActionPerformed) {
-                                toDelete.forEach {
-                                    repo.createMedicine(
+                                var gagalUndo = 0
+                                deleted.forEach {
+                                    when (repo.createMedicine(
                                         MedicineArgs(
                                             it.name, it.category, it.unit,
                                             it.sellPrice, it.stock,
                                             it.expiryDate, it.barcode,
                                             wholesalePrice = it.wholesalePrice
                                         )
-                                    )
+                                    )) {
+                                        is ApiResult.Success -> Unit
+                                        is ApiResult.Error -> gagalUndo++
+                                        is ApiResult.Loading -> Unit
+                                    }
                                 }
                                 reload()
-                                msg = "${toDelete.size} obat dikembalikan."
+                                msg = if (gagalUndo == 0) "${deleted.size} obat dikembalikan."
+                                else tr("${deleted.size - gagalUndo} obat dikembalikan, $gagalUndo gagal.", "${deleted.size - gagalUndo} medicines restored, $gagalUndo failed.")
                             }
                         }
                     }

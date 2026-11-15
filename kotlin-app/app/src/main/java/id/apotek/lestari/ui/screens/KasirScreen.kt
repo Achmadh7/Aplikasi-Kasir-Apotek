@@ -170,8 +170,7 @@ fun KasirScreen() {
     var search by rememberSaveable { mutableStateOf("") }
     var sortAz by remember { mutableStateOf(true) }
     // Pesan umpan balik di bawah kolom cari (mis. stok tidak cukup saat obat
-    // diketuk). Dulu juga dipakai hasil scan barcode; scan kamera dihapus
-    // atas permintaan Achmad 2026-10-29.
+    // diketuk).
     var cartMsg by remember { mutableStateOf("") }
     var method by rememberSaveable { mutableStateOf("Tunai") }
     // TextFieldValue (bukan Int) + formatDecimalFieldValue supaya kursor tidak
@@ -203,6 +202,10 @@ fun KasirScreen() {
     // cart sendiri dibangun ulang dari daftar obat begitu tersedia.
     var savedCart by rememberSaveable { mutableStateOf<List<Int>>(emptyList()) }
     val cart = remember { mutableStateListOf<CartItem>() }
+    // R16 (audit 2026-11-15): bersihkan pesan keranjang basi begitu isi
+    // keranjang berubah (tambah/kurang/hapus/bayar); pesan batas stok
+    // sendiri tidak mengubah keranjang, jadi tidak ikut terhapus.
+    LaunchedEffect(cart.size, cart.sumOf { it.qty }) { cartMsg = "" }
     // Penanda pemulihan awal keranjang sudah selesai (daftar obat pertama
     // kali tersedia). Selama false, penulisan savedCart ditahan supaya data
     // tersimpan tidak tertimpa keranjang kosong sebelum sempat dipulihkan.
@@ -720,7 +723,12 @@ fun KasirScreen() {
                                         textAlign = TextAlign.Center
                                     )
                                 }
-                                StepperButton(Icons.Default.Add, tr("Tambah", "Increase")) { if (ci.qty < ci.medicine.stock) ci.qty++ }
+                                StepperButton(Icons.Default.Add, tr("Tambah", "Increase")) {
+                                    if (ci.qty < ci.medicine.stock) ci.qty++
+                                    // R16: beri tahu saat sudah di batas stok
+                                    // (sebelumnya ketukan diam tanpa pesan).
+                                    else cartMsg = tr("Stok ${ci.medicine.name} hanya ${ci.medicine.stock} — tidak bisa ditambah lagi", "Only ${ci.medicine.stock} of ${ci.medicine.name} in stock — can't add more")
+                                }
                                 Spacer(Modifier.width(8.dp))
                                 // Hapus: keluarkan obat dari keranjang (di kanan
                                 // tombol + jumlah).

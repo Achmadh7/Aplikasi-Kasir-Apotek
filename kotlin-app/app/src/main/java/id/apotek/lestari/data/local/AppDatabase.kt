@@ -640,9 +640,14 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
     }
 }
 
+// R22 (audit 2026-11-15): versi skema sebagai satu sumber — anotasi Room
+// dan layar Tentang membaca konstanta yang sama, jadi migrasi berikutnya
+// tidak bisa membuat angka di Tentang basi.
+const val DATABASE_VERSION = 15
+
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class, SupplierEntity::class],
-    version = 15,
+    version = DATABASE_VERSION,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
