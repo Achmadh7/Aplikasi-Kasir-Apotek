@@ -18,10 +18,12 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
 - Medicine form reorganised into Identity / Price / Stock & Expiry cards.
 - Supplier-invoice form reorganised into Invoice / Items / Summary cards;
   expanded purchase cards show a Subtotal / VAT / Total breakdown.
-- CI now runs Android Lint (report-only) and uploads the report as an artifact.
-- Unit test suite grown to 32 JVM tests covering money math, backup
+- Unit test suite grown to 40 JVM tests covering money math, backup
   round-trips, Excel round-trips, due-date logic, sync conflict rules,
   automatic-backup file naming, and supplier sync mapping.
+- Sales recap export to Excel (J5): an Export Excel button under Profit
+  writes a `.xlsx` with two sheets, "Rekap Harian" (per day) and
+  "Per Obat" (per medicine).
 - Online Mode: optional Google sign-in mirrors all data to the user's own
   Firebase project (Firestore, per-account tree under `users/{uid}/`) with
   sync columns and soft deletes on all seven tables, last-write-wins
@@ -65,6 +67,16 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
   Today / This Month period switch.
 - Cashier medicine list: compact two-line rows (name + price, then
   category/unit + stock status).
+- Cashier add-medicine control is now a round icon-only floating button
+  (TA1, 56dp).
+- Excel stock template/export revamped (X1+X2+X3): fixed column widths
+  (expiry 18, not 8), frozen header row + autofilter, Category/Unit
+  dropdown validation, thousand-separator number formats, and expiry
+  written as real Excel dates.
+- Error reds unified on `colorScheme.error` (audit R28): the cash-out red,
+  the "Habis" stock badge, and the failed-cloud icon/border no longer use
+  hardcoded reds.
+- Reminder card shadow fixed (PG8).
 - Cart sheet: one total + payment-method panel on top (neutral styling with
   a blue accent stripe); the receipt preview is folded by default and the
   printed receipt animates in after a successful payment.
@@ -84,8 +96,9 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
 - Screen headers unified into the N2 solid dark premium card with tonal
   icon chips (light mode uses the H6 light-blue card with navy titles);
   the More page uses the L1 centred-identity layout with grouped cards.
-- Excel stock template/export now use 7 columns (the buy-price column was
-  dropped); older 8-column files still import, the column is ignored.
+- Excel stock template uses 7 columns and the export adds an 8th Barcode
+  column (R6); the buy-price column was dropped from both, and older
+  files that still carry it import fine, the column is ignored.
 - The About page was redesigned twice (T10, then T2: a single grouped card
   with refreshed content) and reads the version from BuildConfig instead
   of a hand-written string.
@@ -99,6 +112,9 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
   longer uses COGS/HPP. PBF purchase-item prices are untouched records.
 - Email/password sign-in: the login form, the app handlers, and the
   Firebase email functions.
+- Foto Faktur OCR (photo invoice capture) removed at the owner's request —
+  PBF entry is fully manual.
+- Barcode camera scan removed at the owner's request.
 - The MIT license: the About license card and dialog, the license text
   constant, and the LICENSE file (the repository carries no license file).
 - Note: the INTERNET permission, removed earlier in this cycle when the
@@ -109,8 +125,9 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
 
 - Release signing verified end to end in CI; the release artifact is named
   `Apotek Lestari-<version>-Release`.
-- Android Lint reports 0 errors (explicit SecurityException handling around
-  Bluetooth device reads).
+- Medicine dedup now matches on name + category + unit and only merges
+  rows whose barcodes agree (both empty, or equal ignoring case and
+  surrounding whitespace); rows with different barcodes stay separate.
 - Data-extraction/backup rules now exclude the database and update snapshots
   from cloud backup; unsafe `!!` usages removed.
 

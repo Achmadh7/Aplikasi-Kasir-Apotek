@@ -14,7 +14,7 @@ to the user's own Firebase project when they sign in with Google (see
 `MainActivity.kt` handles navigation with a Material 3 Expressive bottom
 bar (ShortNavigationBar): **Beranda (Home), Stok (Stock), Kasir (POS),
 Keuangan (Finance)**, plus a **Lainnya (More)** page (Profit, Reminders,
-Sales History, PBF Invoices, Best Sellers, Backup & Restore, About). The
+Sales History, PBF Invoices, Suppliers, Best Sellers, Backup & Restore, About). The
 app is bilingual ID/EN (the `tr(id, en)` function in the theme) and
 supports dark/light mode, dark by default.
 
@@ -50,7 +50,7 @@ kotlin-app/
         theme/                Theme.kt — colour scheme, tr() ID/EN, stockLabel()
         screens/              one file per screen (BerandaScreen, KasirScreen,
                               StokScreen, KeuanganScreen, LabaScreen, PbfScreen,
-                              PengingatScreen, RiwayatScreen, BackupScreen)
+                              PemasokScreen, PengingatScreen, RiwayatScreen, BackupScreen)
                               + Screens.kt (shared components & small screens)
         BluetoothPrinter.kt   ESC/POS receipt printing to a paired thermal printer
         ReceiptShare.kt       receipt rendered as an image for sharing
@@ -94,9 +94,10 @@ decremented → one `cash_entries` row of type `in` with `source = "sale"` is
 created → invoice and receipt (image, share, or Bluetooth thermal print).
 
 **Stock.** Add/edit via the form, or Excel import (matched on
-Name+Category+Unit; the template and export use 7 columns including
-Wholesale Price — older 8-column files that still carry a buy-price
-column import fine, the column is ignored). Stock status is purely
+Name+Category+Unit; the template uses 7 columns and the export 8 — the
+export adds a Barcode column — both including Wholesale Price; older
+8-column files that still carry a buy-price column import fine, the
+column is ignored). Stock status is purely
 count-based: 0 = Out, 1–9 = Low, 10–15 = Medium, 16+ = Safe
 (`stockLabel()` in Theme.kt doubles as the internal logic key).
 
@@ -114,7 +115,7 @@ data). Credit (KREDIT) purchases carry a due date, can be marked paid
 the Home reminder card. Spending summaries count CASH only.
 
 **Backup & restore.** A single JSON file `{version, app, medicines, sales,
-saleItems, cashEntries, purchases, purchaseItems}` via the Storage Access
+saleItems, cashEntries, purchases, purchaseItems, suppliers}` via the Storage Access
 Framework (can be saved to Drive). Restore replaces all data inside one
 Room transaction, after a preview (file date and record counts) and
 confirmation.

@@ -2,8 +2,10 @@
 ##
 ## Copy this file to `signing.properties` (gitignored) and fill in
 ## with your own keystore. The release build picks it up
-## automatically; without it the debug signing config is used so
-## the build still produces a runnable APK for local testing.
+## automatically; without it (or with an incomplete signing setup)
+## the verifyReleaseSigning guard FAILS the release build, so a
+## release APK can never silently ship signed with the debug key.
+## Debug builds are unaffected and always work without a keystore.
 ## KEYSTORE_PATH is relative to kotlin-app/ (or absolute).
 
 KEYSTORE_PATH=apotek.jks

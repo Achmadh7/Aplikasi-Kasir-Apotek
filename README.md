@@ -39,6 +39,7 @@ An Android app for pharmacies: sales cashier, medicine stock, cash book, profit 
 - **Stok Obat (Medicine Stock)** — stock status Safe (16+) / Medium (10–15) / Low (1–9) / Out of stock (0), search & status filters, Excel import/export/template.
 - **Keuangan (Finance)** — cash balance, cash in/out entries (Catat Kas), and a 7-day cash-flow chart.
 - **Laporan Laba (Profit Report)** — side-by-side revenue and net-profit cards (net = revenue − operating costs, shown with its net margin), a revenue/expense breakdown, and a daily net-profit chart per period. The app deliberately does not track buy prices, so there is no COGS/HPP figure.
+- **Export Excel Rekap Penjualan (Sales Recap Export)** — an Export Excel button under Laporan Laba writes a `.xlsx` with two sheets, "Rekap Harian" (per day) and "Per Obat" (per medicine).
 - **Obat Terlaris (Best-Selling Medicines)** — medicine ranking by units sold.
 - **Pengingat (Reminders)** — low/out-of-stock medicines, medicines nearing expiry, and distributor bills nearing their due date.
 - **Riwayat Penjualan (Sales History)** — daily history, invoice details, receipt sharing/printing.
@@ -61,7 +62,7 @@ Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58
 | Online sync (optional) | Firebase Auth + Cloud Firestore (Firebase BOM 33.5.1), WorkManager 2.9.1 periodic sync, last-write-wins merging |
 | Excel | Apache POI 5.5.1 (`.xlsx` import/export/template) |
 | Build | AGP 9.5.1, Gradle 9.6.0, compileSdk 37, targetSdk 36, minSdk 26 |
-| CI | GitHub Actions — 32 JVM unit tests, debug + signed release builds |
+| CI | GitHub Actions — 40 JVM unit tests, debug + signed release builds |
 | Printing | Android PrintManager + ESC/POS over Bluetooth |
 
 ## How to build the APK
@@ -77,7 +78,7 @@ Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58
 Build notes:
 
 - Builds require internet access (Gradle dependency resolution).
-- Release signing uses a keystore from a separate private repository (`Sigkey-Apotek-Lestari`), supplied through GitHub Actions secrets.
+- Release signing uses a keystore from a separate private repository (`Sigkey-Apotek-Lestari`), supplied through GitHub Actions secrets — secret names only: `KEYSTORE_REPO_TOKEN`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` (the values live in the repo settings, never in this file).
 - Online Mode turns on only when `kotlin-app/app/google-services.json` exists (the config of your own Firebase project — see `docs/ONLINE.md`); builds without it are fully local.
 
 ## Project structure
@@ -85,10 +86,12 @@ Build notes:
 - `.github/workflows/main.yml` — the GitHub Actions workflow that builds the debug + release APKs.
 - `kotlin-app/` — the Android project (Kotlin + Jetpack Compose):
   - `app/src/main/java/id/apotek/lestari/MainActivity.kt` — the app shell: tab navigation (official `ShortNavigationBar`), the Lainnya (More) page, screen routing.
-  - `.../ui/screens/` — the screens, one file per area: `Screens.kt` (shared constants, helpers, and small components), `BerandaScreen.kt` (Home), `KasirScreen.kt` (Cashier), `StokScreen.kt` (Stock + medicine form), `KeuanganScreen.kt` (Finance + cash entry), `LabaScreen.kt` (Profit + Best Sellers), `PengingatScreen.kt` (Reminders), `RiwayatScreen.kt` (Sales History + invoice/receipt cards), `BackupScreen.kt` (Backup & Restore + About), `PbfScreen.kt` (Supplier Invoices).
+  - `.../ui/screens/` — the screens, one file per area: `Screens.kt` (shared constants, helpers, and small components), `BerandaScreen.kt` (Home), `KasirScreen.kt` (Cashier), `StokScreen.kt` (Stock + medicine form), `KeuanganScreen.kt` (Finance + cash entry), `LabaScreen.kt` (Profit + Best Sellers), `PengingatScreen.kt` (Reminders), `RiwayatScreen.kt` (Sales History + invoice/receipt cards), `BackupScreen.kt` (Backup & Restore + About), `PbfScreen.kt` (Supplier Invoices), `PemasokScreen.kt` (Suppliers).
   - `.../ui/theme/Theme.kt` — the Material Expressive theme, the generated color scheme, IDR/date formatting, and the stock-status scale.
   - `.../ui/` — also `BluetoothPrinter.kt` (ESC/POS printing), `ReceiptShare.kt` (receipt image sharing), `LogoData.kt` (the pharmacy logo shown on receipts).
   - `.../data/` — `Repository.kt` (business logic), `Models.kt`, `ExcelHelper.kt` (.xlsx import/export), `BackupHelper.kt` (JSON backup/restore), `SyncLogic.kt` + `OnlineSync.kt` (Firestore mapping, sync engine, cloud reset), and `local/` (Room database, entities, DAOs, migrations).
+
+- Architecture map (code structure, database, data flows): `docs/ARSITEKTUR.md`.
 
 ## FAQ
 
