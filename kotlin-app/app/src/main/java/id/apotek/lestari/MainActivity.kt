@@ -1,5 +1,6 @@
 package id.apotek.lestari
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -7,6 +8,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -126,6 +128,19 @@ class MainActivity : ComponentActivity() {
             // dibaca sekali saat aplikasi dibuka.
             val prefs = remember { getSharedPreferences("apotek_prefs", Context.MODE_PRIVATE) }
             var isDark by remember { mutableStateOf(prefs.getBoolean("dark_theme", true)) }
+            // Ikon status bar & bar navigasi mengikuti TEMA APLIKASI
+            // (bukan tema sistem). Tanpa ini ikon selalu putih — di mode
+            // terang latar #F8F9FF membuat jam/baterai/sinyal nyaris tak
+            // terbaca (laporan Achmad 2026-11-16: status bar "tembus").
+            // SideEffect jalan tiap komposisi ulang, jadi ikut berubah
+            // saat saklar tema diketuk.
+            val activity = LocalContext.current as Activity
+            SideEffect {
+                WindowCompat.getInsetsController(activity.window, activity.window.decorView).apply {
+                    isAppearanceLightStatusBars = !isDark
+                    isAppearanceLightNavigationBars = !isDark
+                }
+            }
             // Bahasa aplikasi (id/en) — tersimpan seperti tema, dan disalin
             // ke AppLang.code yang dibaca tr() di semua layar.
             var appLang by remember { mutableStateOf(prefs.getString("app_language", "id") ?: "id") }
