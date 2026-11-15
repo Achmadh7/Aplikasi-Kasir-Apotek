@@ -353,6 +353,9 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
         itemsIndexed(shown, key = { _, m -> m.id }) { index, m ->
             val d = daysUntilExpiry(m.expiryDate)
             val isCritical = m.stock == 0
+            // Pill KADALUARSA (15 Nov 2026): obat sudah lewat tanggal
+            // kadaluarsa (d < 0) — sama gentingnya dengan stok habis.
+            val isExpired = d != null && d < 0
             // Saran restock: jumlah untuk mencapai batas Aman (16) pada skala
             // status baru; hanya ditampilkan bila sarannya > 0.
             val suggest = (16 - m.stock).coerceAtLeast(0)
@@ -377,18 +380,18 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
                     // PG8 (pilihan Achmad 2026-11-14): garis aksen di tepi
-                    // kiri kartu — merah bila stok habis, kuning bila
-                    // kadaluarsa atau stok rendah.
+                    // kiri kartu — merah bila stok habis ATAU kadaluarsa,
+                    // kuning bila stok rendah atau mendekati kadaluarsa.
                     Box(
                         Modifier.width(6.dp).fillMaxHeight()
-                            .background(if (isCritical) MaterialTheme.colorScheme.error else warningAmber())
+                            .background(if (isCritical || isExpired) MaterialTheme.colorScheme.error else warningAmber())
                     )
                     Column(Modifier.weight(1f).padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(color = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
+                            Surface(color = if (isCritical || isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
                                 Icon(
                                     if (isCritical) Icons.Default.ShoppingCart else Icons.Default.Inventory, null,
-                                    tint = if (isCritical) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary,
+                                    tint = if (isCritical || isExpired) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(10.dp).size(20.dp)
                                 )
                             }
@@ -397,13 +400,32 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                     Spacer(Modifier.width(8.dp))
-                                    Surface(color = if (isCritical) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(16.dp), modifier = if (isCritical) Modifier.pulseKritis() else Modifier) {
-                                        Text(
-                                            if (isCritical) tr("HABIS", "OUT") else tr("PANTAU", "WATCH"),
-                                            color = if (isCritical) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary,
-                                            style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                        )
+                                    // Pill status (15 Nov 2026): HABIS bila stok 0,
+                                    // KADALUARSA bila sudah lewat tanggal — keduanya
+                                    // bisa tampil berdampingan; PANTAU bila tidak ada.
+                                    // Merah + tulisan putih seperti HABIS; pulse
+                                    // hanya di HABIS supaya tidak dua-duanya berkedip.
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        val pills = buildList {
+                                            if (isCritical) add(Triple(tr("HABIS", "OUT"), true, true))
+                                            if (isExpired) add(Triple(tr("KADALUARSA", "EXPIRED"), true, false))
+                                            if (isEmpty()) add(Triple(tr("PANTAU", "WATCH"), false, false))
+                                        }
+                                        pills.forEachIndexed { idx, (label, merah, pulse) ->
+                                            if (idx > 0) Spacer(Modifier.width(6.dp))
+                                            Surface(
+                                                color = if (merah) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                shape = RoundedCornerShape(16.dp),
+                                                modifier = if (pulse) Modifier.pulseKritis() else Modifier
+                                            ) {
+                                                Text(
+                                                    label,
+                                                    color = if (merah) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary,
+                                                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                                 Text(
