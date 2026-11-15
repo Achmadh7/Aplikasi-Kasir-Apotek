@@ -267,6 +267,12 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
     val countSedang = medicines.count { stockLabel(it.stock) == "Sedang" }
     val countRendah = medicines.count { stockLabel(it.stock) == "Rendah" }
     val countHabis = medicines.count { stockLabel(it.stock) == "Habis" }
+    // HS5: bila filter sedang "Aman" lalu obat Aman terakhir berubah status
+    // (chip Aman tersembunyi), kembalikan filter ke "Semua" supaya daftar
+    // tidak kosong tanpa jalan kembali yang jelas.
+    LaunchedEffect(countAman) {
+        if (statusFilter == "aman" && countAman == 0) statusFilter = "all"
+    }
     // Filter HANYA dihitung ulang saat data/filter berubah (bukan tiap recomposition).
     val shown by remember {
         derivedStateOf {
@@ -426,16 +432,33 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
             }
             Spacer(Modifier.height(SpaceS))
             // Filter status stok (menggantikan legenda; jumlah per status terlihat di chip).
+            // HS5 (pilihan Achmad 2026-11-16): tiap chip diberi dot warna status
+            // (konsisten dengan angka ringkasan: Aman hijau, Sedang biru,
+            // Rendah tersier, Habis merah; "Semua" tanpa dot). Chip "Aman"
+            // disembunyikan selama jumlahnya 0 — muncul lagi bila > 0.
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 listOf(
-                    "all" to tr("Semua (${medicines.size})", "All (${medicines.size})"),
-                    "aman" to tr("Aman ($countAman)", "Safe ($countAman)"),
-                    "sedang" to tr("Sedang ($countSedang)", "Medium ($countSedang)"),
-                    "rendah" to tr("Rendah ($countRendah)", "Low ($countRendah)"),
-                    "habis" to tr("Habis ($countHabis)", "Out ($countHabis)")
-                ).forEach { (k, l) ->
-                    FilterChip(selected = statusFilter == k, onClick = { statusFilter = k }, label = { Text(l) })
-                }
+                    Triple("all", tr("Semua (${medicines.size})", "All (${medicines.size})"), null as Color?),
+                    Triple("aman", tr("Aman ($countAman)", "Safe ($countAman)"), profitGreen()),
+                    Triple("sedang", tr("Sedang ($countSedang)", "Medium ($countSedang)"), MaterialTheme.colorScheme.primary),
+                    Triple("rendah", tr("Rendah ($countRendah)", "Low ($countRendah)"), MaterialTheme.colorScheme.tertiary),
+                    Triple("habis", tr("Habis ($countHabis)", "Out ($countHabis)"), MaterialTheme.colorScheme.error)
+                ).filter { (k, _, _) -> k != "aman" || countAman > 0 }
+                    .forEach { (k, l, dot) ->
+                        FilterChip(
+                            selected = statusFilter == k,
+                            onClick = { statusFilter = k },
+                            label = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (dot != null) {
+                                        Box(Modifier.size(8.dp).background(dot, CircleShape))
+                                        Spacer(Modifier.width(6.dp))
+                                    }
+                                    Text(l)
+                                }
+                            }
+                        )
+                    }
             }
             // Bar seleksi (hanya di mode pilih banyak): jumlah terpilih + Hapus massal.
             if (selectMode) {
