@@ -146,7 +146,7 @@ dependencies {
     // Mode Online (Firebase): autentikasi + cadangan awan Firestore.
     // Semua pemakaian dijaga FirebaseKit — tanpa google-services.json
     // fitur online tidak aktif dan aplikasi berjalan offline seperti biasa.
-    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+    implementation(platform("com.google.firebase:firebase-bom:35.2.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
