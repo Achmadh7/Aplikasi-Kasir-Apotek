@@ -774,11 +774,16 @@ fun RiwayatScreen() {
                                 )
                             }
                             // B2 Geser + fade (pilihan Achmad 2026-11-14):
-                            // pratinjau 2 item mengembang/menyusut + fade 150ms.
+                            // pratinjau 2 item mengembang/menyusut + fade 250ms,
+                            // disamakan dengan detail struk: kedua blok
+                            // beranimasi bersamaan, jadi durasi + easing harus
+                            // sama supaya tinggi kartu bergerak pada satu kurva
+                            // (sebelumnya 150ms linear vs 250ms FastOutSlowIn —
+                            // kartu sempat menciut dulu saat dibuka).
                             AnimatedVisibility(
                                 visible = !isOpen && s.items.isNotEmpty(),
-                                enter = expandVertically(animationSpec = tween(150)) + fadeIn(animationSpec = tween(150)),
-                                exit = shrinkVertically(animationSpec = tween(150)) + fadeOut(animationSpec = tween(150))
+                                enter = expandVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(250)),
+                                exit = shrinkVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) + fadeOut(animationSpec = tween(250))
                             ) {
                                 Column {
                                     // Pratinjau isi (desain R2, pilihan Achmad
