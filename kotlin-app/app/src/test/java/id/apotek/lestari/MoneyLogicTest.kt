@@ -244,11 +244,11 @@ class MoneyLogicTest {
         // dropdown Kategori & Satuan.
         val wb = WorkbookFactory.create(ByteArrayInputStream(ExcelHelper.templateBytes(emptyList())))
         val sheet = wb.getSheet(ExcelHelper.SHEET_STOK)
-        assertEquals(18 * 256, sheet.getColumnWidth(6))
+        assertEquals(18 * 256, sheet.getColumnWidth(7))
         assertTrue(sheet.paneInformation?.isFreezePane == true)
         val ct = (sheet as XSSFSheet).ctWorksheet
         assertEquals("A1:H1", ct.autoFilter?.ref)
-        assertEquals(14 * 256, sheet.getColumnWidth(7))
+        assertEquals(14 * 256, sheet.getColumnWidth(5))
         val validations = sheet.dataValidations
         assertEquals(2, validations.size)
         assertTrue(validations[0].validationConstraint.formula1.contains("Antibiotik"))
@@ -264,7 +264,7 @@ class MoneyLogicTest {
         val row = sheet.getRow(1)
         assertEquals("#,##0", row.getCell(3).cellStyle.dataFormatString)
         assertEquals("#,##0", row.getCell(5).cellStyle.dataFormatString)
-        val expiryCell = row.getCell(6)
+        val expiryCell = row.getCell(7)
         assertEquals(CellType.NUMERIC, expiryCell.cellType)
         assertTrue(DateUtil.isCellDateFormatted(expiryCell))
         val formatted = SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
@@ -292,8 +292,9 @@ class MoneyLogicTest {
         row.createCell(2).setCellValue("Strip")
         row.createCell(3).apply { setCellValue(12000.0); cellStyle = numberStyle }
         row.createCell(4).setCellValue(0.0)
-        row.createCell(5).apply { setCellValue(50.0); cellStyle = numberStyle }
-        row.createCell(6).setCellValue("")
+        row.createCell(5).setCellValue(0.0)
+        row.createCell(6).apply { setCellValue(50.0); cellStyle = numberStyle }
+        row.createCell(7).setCellValue("")
         val out = ByteArrayOutputStream()
         wb.write(out)
         wb.close()
