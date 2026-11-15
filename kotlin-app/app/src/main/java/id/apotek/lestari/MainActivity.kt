@@ -205,6 +205,12 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     val rootView = LocalView.current
     val appScope = rememberCoroutineScope()
     // ---- Animasi lingkaran tema AN3 (lihat komentar di atas) ----
+    // Skema gerak Expressive dari tema (MaterialTheme.motionScheme) —
+    // reveal memakai spec default-nya (slowSpatialSpec), bukan tween
+    // hardcode. Dibaca di sini (saat komposisi) karena motionScheme
+    // adalah @ReadOnlyComposable get() — tidak bisa dibaca dari lambda
+    // biasa seperti gantiTemaReveal di bawah.
+    val skemaGerak = MaterialTheme.motionScheme
     // Bitmap tema lama + pusat lubang + ukuran layar (px). radiusReveal
     // dianimasikan 0 -> radiusMaks saat saklar diketuk.
     var temaLama by remember { mutableStateOf<ImageBitmap?>(null) }
@@ -232,7 +238,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 onToggleTheme()
                 appScope.launch {
                     radiusReveal.snapTo(0f)
-                    radiusReveal.animateTo(radiusMaks, tween(500, easing = FastOutSlowInEasing))
+                    radiusReveal.animateTo(radiusMaks, skemaGerak.slowSpatialSpec<Float>())
                     temaLama = null
                 }
             } else {
