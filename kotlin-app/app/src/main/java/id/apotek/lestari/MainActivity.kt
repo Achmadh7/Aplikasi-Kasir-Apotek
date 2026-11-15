@@ -341,7 +341,9 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
         } else {
             var tunda: Job? = null
             val pengamat = object : InvalidationTracker.Observer(
-                "medicines", "sales", "sale_items", "cash_entries", "purchases", "purchase_items"
+                // S14 (audit 2026-11-15): "suppliers" ikut diamati supaya
+                // tambah/ubah/hapus pemasok juga memicu auto-sync ±5 detik.
+                "medicines", "sales", "sale_items", "cash_entries", "purchases", "purchase_items", "suppliers"
             ) {
                 override fun onInvalidated(tables: Set<String>) {
                     tunda?.cancel()
