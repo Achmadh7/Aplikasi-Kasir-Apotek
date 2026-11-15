@@ -525,6 +525,25 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             val subExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { -geserSumbuX } + fadeOut(tween(300)) }
             val subPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { -geserSumbuX } + fadeIn(tween(300)) }
             val subPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { geserSumbuX } + fadeOut(tween(300)) }
+            // T3 tab (150ms fade + skala mikro) — sama persis dengan default
+            // NavHost di bawah; dipakai cabang kondisional saat layar lawan
+            // adalah tab utama.
+            val t3Masuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { fadeIn(tween(150)) + scaleIn(initialScale = 0.98f, animationSpec = tween(150)) }
+            val t3Keluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { fadeOut(tween(150)) }
+            // Transisi kondisional (perbaikan 2026-11-15): S3 300ms hanya bila
+            // layar lawan adalah Lainnya/sub-halaman; bila lawan tab utama,
+            // pakai T3 150ms. Tanpa ini, satu sisi selesai 150ms sementara
+            // sisi lain masih bergeser sampai 300ms — animasi buka/tutup
+            // terasa patah, terutama Kembali dari sub-halaman ke Lainnya.
+            val diSubAtauLainnya = { route: String? -> route == "lainnya" || route in subRoutes }
+            val subMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { if (diSubAtauLainnya(initialState.destination.route)) subEnter() else t3Masuk() }
+            val subKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { if (diSubAtauLainnya(targetState.destination.route)) subExit() else t3Keluar() }
+            val subPopMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { if (diSubAtauLainnya(initialState.destination.route)) subPopEnter() else t3Masuk() }
+            val subPopKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { if (diSubAtauLainnya(targetState.destination.route)) subPopExit() else t3Keluar() }
+            val lainnyaMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { if (initialState.destination.route in subRoutes) subPopEnter() else t3Masuk() }
+            val lainnyaKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { if (targetState.destination.route in subRoutes) subExit() else t3Keluar() }
+            val lainnyaPopMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { if (initialState.destination.route in subRoutes) subPopEnter() else t3Masuk() }
+            val lainnyaPopKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { if (targetState.destination.route in subRoutes) subPopExit() else t3Keluar() }
             NavHost(
                 navController = nav,
                 startDestination = "beranda",
@@ -549,15 +568,15 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 // mendarat di Beranda, bukan di Lainnya (laporan Achmad
                 // 2026-11-04). Dengan tumpukan biasa, Kembali dari
                 // Laba/Pengingat/dll. kembali ke halaman Lainnya.
-                composable("lainnya") { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = onToggleTheme, appLang = appLang, onLanguageChange = onLanguageChange, onlineSiap = onlineSiap, emailOnline = emailOnline, statusSync = statusSync, syncTerakhir = syncTerakhir, onSinkronTap = { aksiSinkronTap() }, onKeluarTap = { tampilKonfirmasiKeluar = true }, onResetTap = { tampilKonfirmasiReset = true }) }
-                composable("laba", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { LabaScreen() }
-                composable("pengingat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { PengingatScreen(onGoStok = { nama -> stokCariAwal = nama; stokCariNonce++; goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
-                composable("riwayat", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { RiwayatScreen() }
-                composable("backup", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { BackupScreen() }
-                composable("terlaris", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { ObatTerlarisScreen() }
-                composable("pbf", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { PbfScreen() }
-                composable("pemasok", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { PemasokScreen() }
-                composable("tentang", enterTransition = subEnter, exitTransition = subExit, popEnterTransition = subPopEnter, popExitTransition = subPopExit) { TentangScreen() }
+                composable("lainnya", enterTransition = lainnyaMasuk, exitTransition = lainnyaKeluar, popEnterTransition = lainnyaPopMasuk, popExitTransition = lainnyaPopKeluar) { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = onToggleTheme, appLang = appLang, onLanguageChange = onLanguageChange, onlineSiap = onlineSiap, emailOnline = emailOnline, statusSync = statusSync, syncTerakhir = syncTerakhir, onSinkronTap = { aksiSinkronTap() }, onKeluarTap = { tampilKonfirmasiKeluar = true }, onResetTap = { tampilKonfirmasiReset = true }) }
+                composable("laba", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { LabaScreen() }
+                composable("pengingat", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { PengingatScreen(onGoStok = { nama -> stokCariAwal = nama; stokCariNonce++; goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
+                composable("riwayat", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { RiwayatScreen() }
+                composable("backup", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { BackupScreen() }
+                composable("terlaris", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { ObatTerlarisScreen() }
+                composable("pbf", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { PbfScreen() }
+                composable("pemasok", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { PemasokScreen() }
+                composable("tentang", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { TentangScreen() }
             }
         }
     }
