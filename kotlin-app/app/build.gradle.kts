@@ -141,7 +141,7 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.5")
 
     // Excel (.xlsx) untuk Import / Export / Template Stok — Apache POI
-    implementation("org.apache.poi:poi-ooxml:5.5.1")
+    implementation("org.apache.poi:poi-ooxml:6.0.0")
 
     // Mode Online (Firebase): autentikasi + cadangan awan Firestore.
     // Semua pemakaian dijaga FirebaseKit — tanpa google-services.json
