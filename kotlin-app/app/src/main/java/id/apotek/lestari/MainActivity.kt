@@ -128,16 +128,18 @@ class MainActivity : ComponentActivity() {
             // dibaca sekali saat aplikasi dibuka.
             val prefs = remember { getSharedPreferences("apotek_prefs", Context.MODE_PRIVATE) }
             var isDark by remember { mutableStateOf(prefs.getBoolean("dark_theme", true)) }
-            // Ikon status bar & bar navigasi mengikuti TEMA APLIKASI
-            // (bukan tema sistem). Tanpa ini ikon selalu putih — di mode
-            // terang latar #F8F9FF membuat jam/baterai/sinyal nyaris tak
-            // terbaca (laporan Achmad 2026-11-16: status bar "tembus").
+            // Ikon bar sistem: status bar SELALU putih karena strip
+            // navy solid di atas layar (lihat strip di Box akar
+            // ApotekApp); bar navigasi tetap mengikuti tema aplikasi.
             // SideEffect jalan tiap komposisi ulang, jadi ikut berubah
-            // saat saklar tema diketuk.
+            // saat saklar tema diketuk. (Sebelumnya ikon status mengikuti
+            // isDark — tidak cukup: di mode terang jam/baterai tetap
+            // putih dan nyaris tak terbaca di latar #F8F9FF, laporan
+            // Achmad 2026-11-16 + screenshot 01:15 WIB.)
             val activity = LocalContext.current as Activity
             SideEffect {
                 WindowCompat.getInsetsController(activity.window, activity.window.decorView).apply {
-                    isAppearanceLightStatusBars = !isDark
+                    isAppearanceLightStatusBars = false
                     isAppearanceLightNavigationBars = !isDark
                 }
             }
@@ -595,6 +597,20 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             }
         }
     }
+    // Strip status bar solid (perbaikan 2026-11-16, laporan Achmad
+    // "tembus sampai status bar" + "tidak sampai status bar"): strip
+    // navy WarnaHeaderN2 setinggi status bar, digambar sendiri di atas
+    // layar. Android 15+ memaksa edge-to-edge (targetSdk 36) sehingga
+    // sistem tidak lagi menggambar latar status bar — strip ini yang
+    // memberi batas tegas di kedua mode. Konten Scaffold sudah dipadding
+    // di bawah status bar, jadi strip tidak menutupi apa pun.
+    Box(
+        Modifier
+            .align(Alignment.TopCenter)
+            .fillMaxWidth()
+            .windowInsetsTopHeight(WindowInsets.statusBars)
+            .background(WarnaHeaderN2)
+    )
     // Lencana sinkron S12: pil WarnaHeaderN2 melayang di atas-tengah,
     // awan CloudDone cyan #40C4FF + teks "Tersinkron". Muncul 2,6 detik
     // lalu hilang sendiri. PENEMPATAN (perbaikan 2026-11-12): lencana
