@@ -743,12 +743,9 @@ private fun BarisGrupLainnya(
             Text(judul, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             // A4: subjudul crossfade saat berganti (tema Aktif<->Nonaktif,
             // bahasa English<->Bahasa Indonesia, status sinkronisasi).
-            // sizeTransform = null: lebar kotak langsung pas (teks baru bisa
-            // lebih lebar dari yang lama), hanya fade yang beranimasi.
             AnimatedContent(
                 targetState = sub,
                 transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(250)) },
-                sizeTransform = null,
                 label = "subBarisLainnya"
             ) { subAnim ->
                 if (subAnim != null) {
