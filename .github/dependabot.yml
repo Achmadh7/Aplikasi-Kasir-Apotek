@@ -1,8 +1,9 @@
 # Dependabot — Apotek Lestari
 # Weekly update PRs for the Gradle dependencies (kotlin-app/) and for the
 # GitHub Actions used by .github/workflows/main.yml. Review and merge the
-# PRs by hand; nothing auto-merges. The CI workflow runs on every PR, so a
-# bad bump fails the checks instead of landing silently.
+# PRs by hand; nothing auto-merges. The CI workflow is workflow_dispatch
+# only, so Dependabot PRs get no automatic checks — run the workflow by
+# hand from the latest head before merging a bump.
 version: 2
 updates:
   - package-ecosystem: "gradle"
