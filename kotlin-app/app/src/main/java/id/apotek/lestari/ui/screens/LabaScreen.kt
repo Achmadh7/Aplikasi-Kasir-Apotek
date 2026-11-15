@@ -558,7 +558,7 @@ fun ObatTerlarisScreen() {
                                         }
                                     }
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        AnimatedAmount(totalQty, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface) { "$it" }
+                                        AnimatedAmount(totalQty, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface, sekaliSaja = true, kunciSekali = "terlarisTotal") { "$it" }
                                         Text(tr("item", "items"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
