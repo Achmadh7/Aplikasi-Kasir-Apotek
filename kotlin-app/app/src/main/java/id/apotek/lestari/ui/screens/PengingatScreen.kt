@@ -108,6 +108,9 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
     var dueBills by remember { mutableStateOf<List<Purchase>>(emptyList()) }
     var noDateBills by remember { mutableStateOf<List<Purchase>>(emptyList()) }
+    // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
+    // muat diam-diam menampilkan ringkasan 0 yang menyesatkan.
+    var loadError by remember { mutableStateOf<String?>(null) }
     var window by remember { mutableStateOf(90) }
     var filter by remember { mutableStateOf("all") } // all | expiry | low | critical
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME, pola yang sama
@@ -123,11 +126,22 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(resumeKey) {
-        (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines }
+        // S11: kumpulkan galat kedua panggilan supaya kegagalan salah
+        // satunya tidak tertutup keberhasilan yang lain.
+        var gagal: String? = null
+        medicines = when (val r = repo.listMedicines()) {
+            is ApiResult.Success -> r.data.medicines
+            is ApiResult.Error -> { gagal = r.message; emptyList() }
+            is ApiResult.Loading -> emptyList()
+        }
         // Tagihan PBF: pembelian Kredit yang jatuh temponya <= 7 hari lagi
         // atau sudah lewat (pilihan Achmad 2026-10-30, saran no. 1) —
         // diurutkan dari jatuh tempo paling awal (paling mendesak di atas).
-        val purchases = (repo.listPurchases() as? ApiResult.Success)?.data?.purchases.orEmpty()
+        val purchases = when (val r = repo.listPurchases()) {
+            is ApiResult.Success -> r.data.purchases
+            is ApiResult.Error -> { gagal = r.message; emptyList() }
+            is ApiResult.Loading -> emptyList()
+        }
         dueBills = purchases.filter { p ->
             p.paymentType == "KREDIT" && p.dueDate.isNotBlank() && (dueDaysLeft(p.dueDate) ?: Long.MAX_VALUE) <= 7L
         }.sortedBy { it.dueDate }
@@ -138,6 +152,7 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
         noDateBills = purchases.filter { p ->
             p.paymentType == "KREDIT" && p.dueDate.isBlank()
         }
+        loadError = gagal
     }
     val expired = medicines.filter { (daysUntilExpiry(it.expiryDate) ?: Int.MAX_VALUE) < 0 }
     val withinWindow = medicines.filter { val d = daysUntilExpiry(it.expiryDate); d != null && d >= 0 && d <= window }
@@ -169,6 +184,19 @@ fun PengingatScreen(onGoStok: () -> Unit, onGoPbf: () -> Unit) {
             KartuHeaderPremium(tr("Pengingat", "Reminders"), Icons.Default.NotificationsActive)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
+            // S11: kartu galat muat + tombol coba lagi (pola Beranda S10).
+            if (loadError != null) {
+                Spacer(Modifier.height(SpaceL))
+                ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(tr("Gagal memuat data pengingat.", "Failed to load the reminder data."), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.height(SpaceS))
+                        Text(loadError ?: "", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(SpaceS))
+                        Button(onClick = { loadError = null; resumeKey++ }) { Text(tr("Coba lagi", "Try again")) }
+                    }
+                }
+            }
             Text(tr("MASA KADALUARSA", "EXPIRY WINDOW"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(SpaceS))
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {

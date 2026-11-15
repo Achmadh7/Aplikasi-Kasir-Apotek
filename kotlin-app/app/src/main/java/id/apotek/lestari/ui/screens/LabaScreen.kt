@@ -386,7 +386,9 @@ fun LabaScreen() {
                     Spacer(Modifier.height(SpaceS))
                     Text(err, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(SpaceS))
-                    Text(tr("Keluar dan buka lagi menu ini untuk mencoba kembali.", "Leave and reopen this menu to try again."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // R20 (audit 2026-11-15): tombol coba lagi seperti
+                    // Beranda, jangan suruh pengguna keluar-masuk menu.
+                    Button(onClick = { loadError = null; resumeKey++ }) { Text(tr("Coba lagi", "Try again")) }
                 }
             } else {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { LoadingIndicator() }
@@ -465,7 +467,9 @@ fun ObatTerlarisScreen() {
                         Spacer(Modifier.height(SpaceS))
                         Text(sellersError, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(SpaceS))
-                        Text(tr("Keluar dan buka lagi menu ini untuk mencoba kembali.", "Leave and reopen this menu to try again."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        // R20 (audit 2026-11-15): tombol coba lagi seperti
+                        // Beranda, jangan suruh pengguna keluar-masuk menu.
+                        Button(onClick = { loadError = null; resumeKey++ }) { Text(tr("Coba lagi", "Try again")) }
                     }
                 }
             }

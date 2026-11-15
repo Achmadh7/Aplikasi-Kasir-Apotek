@@ -608,6 +608,9 @@ fun RiwayatScreen() {
     var filterBayar by remember { mutableStateOf("Semua") }
     var salesLimit by remember { mutableIntStateOf(50) }
     var hasMore by remember { mutableStateOf(false) }
+    // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
+    // muat riwayat diam-diam menampilkan daftar kosong.
+    var loadError by remember { mutableStateOf<String?>(null) }
     val receiptLayer = rememberGraphicsLayer()
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME) — pola yang
     // sama seperti Laba/Obat Terlaris/Pengingat/Faktur PBF, supaya data
@@ -622,10 +625,15 @@ fun RiwayatScreen() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(salesLimit, resumeKey) {
-        (repo.listSales(salesLimit) as? ApiResult.Success)?.let {
-            sales = it.data.sales
-            // Hasil penuh (= limit) berarti kemungkinan masih ada penjualan lama.
-            hasMore = it.data.sales.size >= salesLimit
+        when (val r = repo.listSales(salesLimit)) {
+            is ApiResult.Success -> {
+                sales = r.data.sales
+                loadError = null
+                // Hasil penuh (= limit) berarti kemungkinan masih ada penjualan lama.
+                hasMore = r.data.sales.size >= salesLimit
+            }
+            is ApiResult.Error -> loadError = r.message
+            is ApiResult.Loading -> Unit
         }
     }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -638,6 +646,19 @@ fun RiwayatScreen() {
             }
         }
         Spacer(Modifier.height(SpaceL))
+        // S11: kartu galat muat + tombol coba lagi (pola Beranda S10).
+        if (loadError != null) {
+            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(tr("Gagal memuat riwayat penjualan.", "Failed to load the sales history."), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(SpaceS))
+                    Text(loadError ?: "", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(SpaceS))
+                    Button(onClick = { loadError = null; resumeKey++ }) { Text(tr("Coba lagi", "Try again")) }
+                }
+            }
+            Spacer(Modifier.height(SpaceL))
+        }
         // H6: saring dulu menurut cara bayar; hitungan "N transaksi • Rp X"
         // di header hari ikut tersaring karena dihitung dari daySales.
         val salesTampil = if (filterBayar == "Semua") sales else sales.filter { it.paymentMethod.equals(filterBayar, ignoreCase = true) }

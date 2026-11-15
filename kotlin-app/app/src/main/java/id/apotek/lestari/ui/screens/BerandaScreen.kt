@@ -113,6 +113,10 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
     // Gagal muat daftar obat/pembelian — spanduk Pengingat tidak boleh
     // menyimpulkan "Semua stok aman" dari daftar yang tidak termuat.
     var reminderLoadFailed by remember { mutableStateOf(false) }
+    // R26 (audit 2026-11-15): daftar pengingat belum tiba — teks "semua
+    // aman" dikunci pada flag ini supaya tidak berkilas sebelum daftar
+    // pengingat selesai dimuat.
+    var remindersLoaded by remember { mutableStateOf(false) }
     // Periode panel ringkasan BR5 (pilihan Achmad 2026-11-04):
     // 0 = Hari Ini, 1 = Bulan Ini.
     var summaryPeriod by remember { mutableIntStateOf(0) }
@@ -133,6 +137,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(resumeKey) {
+        remindersLoaded = false
         when (val r = repo.getDashboard()) {
             is ApiResult.Success -> { dashboard = r.data; loadError = null }
             is ApiResult.Error -> loadError = r.message
@@ -172,6 +177,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             p.paymentType == "KREDIT" && p.dueDate.isNotBlank() && (dueDaysLeft(p.dueDate) ?: Long.MAX_VALUE) <= 7L
         }.sortedBy { it.dueDate }
         reminderLoadFailed = gagalPengingat
+        remindersLoaded = true
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -241,6 +247,24 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             
         }
         dashboard?.let { d ->
+            // R25 (audit 2026-11-15): refresh gagal setelah muat pertama
+            // berhasil — tampilkan galat kecil + tombol coba lagi, jangan
+            // diam-diam memakai data basi.
+            if (loadError != null) {
+                item {
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(tr("Gagal memperbarui Beranda.", "Failed to refresh Home."), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                                Spacer(Modifier.height(4.dp))
+                                Text(loadError ?: "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Button(onClick = { loadError = null; resumeKey++ }) { Text(tr("Coba lagi", "Try again")) }
+                        }
+                    }
+                }
+            }
             item {
                 
                 // Panel ringkasan BR5 (pilihan Achmad 2026-11-04): hero
@@ -380,6 +404,8 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 val reminderSummary = when {
                     reminderLoadFailed -> tr("Gagal memuat data pengingat.", "Failed to load reminder data.")
                     hasReminders -> reminderParts.joinToString(" • ")
+                    // R26: daftar belum tiba — jangan klaim "semua aman".
+                    !remindersLoaded -> tr("Memuat data pengingat...", "Loading reminder data...")
                     else -> tr("Semua stok dan kadaluarsa aman.", "All stock and expiry dates are safe.")
                 }
                 val reminderDetail: String? = when {

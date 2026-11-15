@@ -121,13 +121,24 @@ fun StokScreen() {
     var showForm by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Medicine?>(null) }
     var msg by remember { mutableStateOf("") }
+    // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
+    // muat daftar obat diam-diam menampilkan daftar kosong.
+    var loadError by remember { mutableStateOf<String?>(null) }
     var deleteTarget by remember { mutableStateOf<Medicine?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var importSummary by remember { mutableStateOf<String?>(null) }
     var showImportDialog by remember { mutableStateOf(false) }
-    fun reload() { scope.launch { (repo.listMedicines(search) as? ApiResult.Success)?.let { medicines = it.data.medicines } } }
+    fun reload() {
+        scope.launch {
+            when (val r = repo.listMedicines(search)) {
+                is ApiResult.Success -> { medicines = r.data.medicines; loadError = null }
+                is ApiResult.Error -> loadError = r.message
+                is ApiResult.Loading -> Unit
+            }
+        }
+    }
     // File Excel dibuka/disimpan lewat Storage Access Framework — tanpa izin penyimpanan.
     val templateLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(ExcelHelper.MIME_XLSX)) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -272,6 +283,19 @@ fun StokScreen() {
             if (msg.isNotEmpty()) {
                 Spacer(Modifier.height(SpaceS))
                 Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+            // S11: kartu galat muat + tombol coba lagi (pola Beranda S10).
+            if (loadError != null) {
+                Spacer(Modifier.height(SpaceS))
+                ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(tr("Gagal memuat daftar obat.", "Failed to load the medicine list."), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.height(SpaceS))
+                        Text(loadError ?: "", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(SpaceS))
+                        Button(onClick = { loadError = null; resumeKey++ }) { Text(tr("Coba lagi", "Try again")) }
+                    }
+                }
             }
             Spacer(Modifier.height(SpaceL))
             // Kartu Import / Export / Template Excel — isi banyak obat sekaligus.

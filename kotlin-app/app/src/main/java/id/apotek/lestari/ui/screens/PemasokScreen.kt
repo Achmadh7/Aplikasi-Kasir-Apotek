@@ -32,6 +32,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun PemasokScreen() {
     var suppliers by remember { mutableStateOf<List<Supplier>>(emptyList()) }
+    // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
+    // muat diam-diam menampilkan daftar kosong.
+    var loadError by remember { mutableStateOf<String?>(null) }
     var showForm by remember { mutableStateOf(false) }
     var formTarget by remember { mutableStateOf<Supplier?>(null) }
     var formNama by remember { mutableStateOf("") }
@@ -53,7 +56,11 @@ fun PemasokScreen() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(resumeKey) {
-        (repo.listSuppliers() as? ApiResult.Success)?.let { suppliers = it.data.suppliers }
+        when (val r = repo.listSuppliers()) {
+            is ApiResult.Success -> { suppliers = r.data.suppliers; loadError = null }
+            is ApiResult.Error -> loadError = r.message
+            is ApiResult.Loading -> Unit
+        }
     }
 
     fun bukaFormTambah() {
@@ -108,6 +115,20 @@ fun PemasokScreen() {
                     Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(tr("Impor dari Riwayat Pembelian", "Import from Purchase History"))
+                }
+            }
+            // S11: kartu galat muat + tombol coba lagi (pola Beranda S10).
+            if (loadError != null) {
+                item {
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(tr("Gagal memuat daftar pemasok.", "Failed to load the supplier list."), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                            Spacer(Modifier.height(SpaceS))
+                            Text(loadError ?: "", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(SpaceS))
+                            Button(onClick = { loadError = null; resumeKey++ }) { Text(tr("Coba lagi", "Try again")) }
+                        }
+                    }
                 }
             }
             if (suppliers.isEmpty()) {

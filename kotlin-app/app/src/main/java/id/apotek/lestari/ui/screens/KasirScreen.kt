@@ -166,6 +166,9 @@ fun dayKeyToIsoUtc(dayKey: String): String? {
 @Composable
 fun KasirScreen() {
     var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
+    // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
+    // muat diam-diam menampilkan daftar obat kosong.
+    var loadError by remember { mutableStateOf<String?>(null) }
     var search by rememberSaveable { mutableStateOf("") }
     var sortAz by remember { mutableStateOf(true) }
     // Pesan umpan balik di bawah kolom cari (mis. stok tidak cukup saat obat
@@ -247,7 +250,13 @@ fun KasirScreen() {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(resumeKey) { (repo.listMedicines() as? ApiResult.Success)?.let { medicines = it.data.medicines } }
+    LaunchedEffect(resumeKey) {
+        when (val r = repo.listMedicines()) {
+            is ApiResult.Success -> { medicines = r.data.medicines; loadError = null }
+            is ApiResult.Error -> loadError = r.message
+            is ApiResult.Loading -> Unit
+        }
+    }
     // Pulihkan keranjang dari data tersimpan, sekali saja, begitu daftar
     // obat pertama kali tersedia. Sesudah itu cartInitialized menyala dan
     // penulisan savedCart di bawah mengambil alih.
@@ -322,6 +331,19 @@ fun KasirScreen() {
         if (cartMsg.isNotEmpty()) {
             Spacer(Modifier.height(SpaceS))
             Text(cartMsg, style = MaterialTheme.typography.bodySmall)
+        }
+        // S11: kartu galat muat + tombol coba lagi (pola Beranda S10).
+        if (loadError != null) {
+            Spacer(Modifier.height(SpaceS))
+            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(tr("Gagal memuat daftar obat.", "Failed to load the medicine list."), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(SpaceS))
+                    Text(loadError ?: "", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(SpaceS))
+                    Button(onClick = { loadError = null; resumeKey++ }) { Text(tr("Coba lagi", "Try again")) }
+                }
+            }
         }
         Spacer(Modifier.height(SpaceL))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

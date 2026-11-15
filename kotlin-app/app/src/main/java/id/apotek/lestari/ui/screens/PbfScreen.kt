@@ -114,6 +114,9 @@ class PurchaseItemRow {
 fun PbfScreen() {
     var purchases by remember { mutableStateOf<List<Purchase>>(emptyList()) }
     var expanded by remember { mutableStateOf<Int?>(null) }
+    // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
+    // muat faktur diam-diam menampilkan ringkasan 0.
+    var loadError by remember { mutableStateOf<String?>(null) }
     var showForm by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<Purchase?>(null) }
     var paidTarget by remember { mutableStateOf<Purchase?>(null) }
@@ -133,7 +136,11 @@ fun PbfScreen() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(resumeKey) {
-        (repo.listPurchases() as? ApiResult.Success)?.let { purchases = it.data.purchases }
+        when (val r = repo.listPurchases()) {
+            is ApiResult.Success -> { purchases = r.data.purchases; loadError = null }
+            is ApiResult.Error -> loadError = r.message
+            is ApiResult.Loading -> Unit
+        }
     }
 
     // Tanggal pembelian disimpan sebagai kunci hari "yyyy-MM-dd", jadi
@@ -160,6 +167,19 @@ fun PbfScreen() {
                 KartuHeaderPremium(tr("Faktur PBF", "PBF Invoices"), Icons.Default.LocalShipping)
                 Spacer(Modifier.height(SpaceL))
                 DemoBanner()
+                // S11: kartu galat muat + tombol coba lagi (pola Beranda S10).
+                if (loadError != null) {
+                    Spacer(Modifier.height(SpaceL))
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(tr("Gagal memuat faktur PBF.", "Failed to load the PBF invoices."), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                            Spacer(Modifier.height(SpaceS))
+                            Text(loadError ?: "", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(SpaceS))
+                            Button(onClick = { loadError = null; resumeKey++ }) { Text(tr("Coba lagi", "Try again")) }
+                        }
+                    }
+                }
                 // Ringkasan belanja (desain PF1, pilihan Achmad 2026-11-04):
                 // dua kartu netral sejajar menggantikan blok biru lebar —
                 // Hari Ini dengan jumlah pembelian, Bulan Ini dengan nama

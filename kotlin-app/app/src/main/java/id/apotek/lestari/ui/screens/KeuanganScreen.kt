@@ -109,6 +109,9 @@ import java.util.TimeZone
 fun KeuanganScreen() {
     var entries by remember { mutableStateOf<List<CashEntry>>(emptyList()) }
     var cashBalance by remember { mutableStateOf<CashBalance?>(null) }
+    // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
+    // muat entri/saldo diam-diam menampilkan angka periode.
+    var loadError by remember { mutableStateOf<String?>(null) }
     var period by remember { mutableStateOf("today") } // today | month | all — awalnya "Hari Ini" (permintaan Achmad 2026-10-31), bukan "Semua"
     var typeFilter by remember { mutableStateOf("all") } // all | in | out
     var showForm by remember { mutableStateOf(false) }
@@ -116,9 +119,21 @@ fun KeuanganScreen() {
     val scope = rememberCoroutineScope()
     fun reload() {
         scope.launch {
-            (repo.listCashEntries() as? ApiResult.Success)?.let { entries = it.data.entries }
+            // S11: kumpulkan galat kedua panggilan supaya kegagalan
+            // salah satunya tidak tertutup keberhasilan yang lain.
+            var gagal: String? = null
+            when (val r = repo.listCashEntries()) {
+                is ApiResult.Success -> entries = r.data.entries
+                is ApiResult.Error -> gagal = r.message
+                is ApiResult.Loading -> Unit
+            }
             // Saldo dihitung dari SEMUA entri (bukan 200 terbaru saja).
-            (repo.getCashBalance() as? ApiResult.Success)?.let { cashBalance = it.data }
+            when (val r = repo.getCashBalance()) {
+                is ApiResult.Success -> cashBalance = r.data
+                is ApiResult.Error -> gagal = r.message
+                is ApiResult.Loading -> Unit
+            }
+            loadError = gagal
         }
     }
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME) — pola yang
@@ -207,6 +222,19 @@ fun KeuanganScreen() {
             KartuHeaderPremium(tr("Keuangan", "Finance"), Icons.Default.AccountBalanceWallet)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
+            // S11: kartu galat muat + tombol coba lagi (pola Beranda S10).
+            if (loadError != null) {
+                Spacer(Modifier.height(SpaceL))
+                ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(tr("Gagal memuat data keuangan.", "Failed to load the finance data."), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.height(SpaceS))
+                        Text(loadError ?: "", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(SpaceS))
+                        Button(onClick = { loadError = null; resumeKey++ }) { Text(tr("Coba lagi", "Try again")) }
+                    }
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                 listOf("today" to tr("Hari Ini", "Today"), "month" to tr("Bulan Ini", "This Month"), "all" to tr("Semua", "All")).forEach { (k, l) ->
                     FilterChip(selected = period == k, onClick = { period = k }, label = { Text(l) })
