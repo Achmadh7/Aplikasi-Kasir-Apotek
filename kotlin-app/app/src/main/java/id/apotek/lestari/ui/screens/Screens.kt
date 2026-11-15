@@ -210,6 +210,11 @@ fun KartuHeaderPremium(judul: String, ikon: ImageVector, subjudul: String? = nul
 // (mis. cashBalance null) sehingga LaunchedEffect(0) me-reset `shown`.
 private val animasiSekaliJalan = mutableSetOf<String>()
 
+/** Catat kunci animasi sekali-per-proses (dipakai grafik batang). */
+internal fun tandaiAnimasiSekali(kunci: String) { animasiSekaliJalan += kunci }
+/** Apakah kunci animasi sekali-per-proses ini sudah pernah jalan? */
+internal fun sudahAnimasiSekali(kunci: String): Boolean = kunci in animasiSekaliJalan
+
 /** Angka berhitung naik dari 0 (dipakai Pemasukan Hari Ini, Saldo Kas &
  *  Masuk/Keluar Keuangan, Laba). maxLines/overflow opsional untuk angka
  *  di kotak sempit (Ellipsis seperti Text polos sebelumnya). */
