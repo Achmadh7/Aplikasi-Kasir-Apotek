@@ -363,19 +363,75 @@ fun KeuanganScreen() {
                             horizontalArrangement = Arrangement.spacedBy(SpaceXS),
                             verticalAlignment = Alignment.Bottom
                         ) {
-                            dailyFlow.forEachIndexed { barIndex, (label, dayIn, dayOut) ->
-                                val isToday = barIndex == dailyFlow.lastIndex
-                                Column(
-                                    modifier = if (scrollable) Modifier.width(44.dp) else Modifier.weight(1f),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    // Label nilai total hari di atas batang (grafik
-                                    // ringkas Varian 1); ruang label selalu disediakan
-                                    // supaya dasar batang tetap sejajar antarhari.
-                                    Box(Modifier.height(16.dp), contentAlignment = Alignment.BottomCenter) {
-                                        if (dayIn + dayOut > 0) {
+                            // G1 (pilihan Achmad 2026-11-16): batang tebal +
+                            // grid. Box mengukur diri dari baris batang;
+                            // lapisan grid (matchParentSize) mengikutinya
+                            // sehingga garis selebar konten dan ikut tergulir.
+                            Box {
+                                // Lapisan grid di belakang batang: 3 garis
+                                // di 1/3, 2/3, 3/3 maxFlow dengan label nilai
+                                // di kiri (gutter 36dp). Blok plot 108dp
+                                // (label 16dp + jeda 2dp + batang 90dp);
+                                // garis berpusat di 18/48/78dp dari atas.
+                                Column(Modifier.matchParentSize()) {
+                                    Spacer(Modifier.height(3.dp))
+                                    listOf(maxFlow / 3, 2 * maxFlow / 3, maxFlow).forEach { nilaiGaris ->
+                                        Row(Modifier.fillMaxWidth().height(30.dp), verticalAlignment = Alignment.CenterVertically) {
                                             Text(
-                                                formatCompactIDR(dayIn + dayOut),
+                                                formatCompactIDR(nilaiGaris),
+                                                Modifier.width(32.dp), textAlign = TextAlign.End,
+                                                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1, overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(Modifier.width(4.dp))
+                                            Box(Modifier.weight(1f).height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                                        }
+                                    }
+                                    Spacer(Modifier.height(15.dp))
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(start = 36.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(SpaceXS),
+                                    verticalAlignment = Alignment.Bottom
+                                ) {
+                                    dailyFlow.forEachIndexed { barIndex, (label, dayIn, dayOut) ->
+                                        val isToday = barIndex == dailyFlow.lastIndex
+                                        Column(
+                                            modifier = if (scrollable) Modifier.width(44.dp) else Modifier.weight(1f),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            // Label nilai total hari di atas batang (grafik
+                                            // ringkas Varian 1); ruang label selalu disediakan
+                                            // supaya dasar batang tetap sejajar antarhari.
+                                            Box(Modifier.height(16.dp), contentAlignment = Alignment.BottomCenter) {
+                                                if (dayIn + dayOut > 0) {
+                                                    Text(
+                                                        formatCompactIDR(dayIn + dayOut),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        maxLines = 1
+                                                    )
+                                                }
+                                            }
+                                            Spacer(Modifier.height(2.dp))
+                                            Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
+                                                key(period, periodIn, periodOut) {
+                                                    // Grafik tumbuh dari 0 tiap kali layar
+                                                    // ditampilkan (seperti awal).
+                                                    val grow = remember { Animatable(0f) }
+                                                    // Jepit jeda animasi supaya grafik panjang
+                                                    // tidak butuh waktu lama untuk selesai tumbuh.
+                                                    LaunchedEffect(period, periodIn, periodOut) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
+                                                    val inH = ((90f * dayIn / maxFlow * grow.value).coerceIn(0f, 90f)).let { if (dayIn > 0) it.coerceAtLeast(4f) else 0f }
+                                                    val outH = ((90f * dayOut / maxFlow * grow.value).coerceIn(0f, 90f)).let { if (dayOut > 0) it.coerceAtLeast(4f) else 0f }
+                                                    Box(Modifier.width(14.dp).height(inH.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
+                                                    Box(Modifier.width(14.dp).height(outH.dp).background(MaterialTheme.colorScheme.error, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
+                                                }
+                                            }
+                                            Spacer(Modifier.height(SpaceS))
+                                            Text(
+                                                label,
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
                                                 color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -383,29 +439,6 @@ fun KeuanganScreen() {
                                             )
                                         }
                                     }
-                                    Spacer(Modifier.height(2.dp))
-                                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
-                                        key(period, periodIn, periodOut) {
-                                            // Grafik tumbuh dari 0 tiap kali layar
-                                            // ditampilkan (seperti awal).
-                                            val grow = remember { Animatable(0f) }
-                                            // Jepit jeda animasi supaya grafik panjang
-                                            // tidak butuh waktu lama untuk selesai tumbuh.
-                                            LaunchedEffect(period, periodIn, periodOut) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
-                                            val inH = ((56f * dayIn / maxFlow * grow.value).coerceIn(0f, 56f)).let { if (dayIn > 0) it.coerceAtLeast(4f) else 0f }
-                                            val outH = ((56f * dayOut / maxFlow * grow.value).coerceIn(0f, 56f)).let { if (dayOut > 0) it.coerceAtLeast(4f) else 0f }
-                                            Box(Modifier.width(10.dp).height(inH.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
-                                            Box(Modifier.width(10.dp).height(outH.dp).background(MaterialTheme.colorScheme.error, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
-                                        }
-                                    }
-                                    Spacer(Modifier.height(SpaceS))
-                                    Text(
-                                        label,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1
-                                    )
                                 }
                             }
                         }
