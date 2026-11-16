@@ -456,22 +456,49 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 Spacer(Modifier.width(8.dp))
                                 Text(reminderSummary, style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
                             }
+                            // R1: jumlah habis / kadaluarsa jadi kotak kecil
+                            // senada kartu P3 (hanya yang jumlahnya > 0).
+                            val kotakPengingat = listOfNotNull(
+                                if (outOfStockNames.isNotEmpty()) Triple(tr("Habis", "Out of stock"), tr("${outOfStockNames.size} obat", "${outOfStockNames.size} medicines"), MaterialTheme.colorScheme.error) else null,
+                                if (d.expiringCount > 0) Triple(tr("Dekat kadaluarsa", "Expiring soon"), tr("${d.expiringCount} obat", "${d.expiringCount} medicines"), warningAmber()) else null
+                            )
+                            if (kotakPengingat.isNotEmpty()) {
+                                Spacer(Modifier.height(SpaceM))
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    kotakPengingat.forEach { (label, nilai, warna) ->
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
+                                                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                Spacer(Modifier.height(4.dp))
+                                                Text(nilai, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = warna, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             if (reminderTampil.isNotEmpty() || reminderTagihan != null) {
                                 Spacer(Modifier.height(SpaceXS))
                                 Column(Modifier.padding(start = 28.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     reminderTampil.forEach { baris ->
                                         Text(baris, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
-                                    if (reminderSisa > 0) {
-                                        Text(tr("+$reminderSisa lainnya", "+$reminderSisa more"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.primary)
-                                    }
                                     if (reminderTagihan != null) {
                                         Text(reminderTagihan, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                             }
+                            // R1: "+N lainnya" dan tautan jadi satu baris.
                             if (hasReminders) {
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                Spacer(Modifier.height(SpaceS))
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        if (reminderSisa > 0) tr("+$reminderSisa lainnya", "+$reminderSisa more") else "",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.primary
+                                    )
                                     TextButton(onClick = onGoPengingat, contentPadding = PaddingValues(0.dp)) {
                                         Text(tr("Lihat Pengingat >", "View Reminders >"), style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp))
                                     }
@@ -494,12 +521,20 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         if (d.bestSellers.isEmpty()) {
                             Text(tr("Belum ada obat terjual hari ini.", "No items sold today yet."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
-                            d.bestSellers.forEachIndexed { index, b ->
-                                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 4.dp))
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text(b.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("${b.qty} item • ${formatIDR(b.revenue)}", style = MaterialTheme.typography.bodyMedium)
+                            // R1: tiap baris jadi kotak kecil senada kartu P3.
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                d.bestSellers.forEach { b ->
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                            Text(b.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("${b.qty} item • ${formatIDR(b.revenue)}", style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -529,9 +564,10 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
 
 @Composable
 fun ShortcutCard(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ExpressiveCard(shape = RoundedCornerShape(20.dp), modifier = modifier.clickable { onClick() }) {
+    // R1 (pilihan Achmad 2026-11-16): sudut 12dp senada kotak P3.
+    ExpressiveCard(shape = RoundedCornerShape(12.dp), modifier = modifier.clickable { onClick() }) {
         Column(Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
             Spacer(Modifier.height(SpaceS))
             Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.Center)
         }
