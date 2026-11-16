@@ -238,6 +238,7 @@ fun LabaScreen() {
                 // Operasional, dengan Laba Kotor = Penjualan - HPP (HPP
                 // kembali 2026-11-15). Angka formatIDR penuh lewat
                 // AnimatedAmount (headlineSmall supaya muat).
+                // Bentuk 12dp senada P3/R1/K1 (B1, pilihan Achmad 2026-11-16).
                 val netMarginPct = if (r.revenue > 0) r.netProfit * 100.0 / r.revenue else 0.0
                 val bersihDark = LocalIsDarkTheme.current
                 val bersihBg = if (bersihDark) Color(0xFF163428) else Color(0xFFDFF2E4)
@@ -245,7 +246,7 @@ fun LabaScreen() {
                 val bersihLabel = if (bersihDark) Color(0xFFA0DCC0) else Color(0xFF2E7D32)
                 val bersihAmount = if (r.netProfit < 0) MaterialTheme.colorScheme.error else bersihOn
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.weight(1f)) {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Text(tr("PENJUALAN", "REVENUE"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceS))
@@ -254,7 +255,7 @@ fun LabaScreen() {
                             Text(tr("${r.itemsSold} item terjual", "${r.itemsSold} items sold"), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = bersihBg, modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = bersihBg, modifier = Modifier.weight(1f)) {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Text(tr("LABA BERSIH", "NET PROFIT"), color = bersihLabel, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceS))
@@ -268,13 +269,13 @@ fun LabaScreen() {
             }
             item {
                 
-                ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        // Rincian LP4: baris label-nilai (Penjualan, HPP,
-                        // Laba Kotor, Biaya Operasional). Laba Bersih tidak
-                        // diulang di sini, sudah naik ke kartu hero hijau.
+                        // Rincian (B1, 2026-11-16): baris label-nilai (HPP,
+                        // Laba Kotor, Biaya Operasional). Penjualan tidak
+                        // diulang di sini, sudah ada di kartu hero biru;
+                        // Laba Bersih sudah naik ke kartu hero hijau.
                         val detailRows = listOf(
-                            tr("Penjualan", "Revenue") to formatIDR(r.revenue),
                             tr("HPP", "Cost of Goods Sold") to formatIDR(r.hpp),
                             tr("Laba Kotor", "Gross Profit") to formatIDR(r.grossProfit),
                             tr("Biaya Operasional", "Operating Costs") to formatIDR(r.operationalExpense)
