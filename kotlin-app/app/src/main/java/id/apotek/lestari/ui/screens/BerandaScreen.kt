@@ -492,9 +492,13 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 }
                             }
                             // R1: "+N lainnya" dan tautan jadi satu baris.
+                            // FIX 2026-11-16 (laporan Achmad: tidak sejajar):
+                            // footer diberi start 28dp supaya "+N lainnya"
+                            // sejajar dengan daftar obat + teks ringkasan
+                            // (sama-sama 44dp dari tepi kartu).
                             if (hasReminders) {
                                 Spacer(Modifier.height(SpaceS))
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Row(Modifier.fillMaxWidth().padding(start = 28.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         if (reminderSisa > 0) tr("+$reminderSisa lainnya", "+$reminderSisa more") else "",
                                         style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.primary
