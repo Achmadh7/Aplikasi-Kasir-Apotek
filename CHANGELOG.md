@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Audit 2026-11-16 (round 2, M1–M22): backup now carries buy prices (HPP survives restore); backup restore and sync pull cross-check sale totals against item subtotals; money aggregates sum as Long and clamp to Int; the expiry-date form guard is reachable again and the last picked date survives unticking the no-expiry checkbox; PBF date/due-date validation; sale tombstones also tombstone their items; database v17 backfills the item-table updatedAt stamps; unit tests grown to 47 JVM tests.
+- backup now carries buy prices (HPP survives restore); backup restore and sync pull cross-check sale totals against item subtotals; money aggregates sum as Long and clamp to Int; the expiry-date form guard is reachable again and the last picked date survives unticking the no-expiry checkbox; PBF date/due-date validation; sale tombstones also tombstone their items; database v17 backfills the item-table updatedAt stamps; unit tests grown to 47 JVM tests.
 
 ## [1.3.0] - 2026-11-16
 
