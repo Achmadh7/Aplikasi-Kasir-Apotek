@@ -644,6 +644,7 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
     var beli by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.buyPrice?.takeIf { it > 0 }?.toString() ?: ""))) }
     var stock by remember(editing) { mutableStateOf(editing?.stock?.toString() ?: "") }
     var expiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
+    var noExpiry by remember(editing) { mutableStateOf(false) }
     var formError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -702,14 +703,25 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                         OutlinedTextField(
                             value = if (expiry.isBlank()) "" else formatDateID(expiry),
                             onValueChange = {},
-                            label = { Text(tr("Kadaluwarsa (boleh kosong)", "Expiry (optional)")) },
+                            label = { Text(tr("Kadaluwarsa (wajib diisi) *", "Expiry (required) *")) },
                             readOnly = true, singleLine = true,
+                            enabled = !noExpiry,
                             trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = tr("Pilih tanggal", "Pick a date")) },
                             interactionSource = expiryInteraction,
                             modifier = Modifier.weight(1f)
                         )
                     }
                 }
+            }
+            // W2 TANGGAL KADALUWARSA WAJIB + PENGECUALIAN (pilihan Achmad
+            // 2026-11-16): Simpan mensyaratkan tanggal kadaluarsa ATAU
+            // centang ini (barang yang memang tidak punya ED). Centang
+            // menghapus tanggal yang sudah dipilih; impor Excel tetap
+            // boleh kosong (validasi hanya di form ini).
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { val baru = !noExpiry; noExpiry = baru; if (baru) expiry = "" }) {
+                Checkbox(checked = noExpiry, onCheckedChange = null)
+                Spacer(Modifier.width(8.dp))
+                Text(tr("Tidak ada tanggal kadaluarsa", "No expiry date"), style = MaterialTheme.typography.bodyMedium)
             }
             Spacer(Modifier.height(SpaceS))
             if (formError.isNotEmpty()) {
@@ -720,6 +732,12 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                 Button(
                     onClick = {
                         scope.launch {
+                            // W2: tanggal kadaluarsa wajib, kecuali centang
+                            // "Tidak ada tanggal kadaluarsa".
+                            if (expiry.isBlank() && !noExpiry) {
+                                formError = tr("Tanggal kadaluarsa wajib diisi atau centang \"Tidak ada tanggal kadaluarsa\".", "Expiry date is required, or tick \"No expiry date\".")
+                                return@launch
+                            }
                             val cat = category.ifBlank { "Umum" }
                             val unt = unit.ifBlank { "Strip" }
                             val s = parseDecimal(sell.text)
@@ -742,7 +760,7 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                             }
                         }
                     },
-                    enabled = name.isNotBlank() && parseDecimal(sell.text) > 0,
+                    enabled = name.isNotBlank() && parseDecimal(sell.text) > 0 && (expiry.isNotBlank() || noExpiry),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.weight(1f).height(52.dp)
