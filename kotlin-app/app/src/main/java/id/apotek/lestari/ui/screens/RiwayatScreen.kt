@@ -581,6 +581,8 @@ fun RiwayatScreen() {
     // paymentMethod tanpa peka huruf (audit LOW: "tunai" kecil pun Tunai).
     var filterBayar by rememberSaveable { mutableStateOf("Semua") }
     var salesLimit by rememberSaveable { mutableIntStateOf(50) }
+    // MB1: total penjualan bulan ini per cara bayar (dimuat bersama daftar).
+    var monthByMethod by remember { mutableStateOf(mapOf("Tunai" to 0L, "QRIS" to 0L, "Transfer" to 0L)) }
     // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
     // muat riwayat diam-diam menampilkan daftar kosong.
     var loadError by remember { mutableStateOf<String?>(null) }
@@ -607,6 +609,11 @@ fun RiwayatScreen() {
             is ApiResult.Error -> loadError = r.message
             is ApiResult.Loading -> Unit
         }
+        // MB1: ringkasan bulan ini dimuat ulang bersama daftar (ON_RESUME).
+        when (val m = repo.getMonthSalesByMethod()) {
+            is ApiResult.Success -> monthByMethod = m.data
+            else -> Unit
+        }
     }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         KartuHeaderPremium(tr("Riwayat", "History"), Icons.Default.ReceiptLong)
@@ -615,6 +622,22 @@ fun RiwayatScreen() {
         Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.horizontalScroll(rememberScrollState())) {
             listOf("Semua" to tr("Semua", "All"), "Tunai" to tr("Tunai", "Cash"), "QRIS" to "QRIS", "Transfer" to tr("Transfer", "Transfer")).forEach { (k, l) ->
                 FilterChip(selected = filterBayar == k, onClick = { expanded = null; filterBayar = k }, label = { Text(l) })
+            }
+        }
+        Spacer(Modifier.height(SpaceL))
+        // MB1 (pilihan Achmad 2026-11-16): ringkasan total penjualan BULAN
+        // INI per cara bayar — tiga kotak senada 12dp surfaceContainerHigh
+        // (angka penuh 12sp bold + Ellipsis, pola perbaikan N1).
+        Text(tr("Bulan ini", "This month"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(SpaceXS))
+        Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.fillMaxWidth()) {
+            listOf("Tunai" to tr("Tunai", "Cash"), "QRIS" to "QRIS", "Transfer" to tr("Transfer", "Transfer")).forEach { (k, l) ->
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
+                    Column(Modifier.padding(horizontal = 8.dp, vertical = 10.dp)) {
+                        Text(l, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(formatIDR(monthByMethod[k] ?: 0L), style = MaterialTheme.typography.titleSmall.copy(fontSize = 12.sp), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
             }
         }
         Spacer(Modifier.height(SpaceL))

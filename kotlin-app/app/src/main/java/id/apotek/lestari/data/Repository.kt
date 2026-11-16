@@ -477,6 +477,30 @@ class Repository {
         ListSalesResponse(sales)
     }
 
+    // MB1 (pilihan Achmad 2026-11-16): total penjualan BULAN INI per cara
+    // bayar untuk ringkasan di atas layar Riwayat. Dihitung dari SEMUA
+    // penjualan di DB (bukan jendela 50 baris listSales) supaya total
+    // tidak terpotong saat penjualan sebulan melebihi limit layar.
+    // Batas bulan mengikuti WIB seperti getProfitReport.
+    suspend fun getMonthSalesByMethod(): ApiResult<Map<String, Long>> = call {
+        val startMonth = jakartaMonthStartMillis()
+        val endToday = jakartaDayStartMillis(1)
+        val totals = mutableMapOf("Tunai" to 0L, "QRIS" to 0L, "Transfer" to 0L)
+        for (sale in DatabaseProvider.db.saleDao().getAll()) {
+            val t = parseISODate(sale.createdAt)?.time ?: continue
+            if (t in startMonth until endToday) {
+                val key = when {
+                    sale.paymentMethod.equals("Tunai", ignoreCase = true) -> "Tunai"
+                    sale.paymentMethod.equals("QRIS", ignoreCase = true) -> "QRIS"
+                    sale.paymentMethod.equals("Transfer", ignoreCase = true) -> "Transfer"
+                    else -> continue
+                }
+                totals[key] = (totals[key] ?: 0L) + sale.total.toLong()
+            }
+        }
+        totals
+    }
+
     // ---- Kas ----
 
     suspend fun getCashBalance(): ApiResult<CashBalance> = call {
