@@ -24,7 +24,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -33,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Money
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Schedule
@@ -480,45 +480,34 @@ fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = false) {
 // ---------- Beranda ----------
 
 
-// Kolom cari ramping berbentuk pil (BasicTextField + decorationBox), dipakai Kasir & Stok.
-// OutlinedTextField tidak dipakai di sini karena tinggi paksa yang kecil (44dp)
-// membuat teksnya terpotong — OutlinedTextField Material 3 mencadangkan ruang
-// untuk label dan tinggi minimalnya ~56dp. Dengan BasicTextField, padding dan
-// posisi teks diatur sendiri sehingga tidak ada yang terpotong.
+// Kolom cari (BasicTextField + decorationBox), dipakai Kasir & Stok.
+// V1 (pilihan Achmad 2026-11-16): kotak 12dp surfaceContainerHigh
+// tanpa garis tepi — senada kotak stat P3 / baris K1 / shortcut R1,
+// bukan lagi pill 22dp. Tombol X di kanan muncul saat ada teks,
+// untuk hapus pencarian. Tinggi 48dp.
+// OutlinedTextField tidak dipakai di sini karena tinggi paksa yang kecil
+// membuat teksnya terpotong — OutlinedTextField Material 3 mencadangkan
+// ruang untuk label dan tinggi minimalnya ~56dp. Dengan BasicTextField,
+// padding dan posisi teks diatur sendiri sehingga tidak ada yang terpotong.
 @Composable
 fun SearchField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var focused by remember { mutableStateOf(false) }
-    // Garis tepi (input line) pill dibuat putih di mode gelap supaya jelas
-    // terlihat (permintaan Achmad — latar pill dikembalikan gelap seperti
-    // semula, bukan putih). Mode terang tidak berubah.
-    val isDark = LocalIsDarkTheme.current
-    val borderColor = if (isDark) {
-        Color.White
-    } else if (focused) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.outline
-    }
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
         textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
         modifier = modifier
-            .height(44.dp)
-            .onFocusEvent { focused = it.isFocused },
+            .height(48.dp),
         decorationBox = { innerTextField ->
             Surface(
-                // Latar surfaceContainer (bukan surface) supaya pill terlihat jelas
-                // di atas latar layar — surface sama dengan latar (#0A0E14 di mode
-                // gelap) sehingga pill sebelumnya hanya dibatasi garis tipis.
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = RoundedCornerShape(22.dp),
-                border = BorderStroke(1.dp, borderColor),
+                // Latar surfaceContainerHigh tanpa garis tepi, senada
+                // kotak stat P3 / baris K1 / shortcut R1.
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
                 Row(
@@ -541,6 +530,15 @@ fun SearchField(
                             )
                         }
                         innerTextField()
+                    }
+                    if (value.isNotEmpty()) {
+                        IconButton(onClick = { onValueChange("") }) {
+                            Icon(
+                                Icons.Default.Close, tr("Hapus pencarian", "Clear search"),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
