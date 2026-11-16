@@ -346,9 +346,11 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 
                 // BR1 (pilihan Achmad 2026-11-14, diubah 15 Nov 2026 jadi
                 // "3 obat + '+N lainnya'"): kartu Pengingat tetap spanduk
-                // ringkas — garis aksen kuning di kiri, ringkasan jumlah per
-                // kelompok + maks. 3 obat paling mendesak + "+N lainnya",
-                // dan tautan "Lihat Pengingat >" ke layar penuh.
+                // ringkas — garis aksen kuning di kiri, kotak jumlah
+                // (habis/kadaluarsa) + maks. 3 obat paling mendesak +
+                // "+N lainnya", dan tautan "Lihat Pengingat >" ke layar penuh.
+                // Baris ringkasan atas dihapus 16 Nov 2026 (pilihan Achmad);
+                // hanya tampil saat kartu kosong (semua aman / memuat / gagal).
                 // Isi lengkap tetap ada di layar Pengingat.
                 val reminderParts = buildList {
                     if (outOfStockNames.isNotEmpty()) add(tr("${outOfStockNames.size} obat habis", "${outOfStockNames.size} medicines out of stock"))
@@ -393,17 +395,25 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
                         Box(Modifier.width(6.dp).fillMaxHeight().background(warningAmber()))
                         Column(Modifier.weight(1f).padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Warning, null, tint = warningAmber(), modifier = Modifier.size(20.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(reminderSummary, style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
-                            }
                             // R1: jumlah habis / kadaluarsa jadi kotak kecil
                             // senada kartu P3 (hanya yang jumlahnya > 0).
                             val kotakPengingat = listOfNotNull(
                                 if (outOfStockNames.isNotEmpty()) Triple(tr("Habis", "Out of stock"), tr("${outOfStockNames.size} obat", "${outOfStockNames.size} medicines"), MaterialTheme.colorScheme.error) else null,
                                 if (d.expiringCount > 0) Triple(tr("Dekat kadaluarsa", "Expiring soon"), tr("${d.expiringCount} obat", "${d.expiringCount} medicines"), warningAmber()) else null
                             )
+                            // Baris ringkasan atas DIHAPUS 2026-11-16
+                            // (pilihan Achmad): angkanya sudah ada di kotak
+                            // di bawah. Baris ini hanya tampil saat kartu
+                            // kosong (semua aman / memuat / gagal), supaya
+                            // kartu tidak kosong.
+                            val tampilkanRingkasan = kotakPengingat.isEmpty() && reminderTampil.isEmpty() && reminderTagihan == null
+                            if (tampilkanRingkasan) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Warning, null, tint = warningAmber(), modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(reminderSummary, style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
+                                }
+                            }
                             if (kotakPengingat.isNotEmpty()) {
                                 Spacer(Modifier.height(SpaceM))
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
