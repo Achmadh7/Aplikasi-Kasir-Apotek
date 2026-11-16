@@ -379,17 +379,10 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                 }
             }
             Spacer(Modifier.height(SpaceL))
-            // Ringkasan stok: total jenis, menipis (Rendah), habis.
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text("${medicines.size}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                Text(tr(" jenis obat", " medicines"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("  •  ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("$countRendah", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
-                Text(tr(" menipis", " low"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("  •  ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("$countHabis", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                Text(tr(" habis", " out"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.weight(1f))
+            // Ringkasan stok ("N jenis obat • N menipis • N habis")
+            // DIHAPUS atas permintaan Achmad 2026-11-16 — hanya tombol
+            // Pilih + urut yang tersisa, rata kanan.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                 // Tombol Pilih/Batal (mode pilih banyak) + tombol urut 3 mode
                 // (A-Z -> Z-A -> Terendah -> kembali ke A-Z).
                 OutlinedButton(
