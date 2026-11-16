@@ -620,6 +620,7 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
     var showCategorySheet by remember { mutableStateOf(false) }
     var showUnitSheet by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var noExpiry by remember(editing) { mutableStateOf(false) }
     // Ketukan pada field read-only ditangkap lewat interactionSource:
     // Modifier.clickable di OutlinedTextField tidak jalan karena field
     // menelan ketukan untuk fokus. Pola ini sama seperti dropdown bawaan.
@@ -644,7 +645,6 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
     var beli by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.buyPrice?.takeIf { it > 0 }?.toString() ?: ""))) }
     var stock by remember(editing) { mutableStateOf(editing?.stock?.toString() ?: "") }
     var expiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
-    var noExpiry by remember(editing) { mutableStateOf(false) }
     // M13: tanggal terakhir yang dipilih — centang dilepas mengembalikan
     // tanggal ini (bukan ""), supaya tanggal tidak hilang permanen.
     var lastExpiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
