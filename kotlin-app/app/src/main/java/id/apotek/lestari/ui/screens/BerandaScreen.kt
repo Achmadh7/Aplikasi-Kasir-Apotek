@@ -564,8 +564,9 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
 
 @Composable
 fun ShortcutCard(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    // R1 (pilihan Achmad 2026-11-16): sudut 12dp senada kotak P3.
-    ExpressiveCard(shape = RoundedCornerShape(12.dp), modifier = modifier.clickable { onClick() }) {
+    // R1 (pilihan Achmad 2026-11-16): sudut 12dp + latar
+    // surfaceContainerHigh, senada kotak P3.
+    ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = modifier.clickable { onClick() }) {
         Column(Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
             Spacer(Modifier.height(SpaceS))

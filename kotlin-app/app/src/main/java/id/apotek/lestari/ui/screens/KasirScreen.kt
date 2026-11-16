@@ -372,16 +372,19 @@ fun KasirScreen() {
             }
         }
         Spacer(Modifier.height(SpaceL))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("${filtered.size} obat", "${filtered.size} medicines"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // K1: teks jumlah "N obat" DIHAPUS (permintaan Achmad 2026-11-16)
+        // — hanya tombol urut A-Z yang tersisa, rata kanan.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
             SortToggle(sortAz = sortAz, onToggle = { sortAz = !sortAz })
         }
         Spacer(Modifier.height(SpaceS))
             }
             itemsIndexed(sorted, key = { _, m -> m.id }) { _, m ->
                 val out = m.stock <= 0
+                // K1 (pilihan Achmad 2026-11-16): kotak 12dp senada P3.
                 ExpressiveCard(
-                    shape = MaterialTheme.shapes.large,
+                    shape = RoundedCornerShape(12.dp),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     modifier = Modifier.fillMaxWidth()
                         .onGloballyPositioned { layoutPos.cardCenters[m.id] = it.boundsInWindow().center }
                         .clickable(enabled = !out) {
@@ -451,8 +454,10 @@ fun KasirScreen() {
             exit = ExitTransition.None,
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
+            // K1: bar keranjang ikut kotak 12dp senada P3.
             ExpressiveCard(
-                shape = MaterialTheme.shapes.extraLarge,
+                shape = RoundedCornerShape(12.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
                     .onGloballyPositioned { layoutPos.cartCenter = it.boundsInWindow().center }
                     .clickable { showSheet = true }
