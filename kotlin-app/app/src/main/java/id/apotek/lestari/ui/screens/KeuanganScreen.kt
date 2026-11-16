@@ -263,7 +263,7 @@ fun KeuanganScreen() {
                     // tanpa ikon dompet di sampingnya (sesuai papan BR/KE).
                     Text(tr("SALDO KAS", "CASH BALANCE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(SpaceS))
-                    AnimatedAmount(saldo, MaterialTheme.typography.headlineLarge, if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface, sekaliSaja = true, kunciSekali = "keuanganSaldo")
+                    AnimatedAmount(saldo, MaterialTheme.typography.headlineLarge, if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
                     // R18: bila agregat saldo gagal dimuat, angka 0 di atas
                     // bukan saldo sebenarnya — beri keterangan (hanya saat
                     // gagal, bukan saat muat pertama: loadError != null).
@@ -280,14 +280,14 @@ fun KeuanganScreen() {
                             Column(Modifier.padding(12.dp)) {
                                 Text(tr("MASUK", "IN"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.height(4.dp))
-                                AnimatedAmount(saldoIn, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis, sekaliSaja = true, kunciSekali = "keuanganMasuk")
+                                AnimatedAmount(saldoIn, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                         Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
                             Column(Modifier.padding(12.dp)) {
                                 Text(tr("KELUAR", "OUT"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.height(4.dp))
-                                AnimatedAmount(saldoOut, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis, sekaliSaja = true, kunciSekali = "keuanganKeluar")
+                                AnimatedAmount(saldoOut, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -392,14 +392,12 @@ fun KeuanganScreen() {
                                     Spacer(Modifier.height(2.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
                                         key(period, periodIn, periodOut) {
-                                            // Grafik tumbuh 1x saja per periode (sama
-                                            // seperti angka Saldo Kas): pindah tab lalu
-                                            // kembali, batang langsung tampil penuh.
-                                            val kunciGrafik = "keuanganGrafik-$period"
-                                            val grow = remember { Animatable(if (sudahAnimasiSekali(kunciGrafik)) 1f else 0f) }
+                                            // Grafik tumbuh dari 0 tiap kali layar
+                                            // ditampilkan (seperti awal).
+                                            val grow = remember { Animatable(0f) }
                                             // Jepit jeda animasi supaya grafik panjang
                                             // tidak butuh waktu lama untuk selesai tumbuh.
-                                            LaunchedEffect(period, periodIn, periodOut) { tandaiAnimasiSekali(kunciGrafik); grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
+                                            LaunchedEffect(period, periodIn, periodOut) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
                                             val inH = ((56f * dayIn / maxFlow * grow.value).coerceIn(0f, 56f)).let { if (dayIn > 0) it.coerceAtLeast(4f) else 0f }
                                             val outH = ((56f * dayOut / maxFlow * grow.value).coerceIn(0f, 56f)).let { if (dayOut > 0) it.coerceAtLeast(4f) else 0f }
                                             Box(Modifier.width(10.dp).height(inH.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))

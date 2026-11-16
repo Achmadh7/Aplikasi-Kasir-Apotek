@@ -355,14 +355,12 @@ fun LabaScreen() {
                                             )
                                             Spacer(Modifier.height(SpaceXS))
                                             key(period) {
-                                                // Grafik tumbuh 1x saja per periode (sama
-                                                // seperti angka Saldo Kas): buka menu lalu
-                                                // kembali, batang langsung tampil penuh.
-                                                val kunciGrafik = "labaGrafik-$period"
-                                                val grow = remember { Animatable(if (sudahAnimasiSekali(kunciGrafik)) 1f else 0f) }
+                                                // Grafik tumbuh dari 0 tiap kali layar
+                                                // ditampilkan (seperti awal).
+                                                val grow = remember { Animatable(0f) }
                                                 // Jepit jeda animasi supaya grafik panjang
                                                 // tidak butuh waktu lama untuk selesai tumbuh.
-                                                LaunchedEffect(period) { tandaiAnimasiSekali(kunciGrafik); grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
+                                                LaunchedEffect(period) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
                                                 val barH = ((110f * day.profit / maxProfit * grow.value).coerceIn(0f, 110f)).let { if (day.profit > 0) it.coerceAtLeast(4f) else 0f }
                                                 Box(
                                                     Modifier.width(28.dp).height(barH.dp)
@@ -558,7 +556,7 @@ fun ObatTerlarisScreen() {
                                         }
                                     }
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        AnimatedAmount(totalQty, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface, sekaliSaja = true, kunciSekali = "terlarisTotal") { "$it" }
+                                        AnimatedAmount(totalQty, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface) { "$it" }
                                         Text(tr("item", "items"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
