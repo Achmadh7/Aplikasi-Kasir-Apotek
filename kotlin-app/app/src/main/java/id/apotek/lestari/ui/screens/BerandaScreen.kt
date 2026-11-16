@@ -333,52 +333,56 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text(if (monthMode) tr("PEMASUKAN BULAN INI", "THIS MONTH'S INCOME") else tr("PEMASUKAN HARI INI", "TODAY'S INCOME"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                                    Icon(Icons.Default.TrendingUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(6.dp).size(18.dp))
+                                // P3 (pilihan Achmad 2026-11-16): perbandingan
+                                // vs kemarin jadi pill ringkas di kanan atas;
+                                // mode Bulan Ini tanpa pill.
+                                if (!monthMode) {
+                                    val pillTint = when {
+                                        diff > 0 -> profitGreen()
+                                        diff < 0 -> MaterialTheme.colorScheme.error
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                    Surface(
+                                        color = pillTint.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(13.dp),
+                                        border = BorderStroke(1.dp, pillTint)
+                                    ) {
+                                        Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            if (diff != 0) {
+                                                Icon(if (diff > 0) Icons.Default.TrendingUp else Icons.Default.TrendingDown, null, tint = pillTint, modifier = Modifier.size(14.dp))
+                                                Spacer(Modifier.width(4.dp))
+                                            }
+                                            Text(
+                                                if (diff == 0) tr("Sama", "Same") else "Rp ${formatCompactIDR(kotlin.math.abs(diff))}",
+                                                style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = pillTint, maxLines = 1
+                                            )
+                                        }
+                                    }
                                 }
                             }
                             Spacer(Modifier.height(SpaceS))
                             AnimatedAmount(panelIn, MaterialTheme.typography.headlineLarge, MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.height(SpaceXS))
-                            if (!monthMode) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    when {
-                                        diff > 0 -> {
-                                            Icon(Icons.Default.TrendingUp, null, tint = profitGreen(), modifier = Modifier.size(16.dp))
-                                            Spacer(Modifier.width(6.dp))
-                                            Text(tr("Naik ${formatIDR(diff)} dari kemarin", "Up ${formatIDR(diff)} from yesterday"), color = profitGreen(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
-                                        }
-                                        diff < 0 -> {
-                                            Icon(Icons.Default.TrendingDown, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-                                            Spacer(Modifier.width(6.dp))
-                                            Text(tr("Turun ${formatIDR(-diff)} dari kemarin", "Down ${formatIDR(-diff)} from yesterday"), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
-                                        }
-                                        else -> {
-                                            Text(tr("Sama seperti kemarin", "Same as yesterday"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                            Spacer(Modifier.height(SpaceM))
+                            // P3: tiga angka bawah jadi kotak kecil; nilai
+                            // uang memakai format ringkas (Rp 160rb) supaya
+                            // muat dalam kotak tanpa terpotong.
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(
+                                    Triple(tr("Pengeluaran", "Expenses"), "Rp ${formatCompactIDR(panelOut)}", MaterialTheme.colorScheme.error),
+                                    Triple(tr("Selisih", "Difference"), (if (panelProfit < 0) "-" else "") + "Rp ${formatCompactIDR(kotlin.math.abs(panelProfit))}", if (panelProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error),
+                                    Triple(tr("Transaksi", "Transactions"), "$panelSales", MaterialTheme.colorScheme.onSurface)
+                                ).forEach { (label, nilai, warna) ->
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
+                                            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(nilai, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = warna, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         }
                                     }
-                                }
-                            } else {
-                                Text(tr("Penjualan pada bulan berjalan", "Sales in the current month"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                            }
-                            Spacer(Modifier.height(SpaceM))
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                            Spacer(Modifier.height(SpaceM))
-                            Row(Modifier.fillMaxWidth()) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(tr("Pengeluaran", "Expenses"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Spacer(Modifier.height(SpaceXS))
-                                    Text(formatIDR(panelOut), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
-                                Column(Modifier.weight(1f)) {
-                                    Text(tr("Selisih", "Difference"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Spacer(Modifier.height(SpaceXS))
-                                    Text(formatIDR(panelProfit), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = if (panelProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
-                                Column(Modifier.weight(1f)) {
-                                    Text(tr("Transaksi", "Transactions"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Spacer(Modifier.height(SpaceXS))
-                                    Text("$panelSales", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                         }
