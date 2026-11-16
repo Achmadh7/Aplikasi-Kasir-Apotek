@@ -253,57 +253,51 @@ fun KeuanganScreen() {
                 }
             }
             Spacer(Modifier.height(SpaceL))
-            // Kartu Saldo Kas — warna gradasi biru di-revert ke kartu datar seperti semula.
-            // Redesain Varian 1 (pilihan
-            // Achmad 2026-11-04): tombol Catat Kas yang dulu berdiri sendiri di
-            // atas kartu kini menyatu sebagai baris bawah kartu ini.
+            // Kartu Saldo Kas compact C2 — DUA KOLOM (pilihan Achmad
+            // 2026-11-16, dari papan preview saldo-kas-compact): kiri =
+            // label + angka saldo + tombol Catat Kas kecil; kanan =
+            // Masuk/Keluar bertumpuk, dipisah garis vertikal. Kartu
+            // memendek ±140dp; grafik Arus Kas naik. Tombol tetap
+            // membuka/menutup formulir CS4 di bawah kartu.
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    // KE1 (pilihan Achmad 2026-11-14): label saldo saja,
-                    // tanpa ikon dompet di sampingnya (sesuai papan BR/KE).
-                    Text(tr("SALDO KAS", "CASH BALANCE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(SpaceS))
-                    AnimatedAmount(saldo, MaterialTheme.typography.headlineLarge, if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-                    // R18: bila agregat saldo gagal dimuat, angka 0 di atas
-                    // bukan saldo sebenarnya — beri keterangan (hanya saat
-                    // gagal, bukan saat muat pertama: loadError != null).
-                    if (cashBalance == null && loadError != null) {
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(tr("SALDO KAS", "CASH BALANCE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(SpaceS))
+                        AnimatedAmount(saldo, MaterialTheme.typography.titleLarge, if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        // R18: bila agregat saldo gagal dimuat, angka 0 di atas
+                        // bukan saldo sebenarnya — beri keterangan (hanya saat
+                        // gagal, bukan saat muat pertama: loadError != null).
+                        if (cashBalance == null && loadError != null) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(tr("Saldo tidak tersedia — gagal memuat.", "Balance unavailable — failed to load."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        }
+                        Spacer(Modifier.height(SpaceM))
+                        Button(
+                            onClick = { if (showForm) showForm = false else { formType = "in"; showForm = true } },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                            shape = RoundedCornerShape(18.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            if (showForm) {
+                                Icon(Icons.Default.ExpandLess, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(tr("Sembunyikan", "Hide"), style = MaterialTheme.typography.titleSmall)
+                            } else {
+                                Icon(Icons.Default.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(tr("Catat Kas", "Record Cash"), style = MaterialTheme.typography.titleSmall)
+                            }
+                        }
+                    }
+                    // Pemisah vertikal antar kolom.
+                    Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
+                    Spacer(Modifier.width(SpaceM))
+                    Column(Modifier.width(132.dp)) {
+                        Text("▲ " + tr("MASUK", "IN"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(4.dp))
-                        Text(tr("Saldo tidak tersedia — gagal memuat.", "Balance unavailable — failed to load."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                    }
-                    // KE1 (pilihan Achmad 2026-11-14): Masuk/Keluar dalam
-                    // dua kotak berdampingan (tanpa ikon panah, tanpa
-                    // pemisah vertikal, tanpa bar proporsi).
-                    Spacer(Modifier.height(SpaceM))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SpaceM)) {
-                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
-                            Column(Modifier.padding(12.dp)) {
-                                Text(tr("MASUK", "IN"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(4.dp))
-                                AnimatedAmount(saldoIn, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                        }
-                        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
-                            Column(Modifier.padding(12.dp)) {
-                                Text(tr("KELUAR", "OUT"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(4.dp))
-                                AnimatedAmount(saldoOut, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                        }
-                    }
-                    // Baris bawah kartu: tombol Catat Kas (menyatu, Varian 1).
-                    Spacer(Modifier.height(SpaceM))
-                    Button(
-                        onClick = { if (showForm) showForm = false else { formType = "in"; showForm = true } },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
-                        shape = RoundedCornerShape(24.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
-                    ) {
-                        if (showForm) {
-                            Icon(Icons.Default.ExpandLess, null); Spacer(Modifier.width(8.dp)); Text(tr("Sembunyikan", "Hide"), style = MaterialTheme.typography.titleMedium)
-                        } else {
-                            Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text(tr("Catat Kas", "Record Cash"), style = MaterialTheme.typography.titleMedium)
-                        }
+                        AnimatedAmount(saldoIn, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Spacer(Modifier.height(SpaceM))
+                        Text("▼ " + tr("KELUAR", "OUT"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(4.dp))
+                        AnimatedAmount(saldoOut, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
