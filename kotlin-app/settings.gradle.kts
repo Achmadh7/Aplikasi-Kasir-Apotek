@@ -12,6 +12,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "ApotikLestari"
+rootProject.name = "ApotekLestari"
 include(":app")
 include(":baseline-profile")

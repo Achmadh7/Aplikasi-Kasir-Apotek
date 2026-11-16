@@ -7,8 +7,10 @@ import id.apotek.lestari.data.Medicine
 import id.apotek.lestari.data.ProfitByMedicine
 import id.apotek.lestari.data.RekapHarian
 import id.apotek.lestari.data.RekapPenjualan
+import id.apotek.lestari.data.agregatPenjualanPerMetode
 import id.apotek.lestari.data.agregatRekapPenjualan
 import id.apotek.lestari.data.hitungLaba
+import id.apotek.lestari.data.isExpiryValid
 import id.apotek.lestari.data.local.CashEntryEntity
 import id.apotek.lestari.data.local.MedicineEntity
 import id.apotek.lestari.data.local.PurchaseEntity
@@ -25,6 +27,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.apache.poi.xssf.usermodel.XSSFSheet
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -506,5 +509,79 @@ class MoneyLogicTest {
         assertEquals(1, parsed.items.size)
         assertEquals(9000, parsed.items[0].sellPrice)
         assertEquals(0, parsed.items[0].buyPrice)
+    }
+
+    // M20 (audit 2026-11-16): predikat tanggal kadaluarsa wajib (W2).
+    @Test
+    fun w2_isExpiryValid_tanggalAtauCentang() {
+        // Tanggal terisi tanpa centang: valid.
+        assertTrue(isExpiryValid("2026-11-21", false))
+        // Tanggal kosong tanpa centang: tidak valid (Simpan harus menolak).
+        assertFalse(isExpiryValid("", false))
+        // Tanggal kosong + centang: valid.
+        assertTrue(isExpiryValid("", true))
+        // Tanggal terisi + centang: valid.
+        assertTrue(isExpiryValid("2026-11-21", true))
+        // Hanya spasi bukan tanggal: tidak valid.
+        assertFalse(isExpiryValid("   ", false))
+    }
+
+    // M21 (audit 2026-11-16): agregasi MB1 per cara bayar.
+    private fun penjualanUntukMb1(id: Int, total: Int, method: String, createdAt: String) =
+        SaleEntity(
+            id = id, invoiceNo = "INV-$id", total = total,
+            paymentMethod = method, amountPaid = total, changeAmount = 0,
+            createdAt = createdAt
+        )
+
+    private fun wibMillis(tahun: Int, bulan: Int, tanggal: Int): Long =
+        Calendar.getInstance(TimeZone.getTimeZone("Asia/Jakarta")).apply {
+            set(tahun, bulan, tanggal, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+    @Test
+    fun mb1_agregatPerMetode_totalPerMetodeDanNormalisasi() {
+        val awal = wibMillis(2026, Calendar.NOVEMBER, 1)
+        val akhir = wibMillis(2026, Calendar.DECEMBER, 1)
+        val sales = listOf(
+            penjualanUntukMb1(1, 100000, "Tunai", "2026-11-05T10:00:00.000Z"),
+            penjualanUntukMb1(2, 50000, "tunai", "2026-11-05T10:00:00.000Z"),
+            penjualanUntukMb1(3, 75000, " QRIS", "2026-11-06T10:00:00.000Z"),
+            penjualanUntukMb1(4, 200000, "Transfer ", "2026-11-07T10:00:00.000Z"),
+            // Metode tak dikenal: dilewati total, tapi dilaporkan.
+            penjualanUntukMb1(5, 99999, "E-Wallet", "2026-11-08T10:00:00.000Z"),
+            penjualanUntukMb1(6, 12345, "", "2026-11-08T10:00:00.000Z"),
+            // Tanggal tidak bisa diparse: dilewati seluruhnya.
+            penjualanUntukMb1(7, 77777, "Tunai", "bukan-tanggal"),
+            // Di luar bulan: dilewati.
+            penjualanUntukMb1(8, 11111, "Tunai", "2026-10-15T10:00:00.000Z")
+        )
+        val hasil = agregatPenjualanPerMetode(sales, awal, akhir)
+        assertEquals(150000L, hasil.totals["Tunai"])
+        assertEquals(75000L, hasil.totals["QRIS"])
+        assertEquals(200000L, hasil.totals["Transfer"])
+        assertEquals(2, hasil.metodeTakDikenal.size)
+        assertTrue(hasil.metodeTakDikenal.contains("E-Wallet"))
+        assertTrue(hasil.metodeTakDikenal.contains(""))
+    }
+
+    @Test
+    fun mb1_agregatPerMetode_batasBulanWIB() {
+        val awal = wibMillis(2026, Calendar.NOVEMBER, 1)
+        val akhir = wibMillis(2026, Calendar.DECEMBER, 1)
+        val sales = listOf(
+            // Tepat 00:00 WIB 1 Nov (17:00 UTC 31 Okt): masuk.
+            penjualanUntukMb1(1, 1000, "Tunai", "2026-10-31T17:00:00.000Z"),
+            // Sedetik sebelum awal bulan WIB: di luar.
+            penjualanUntukMb1(2, 2000, "Tunai", "2026-10-31T16:59:59.000Z"),
+            // Tepat 00:00 WIB 1 Des (akhir eksklusif): di luar.
+            penjualanUntukMb1(3, 3000, "Tunai", "2026-11-30T17:00:00.000Z"),
+            // Sedetik sebelum akhir bulan WIB: masuk.
+            penjualanUntukMb1(4, 4000, "Tunai", "2026-11-30T16:59:59.000Z")
+        )
+        val hasil = agregatPenjualanPerMetode(sales, awal, akhir)
+        assertEquals(5000L, hasil.totals["Tunai"])
+        assertTrue(hasil.metodeTakDikenal.isEmpty())
     }
 }

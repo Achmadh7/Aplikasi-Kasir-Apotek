@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Audit 2026-11-16 (round 2, M1–M22): backup now carries buy prices (HPP survives restore); backup restore and sync pull cross-check sale totals against item subtotals; money aggregates sum as Long and clamp to Int; the expiry-date form guard is reachable again and the last picked date survives unticking the no-expiry checkbox; PBF date/due-date validation; sale tombstones also tombstone their items; database v17 backfills the item-table updatedAt stamps; unit tests grown to 47 JVM tests.
+
 ## [1.3.0] - 2026-11-16
 
 ### Added
@@ -98,9 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Screen headers unified into the N2 solid dark premium card with tonal
   icon chips (light mode uses the H6 light-blue card with navy titles);
   the More page uses the L1 centred-identity layout with grouped cards.
-- Excel stock template uses 7 columns and the export adds an 8th Barcode
-  column (R6); the buy-price column was dropped from both, and older
-  files that still carry it import fine, the column is ignored.
+- Excel stock template uses 8 columns, including Harga Beli beside Harga Jual Grosir (X1+X2+X3); the export adds a 9th Barcode column. Older files without a Harga Beli column still import (read as 0).
 - The About page was redesigned twice (T10, then T2: a single grouped card
   with refreshed content) and reads the version from BuildConfig instead
   of a hand-written string.

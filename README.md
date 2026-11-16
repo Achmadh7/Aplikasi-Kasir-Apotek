@@ -58,11 +58,11 @@ Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58
 | Language | Kotlin 2.4.21 |
 | UI | Jetpack Compose — Material 3 Expressive (`material3` 1.5.0-rc01, Compose BOM 2026.09.00), Navigation Compose 2.10.2 |
 | Theme | `MaterialExpressiveTheme` + `MotionScheme.expressive()`; official components (`ShortNavigationBar`, `SegmentedButton`, chips, `ListItem`); color scheme generated with Google's Material Color Utilities algorithm (Fidelity style, seed `#0061A4`, 2025 color spec) |
-| Database | Room 2.8.5 (SQLite), offline-first — database version 16 (sync columns + soft deletes for Online Mode; v14 retired the stored buy prices, v15 added the PBF supplier directory, v16 added sync indexes) |
-| Online sync (optional) | Firebase Auth + Cloud Firestore (Firebase BOM 35.2.0), WorkManager 2.9.1 periodic sync, last-write-wins merging |
+| Database | Room 2.8.5 (SQLite), offline-first — database version 17 (sync columns + soft deletes for Online Mode; v14 retired the stored buy prices, v15 added the PBF supplier directory, v16 added sync indexes, v17 backfilled the item-table updatedAt stamps) |
+| Online sync (optional) | Firebase Auth + Cloud Firestore (Firebase BOM 35.2.0), WorkManager 2.12.0 periodic sync, last-write-wins merging |
 | Excel | Apache POI 5.5.1 (`.xlsx` import/export/template) |
 | Build | AGP 9.5.1, Gradle 9.6.0, compileSdk 37, targetSdk 36, minSdk 26 |
-| CI | GitHub Actions — 44 JVM unit tests, debug + signed release builds |
+| CI | GitHub Actions — 47 JVM unit tests, debug + signed release builds |
 | Printing | Android PrintManager + ESC/POS over Bluetooth |
 
 ## How to build the APK
