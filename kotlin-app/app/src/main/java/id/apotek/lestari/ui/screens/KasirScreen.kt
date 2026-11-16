@@ -350,10 +350,16 @@ fun KasirScreen() {
         KartuHeaderPremium(tr("Kasir", "Cashier"), Icons.Default.PointOfSale)
         Spacer(Modifier.height(SpaceL))
         DemoBanner()
-        SearchField(
-            value = search, onValueChange = { search = it },
-            modifier = Modifier.fillMaxWidth()
-        )
+        // A-Z di samping search (pilihan Achmad 2026-11-16): satu baris,
+        // search weight 1f + tombol urut 36dp rata tengah vertikal.
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            SearchField(
+                value = search, onValueChange = { search = it },
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+            SortToggle(sortAz = sortAz, onToggle = { sortAz = !sortAz })
+        }
         if (cartMsg.isNotEmpty()) {
             Spacer(Modifier.height(SpaceS))
             Text(cartMsg, style = MaterialTheme.typography.bodySmall)
@@ -371,13 +377,6 @@ fun KasirScreen() {
                 }
             }
         }
-        Spacer(Modifier.height(SpaceL))
-        // K1: teks jumlah "N obat" DIHAPUS (permintaan Achmad 2026-11-16)
-        // — hanya tombol urut A-Z yang tersisa, rata kanan.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            SortToggle(sortAz = sortAz, onToggle = { sortAz = !sortAz })
-        }
-        Spacer(Modifier.height(SpaceS))
             }
             itemsIndexed(sorted, key = { _, m -> m.id }) { _, m ->
                 val out = m.stock <= 0
