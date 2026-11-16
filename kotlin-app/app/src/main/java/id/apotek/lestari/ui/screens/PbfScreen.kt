@@ -157,16 +157,16 @@ fun PbfScreen() {
                 // Hari Ini dengan jumlah pembelian, Bulan Ini dengan nama
                 // bulan berjalan. Tetap hanya menghitung pembelian CASH.
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.weight(1f)) {
-                        Column(Modifier.padding(16.dp)) {
+                    ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
+                        Column(Modifier.padding(12.dp)) {
                             Text(tr("BELANJA HARI INI", "TODAY'S PURCHASES"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceXS))
                             AnimatedAmount(todayTotal, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface)
                             Text(tr("${todayPurchases.size} pembelian", "${todayPurchases.size} purchases"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.weight(1f)) {
-                        Column(Modifier.padding(16.dp)) {
+                    ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
+                        Column(Modifier.padding(12.dp)) {
                             Text(tr("BELANJA BULAN INI", "THIS MONTH'S PURCHASES"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceXS))
                             AnimatedAmount(monthTotal, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface)
@@ -277,11 +277,14 @@ fun PbfScreen() {
                 itemsIndexed(dayPurchases, key = { _, item -> "pbf-${item.id}" }) { index, p ->
                     
                     val isOpen = expanded == p.id
+                    // Kartu F1 KOTAK SENADA (pilihan Achmad 2026-11-16):
+                    // 12dp + surfaceContainerHigh.
                     ExpressiveCard(
-                        shape = MaterialTheme.shapes.extraLarge,
+                        shape = RoundedCornerShape(12.dp),
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         modifier = Modifier.fillMaxWidth().clickable { expanded = if (isOpen) null else p.id }
                     ) {
-                        Column(Modifier.padding(16.dp)) {
+                        Column(Modifier.padding(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text(p.pbfName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
