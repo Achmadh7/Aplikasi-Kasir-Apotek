@@ -260,7 +260,7 @@ fun KeuanganScreen() {
             // memendek ±140dp; grafik Arus Kas naik. Tombol tetap
             // membuka/menutup formulir CS4 di bawah kartu.
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp).height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(tr("SALDO KAS", "CASH BALANCE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(SpaceS))
@@ -290,7 +290,9 @@ fun KeuanganScreen() {
                     // Pemisah vertikal antar kolom.
                     Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
                     Spacer(Modifier.width(SpaceM))
-                    Column(Modifier.width(132.dp)) {
+                    // N10 (2026-11-16): 108dp supaya saldo titleLarge muat
+                    // penuh di layar 320dp (kolom kiri jadi 135dp).
+                    Column(Modifier.width(108.dp)) {
                         Text("▲ " + tr("MASUK", "IN"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(4.dp))
                         AnimatedAmount(saldoIn, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -369,17 +371,18 @@ fun KeuanganScreen() {
                             // sehingga garis selebar konten dan ikut tergulir.
                             Box {
                                 // Lapisan grid di belakang batang: 3 garis
-                                // di 1/3, 2/3, 3/3 maxFlow dengan label nilai
-                                // di kiri (gutter 36dp). Blok plot 108dp
+                                // (atas = maxFlow, tengah = 2/3, bawah = 1/3)
+                                // dengan label nilai di kiri (gutter 48dp;
+                                // N3+N9 2026-11-16). Blok plot 108dp
                                 // (label 16dp + jeda 2dp + batang 90dp);
                                 // garis berpusat di 18/48/78dp dari atas.
                                 Column(Modifier.matchParentSize()) {
                                     Spacer(Modifier.height(3.dp))
-                                    listOf(maxFlow / 3, 2 * maxFlow / 3, maxFlow).forEach { nilaiGaris ->
+                                    listOf(maxFlow, 2 * maxFlow / 3, maxFlow / 3).forEach { nilaiGaris ->
                                         Row(Modifier.fillMaxWidth().height(30.dp), verticalAlignment = Alignment.CenterVertically) {
                                             Text(
                                                 formatCompactIDR(nilaiGaris),
-                                                Modifier.width(32.dp), textAlign = TextAlign.End,
+                                                Modifier.width(44.dp), textAlign = TextAlign.End,
                                                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 maxLines = 1, overflow = TextOverflow.Ellipsis
                                             )
@@ -390,7 +393,7 @@ fun KeuanganScreen() {
                                     Spacer(Modifier.height(15.dp))
                                 }
                                 Row(
-                                    modifier = Modifier.fillMaxWidth().padding(start = 36.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(start = 48.dp),
                                     horizontalArrangement = Arrangement.spacedBy(SpaceXS),
                                     verticalAlignment = Alignment.Bottom
                                 ) {

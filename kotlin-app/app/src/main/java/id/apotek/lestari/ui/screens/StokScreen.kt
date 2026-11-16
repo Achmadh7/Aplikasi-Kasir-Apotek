@@ -610,7 +610,7 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                                     }
                                 }
                                 reload()
-                                msg = if (gagalUndo == 0) "${deleted.size} obat dikembalikan."
+                                msg = if (gagalUndo == 0) tr("${deleted.size} obat dikembalikan.", "${deleted.size} medicines restored.")
                                 else tr("${deleted.size - gagalUndo} obat dikembalikan, $gagalUndo gagal.", "${deleted.size - gagalUndo} medicines restored, $gagalUndo failed.")
                             }
                         }
@@ -646,7 +646,7 @@ fun OptionPickerSheet(
         )
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 20.dp))
         LazyColumn(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-            items(options) { opt ->
+            items(options, key = { it }) { opt ->
                 Column {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
