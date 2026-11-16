@@ -496,20 +496,20 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                     if (reminderTagihan != null) {
                                         Text(reminderTagihan, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
+                                    // "+N lainnya" kembali tepat di bawah daftar
+                                    // obat (permintaan Achmad 2026-11-16), bukan
+                                    // lagi sebaris dengan tombol di footer.
+                                    if (reminderSisa > 0) {
+                                        Text(tr("+$reminderSisa lainnya", "+$reminderSisa more"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.primary)
+                                    }
                                 }
                             }
-                            // R1: "+N lainnya" dan tautan jadi satu baris.
-                            // FIX 2026-11-16 (laporan Achmad: tidak sejajar):
-                            // footer start 10dp supaya "+N lainnya" sejajar
-                            // dengan daftar obat + label kotak di atasnya
-                            // (sama-sama 26dp dari tepi kartu).
+                            // Footer kini hanya berisi tombol "Lihat Pengingat >"
+                            // rata kanan — "+N lainnya" sudah pindah ke bawah
+                            // daftar obat di atas (permintaan Achmad 2026-11-16).
                             if (hasReminders) {
                                 Spacer(Modifier.height(SpaceS))
-                                Row(Modifier.fillMaxWidth().padding(start = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        if (reminderSisa > 0) tr("+$reminderSisa lainnya", "+$reminderSisa more") else "",
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.primary
-                                    )
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                                     TextButton(onClick = onGoPengingat, contentPadding = PaddingValues(0.dp)) {
                                         Text(tr("Lihat Pengingat >", "View Reminders >"), style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp))
                                     }
