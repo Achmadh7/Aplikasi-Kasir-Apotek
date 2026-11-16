@@ -732,6 +732,9 @@ private data class LainnyaTile(
 
 // Baris menu berkelompok gaya KasBulanan untuk halaman Lainnya:
 // kotak ikon membulat + judul + subjudul + chevron (atau isi trailing lain).
+// N1 KOTAK SENADA 12DP (pilihan Achmad 2026-11-16): kotak ikon
+// primaryContainer + ikon onPrimaryContainer; bila warnaIkon diisi
+// (Keluar Akun = error) kotaknya errorContainer + onErrorContainer.
 @Composable
 private fun BarisGrupLainnya(
     ikon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -745,7 +748,9 @@ private fun BarisGrupLainnya(
         Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable { onClick() } else Modifier).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
+        val kotakIkon = if (warnaIkon != null) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+        val tintIkon = if (warnaIkon != null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
+        Surface(color = kotakIkon, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
             // A4 (animasi Lainnya, 2026-11-15): ikon crossfade saat berganti
             // (tema bulan<->matahari) — fade 250ms, tanpa geser/skala.
             AnimatedContent(
@@ -753,7 +758,7 @@ private fun BarisGrupLainnya(
                 transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(250)) },
                 label = "ikonBarisLainnya"
             ) { ikonAnim ->
-                Icon(ikonAnim, null, tint = warnaIkon ?: MaterialTheme.colorScheme.primary, modifier = Modifier.padding(9.dp).fillMaxSize())
+                Icon(ikonAnim, null, tint = tintIkon, modifier = Modifier.padding(9.dp).fillMaxSize())
             }
         }
         Spacer(Modifier.width(12.dp))
@@ -847,18 +852,24 @@ fun LainnyaScreen(
             onlineSiap -> tr("Mode tamu \u2014 data hanya tersimpan di HP ini", "Guest mode \u2014 data is only stored on this phone")
             else -> tr("Aplikasi berjalan lokal sepenuhnya di HP ini", "The app runs fully locally on this phone")
         }
+        // N1 KOTAK SENADA 12DP (pilihan Achmad 2026-11-16): kartu status
+        // 12dp surfaceContainerHigh; ikon awan dalam kotak 40dp
+        // primaryContainer (onPrimaryContainer) seperti kotak ikon baris
+        // menu — mode tetap terbaca dari judul "Mode Online/Offline".
         Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+            shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth().padding(vertical = SpaceS)
         ) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (emailOnline != null) Icons.Default.CloudDone else Icons.Default.CloudOff,
-                    null,
-                    tint = if (emailOnline != null) Color(0xFF43A047) else Color(0xFFE3B341),
-                    modifier = Modifier.size(28.dp)
-                )
+            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
+                    Icon(
+                        if (emailOnline != null) Icons.Default.CloudDone else Icons.Default.CloudOff,
+                        null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(9.dp).fillMaxSize()
+                    )
+                }
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(
@@ -885,7 +896,8 @@ fun LainnyaScreen(
             LainnyaTile("pemasok", tr("Pemasok", "Suppliers"), tr("Daftar PBF", "PBF list"), Icons.Default.Store),
             LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
         )
-        ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
+        // N1: kartu grup 12dp surfaceContainerHigh (ketiga kartu grup).
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column(Modifier.padding(vertical = 8.dp)) {
                 tiles.forEachIndexed { idx, tile ->
                     if (idx > 0) PemisahGrup()
@@ -896,7 +908,7 @@ fun LainnyaScreen(
         Spacer(Modifier.height(SpaceM))
         // Kartu grup pengaturan: tema (saklar), bahasa, sinkronisasi,
         // keluar akun.
-        ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column(Modifier.padding(vertical = 8.dp)) {
                 BarisGrupLainnya(
                     if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
@@ -944,7 +956,7 @@ fun LainnyaScreen(
         }
         Spacer(Modifier.height(SpaceM))
         // Kartu Tentang tersendiri, seperti KasBulanan.
-        ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column(Modifier.padding(vertical = 8.dp)) {
                 BarisGrupLainnya(
                     Icons.Default.Info,
@@ -960,8 +972,10 @@ fun LainnyaScreen(
             headlineContent = { Text(tr("Reset Semua Data", "Reset All Data"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error) },
             supportingContent = { Text(tr("Hapus data di HP ini dan di awan, mulai dari nol", "Delete data on this phone and in the cloud, start from zero")) },
             leadingContent = {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                    Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.padding(10.dp).size(22.dp))
+                // N1: lingkaran ikon merah senada (errorContainer +
+                // onErrorContainer), seperti kotak ikon Keluar Akun.
+                Surface(color = MaterialTheme.colorScheme.errorContainer, shape = CircleShape) {
+                    Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(10.dp).size(22.dp))
                 }
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
