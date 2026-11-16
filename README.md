@@ -5,7 +5,7 @@ An Android app for pharmacies: sales cashier, medicine stock, cash book, profit 
 [![Build APK](https://github.com/Achmadh7/Aplikasi-Kasir-Apotek/actions/workflows/main.yml/badge.svg)](https://github.com/Achmadh7/Aplikasi-Kasir-Apotek/actions)
 
 - **Technology:** Kotlin + Jetpack Compose (Material 3 Expressive), local Room/SQLite database
-- **App version:** 1.2.0 — minimum Android 8.0 (API 26)
+- **App version:** 1.3.0 — minimum Android 8.0 (API 26)
 - **Time zone:** all "today / this month" boundaries use Asia/Jakarta (WIB)
 
 ## Screenshots
@@ -70,7 +70,7 @@ Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58
 **Without a computer (the everyday flow):**
 
 1. Open the **Actions** tab in this repo → the **Build APK** workflow → **Run workflow** on the `main` branch.
-2. Download the **`Apotek Lestari-1.2.0-Release`** artifact (signed release build, R8 — the one used day to day) or **`app-debug-apk`** (debug build) from the finished run page.
+2. Download the **`Apotek Lestari-1.3.0-Release`** artifact (signed release build, R8 — the one used day to day) or **`app-debug-apk`** (debug build) from the finished run page.
 3. Install the APK on the phone/tablet.
 
 **With Android Studio:** open the `kotlin-app/` folder, wait for Gradle Sync, then Build APK.
