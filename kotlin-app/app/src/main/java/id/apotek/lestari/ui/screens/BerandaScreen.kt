@@ -290,7 +290,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                             Text(
                                                 // Nominal pill format PENUH (permintaan Achmad
                                                 // 2026-11-16): 'Rp 2.940.000', bukan 'Rp 2,94jt'.
-                                                if (diff == 0) tr("Sama", "Same") else "Rp ${formatIDR(kotlin.math.abs(diff))}",
+                                                if (diff == 0) tr("Sama", "Same") else formatIDR(kotlin.math.abs(diff)),
                                                 style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = pillTint, maxLines = 1, overflow = TextOverflow.Ellipsis
                                             )
                                         }
@@ -306,12 +306,12 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             // (N1 2026-11-16).
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 listOf(
-                                    Triple(tr("Pengeluaran", "Expenses"), "Rp ${formatIDR(panelOut)}", MaterialTheme.colorScheme.error),
+                                    Triple(tr("Pengeluaran", "Expenses"), formatIDR(panelOut), MaterialTheme.colorScheme.error),
                                     // Nilai kotak format PENUH (bukan ringkas),
                                     // atas permintaan Achmad 2026-11-16: Roboto Bold
                                     // 12sp muat sampai ratusan juta di lebar pakai
                                     // 88,3dp (padding horizontal kotak 8dp; N1).
-                                    Triple(tr("Selisih", "Difference"), (if (panelProfit < 0) "-" else "") + "Rp ${formatIDR(kotlin.math.abs(panelProfit))}", if (panelProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error),
+                                    Triple(tr("Selisih", "Difference"), (if (panelProfit < 0) "-" else "") + formatIDR(kotlin.math.abs(panelProfit)), if (panelProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error),
                                     Triple(tr("Transaksi", "Transactions"), "$panelSales", MaterialTheme.colorScheme.onSurface)
                                 ).forEach { (label, nilai, warna) ->
                                     Surface(
