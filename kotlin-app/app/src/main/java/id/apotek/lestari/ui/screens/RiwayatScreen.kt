@@ -702,14 +702,17 @@ fun RiwayatScreen() {
                     val globalIndex = groupOffset + index
                     val isOpen = expanded == s.id
                     
+                    // Kartu H1 KOTAK SENADA (pilihan Achmad 2026-11-16):
+                    // 12dp + surfaceContainerHigh, lingkaran ikon biru.
                     ExpressiveCard(
-                        shape = MaterialTheme.shapes.extraLarge,
+                        shape = RoundedCornerShape(12.dp),
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         modifier = Modifier.fillMaxWidth().clickable { expanded = if (isOpen) null else s.id }
                     ) {
-                        Column(Modifier.padding(16.dp)) {
+                        Column(Modifier.padding(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                                    Icon(Icons.Default.Receipt, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(20.dp))
+                                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                                    Icon(Icons.Default.Receipt, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(10.dp).size(20.dp))
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
