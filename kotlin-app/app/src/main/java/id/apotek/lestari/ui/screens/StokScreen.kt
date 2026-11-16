@@ -492,7 +492,7 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
             ExpressiveCard(
                 shape = RoundedCornerShape(12.dp),
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.fillMaxWidth().clickable {
+                modifier = Modifier.fillMaxWidth().animateItem().clickable {
                     if (selectMode) {
                         selectedMeds = if (selectedMeds.containsKey(m.id)) selectedMeds - m.id else selectedMeds + (m.id to m)
                     } else {
@@ -516,6 +516,8 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                     // baris-stok): kotak 12dp senada P3/R1/K1 + search V1;
                     // ketuk kartu = edit (mode normal) atau centang
                     // (mode Pilih); hapus hanya lewat mode Pilih.
+                    // Animasi A1 (2026-11-16): animateItem() di kartu —
+                    // baris baru muncul fade + geser halus.
                     Column(Modifier.weight(1f)) {
                         Text(
                             m.name,

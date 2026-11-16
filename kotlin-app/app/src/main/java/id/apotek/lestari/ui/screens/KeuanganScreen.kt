@@ -464,7 +464,9 @@ fun KeuanganScreen() {
         itemsIndexed(shown, key = { _, e -> e.id }) { index, e ->
             
             val isIn = e.type == "in"
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+            // Animasi A1 (2026-11-16, pilihan Achmad): entri baru
+            // muncul dengan fade + geser halus (animateItem standar).
+            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth().animateItem()) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = Color.White, shape = CircleShape) {
                         Icon(
