@@ -411,13 +411,16 @@ fun KeuanganScreen() {
             val isIn = e.type == "in"
             // Animasi A1 (2026-11-16, pilihan Achmad): entri baru
             // muncul dengan fade + geser halus (animateItem standar).
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth().animateItem()) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = Color.White, shape = CircleShape) {
+            // Entri E2 PADAT (pilihan Achmad 2026-11-16): kotak 12dp
+            // senada P3/R1/K1/B1 + lingkaran berwarna (bukan putih) +
+            // baris lebih pendek (ikon 32dp, padding 10dp).
+            ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth().animateItem()) {
+                Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(color = if (isIn) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = CircleShape) {
                         Icon(
                             if (isIn) Icons.Default.SouthWest else Icons.Default.NorthEast, null,
-                            tint = if (isIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(10.dp).size(20.dp)
+                            tint = if (isIn) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(8.dp).size(16.dp)
                         )
                     }
                     Spacer(Modifier.width(12.dp))
