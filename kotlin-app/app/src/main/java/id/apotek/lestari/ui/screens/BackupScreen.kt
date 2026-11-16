@@ -209,7 +209,7 @@ fun BackupScreen() {
                     }
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Backup Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(tr("Backup Data", "Backup Data"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(tr("Simpan salinan semua data ke file .json", "Save a copy of all data to a .json file"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -235,7 +235,7 @@ fun BackupScreen() {
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.fillMaxWidth().height(52.dp)
-                ) { Text("Backup Data") }
+                ) { Text(tr("Backup Data", "Backup Data")) }
             }
         }
         Spacer(Modifier.height(SpaceL))

@@ -486,7 +486,7 @@ fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, sale: Sal
             ) {
                 Icon(Icons.Default.Print, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Cetak")
+                Text(tr("Cetak", "Print"))
             }
         }
         Spacer(Modifier.height(SpaceS))
@@ -712,7 +712,7 @@ fun RiwayatScreen() {
                         Spacer(Modifier.width(8.dp))
                         Text(
                             "${daySales.size} transaksi • ${formatIDR(dayTotal)}",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

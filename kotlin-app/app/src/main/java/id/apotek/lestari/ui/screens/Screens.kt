@@ -192,7 +192,7 @@ fun PurchasePaymentChip(paymentType: String) {
         enabled = false,
         label = {
             Text(
-                if (kredit) tr("Kredit", "Credit") else "Cash",
+                if (kredit) tr("Kredit", "Credit") else tr("Tunai", "Cash"),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
             )

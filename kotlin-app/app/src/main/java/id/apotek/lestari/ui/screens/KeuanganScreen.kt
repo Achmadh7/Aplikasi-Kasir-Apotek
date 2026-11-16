@@ -428,13 +428,14 @@ fun KeuanganScreen() {
                         Text(e.description, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
                             "${e.category} • ${formatDateTimeID(e.createdAt)} • ${if (e.source == "sale") tr("Otomatis", "Automatic") else "Manual"}",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
                     }
                     Text(
                         (if (isIn) "+ " else "- ") + formatIDR(e.amount),
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
-                        color = if (isIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        color = if (isIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
             }

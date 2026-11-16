@@ -266,7 +266,7 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                         }
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("Import / Export Excel", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(tr("Import / Export Excel", "Import / Export Excel"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(tr("Isi banyak obat sekaligus lewat file .xlsx", "Add many medicines at once via an .xlsx file"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -278,7 +278,7 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                         ) {
                             Icon(Icons.Default.Description, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Template", maxLines = 1)
+                            Text(tr("Template", "Template"), maxLines = 1)
                         }
                         Button(
                             onClick = { importLauncher.launch(arrayOf(ExcelHelper.MIME_XLSX)) },
@@ -286,7 +286,7 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                         ) {
                             Icon(Icons.Default.Upload, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Import", maxLines = 1)
+                            Text(tr("Import", "Import"), maxLines = 1)
                         }
                         OutlinedButton(
                             onClick = {
@@ -297,7 +297,7 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                         ) {
                             Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Export", maxLines = 1)
+                            Text(tr("Export", "Export"), maxLines = 1)
                         }
                     }
                 }
@@ -633,7 +633,7 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
         unitInteraction.interactions.collect { if (it is PressInteraction.Press) showUnitSheet = true }
     }
     LaunchedEffect(expiryInteraction) {
-        expiryInteraction.interactions.collect { if (it is PressInteraction.Press) showDatePicker = true }
+        expiryInteraction.interactions.collect { if (it is PressInteraction.Press && !noExpiry) showDatePicker = true }
     }
     var sell by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.sellPrice?.toString() ?: ""))) }
     // Harga jual grosir: boleh kosong (= belum diatur, nilai 0); ditampilkan
@@ -645,6 +645,9 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
     var stock by remember(editing) { mutableStateOf(editing?.stock?.toString() ?: "") }
     var expiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
     var noExpiry by remember(editing) { mutableStateOf(false) }
+    // M13: tanggal terakhir yang dipilih — centang dilepas mengembalikan
+    // tanggal ini (bukan ""), supaya tanggal tidak hilang permanen.
+    var lastExpiry by remember(editing) { mutableStateOf(editing?.expiryDate ?: "") }
     var formError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -668,12 +671,12 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                     Text(tr("IDENTITAS", "IDENTITY"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    OutlinedTextField(name, { name = it }, label = { Text(tr("Nama Obat", "Medicine Name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(name, { name = it; formError = "" }, label = { Text(tr("Nama Obat", "Medicine Name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                         OutlinedTextField(
                             value = category, onValueChange = {}, label = { Text(tr("Kategori", "Category")) },
                             readOnly = true, singleLine = true,
-                            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Pilih kategori") },
+                            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = tr("Pilih kategori", "Choose category")) },
                             interactionSource = categoryInteraction,
                             modifier = Modifier.weight(1f)
                         )
@@ -690,16 +693,16 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                     Text(tr("HARGA", "PRICE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    OutlinedTextField(sell, { sell = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Jual", "Sell Price")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(grosir, { grosir = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Jual Grosir (boleh kosong)", "Wholesale Sell Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(beli, { beli = formatDecimalFieldValue(it) }, label = { Text(tr("Harga Beli (boleh kosong)", "Buy Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(sell, { sell = formatDecimalFieldValue(it); formError = "" }, label = { Text(tr("Harga Jual", "Sell Price")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(grosir, { grosir = formatDecimalFieldValue(it); formError = "" }, label = { Text(tr("Harga Jual Grosir (boleh kosong)", "Wholesale Sell Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(beli, { beli = formatDecimalFieldValue(it); formError = "" }, label = { Text(tr("Harga Beli (boleh kosong)", "Buy Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
             }
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                     Text(tr("STOK & KADALUWARSA", "STOCK & EXPIRY"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                        OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() } }, label = { Text(tr("Stok", "Stock")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
+                        OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() }; formError = "" }, label = { Text(tr("Stok", "Stock")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
                         OutlinedTextField(
                             value = if (expiry.isBlank()) "" else formatDateID(expiry),
                             onValueChange = {},
@@ -716,9 +719,10 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
             // W2 TANGGAL KADALUWARSA WAJIB + PENGECUALIAN (pilihan Achmad
             // 2026-11-16): Simpan mensyaratkan tanggal kadaluarsa ATAU
             // centang ini (barang yang memang tidak punya ED). Centang
-            // menghapus tanggal yang sudah dipilih; impor Excel tetap
+            // menghapus tanggal yang sudah dipilih; centang dilepas
+            // mengembalikan tanggal terakhir (M13). Impor Excel tetap
             // boleh kosong (validasi hanya di form ini).
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { val baru = !noExpiry; noExpiry = baru; if (baru) expiry = "" }) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { val baru = !noExpiry; noExpiry = baru; if (baru) expiry = "" else expiry = lastExpiry; formError = "" }) {
                 Checkbox(checked = noExpiry, onCheckedChange = null)
                 Spacer(Modifier.width(8.dp))
                 Text(tr("Tidak ada tanggal kadaluarsa", "No expiry date"), style = MaterialTheme.typography.bodyMedium)
@@ -732,9 +736,12 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                 Button(
                     onClick = {
                         scope.launch {
-                            // W2: tanggal kadaluarsa wajib, kecuali centang
-                            // "Tidak ada tanggal kadaluarsa".
-                            if (expiry.isBlank() && !noExpiry) {
+                            // W2 + M2: tanggal kadaluarsa wajib, kecuali
+                            // centang "Tidak ada tanggal kadaluarsa".
+                            // Penjaga tinggal di sini (bukan di enabled
+                            // Simpan) supaya tombol tetap bisa ditekan dan
+                            // formError terlihat.
+                            if (!isExpiryValid(expiry, noExpiry)) {
                                 formError = tr("Tanggal kadaluarsa wajib diisi atau centang \"Tidak ada tanggal kadaluarsa\".", "Expiry date is required, or tick \"No expiry date\".")
                                 return@launch
                             }
@@ -760,7 +767,7 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                             }
                         }
                     },
-                    enabled = name.isNotBlank() && parseDecimal(sell.text) > 0 && (expiry.isNotBlank() || noExpiry),
+                    enabled = name.isNotBlank() && parseDecimal(sell.text) > 0,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.weight(1f).height(52.dp)
@@ -776,12 +783,12 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { expiry = dayKeyID(Date(it)) }
+                    datePickerState.selectedDateMillis?.let { expiry = dayKeyID(Date(it)); lastExpiry = expiry; formError = "" }
                     showDatePicker = false
                 }) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { expiry = ""; showDatePicker = false }) { Text(tr("Hapus", "Clear")) }
+                TextButton(onClick = { expiry = ""; lastExpiry = ""; formError = ""; showDatePicker = false }) { Text(tr("Hapus", "Clear")) }
                 TextButton(onClick = { showDatePicker = false }) { Text(tr("Batal", "Cancel")) }
             }
         ) {
@@ -796,11 +803,11 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
     if (showCategorySheet) {
         // Nilai lama yang tidak ada di daftar tetap ditampilkan di atas agar tidak hilang.
         val options = if (category in CATEGORIES) CATEGORIES else listOf(category) + CATEGORIES
-        OptionPickerSheet(title = tr("Kategori", "Category"), options = options, selected = category, onSelect = { category = it; showCategorySheet = false }, onDismiss = { showCategorySheet = false })
+        OptionPickerSheet(title = tr("Kategori", "Category"), options = options, selected = category, onSelect = { category = it; formError = ""; showCategorySheet = false }, onDismiss = { showCategorySheet = false })
     }
     if (showUnitSheet) {
         val options = if (unit in UNITS) UNITS else listOf(unit) + UNITS
-        OptionPickerSheet(title = tr("Satuan", "Unit"), options = options, selected = unit, onSelect = { unit = it; showUnitSheet = false }, onDismiss = { showUnitSheet = false })
+        OptionPickerSheet(title = tr("Satuan", "Unit"), options = options, selected = unit, onSelect = { unit = it; formError = ""; showUnitSheet = false }, onDismiss = { showUnitSheet = false })
     }
 }
 
