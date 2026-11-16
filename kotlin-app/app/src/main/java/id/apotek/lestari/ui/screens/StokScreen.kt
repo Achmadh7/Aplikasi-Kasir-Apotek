@@ -44,9 +44,6 @@ import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Spring
 import androidx.compose.material3.*
@@ -222,26 +219,6 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val listState = rememberLazyListState()
-    // FAB Tambah Obat: sembunyi saat daftar digulir ke bawah, muncul lagi
-    // saat digulir ke atas (permintaan Achmad 2026-10-31).
-    var fabVisible by remember { mutableStateOf(true) }
-    var lastScrollIndex by remember { mutableIntStateOf(0) }
-    var lastScrollOffset by remember { mutableIntStateOf(0) }
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .collect { (index, offset) ->
-                fabVisible = when {
-                    index == 0 && offset == 0 -> true
-                    index > lastScrollIndex -> false
-                    index < lastScrollIndex -> true
-                    offset > lastScrollOffset + 8 -> false
-                    offset < lastScrollOffset - 8 -> true
-                    else -> fabVisible
-                }
-                lastScrollIndex = index
-                lastScrollOffset = offset
-            }
-    }
     // Muat awal + setiap kali layar kembali tampil (resumeKey): langsung
     // tanpa menunggu. Dulu muat awal ikut antre di debounce pencarian di
     // bawah, jadi menu Stok terasa delay saat dibuka (perbaikan 2026-11-01).
@@ -380,9 +357,23 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
             }
             Spacer(Modifier.height(SpaceL))
             // Ringkasan stok ("N jenis obat • N menipis • N habis")
-            // DIHAPUS atas permintaan Achmad 2026-11-16 — hanya tombol
-            // Pilih + urut yang tersisa, rata kanan.
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+            // DIHAPUS atas permintaan Achmad 2026-11-16.
+            // E2 (pilihan Achmad 2026-11-16): tombol Tambah Obat di kiri
+            // baris ini (FAB dihapus); tombol Pilih + urut tetap kanan.
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                // Tombol Tambah Obat — sedikit compact dari mock papan:
+                // tinggi 32dp (bukan 36dp), ikon 16dp, padding 8dp.
+                Button(
+                    onClick = { editing = null; showForm = true },
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(tr("Tambah Obat", "Add Medicine"), style = MaterialTheme.typography.bodyMedium)
+                }
+                Spacer(Modifier.weight(1f))
                 // Tombol Pilih/Batal (mode pilih banyak) + tombol urut 3 mode
                 // (A-Z -> Z-A -> Terendah -> kembali ke A-Z).
                 OutlinedButton(
@@ -557,26 +548,8 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
             
         }
     }
-        // FAB Tambah Obat (TA1, pilihan Achmad 2026-11-15): tombol bulat
-        // 56dp berisi ikon + saja; tetap melayang di kanan bawah dan naik
-        // sedikit saat Snackbar tampil supaya tombol aksinya (mis. Urungkan)
-        // tidak tertutup.
-        val fabBottomPadding = if (snackbarHostState.currentSnackbarData != null) 84.dp else 16.dp
-        AnimatedVisibility(
-            visible = fabVisible,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = fabBottomPadding),
-            enter = EnterTransition.None,
-            exit = ExitTransition.None
-        ) {
-            FloatingActionButton(
-                onClick = { editing = null; showForm = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = CircleShape
-            ) {
-                Icon(Icons.Default.Add, tr("Tambah Obat", "Add Medicine"))
-            }
-        }
+        // FAB Tambah Obat (TA1) DIHAPUS 2026-11-16 (E2, pilihan Achmad):
+        // tambah obat hanya lewat tombol di baris Pilih/A-Z di atas.
         SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
     }
     if (showForm) MedicineFormDialog(editing = editing, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
