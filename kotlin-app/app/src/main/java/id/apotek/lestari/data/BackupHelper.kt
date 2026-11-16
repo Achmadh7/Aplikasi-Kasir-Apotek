@@ -57,6 +57,10 @@ object BackupHelper {
             o.put("unit", m.unit)
             o.put("sellPrice", m.sellPrice)
             o.put("wholesalePrice", m.wholesalePrice)
+            // M1 (audit 2026-11-16): Harga Beli ikut dibackup — tanpanya
+            // restore menolkan buyPrice dan Laba Kotor jadi sama dengan
+            // omzet (parse sudah membaca buyPrice, optInt 0 untuk file lama).
+            o.put("buyPrice", m.buyPrice)
             o.put("stock", m.stock)
             if (m.expiryDate != null) o.put("expiryDate", m.expiryDate) else o.put("expiryDate", JSONObject.NULL)
             if (m.barcode != null) o.put("barcode", m.barcode) else o.put("barcode", JSONObject.NULL)
@@ -95,6 +99,9 @@ object BackupHelper {
             o.put("qty", it.qty)
             o.put("price", it.price)
             o.put("priceType", it.priceType)
+            // M1 (audit 2026-11-16): snapshot Harga Beli item ikut
+            // dibackup, seperti item PBF di bawah (parse sudah membacanya).
+            o.put("buyPrice", it.buyPrice)
             o.put("subtotal", it.subtotal)
             o.put("remoteId", it.remoteId)
             o.put("updatedAt", it.updatedAt)
@@ -311,6 +318,33 @@ object BackupHelper {
                 throw IllegalArgumentException(
                     tr("Baris item penjualan ke-${index + 1} rusak: saleId ${item.saleId} ", "Sale item row ${index + 1} is invalid: saleId ${item.saleId} ") +
                         tr("tidak ditemukan di daftar sales", "was not found in the sales list")
+                )
+            }
+        }
+
+        // M3 (audit 2026-11-16): validasi silang total penjualan —
+        // total harus sama dengan jumlah subtotal itemnya, amountPaid
+        // tidak boleh kurang dari total, dan changeAmount harus sama
+        // dengan amountPaid - total. File yang dibuat aplikasi sendiri
+        // selalu konsisten (createSale menghitung ketiganya dari Long
+        // yang sama); ini untuk file yang diedit tangan.
+        val itemsBySale = items.groupBy { it.saleId }
+        for ((i, s) in sales.withIndex()) {
+            val l = tr("Baris penjualan ke-${i + 1}", "Sale row ${i + 1}")
+            val jumlahSubtotal = itemsBySale[s.id].orEmpty().sumOf { it.subtotal.toLong() }
+            if (s.total.toLong() != jumlahSubtotal) {
+                throw IllegalArgumentException(
+                    tr("$l rusak: total ${s.total} tidak sama dengan jumlah subtotal item $jumlahSubtotal", "$l is invalid: total ${s.total} does not equal the sum of item subtotals $jumlahSubtotal")
+                )
+            }
+            if (s.amountPaid < s.total) {
+                throw IllegalArgumentException(
+                    tr("$l rusak: amountPaid ${s.amountPaid} kurang dari total ${s.total}", "$l is invalid: amountPaid ${s.amountPaid} is less than total ${s.total}")
+                )
+            }
+            if (s.changeAmount.toLong() != s.amountPaid.toLong() - s.total.toLong()) {
+                throw IllegalArgumentException(
+                    tr("$l rusak: changeAmount ${s.changeAmount} tidak sama dengan amountPaid ${s.amountPaid} - total ${s.total}", "$l is invalid: changeAmount ${s.changeAmount} does not equal amountPaid ${s.amountPaid} - total ${s.total}")
                 )
             }
         }

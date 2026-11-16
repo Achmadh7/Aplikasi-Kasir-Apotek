@@ -350,7 +350,11 @@ fun parseISODate(s: String?): Date? {
     for (p in patterns) {
         try {
             val f = SimpleDateFormat(p, Locale.US)
-            if (p.contains("T")) f.timeZone = TimeZone.getTimeZone("UTC")
+            // M7 (audit 2026-11-16): UTC untuk SEMUA pola — pola tanpa
+            // "T" (tanggal saja / jam tanpa T) sebelumnya memakai zona
+            // perangkat, jadi hasilnya bergeser bila zona perangkat
+            // bukan WIB. Semua tanggal di aplikasi ini UTC (lihat nowIso).
+            f.timeZone = TimeZone.getTimeZone("UTC")
             f.isLenient = false
             return f.parse(value)
         } catch (_: Exception) {

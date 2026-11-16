@@ -1,6 +1,7 @@
 package id.apotek.lestari.data
 
 import android.content.Context
+import android.util.Log
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -286,6 +287,12 @@ class SyncManager(private val repository: Repository) {
                 ditarik++
             }
 
+            // M3 (audit 2026-11-16): rekonsiliasi silang setelah semua
+            // item ditarik — penjualan yang totalnya tidak cocok dengan
+            // jumlah subtotal itemnya hanya dicatat di log (tidak
+            // dihapus; lihat Repository.rekonsiliasiPenjualanDitarik).
+            val tidakCocok = repository.rekonsiliasiPenjualanDitarik()
+            if (tidakCocok > 0) Log.w("OnlineSync", "rekonsiliasi: $tidakCocok penjualan totalnya tidak cocok dengan jumlah subtotal itemnya (periksa log Repository)")
             repository.purgeTombstones()
             HasilSync.Berhasil(didorong, ditarik)
         } catch (e: Exception) {

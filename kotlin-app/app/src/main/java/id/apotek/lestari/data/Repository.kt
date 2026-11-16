@@ -79,6 +79,17 @@ class Repository {
     /** Cap waktu sekarang (ms epoch) untuk kolom sinkronisasi updatedAt. */
     private fun nowMillis(): Long = System.currentTimeMillis()
 
+    /** M8 (audit 2026-11-16): yyyy-MM-dd ketat — bentuk 4-2-2 digit dan
+     *  tanggal kalender yang benar (menolak 2026-02-30, 2026-13-01). */
+    private fun tanggalValid(s: String): Boolean {
+        if (!Regex("""\d{4}-\d{2}-\d{2}""").matches(s)) return false
+        return try {
+            SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { isLenient = false }.parse(s) != null
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     /** Identitas awan acak untuk baris baru (awalan menandai tabelnya). */
     private fun genRemoteId(awalan: String): String = awalan + "-" + UUID.randomUUID().toString()
 
@@ -124,11 +135,14 @@ class Repository {
         val medById = meds.associateBy { it.id }
 
         fun instantOf(iso: String): Long? = parseISODate(iso)?.time
-        var todayIn = 0
-        var yesterdayIn = 0
-        var todayOut = 0
-        var monthIn = 0
-        var monthOut = 0
+        // M5 (audit 2026-11-16): jumlahkan uang sebagai Long supaya total
+        // di atas Rp 2,1 miliar tidak meluber diam-diam (pola R1);
+        // dijepit ke Int saat Dashboard dibuat di bawah.
+        var todayIn = 0L
+        var yesterdayIn = 0L
+        var todayOut = 0L
+        var monthIn = 0L
+        var monthOut = 0L
         for (e in entries) {
             val t = instantOf(e.createdAt) ?: continue
             // Pemasukan hanya dari penjualan (source "sale") — kas masuk manual
@@ -180,8 +194,8 @@ class Repository {
             DayCash(dayKeyID(date), dayLabelID(date), income, expense)
         }
         Dashboard(
-            todayIn = todayIn, yesterdayIn = yesterdayIn, todayOut = todayOut, todayProfit = todayIn - todayOut,
-            monthIn = monthIn, monthOut = monthOut, monthProfit = monthIn - monthOut,
+            todayIn = todayIn.toIntClamped(), yesterdayIn = yesterdayIn.toIntClamped(), todayOut = todayOut.toIntClamped(), todayProfit = (todayIn - todayOut).toIntClamped(),
+            monthIn = monthIn.toIntClamped(), monthOut = monthOut.toIntClamped(), monthProfit = (monthIn - monthOut).toIntClamped(),
             totalMedicines = meds.size, lowStockCount = lowStockCount, expiringCount = expiringCount,
             totalSalesToday = todaySales.size, totalSalesMonth = monthSales.size, bestSellers = bestSellers, last7Days = last7Days,
             // "Penjualan Terakhir" di Beranda juga hanya hari ini.
@@ -346,7 +360,10 @@ class Repository {
                             stock = item.stock,
                             // Baris impor tanpa barcode: pertahankan barcode lama
                             // (jangan ditimpa null — obat jadi tidak bisa dipindai).
-                            expiryDate = item.expiryDate, barcode = barcode ?: existing.barcode,
+                            // M6 (audit 2026-11-16): baris impor tanpa tanggal
+                            // kadaluarsa TIDAK menghapus tanggal yang sudah
+                            // tersimpan (seperti penjaga harga di atas).
+                            expiryDate = item.expiryDate ?: existing.expiryDate, barcode = barcode ?: existing.barcode,
                             // S5: hidupkan lagi bila yang cocok adalah
                             // tombstone (tanpa ini baris tetap terhapus).
                             terhapus = 0,
@@ -485,27 +502,22 @@ class Repository {
     suspend fun getMonthSalesByMethod(): ApiResult<Map<String, Long>> = call {
         val startMonth = jakartaMonthStartMillis()
         val endToday = jakartaDayStartMillis(1)
-        val totals = mutableMapOf("Tunai" to 0L, "QRIS" to 0L, "Transfer" to 0L)
-        for (sale in DatabaseProvider.db.saleDao().getAll()) {
-            val t = parseISODate(sale.createdAt)?.time ?: continue
-            if (t in startMonth until endToday) {
-                val key = when {
-                    sale.paymentMethod.equals("Tunai", ignoreCase = true) -> "Tunai"
-                    sale.paymentMethod.equals("QRIS", ignoreCase = true) -> "QRIS"
-                    sale.paymentMethod.equals("Transfer", ignoreCase = true) -> "Transfer"
-                    else -> continue
-                }
-                totals[key] = (totals[key] ?: 0L) + sale.total.toLong()
-            }
+        val hasil = agregatPenjualanPerMetode(DatabaseProvider.db.saleDao().getAll(), startMonth, endToday)
+        // M4: metode tak dikenal dilewati agregasi, bukan diam-diam —
+        // catat supaya salah eja / metode baru ketahuan di log.
+        if (hasil.metodeTakDikenal.isNotEmpty()) {
+            Log.w("Repository", "MB1: ${hasil.metodeTakDikenal.size} penjualan bulan ini metodenya tak dikenal dan tidak masuk ringkasan: ${hasil.metodeTakDikenal.distinct().take(5)}")
         }
-        totals
+        hasil.totals
     }
 
     // ---- Kas ----
 
     suspend fun getCashBalance(): ApiResult<CashBalance> = call {
         val dao = DatabaseProvider.db.cashDao()
-        CashBalance(dao.sumIn(), dao.sumOut())
+        // M5: DAO menjumlahkan sebagai Long; jepit ke Int di sini supaya
+        // CashBalance (Int) dan layarnya tidak perlu berubah.
+        CashBalance(dao.sumIn().toIntClamped(), dao.sumOut().toIntClamped())
     }
 
     // Bawaan: muat SEMUA entri (bukan 200 teratas). Keuangan menyaring per
@@ -580,7 +592,8 @@ class Repository {
         // jumlah (qty x Harga Beli snapshot). Laba Kotor = Penjualan - HPP;
         // Laba Bersih = Laba Kotor - Biaya Operasional. Penjualan lama
         // (snapshot-nya di-nol-kan 2026-11-10) tetap ber-HPP 0.
-        val revenue = periodItems.sumOf { it.subtotal }
+        // M5 (audit 2026-11-16): jumlahkan sebagai Long lalu jepit (pola R1).
+        val revenue = periodItems.sumOf { it.subtotal.toLong() }.toIntClamped()
         val itemsSold = periodItems.sumOf { it.qty }
         // Jumlah qty x Harga Beli sebagai Long supaya tidak meluber
         // diam-diam sebelum dijepit ke Int (pola R1).
@@ -661,7 +674,8 @@ class Repository {
             val sale = saleById[it.saleId] ?: continue
             val t = parseISODate(sale.createdAt)?.time ?: continue
             val key = dayKeyID(Date(t))
-            hppByDay[key] = (hppByDay[key] ?: 0) + it.qty * it.buyPrice
+            // M5: jumlahkan sebagai Long lalu jepit per hari (pola R1).
+            hppByDay[key] = ((hppByDay[key] ?: 0).toLong() + it.qty.toLong() * it.buyPrice.toLong()).toIntClamped()
         }
         val daily = (dayCount - 1 downTo 0).map { offset ->
             val dayStart = jakartaDayStartMillis(-offset)
@@ -790,6 +804,13 @@ class Repository {
         // PPN ikut divalidasi (audit 2026-11-02, M5): PPN negatif menggerus
         // total pembelian sampai di bawah jumlah subtotal itemnya.
         if (args.ppn < 0) throw IllegalArgumentException(tr("PPN tidak boleh negatif", "PPN/VAT must not be negative"))
+        // M8 (audit 2026-11-16): tanggal beli wajib yyyy-MM-dd yang
+        // valid — tanggal cacat membuat catatan hilang dari Pengingat /
+        // riwayat tanpa penjelasan (jatuh tempo cacat juga tidak pernah
+        // muncul). Jatuh tempo hanya divalidasi untuk Kredit yang isinya
+        // tidak kosong ("" berarti tanpa jatuh tempo).
+        if (!tanggalValid(args.date)) throw IllegalArgumentException(tr("Tanggal beli tidak valid (format yyyy-MM-dd)", "Purchase date is invalid (yyyy-MM-dd format)"))
+        if (args.paymentType == "KREDIT" && args.dueDate.isNotBlank() && !tanggalValid(args.dueDate)) throw IllegalArgumentException(tr("Tanggal jatuh tempo tidak valid (format yyyy-MM-dd)", "Due date is invalid (yyyy-MM-dd format)"))
         val db = DatabaseProvider.db
         val dao = db.purchaseDao()
         var newId = 0
@@ -857,6 +878,9 @@ class Repository {
      *  kolom dueDate; tanggal disimpan apa adanya (pemanggil memastikan
      *  hanya untuk Kredit). */
     suspend fun setPurchaseDueDate(id: Int, dueDate: String): ApiResult<OkResponse> = call {
+        // M8 (audit 2026-11-16): jatuh tempo wajib yyyy-MM-dd yang valid;
+        // "" berarti hapus tanggalnya (tetap diizinkan).
+        if (dueDate.isNotBlank() && !tanggalValid(dueDate)) throw IllegalArgumentException(tr("Tanggal jatuh tempo tidak valid (format yyyy-MM-dd)", "Due date is invalid (yyyy-MM-dd format)"))
         val changed = DatabaseProvider.db.purchaseDao().updateDueDate(id, dueDate.trim(), nowMillis())
         if (changed == 0) throw IllegalStateException("Catatan pembelian tidak ditemukan")
         OkResponse(true)
@@ -1212,6 +1236,13 @@ class Repository {
         }
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.update(e.copy(id = ada.id, kotor = 0))
+            // M9 (audit 2026-11-16): tombstone penjualan yang menang
+            // menandai juga item-itemnya terhapus — tanpa ini item yatim
+            // tidak pernah ter-purge dan mengendap selamanya. Pakai cap
+            // tombstone yang sama supaya last-write-wins tetap konsisten;
+            // kotor = 1 supaya tombstone item ikut terdorong ke awan
+            // (pola deleteItemsForPurchase).
+            if (e.terhapus == 1) dao.deleteItemsForSale(ada.id, e.updatedAt)
         } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
             // Versi lokal lebih baru tapi awan masih menyimpan versi lama
             // (mis. pernah tertimpa dorongan buta, S4): tandai kotor
@@ -1344,6 +1375,26 @@ class Repository {
     }
 
     /** Buang fisik tombstone yang sudah terkirim ke awan. */
+    /** M3 (audit 2026-11-16): rekonsiliasi silang setelah tarik —
+     *  penjualan yang totalnya tidak sama dengan jumlah subtotal
+     *  itemnya dicatat di log (data awan korup / diedit tangan).
+     *  Penjualan itu TIDAK dihapus: menghapusnya lokal akan mendorong
+     *  tombstone ke awan dan merusak satu-satunya salinan. Kembalikan
+     *  jumlah penjualan yang tidak cocok. */
+    suspend fun rekonsiliasiPenjualanDitarik(): Int {
+        val dao = DatabaseProvider.db.saleDao()
+        val itemsBySale = dao.getAllItems().groupBy { it.saleId }
+        var tidakCocok = 0
+        for (sale in dao.getAll()) {
+            val jumlahItem = itemsBySale[sale.id].orEmpty().sumOf { it.subtotal.toLong() }
+            if (sale.total.toLong() != jumlahItem) {
+                tidakCocok++
+                Log.w("Repository", "rekonsiliasi: penjualan ${sale.invoiceNo} (id ${sale.id}) total ${sale.total} != jumlah subtotal item $jumlahItem — dibiarkan, periksa data awan")
+            }
+        }
+        return tidakCocok
+    }
+
     suspend fun purgeTombstones() {
         val db = DatabaseProvider.db
         db.medicineDao().purge()
@@ -1388,6 +1439,42 @@ private fun Long.toIntClamped(): Int =
     coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
 
 
+/** W2 (2026-11-16) + M20 (audit 2026-11-16): predikat tanggal
+ *  kadaluarsa wajib — tanggal terisi, atau centang "Tidak ada tanggal
+ *  kadaluarsa". Murni, bisa diuji unit tanpa database; dipakai guard
+ *  Simpan di formulir obat. */
+fun isExpiryValid(expiry: String, noExpiry: Boolean): Boolean = noExpiry || expiry.isNotBlank()
+
+/** Hasil agregasi MB1: total per cara bayar + metode tak dikenal yang
+ *  dilewati (supaya pemanggil bisa mencatatnya, bukan diam-diam). */
+data class HasilAgregatMetode(val totals: Map<String, Long>, val metodeTakDikenal: List<String>)
+
+/** MB1 (M4/M21, audit 2026-11-16): agregasi murni total penjualan per
+ *  cara bayar dalam [start, end) — tanpa database, bisa diuji unit.
+ *  Cara bayar dinormalisasi (trim + abaikan huruf besar/kecil);
+ *  metode tak dikenal dilewati dan dilaporkan di metodeTakDikenal. */
+fun agregatPenjualanPerMetode(sales: List<SaleEntity>, start: Long, end: Long): HasilAgregatMetode {
+    val totals = mutableMapOf("Tunai" to 0L, "QRIS" to 0L, "Transfer" to 0L)
+    val takDikenal = mutableListOf<String>()
+    for (sale in sales) {
+        val t = parseISODate(sale.createdAt)?.time ?: continue
+        if (t !in start until end) continue
+        val method = sale.paymentMethod.trim()
+        val key = when {
+            method.equals("Tunai", ignoreCase = true) -> "Tunai"
+            method.equals("QRIS", ignoreCase = true) -> "QRIS"
+            method.equals("Transfer", ignoreCase = true) -> "Transfer"
+            else -> null
+        }
+        if (key == null) {
+            takDikenal.add(method)
+            continue
+        }
+        totals[key] = (totals[key] ?: 0L) + sale.total.toLong()
+    }
+    return HasilAgregatMetode(totals, takDikenal)
+}
+
 /** Agregasi murni rekap penjualan (J5) — tanpa database, bisa diuji unit.
  *  Hanya penjualan dalam [start, end) yang dihitung; hari tanpa penjualan
  *  tidak muncul di daftar harian. Nama/kategori obat diambil dari stok saat
@@ -1409,7 +1496,7 @@ fun agregatRekapPenjualan(
     val periodItems = items.filter { it.saleId in periodSaleIds }
     val saleById = periodSales.associateBy { it.id }
 
-    data class AggHarian(var transactions: Int = 0, var itemsSold: Int = 0, var revenue: Int = 0, var hpp: Int = 0)
+    data class AggHarian(var transactions: Int = 0, var itemsSold: Int = 0, var revenue: Int = 0, var hpp: Long = 0)
     val harian = linkedMapOf<String, AggHarian>()
     for (s in periodSales) {
         val key = parseISODate(s.createdAt)?.let { dayKeyID(it) } ?: continue
@@ -1422,10 +1509,11 @@ fun agregatRekapPenjualan(
         a.itemsSold += it.qty
         a.revenue += it.subtotal
         // HPP harian: qty * buyPrice snapshot per item (0 untuk item lama).
-        a.hpp += it.qty * it.buyPrice
+        // M5: jumlahkan sebagai Long (pola R1), dijepit saat RekapHarian dibuat.
+        a.hpp += it.qty.toLong() * it.buyPrice.toLong()
     }
     val daily = harian.entries.sortedBy { it.key }.map { (date, a) ->
-        RekapHarian(date, a.transactions, a.itemsSold, a.revenue, a.hpp)
+        RekapHarian(date, a.transactions, a.itemsSold, a.revenue, a.hpp.toIntClamped())
     }
 
     data class Agg(var qty: Int = 0, var revenue: Int = 0, var hpp: Int = 0)
@@ -1452,7 +1540,7 @@ fun agregatRekapPenjualan(
         byMedicine = byMedicine,
         totalTransactions = periodSales.size,
         totalItemsSold = periodItems.sumOf { it.qty },
-        totalRevenue = periodItems.sumOf { it.subtotal },
-        totalHpp = periodItems.sumOf { it.qty * it.buyPrice }
+        totalRevenue = periodItems.sumOf { it.subtotal.toLong() }.toIntClamped(),
+        totalHpp = periodItems.sumOf { it.qty.toLong() * it.buyPrice.toLong() }.toIntClamped()
     )
 }

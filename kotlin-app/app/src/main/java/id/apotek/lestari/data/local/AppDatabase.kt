@@ -320,6 +320,11 @@ interface SaleDao {
     @Query("DELETE FROM sale_items WHERE terhapus = 1 AND kotor = 0")
     suspend fun purgeItems(): Int
 
+    // M9 (audit 2026-11-16): tandai semua item satu penjualan sebagai
+    // tombstone — cermin deleteItemsForPurchase di PurchaseDao.
+    @Query("UPDATE sale_items SET terhapus = 1, kotor = 1, updatedAt = :now WHERE saleId = :saleId AND terhapus = 0")
+    suspend fun deleteItemsForSale(saleId: Int, now: Long): Int
+
     @Query("DELETE FROM sales")
     suspend fun deleteAll()
 
@@ -361,11 +366,13 @@ interface CashDao {
     @Query("DELETE FROM cash_entries")
     suspend fun deleteAll()
 
+    // M5 (audit 2026-11-16): jumlahkan sebagai Long — SUM di atas
+    // Rp 2,1 miliar tidak lagi meluber sebelum dijepit di Repository.
     @Query("SELECT COALESCE(SUM(amount), 0) FROM cash_entries WHERE type = 'in' AND terhapus = 0")
-    suspend fun sumIn(): Int
+    suspend fun sumIn(): Long
 
     @Query("SELECT COALESCE(SUM(amount), 0) FROM cash_entries WHERE type = 'out' AND terhapus = 0")
-    suspend fun sumOut(): Int
+    suspend fun sumOut(): Long
 }
 
 @Dao
@@ -675,10 +682,24 @@ val MIGRATION_15_16 = object : Migration(15, 16) {
     }
 }
 
+val MIGRATION_16_17 = object : Migration(16, 17) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // M10 (audit 2026-11-16): MIGRATION_12_13 mengisi updatedAt
+        // keempat tabel induk dari createdAt, tapi melewatkan
+        // sale_items/purchase_items (tidak punya createdAt sendiri).
+        // Isi dari createdAt induknya lewat subquery — COALESCE menjaga
+        // baris yang induknya hilang / tanggalnya tidak terbaca tetap 0
+        // (bukan NULL, kolomnya NOT NULL), dan hanya baris yang masih 0
+        // yang disentuh supaya nilai yang sudah benar tidak berubah.
+        db.execSQL("UPDATE `sale_items` SET `updatedAt` = COALESCE((SELECT CAST(strftime('%s', s.`createdAt`) AS INTEGER) * 1000 FROM `sales` s WHERE s.`id` = `sale_items`.`saleId`), 0) WHERE `updatedAt` = 0")
+        db.execSQL("UPDATE `purchase_items` SET `updatedAt` = COALESCE((SELECT CAST(strftime('%s', p.`createdAt`) AS INTEGER) * 1000 FROM `purchases` p WHERE p.`id` = `purchase_items`.`purchaseId`), 0) WHERE `updatedAt` = 0")
+    }
+}
+
 // R22 (audit 2026-11-15): versi skema sebagai satu sumber — anotasi Room
 // dan layar Tentang membaca konstanta yang sama, jadi migrasi berikutnya
 // tidak bisa membuat angka di Tentang basi.
-const val DATABASE_VERSION = 16
+const val DATABASE_VERSION = 17
 
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class, SupplierEntity::class],
@@ -747,7 +768,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17).build()
                 }
             }
         }
