@@ -199,28 +199,13 @@ fun BackupScreen() {
             Text(msg, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(SpaceL))
         }
-        ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
+        // Kartu B1 KOTAK SENADA (pilihan Achmad 2026-11-16):
+        // 12dp + surfaceContainerHigh, lingkaran ikon biru.
+        ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                        Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Text(tr("Kenapa backup itu penting?", "Why does backup matter?"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(SpaceS))
-                Text(
-                    tr("Semua data (obat, penjualan, kas) hanya tersimpan di HP ini. Kalau HP hilang, rusak, atau aplikasi terhapus, data tidak bisa dikembalikan. Simpan file backup di tempat aman (mis. Google Drive atau laptop) secara berkala.", "All data (medicines, sales, cash) is stored only on this phone. If the phone is lost, damaged, or the app is uninstalled, the data cannot be recovered. Keep backup files somewhere safe (e.g. Google Drive or a laptop) regularly."),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
-        Spacer(Modifier.height(SpaceL))
-        ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                        Icon(Icons.Default.Backup, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Icon(Icons.Default.Backup, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(8.dp).size(20.dp))
                     }
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
@@ -255,11 +240,12 @@ fun BackupScreen() {
         }
         Spacer(Modifier.height(SpaceL))
         // Backup Otomatis (G6): saklar + folder tujuan + frekuensi + jalan sekali.
-        ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
+        // Kartu B1 KOTAK SENADA (pilihan Achmad 2026-11-16).
+        ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                        Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(8.dp).size(20.dp))
                     }
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
@@ -351,11 +337,12 @@ fun BackupScreen() {
             }
         }
         Spacer(Modifier.height(SpaceL))
-        ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
+        // Kartu B1 KOTAK SENADA (pilihan Achmad 2026-11-16).
+        ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
-                        Icon(Icons.Default.Restore, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
+                        Icon(Icons.Default.Restore, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(8.dp).size(20.dp))
                     }
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
