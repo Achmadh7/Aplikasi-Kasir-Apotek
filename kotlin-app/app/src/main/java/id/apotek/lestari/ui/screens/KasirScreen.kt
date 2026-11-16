@@ -477,7 +477,7 @@ fun KasirScreen() {
                     
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("$cartQty item", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text(tr("$cartQty item", "$cartQty items"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                         Text(formatIDR(total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                     Button(

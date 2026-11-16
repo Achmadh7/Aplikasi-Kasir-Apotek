@@ -332,7 +332,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     ) {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text(if (monthMode) tr("PEMASUKAN BULAN INI", "THIS MONTH'S INCOME") else tr("PEMASUKAN HARI INI", "TODAY'S INCOME"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                                Text(if (monthMode) tr("PEMASUKAN BULAN INI", "THIS MONTH'S INCOME") else tr("PEMASUKAN HARI INI", "TODAY'S INCOME"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 // P3 (pilihan Achmad 2026-11-16): perbandingan
                                 // vs kemarin jadi pill ringkas di kanan atas;
                                 // mode Bulan Ini tanpa pill.
@@ -366,14 +366,16 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             AnimatedAmount(panelIn, MaterialTheme.typography.headlineLarge, MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.height(SpaceM))
                             // P3: tiga angka bawah jadi kotak kecil; nilai
-                            // uang memakai format ringkas (Rp 160rb) supaya
-                            // muat dalam kotak tanpa terpotong.
+                            // uang memakai format PENUH (Rp 160.000); teks
+                            // 12sp + padding 8dp supaya muat tanpa terpotong
+                            // (N1 2026-11-16).
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 listOf(
                                     Triple(tr("Pengeluaran", "Expenses"), "Rp ${formatIDR(panelOut)}", MaterialTheme.colorScheme.error),
                                     // Nilai kotak format PENUH (bukan ringkas),
                                     // atas permintaan Achmad 2026-11-16: Roboto Bold
-                                    // 14sp muat sampai belasan juta di lebar 95dp.
+                                    // 12sp muat sampai ratusan juta di lebar pakai
+                                    // 88,3dp (padding horizontal kotak 8dp; N1).
                                     Triple(tr("Selisih", "Difference"), (if (panelProfit < 0) "-" else "") + "Rp ${formatIDR(kotlin.math.abs(panelProfit))}", if (panelProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error),
                                     Triple(tr("Transaksi", "Transactions"), "$panelSales", MaterialTheme.colorScheme.onSurface)
                                 ).forEach { (label, nilai, warna) ->
@@ -382,10 +384,10 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                         shape = RoundedCornerShape(12.dp),
                                         modifier = Modifier.weight(1f)
                                     ) {
-                                        Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
+                                        Column(Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
                                             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             Spacer(Modifier.height(4.dp))
-                                            Text(nilai, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = warna, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(nilai, style = MaterialTheme.typography.titleSmall.copy(fontSize = 12.sp), fontWeight = FontWeight.Bold, color = warna, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         }
                                     }
                                 }
@@ -493,14 +495,14 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                     reminderTampil.forEach { baris ->
                                         Text(baris, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
-                                    if (reminderTagihan != null) {
-                                        Text(reminderTagihan, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    // "+N lainnya" kembali tepat di bawah daftar
-                                    // obat (permintaan Achmad 2026-11-16), bukan
-                                    // lagi sebaris dengan tombol di footer.
+                                    // "+N lainnya" tepat di bawah daftar obat
+                                    // (permintaan Achmad 2026-11-16), sebelum
+                                    // baris tagihan PBF (N5).
                                     if (reminderSisa > 0) {
                                         Text(tr("+$reminderSisa lainnya", "+$reminderSisa more"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.primary)
+                                    }
+                                    if (reminderTagihan != null) {
+                                        Text(reminderTagihan, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                             }
@@ -543,7 +545,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                             Text(b.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             Spacer(Modifier.width(8.dp))
-                                            Text("${b.qty} item • ${formatIDR(b.revenue)}", style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                                            Text(tr("${b.qty} item • ${formatIDR(b.revenue)}", "${b.qty} items • ${formatIDR(b.revenue)}"), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
                                         }
                                     }
                                 }

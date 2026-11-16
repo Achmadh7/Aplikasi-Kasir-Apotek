@@ -237,7 +237,8 @@ fun LabaScreen() {
                 // kartu hijau LABA BERSIH = Laba Kotor - Biaya
                 // Operasional, dengan Laba Kotor = Penjualan - HPP (HPP
                 // kembali 2026-11-15). Angka formatIDR penuh lewat
-                // AnimatedAmount (headlineSmall supaya muat).
+                // AnimatedAmount (titleLarge supaya muat sampai ~Rp 99 jt;
+                // maxLines = 1 + Ellipsis sebagai guard — N2 2026-11-16).
                 // Bentuk 12dp senada P3/R1/K1 (B1, pilihan Achmad 2026-11-16).
                 val netMarginPct = if (r.revenue > 0) r.netProfit * 100.0 / r.revenue else 0.0
                 val bersihDark = LocalIsDarkTheme.current
@@ -250,7 +251,7 @@ fun LabaScreen() {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Text(tr("PENJUALAN", "REVENUE"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceS))
-                            AnimatedAmount(r.revenue, MaterialTheme.typography.headlineSmall, Color.White)
+                            AnimatedAmount(r.revenue, MaterialTheme.typography.titleLarge, Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Spacer(Modifier.height(SpaceXS))
                             Text(tr("${r.itemsSold} item terjual", "${r.itemsSold} items sold"), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
                         }
@@ -259,7 +260,7 @@ fun LabaScreen() {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Text(tr("LABA BERSIH", "NET PROFIT"), color = bersihLabel, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceS))
-                            AnimatedAmount(r.netProfit, MaterialTheme.typography.headlineSmall, bersihAmount)
+                            AnimatedAmount(r.netProfit, MaterialTheme.typography.titleLarge, bersihAmount, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Spacer(Modifier.height(SpaceXS))
                             Text("Margin ${marginTextID(netMarginPct)}%", color = bersihLabel, style = MaterialTheme.typography.bodySmall)
                         }
@@ -514,20 +515,23 @@ fun ObatTerlarisScreen() {
                 // Donat TL1: 3 obat teratas + gabungan "Lainnya" bila daftar
                 // lebih panjang; pangsa dihitung largest remainder supaya
                 // jumlahnya tepat 100%.
-                val irisanQty = if (list.size > 3) {
-                    list.take(3).map { it.qty } + list.drop(3).sumOf { it.qty }
-                } else {
-                    list.map { it.qty }
-                }
-                val irisanNama = if (list.size > 3) {
-                    list.take(3).map { it.name } + tr("Lainnya", "Others")
-                } else {
-                    list.map { it.name }
-                }
-                val irisanPangsa = pangsaDonat(irisanQty)
                 // R27: donat disembunyikan bila tidak ada item terjual
                 if (totalQty > 0) {
                     item {
+                        // N12 (2026-11-16): irisan dihitung di dalam item{ }
+                        // (bukan di scope LazyColumn) — tr() hanya sah di
+                        // konteks composable.
+                        val irisanQty = if (list.size > 3) {
+                            list.take(3).map { it.qty } + list.drop(3).sumOf { it.qty }
+                        } else {
+                            list.map { it.qty }
+                        }
+                        val irisanNama = if (list.size > 3) {
+                            list.take(3).map { it.name } + tr("Lainnya", "Others")
+                        } else {
+                            list.map { it.name }
+                        }
+                        val irisanPangsa = pangsaDonat(irisanQty)
                         val warnaDonat = listOf(
                             Color(0xFF40C4FF),
                             MaterialTheme.colorScheme.primary,
