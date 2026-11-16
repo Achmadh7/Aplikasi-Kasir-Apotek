@@ -368,8 +368,11 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             // muat dalam kotak tanpa terpotong.
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 listOf(
-                                    Triple(tr("Pengeluaran", "Expenses"), "Rp ${formatCompactIDR(panelOut)}", MaterialTheme.colorScheme.error),
-                                    Triple(tr("Selisih", "Difference"), (if (panelProfit < 0) "-" else "") + "Rp ${formatCompactIDR(kotlin.math.abs(panelProfit))}", if (panelProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error),
+                                    Triple(tr("Pengeluaran", "Expenses"), "Rp ${formatIDR(panelOut)}", MaterialTheme.colorScheme.error),
+                                    // Nilai kotak format PENUH (bukan ringkas),
+                                    // atas permintaan Achmad 2026-11-16: Roboto Bold
+                                    // 14sp muat sampai belasan juta di lebar 95dp.
+                                    Triple(tr("Selisih", "Difference"), (if (panelProfit < 0) "-" else "") + "Rp ${formatIDR(kotlin.math.abs(panelProfit))}", if (panelProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error),
                                     Triple(tr("Transaksi", "Transactions"), "$panelSales", MaterialTheme.colorScheme.onSurface)
                                 ).forEach { (label, nilai, warna) ->
                                     Surface(
