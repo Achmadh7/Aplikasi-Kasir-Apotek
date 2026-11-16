@@ -482,7 +482,9 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             }
                             if (reminderTampil.isNotEmpty() || reminderTagihan != null) {
                                 Spacer(Modifier.height(SpaceXS))
-                                Column(Modifier.padding(start = 28.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                // Daftar obat sejajar dengan label kotak di atas
+                                // (26dp dari tepi kartu), atas permintaan Achmad.
+                                Column(Modifier.padding(start = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     reminderTampil.forEach { baris ->
                                         Text(baris, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
@@ -493,12 +495,12 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             }
                             // R1: "+N lainnya" dan tautan jadi satu baris.
                             // FIX 2026-11-16 (laporan Achmad: tidak sejajar):
-                            // footer diberi start 28dp supaya "+N lainnya"
-                            // sejajar dengan daftar obat + teks ringkasan
-                            // (sama-sama 44dp dari tepi kartu).
+                            // footer start 10dp supaya "+N lainnya" sejajar
+                            // dengan daftar obat + label kotak di atasnya
+                            // (sama-sama 26dp dari tepi kartu).
                             if (hasReminders) {
                                 Spacer(Modifier.height(SpaceS))
-                                Row(Modifier.fillMaxWidth().padding(start = 28.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Row(Modifier.fillMaxWidth().padding(start = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         if (reminderSisa > 0) tr("+$reminderSisa lainnya", "+$reminderSisa more") else "",
                                         style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.primary
