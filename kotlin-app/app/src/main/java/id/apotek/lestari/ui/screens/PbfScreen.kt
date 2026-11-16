@@ -332,57 +332,74 @@ fun PbfScreen() {
                                 Spacer(Modifier.height(SpaceM))
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                 Spacer(Modifier.height(SpaceM))
-                                if (p.invoiceNo.isNotBlank()) {
-                                    Text(tr("No. Faktur: ${p.invoiceNo}", "Invoice No.: ${p.invoiceNo}"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Spacer(Modifier.height(SpaceS))
-                                }
-                                p.items.forEach { pItem ->
-                                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text(pItem.medicineName, style = MaterialTheme.typography.bodyMedium)
-                                            Text("${pItem.qty} ${pItem.unit} × ${formatIDR(pItem.buyPrice)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                // FB2 DETAIL DALAM KOTAK (pilihan Achmad 2026-11-16):
+                                // blok detail (No. Faktur + item + Subtotal/
+                                // PPN/Total) dalam satu kotak surfaceContainer
+                                // 12dp di dalam kartu.
+                                Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(12.dp)) {
+                                    Column(Modifier.padding(12.dp)) {
+                                        if (p.invoiceNo.isNotBlank()) {
+                                            Text(tr("No. Faktur: ${p.invoiceNo}", "Invoice No.: ${p.invoiceNo}"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Spacer(Modifier.height(SpaceS))
                                         }
-                                        Text(formatIDR(pItem.subtotal), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                        p.items.forEach { pItem ->
+                                            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                Column(Modifier.weight(1f)) {
+                                                    Text(pItem.medicineName, style = MaterialTheme.typography.bodyMedium)
+                                                    Text("${pItem.qty} ${pItem.unit} × ${formatIDR(pItem.buyPrice)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                }
+                                                Text(formatIDR(pItem.subtotal), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                        // Blok ringkasan KP1 (pilihan Achmad 2026-11-04):
+                                        // Subtotal item selalu tampil supaya hitungan
+                                        // menuju Total transparan (sebelumnya hanya PPN
+                                        // dan total di kepala kartu yang terlihat,
+                                        // subtotalnya tidak pernah ditampilkan).
+                                        Spacer(Modifier.height(SpaceS))
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                        Spacer(Modifier.height(SpaceS))
+                                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                            Text(tr("Subtotal", "Subtotal"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                                            Text(formatIDR(p.items.sumOf { it.subtotal }), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                        }
+                                        if (p.ppn > 0) {
+                                            Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                Text("PPN", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                                                Text(formatIDR(p.ppn), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Text(tr("Total", "Total"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                            Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                        }
                                     }
                                 }
-                                // Blok ringkasan KP1 (pilihan Achmad 2026-11-04):
-                                // Subtotal item selalu tampil supaya hitungan
-                                // menuju Total transparan (sebelumnya hanya PPN
-                                // dan total di kepala kartu yang terlihat,
-                                // subtotalnya tidak pernah ditampilkan).
                                 Spacer(Modifier.height(SpaceS))
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                                Spacer(Modifier.height(SpaceS))
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Text(tr("Subtotal", "Subtotal"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                                    Text(formatIDR(p.items.sumOf { it.subtotal }), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                }
-                                if (p.ppn > 0) {
-                                    Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Text("PPN", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                                        Text(formatIDR(p.ppn), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
-                                Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Text(tr("Total", "Total"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                    Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                                }
-                                Spacer(Modifier.height(SpaceS))
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = if (p.paymentType == "KREDIT") Arrangement.SpaceBetween else Arrangement.End) {
-                                    // Tandai Lunas hanya untuk pembelian Kredit:
-                                    // mengubahnya jadi Cash supaya masuk ringkasan.
-                                    if (p.paymentType == "KREDIT") {
+                                // Tandai Lunas hanya untuk pembelian Kredit:
+                                // mengubahnya jadi Cash supaya masuk ringkasan.
+                                if (p.paymentType == "KREDIT") {
+                                    Row(Modifier.fillMaxWidth()) {
                                         TextButton(onClick = { paidTarget = p }) {
                                             Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                             Spacer(Modifier.width(4.dp))
                                             Text(tr("Tandai Lunas", "Mark as Paid"), color = MaterialTheme.colorScheme.primary)
                                         }
                                     }
-                                    TextButton(onClick = { deleteTarget = p }) {
-                                        Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(tr("Hapus", "Delete"), color = MaterialTheme.colorScheme.error)
-                                    }
+                                }
+                                // Hapus gaya FB1 (pilihan Achmad 2026-11-16):
+                                // tombol Outlined merah selebar kartu, 48dp,
+                                // sudut 12dp — menggantikan TextButton kecil.
+                                OutlinedButton(
+                                    onClick = { deleteTarget = p },
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                                ) {
+                                    Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(tr("Hapus", "Delete"))
                                 }
                                 if (p.paymentType == "KREDIT") {
                                     // Atur Jatuh Tempo untuk catatan Kredit
