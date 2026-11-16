@@ -353,8 +353,10 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                                 Spacer(Modifier.width(4.dp))
                                             }
                                             Text(
-                                                if (diff == 0) tr("Sama", "Same") else "Rp ${formatCompactIDR(kotlin.math.abs(diff))}",
-                                                style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = pillTint, maxLines = 1
+                                                // Nominal pill format PENUH (permintaan Achmad
+                                                // 2026-11-16): 'Rp 2.940.000', bukan 'Rp 2,94jt'.
+                                                if (diff == 0) tr("Sama", "Same") else "Rp ${formatIDR(kotlin.math.abs(diff))}",
+                                                style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = pillTint, maxLines = 1, overflow = TextOverflow.Ellipsis
                                             )
                                         }
                                     }
