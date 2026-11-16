@@ -852,21 +852,22 @@ fun LainnyaScreen(
             onlineSiap -> tr("Mode tamu \u2014 data hanya tersimpan di HP ini", "Guest mode \u2014 data is only stored on this phone")
             else -> tr("Aplikasi berjalan lokal sepenuhnya di HP ini", "The app runs fully locally on this phone")
         }
-        // N1 KOTAK SENADA 12DP (pilihan Achmad 2026-11-16): kartu status
-        // 12dp surfaceContainerHigh; ikon awan dalam kotak 40dp
-        // primaryContainer (onPrimaryContainer) seperti kotak ikon baris
-        // menu — mode tetap terbaca dari judul "Mode Online/Offline".
+        // O1 WARNA STATUS (pilihan Achmad 2026-11-16): kartu status
+        // tetap 12dp surfaceContainerHigh (N1); kotak ikon 40dp ikut
+        // status — Online hijau #2E7D32, Offline kuning gelap #8D6E00,
+        // ikon awan putih. Mode tetap terbaca juga dari judul.
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth().padding(vertical = SpaceS)
         ) {
             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
+                val kotakStatus = if (emailOnline != null) Color(0xFF2E7D32) else Color(0xFF8D6E00)
+                Surface(color = kotakStatus, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
                     Icon(
                         if (emailOnline != null) Icons.Default.CloudDone else Icons.Default.CloudOff,
                         null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        tint = Color.White,
                         modifier = Modifier.padding(9.dp).fillMaxSize()
                     )
                 }
