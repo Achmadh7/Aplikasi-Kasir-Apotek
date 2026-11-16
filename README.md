@@ -38,7 +38,7 @@ An Android app for pharmacies: sales cashier, medicine stock, cash book, profit 
 - **Kasir (Cashier)** — shopping cart with one combined total + payment-method panel, Cash/QRIS/Transfer payments, large quick-amount cards for cash received (exact amount or the next 50k round-ups, each showing its change), per-medicine Retail/Wholesale (Ecer/Grosir) pricing, and receipts carrying the "Semoga Cepat Sembuh" (get well soon) message.
 - **Stok Obat (Medicine Stock)** — stock status Safe (16+) / Medium (10–15) / Low (1–9) / Out of stock (0), search & status filters, Excel import/export/template.
 - **Keuangan (Finance)** — cash balance, cash in/out entries (Catat Kas), and a 7-day cash-flow chart.
-- **Laporan Laba (Profit Report)** — side-by-side revenue and net-profit cards (net = revenue − operating costs, shown with its net margin), a revenue/expense breakdown, and a daily net-profit chart per period. The app deliberately does not track buy prices, so there is no COGS/HPP figure.
+- **Laporan Laba (Profit Report)** — side-by-side revenue and net-profit cards (gross profit = revenue − HPP, net = gross profit − operating costs, shown with its net margin), a revenue/expense breakdown, and a daily net-profit chart per period. Buy prices (Harga Beli) are tracked (restored 15 Nov 2026): each sale snapshots the buy price per item, HPP = Σ qty × buy price, and buyPrice is carried by sync, backup, and Excel.
 - **Export Excel Rekap Penjualan (Sales Recap Export)** — an Export Excel button under Laporan Laba writes a `.xlsx` with two sheets, "Rekap Harian" (per day) and "Per Obat" (per medicine).
 - **Obat Terlaris (Best-Selling Medicines)** — medicine ranking by units sold.
 - **Pengingat (Reminders)** — low/out-of-stock medicines, medicines nearing expiry, and distributor bills nearing their due date.
@@ -58,11 +58,11 @@ Supporting features: receipt printing to Bluetooth thermal printers (ESC/POS, 58
 | Language | Kotlin 2.4.21 |
 | UI | Jetpack Compose — Material 3 Expressive (`material3` 1.5.0-rc01, Compose BOM 2026.09.00), Navigation Compose 2.10.2 |
 | Theme | `MaterialExpressiveTheme` + `MotionScheme.expressive()`; official components (`ShortNavigationBar`, `SegmentedButton`, chips, `ListItem`); color scheme generated with Google's Material Color Utilities algorithm (Fidelity style, seed `#0061A4`, 2025 color spec) |
-| Database | Room 2.8.5 (SQLite), offline-first — database version 15 (sync columns + soft deletes for Online Mode; v14 retired the stored buy prices, v15 added the PBF supplier directory) |
-| Online sync (optional) | Firebase Auth + Cloud Firestore (Firebase BOM 33.5.1), WorkManager 2.9.1 periodic sync, last-write-wins merging |
+| Database | Room 2.8.5 (SQLite), offline-first — database version 16 (sync columns + soft deletes for Online Mode; v14 retired the stored buy prices, v15 added the PBF supplier directory, v16 added sync indexes) |
+| Online sync (optional) | Firebase Auth + Cloud Firestore (Firebase BOM 35.2.0), WorkManager 2.9.1 periodic sync, last-write-wins merging |
 | Excel | Apache POI 5.5.1 (`.xlsx` import/export/template) |
 | Build | AGP 9.5.1, Gradle 9.6.0, compileSdk 37, targetSdk 36, minSdk 26 |
-| CI | GitHub Actions — 40 JVM unit tests, debug + signed release builds |
+| CI | GitHub Actions — 44 JVM unit tests, debug + signed release builds |
 | Printing | Android PrintManager + ESC/POS over Bluetooth |
 
 ## How to build the APK

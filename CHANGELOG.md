@@ -18,7 +18,7 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
 - Medicine form reorganised into Identity / Price / Stock & Expiry cards.
 - Supplier-invoice form reorganised into Invoice / Items / Summary cards;
   expanded purchase cards show a Subtotal / VAT / Total breakdown.
-- Unit test suite grown to 40 JVM tests covering money math, backup
+- Unit test suite grown to 44 JVM tests covering money math, backup
   round-trips, Excel round-trips, due-date logic, sync conflict rules,
   automatic-backup file naming, and supplier sync mapping.
 - Sales recap export to Excel (J5): an Export Excel button under Profit
@@ -57,18 +57,20 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
 - Toolchain upgraded: AGP 9.5.1, Gradle 9.6.0, Kotlin 2.4.21, compileSdk 37,
   targetSdk 36 (from 34), Compose BOM 2026.09.00 / Material 3 1.5.0-rc01,
   Apache POI 5.5.1, Navigation Compose 2.10.2, Lifecycle 2.11.0,
-  Coroutines 1.11.0, Room 2.8.5, google-services 4.5.0.
+  Coroutines 1.11.0, Room 2.8.5, google-services 4.6.0.
 - GitHub Actions upgraded (checkout v7, setup-java v6, upload-artifact v7,
   gradle/actions v6) and Dependabot enabled (weekly PRs, hand-merged).
-- Profit report rebuilt without buy prices: the hero is revenue
-  (Penjualan); Net Profit = Revenue - Operating Costs, shown with its net
-  margin, a revenue/expense breakdown, and a daily net chart.
+- Profit report restored with buy prices (HPP, 15 Nov 2026): Gross Profit
+  = Revenue - HPP (buy-price snapshot per item sold); Net Profit = Gross
+  Profit - Operating Costs, shown with its net margin, a revenue/expense
+  breakdown, and a daily net chart. buyPrice is carried by sync, backup,
+  and Excel.
 - Home: the revenue hero and money card merged into one panel with a
   Today / This Month period switch.
 - Cashier medicine list: compact two-line rows (name + price, then
   category/unit + stock status).
-- Cashier add-medicine control is now a round icon-only floating button
-  (TA1, 56dp).
+- Cashier add-medicine control is now a compact "+ Tambah Obat" button in
+  the Pick/Sort row (E2, 32dp); the round floating button (TA1) is gone.
 - Excel stock template/export revamped (X1+X2+X3): fixed column widths
   (expiry 18, not 8), frozen header row + autofilter, Category/Unit
   dropdown validation, thousand-separator number formats, and expiry
@@ -106,10 +108,6 @@ Changes on `main` after the 1.2.0 version bump; they ship with the next version.
 
 ### Removed
 
-- Buy price (Harga Beli) everywhere: the medicine form field, stock
-  lists, Excel columns, backup and sync payloads. Database v14 zeroes the
-  stored values (the columns stay dormant in the schema). Profit no
-  longer uses COGS/HPP. PBF purchase-item prices are untouched records.
 - Email/password sign-in: the login form, the app handlers, and the
   Firebase email functions.
 - Foto Faktur OCR (photo invoice capture) removed at the owner's request —
