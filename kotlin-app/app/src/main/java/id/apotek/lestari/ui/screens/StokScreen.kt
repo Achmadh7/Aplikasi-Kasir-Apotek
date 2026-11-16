@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.TableChart
@@ -135,7 +134,6 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
     // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
     // muat daftar obat diam-diam menampilkan daftar kosong.
     var loadError by remember { mutableStateOf<String?>(null) }
-    var deleteTarget by remember { mutableStateOf<Medicine?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -492,15 +490,18 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
         itemsIndexed(sorted, key = { _, m -> m.id }) { index, m ->
             
             ExpressiveCard(
-                shape = MaterialTheme.shapes.extraLarge,
-                modifier = Modifier.fillMaxWidth().then(
-                    if (selectMode) Modifier.clickable {
+                shape = RoundedCornerShape(12.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.fillMaxWidth().clickable {
+                    if (selectMode) {
                         selectedMeds = if (selectedMeds.containsKey(m.id)) selectedMeds - m.id else selectedMeds + (m.id to m)
-                    } else Modifier
-                )
+                    } else {
+                        editing = m; showForm = true
+                    }
+                }
             ) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // Di mode pilih banyak: checkbox ganti tombol Edit/Hapus,
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Di mode pilih banyak: checkbox muncul di kiri,
                     // dan ketuk kartu = centang/batal centang.
                     if (selectMode) {
                         Checkbox(
@@ -511,11 +512,10 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                         )
                         Spacer(Modifier.width(8.dp))
                     }
-                    // ST1 Kartu Baris (2026-11-13, pilihan Achmad dari papan
-                    // ST1-ST6): nama + "kategori • satuan • harga" di kiri;
-                    // pil status solid + "Stok: N" di kanan. Tombol
-                    // Edit/Hapus tetap ada di ujung kanan (tidak digambar di
-                    // mock, tapi fungsinya harus tetap jalan).
+                    // R3 Tanpa Ikon (2026-11-16, pilihan Achmad dari papan
+                    // baris-stok): kotak 12dp senada P3/R1/K1 + search V1;
+                    // ketuk kartu = edit (mode normal) atau centang
+                    // (mode Pilih); hapus hanya lewat mode Pilih.
                     Column(Modifier.weight(1f)) {
                         Text(
                             m.name,
@@ -537,12 +537,6 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                             style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold
                         )
                     }
-                    if (!selectMode) {
-                        IconButton(onClick = { editing = m; showForm = true }) { Icon(Icons.Default.Edit, tr("Edit obat", "Edit medicine")) }
-                        IconButton(onClick = { deleteTarget = m }) {
-                            Icon(Icons.Default.Delete, tr("Hapus obat", "Delete medicine"), tint = MaterialTheme.colorScheme.error)
-                        }
-                    }
                 }
             }
             
@@ -559,63 +553,6 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
             title = { Text(tr("Import Excel Selesai", "Excel Import Complete")) },
             text = { Text(importSummary.orEmpty()) },
             confirmButton = { TextButton(onClick = { showImportDialog = false }) { Text("OK") } }
-        )
-    }
-    if (deleteTarget != null) {
-        val target = checkNotNull(deleteTarget)
-        AlertDialog(
-            onDismissRequest = { deleteTarget = null },
-            title = { Text(tr("Hapus Obat?", "Delete Medicine?")) },
-            text = { Text(tr("Hapus ${target.name} dari stok?", "Remove ${target.name} from stock?")) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        deleteTarget = null
-                        scope.launch {
-                            // R48 (audit 2026-11-15): periksa hasil hapus —
-                            // jangan klaim "dihapus" bila gagal; begitu juga
-                            // hasil Urungkan harus dilaporkan bila gagal.
-                            when (val del = repo.deleteMedicine(target.id)) {
-                                is ApiResult.Success -> {
-                                    reload()
-                                    val result = snackbarHostState.showSnackbar(
-                                        message = tr("Obat ${target.name} dihapus.", "${target.name} deleted."),
-                                        actionLabel = tr("Urungkan", "Undo"),
-                                        duration = SnackbarDuration.Long
-                                    )
-                                    if (result == SnackbarResult.ActionPerformed) {
-                                        when (val undo = repo.createMedicine(
-                                            MedicineArgs(
-                                                target.name, target.category, target.unit,
-                                                target.sellPrice, target.stock,
-                                                target.expiryDate, target.barcode,
-                                                wholesalePrice = target.wholesalePrice,
-                                                buyPrice = target.buyPrice
-                                            )
-                                        )) {
-                                            is ApiResult.Success -> {
-                                                reload()
-                                                msg = "Obat ${target.name} dikembalikan."
-                                            }
-                                            is ApiResult.Error -> {
-                                                reload()
-                                                msg = tr("Gagal mengembalikan ${target.name}: ${undo.message}", "Failed to restore ${target.name}: ${undo.message}")
-                                            }
-                                            is ApiResult.Loading -> Unit
-                                        }
-                                    }
-                                }
-                                is ApiResult.Error -> {
-                                    reload()
-                                    msg = tr("Gagal menghapus ${target.name}: ${del.message}", "Failed to delete ${target.name}: ${del.message}")
-                                }
-                                is ApiResult.Loading -> Unit
-                            }
-                        }
-                    }
-                ) { Text(tr("Hapus", "Delete"), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text(tr("Batal", "Cancel")) } }
         )
     }
     // Konfirmasi hapus massal: hapus semua yang terpilih, lalu Snackbar
