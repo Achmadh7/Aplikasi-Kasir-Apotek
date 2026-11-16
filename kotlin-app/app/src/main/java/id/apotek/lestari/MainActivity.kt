@@ -984,6 +984,11 @@ fun LainnyaScreen(
 // L1-L6, menggantikan M2): logo di ubin putih sudut membulat, "LESTARI"
 // cyan, aksen cyan di bawah nama, tombol Lewati jadi pil berbingkai cyan.
 // Tetap gelap premium di kedua tema; perilaku + string tr() tidak berubah.
+// L8 MINIMAL RATA (pilihan Achmad 2026-11-16, dari board L7-L9):
+// subjudul "Kasir Apotek" dihapus, jeda ke kalimat masuk 48dp -> 32dp,
+// pemisah "atau" antara tombol Google dan Lewati, Lewati selebar tombol
+// Google. Logo ASLI sudah dipakai sejak awal (rememberLogoBitmap di
+// LogoData.kt, JPG 512px) — bukan ikon generik.
 @Composable
 fun LayarLogin(
     googleSiap: Boolean,
@@ -1048,13 +1053,9 @@ fun LayarLogin(
                         .height(3.dp)
                         .background(cyan, RoundedCornerShape(2.dp))
                 )
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    tr("Kasir Apotek", "Pharmacy Cashier"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF93A5B8)
-                )
-                Spacer(Modifier.height(48.dp))
+                // L8: subjudul "Kasir Apotek" dihapus (permintaan Achmad);
+                // jeda ke kalimat masuk dirapatkan 48dp -> 32dp.
+                Spacer(Modifier.height(32.dp))
                 Text(
                     tr("Masuk untuk mencadangkan data ke akunmu", "Sign in to back up your data to your account"),
                     style = MaterialTheme.typography.titleMedium,
@@ -1099,14 +1100,22 @@ fun LayarLogin(
                         textAlign = TextAlign.Center
                     )
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(14.dp))
+                // L8 MINIMAL RATA: pemisah "atau" antara tombol Google
+                // dan Lewati.
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFF2A3542))
+                    Text(tr("atau", "or"), style = MaterialTheme.typography.bodySmall, color = Color(0xFF6E7C8C), modifier = Modifier.padding(horizontal = 12.dp))
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFF2A3542))
+                }
+                Spacer(Modifier.height(14.dp))
                 OutlinedButton(
                     onClick = onLewati,
                     enabled = !sibuk,
                     border = BorderStroke(1.5.dp, cyan),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = cyan),
                     shape = RoundedCornerShape(50),
-                    modifier = Modifier.fillMaxWidth(0.8f)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(tr("Lewati \u2014 Pakai Tanpa Akun", "Skip \u2014 Use Without an Account"), fontWeight = FontWeight.SemiBold)
                 }
