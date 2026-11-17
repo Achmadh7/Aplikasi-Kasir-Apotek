@@ -1,15 +1,19 @@
 package id.apotek.lestari.data
 
+import org.apache.poi.ss.usermodel.BorderStyle
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.DataFormatter
 import org.apache.poi.ss.usermodel.DateUtil
 import org.apache.poi.ss.usermodel.FillPatternType
 import org.apache.poi.ss.usermodel.IndexedColors
+import org.apache.poi.ss.usermodel.PrintOrientation
 import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.ss.util.CellRangeAddress
 import org.apache.poi.ss.util.CellRangeAddressList
 import org.apache.poi.ss.usermodel.WorkbookFactory
+import org.apache.poi.xssf.usermodel.XSSFColor
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import java.awt.Color
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
@@ -129,7 +133,10 @@ object ExcelHelper {
      *  hari berisi penjualan + HPP + Laba Kotor + baris TOTAL) dan sheet
      *  "Per Obat" (satu baris per obat + TOTAL). Laba Kotor = Total Penjualan
      *  - HPP. Format mengikuti template Stok (X1+X2+X3): judul dibekukan +
-     *  filter otomatis, angka #,##0, tanggal sel Excel asli. */
+     *  filter otomatis, angka #,##0, tanggal sel Excel asli. Gaya EX2 Steel
+     *  Biru (2026-11-17, pilihan Achmad): header biru baja + teks putih,
+     *  baris selang-seling abu muda, TOTAL biru muda + teks navy + garis
+     *  atas, judul navy, cetak landscape + judul diulang tiap halaman. */
     fun rekapPenjualanBytes(rekap: RekapPenjualan, judulPeriode: String): ByteArray {
         val wb = XSSFWorkbook()
         buildRekapSheet(
@@ -152,8 +159,10 @@ object ExcelHelper {
     }
 
     /** Satu sheet rekap: baris 0 judul (digabung), baris 1 header, lalu data
-     *  dan baris TOTAL tebal di akhir. Kolom tanggal ditulis sebagai sel
-     *  tanggal Excel asli (seperti X3), bukan teks. */
+     *  dan baris TOTAL di akhir. Kolom tanggal ditulis sebagai sel
+     *  tanggal Excel asli (seperti X3), bukan teks. Gaya EX2 Steel Biru:
+     *  header biru baja + teks putih, baris data selang-seling abu muda,
+     *  TOTAL biru muda + teks navy + garis atas tebal, judul navy. */
     private fun buildRekapSheet(
         wb: XSSFWorkbook,
         sheetName: String,
@@ -165,8 +174,21 @@ object ExcelHelper {
         totalRow: List<Any>
     ) {
         val sheet = wb.createSheet(sheetName)
+        // EX2 (2026-11-17, pilihan Achmad): gaya "Steel Biru" — judul navy,
+        // header biru baja + teks putih, baris selang-seling abu muda, TOTAL
+        // biru muda + teks navy + garis atas. Warna custom WAJIB lewat
+        // setter eksplisit (setFillForegroundColor/setColor) — assignment
+        // properti mengikat overload Short dan gagal kompilasi.
+        val biruBaja = XSSFColor(Color(46, 117, 182), null)
+        val biruMuda = XSSFColor(Color(217, 226, 243), null)
+        val navyTeks = XSSFColor(Color(31, 56, 100), null)
+        val abuBaris = XSSFColor(Color(242, 242, 242), null)
         val titleStyle = wb.createCellStyle().apply {
-            setFont(wb.createFont().apply { bold = true; fontHeightInPoints = 14 })
+            setFont(wb.createFont().apply {
+                bold = true
+                fontHeightInPoints = 14
+                setColor(navyTeks)
+            })
         }
         val titleRow = sheet.createRow(0)
         titleRow.createCell(0).apply { setCellValue(title); cellStyle = titleStyle }
@@ -174,9 +196,9 @@ object ExcelHelper {
         val headerStyle = wb.createCellStyle().apply {
             setFont(wb.createFont().apply {
                 bold = true
-                color = IndexedColors.BLACK.index
+                color = IndexedColors.WHITE.index
             })
-            fillForegroundColor = IndexedColors.PALE_BLUE.index
+            setFillForegroundColor(biruBaja)
             fillPattern = FillPatternType.SOLID_FOREGROUND
         }
         val header = sheet.createRow(1)
@@ -186,44 +208,80 @@ object ExcelHelper {
         val numberStyle = wb.createCellStyle().apply {
             dataFormat = wb.createDataFormat().getFormat("#,##0")
         }
-        val boldNumberStyle = wb.createCellStyle().apply {
-            setFont(wb.createFont().apply { bold = true })
+        val numberStyleBand = wb.createCellStyle().apply {
             dataFormat = wb.createDataFormat().getFormat("#,##0")
+            setFillForegroundColor(abuBaris)
+            fillPattern = FillPatternType.SOLID_FOREGROUND
+        }
+        val boldNumberStyle = wb.createCellStyle().apply {
+            setFont(wb.createFont().apply { bold = true; setColor(navyTeks) })
+            dataFormat = wb.createDataFormat().getFormat("#,##0")
+            setFillForegroundColor(biruMuda)
+            fillPattern = FillPatternType.SOLID_FOREGROUND
+            borderTop = BorderStyle.MEDIUM
+            setTopBorderColor(navyTeks)
         }
         val boldStyle = wb.createCellStyle().apply {
-            setFont(wb.createFont().apply { bold = true })
+            setFont(wb.createFont().apply { bold = true; setColor(navyTeks) })
+            setFillForegroundColor(biruMuda)
+            fillPattern = FillPatternType.SOLID_FOREGROUND
+            borderTop = BorderStyle.MEDIUM
+            setTopBorderColor(navyTeks)
         }
         val dateStyle = wb.createCellStyle().apply {
             dataFormat = wb.createDataFormat().getFormat("yyyy-mm-dd")
         }
-        fun writeRow(rowIdx: Int, values: List<Any>, bold: Boolean) {
+        val dateStyleBand = wb.createCellStyle().apply {
+            dataFormat = wb.createDataFormat().getFormat("yyyy-mm-dd")
+            setFillForegroundColor(abuBaris)
+            fillPattern = FillPatternType.SOLID_FOREGROUND
+        }
+        val textStyleBand = wb.createCellStyle().apply {
+            setFillForegroundColor(abuBaris)
+            fillPattern = FillPatternType.SOLID_FOREGROUND
+        }
+        fun writeRow(rowIdx: Int, values: List<Any>, bold: Boolean, banded: Boolean = false) {
             val row = sheet.createRow(rowIdx)
             values.forEachIndexed { c, v ->
                 val cell = row.createCell(c)
                 when (v) {
-                    is Int -> { cell.setCellValue(v.toDouble()); cell.cellStyle = if (bold) boldNumberStyle else numberStyle }
-                    is Long -> { cell.setCellValue(v.toDouble()); cell.cellStyle = if (bold) boldNumberStyle else numberStyle }
+                    is Int -> {
+                        cell.setCellValue(v.toDouble())
+                        cell.cellStyle = if (bold) boldNumberStyle else if (banded) numberStyleBand else numberStyle
+                    }
+                    is Long -> {
+                        cell.setCellValue(v.toDouble())
+                        cell.cellStyle = if (bold) boldNumberStyle else if (banded) numberStyleBand else numberStyle
+                    }
                     else -> {
                         val s = v.toString()
                         if (c == dateCol) {
                             val parsed = runCatching { LocalDate.parse(s, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
                             if (parsed != null) {
                                 cell.setCellValue(Date.from(parsed.atStartOfDay(ZoneId.of("Asia/Jakarta")).toInstant()))
-                                cell.cellStyle = dateStyle
+                                cell.cellStyle = if (banded) dateStyleBand else dateStyle
                             } else cell.setCellValue(s)
                         } else {
                             cell.setCellValue(s)
                             if (bold) cell.cellStyle = boldStyle
+                            else if (banded) cell.cellStyle = textStyleBand
                         }
                     }
                 }
             }
         }
-        rows.forEachIndexed { i, values -> writeRow(i + 2, values, false) }
+        rows.forEachIndexed { i, values -> writeRow(i + 2, values, false, i % 2 == 1) }
         writeRow(rows.size + 2, totalRow, true)
         widths.forEachIndexed { i, w -> sheet.setColumnWidth(i, w * 256) }
         sheet.createFreezePane(0, 2)
         sheet.setAutoFilter(CellRangeAddress(1, 1, 0, headers.size - 1))
+        // EX2: setelan cetak — landscape, muat 1 halaman lebar, judul +
+        // header diulang di tiap halaman cetak.
+        sheet.printSetup.orientation = PrintOrientation.LANDSCAPE
+        sheet.setFitToPage(true)
+        sheet.printSetup.fitToWidth = 1
+        sheet.printSetup.fitToHeight = 0
+        sheet.setRepeatingRows(CellRangeAddress(0, 1, 0, headers.size - 1))
     }
 
     data class ParsedImport(val items: List<MedicineArgs>, val skippedRows: List<Int>)
