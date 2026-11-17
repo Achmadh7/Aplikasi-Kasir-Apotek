@@ -61,7 +61,7 @@ fun KeuanganScreen() {
     // muat entri/saldo diam-diam menampilkan angka periode.
     var loadError by remember { mutableStateOf<String?>(null) }
     // R10 (audit 2026-11-15): pilihan periode selamat dari rotasi.
-    var period by rememberSaveable { mutableStateOf("today") } // today | month | all — awalnya "Hari Ini" (permintaan Achmad 2026-10-31), bukan "Semua"
+    var period by rememberSaveable { mutableStateOf("all") } // today | month | all — awalnya "Semua" (permintaan Achmad 2026-11-17: riwayat tidak reset harian supaya semua catatan terlihat; dulu "Hari Ini" sejak 2026-10-31)
     var typeFilter by remember { mutableStateOf("all") } // all | in | out
     var showForm by remember { mutableStateOf(false) }
     var formType by remember { mutableStateOf("in") }
@@ -114,11 +114,15 @@ fun KeuanganScreen() {
     // periode terpilih — tampilkan 0 dengan keterangan di kartu (di bawah),
     // karena kartu galat S11 sudah menjelaskan kegagalannya.
     // TB2 (2026-11-17, permintaan Achmad): Masuk/Keluar di kartu ini
-    // mengikuti pil periode — di "Hari Ini" berarti khusus hari ini (reset
-    // tiap pagi seperti Penjualan Hari Ini), bukan total sejak awal.
-    // Saldo (balance) tetap total sejak awal (uang laci).
-    val masukPeriode = periodEntries.filter { it.type == "in" }.sumOf { it.amount }
-    val keluarPeriode = periodEntries.filter { it.type == "out" }.sumOf { it.amount }
+    // SELALU khusus hari ini (reset tiap pagi seperti Penjualan Hari Ini),
+    // bukan total sejak awal dan bukan mengikuti pil periode — pil periode
+    // hanya mengatur daftar riwayat + grafik di bawah, supaya riwayat
+    // tidak ikut kereset (permintaan Achmad 2026-11-17: semua catatan
+    // tetap terlihat, terbaru dulu). Saldo (balance) tetap total sejak
+    // awal (uang laci).
+    val entriHariIni = entries.filter { e -> parseISODate(e.createdAt)?.let { dayKeyID(it) == todayKey } == true }
+    val masukHariIni = entriHariIni.filter { it.type == "in" }.sumOf { it.amount }
+    val keluarHariIni = entriHariIni.filter { it.type == "out" }.sumOf { it.amount }
     val saldo = cashBalance?.balance ?: 0
     // Arus kas mengikuti periode yang dipilih, kecuali "Hari Ini" yang tetap
     // menampilkan 7 hari terakhir supaya jelas (1 batang saja di tengah kartu
@@ -241,11 +245,11 @@ fun KeuanganScreen() {
                     Column(Modifier.width(108.dp)) {
                         Text("▲ " + tr("MASUK", "IN"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(4.dp))
-                        AnimatedAmount(masukPeriode, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        AnimatedAmount(masukHariIni, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Spacer(Modifier.height(SpaceM))
                         Text("▼ " + tr("KELUAR", "OUT"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(4.dp))
-                        AnimatedAmount(keluarPeriode, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        AnimatedAmount(keluarHariIni, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
