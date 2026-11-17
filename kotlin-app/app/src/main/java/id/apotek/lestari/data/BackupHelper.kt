@@ -19,10 +19,10 @@ import org.json.JSONObject
  *
  * Format file: {"version":1, "app":"apotek-lestari", "exportedAtMillis":<ms epoch>,
  *   "medicines":[...], "sales":[...], "saleItems":[...], "cashEntries":[...],
- *   "purchases":[...], "purchaseItems":[...], "suppliers":[...]}
- * Array purchases/purchaseItems/suppliers (fitur PBF + daftar pemasok)
- * bersifat OPSIONAL saat dibaca: backup lama yang belum punya array itu
- * tetap bisa dipulihkan.
+ *   "purchases":[...], "purchaseItems":[...], "suppliers":[...], "closedMonths":[...]}
+ * Array purchases/purchaseItems/suppliers/closedMonths (fitur PBF + daftar
+ * pemasok + kunci Tutup Buku) bersifat OPSIONAL saat dibaca: backup lama
+ * yang belum punya array itu tetap bisa dipulihkan.
  * Dipakai org.json bawaan Android, jadi tidak perlu dependensi baru.
  * Restore MENGGANTI seluruh data saat ini dengan isi file backup
  * (ID dipertahankan supaya relasi penjualan-item tetap utuh).
@@ -36,7 +36,10 @@ data class BackupData(
     val purchaseItems: List<PurchaseItemEntity> = emptyList(),
     val suppliers: List<SupplierEntity> = emptyList(),
     // Cap waktu pembuatan file (ms epoch); 0 = file lama tanpa cap waktu.
-    val exportedAtMillis: Long = 0
+    val exportedAtMillis: Long = 0,
+    // S3 (audit 2026-11-17): bulan yang sudah ditutup ("yyyy-MM") saat
+    // backup dibuat; file lama tanpa array ini dianggap tidak ada kunci.
+    val closedMonths: List<String> = emptyList()
 )
 
 object BackupHelper {
@@ -171,6 +174,13 @@ object BackupHelper {
             suppliers.put(o)
         }
         root.put("suppliers", suppliers)
+
+        // S3 (audit 2026-11-17): bulan yang sudah ditutup ikut backup —
+        // tanpa ini restore di perangkat baru membuka diam-diam bulan
+        // yang dulu terkunci.
+        val closed = JSONArray()
+        for (b in data.closedMonths) closed.put(b)
+        root.put("closedMonths", closed)
 
         return root.toString(2)
     }
@@ -450,6 +460,19 @@ object BackupHelper {
             }
         }
 
+        // S3: bulan tertutup — array OPSIONAL seperti pemasok; backup lama
+        // tidak punya array ini dan tetap sah. Entri yang bukan kunci
+        // bulan valid dilewati (bukan ditolak) supaya satu entri rusak
+        // tidak menggagalkan restore.
+        val closedMonths = mutableListOf<String>()
+        val closedArr = root.optJSONArray("closedMonths")
+        if (closedArr != null) {
+            for (i in 0 until closedArr.length()) {
+                val b = closedArr.optString(i, "")
+                if (bulanValid(b)) closedMonths.add(b)
+            }
+        }
+
         // R3 (audit 2026-11-15): tolak nilai negatif di seluruh tabel.
         // Cek konsistensi subtotal saja tidak menangkapnya: qty -1 x
         // harga 10 = subtotal -10 tetap "konsisten". File yang dibuat
@@ -552,7 +575,7 @@ object BackupHelper {
             }
         }
 
-        return BackupData(medicines, sales, items, entries, purchases, purchaseItems, suppliers, exportedAtMillis)
+        return BackupData(medicines, sales, items, entries, purchases, purchaseItems, suppliers, exportedAtMillis, closedMonths)
     }
 
     /** A3: array wajib ada dan benar-benar JSONArray; kalau tidak, backup ditolak. */

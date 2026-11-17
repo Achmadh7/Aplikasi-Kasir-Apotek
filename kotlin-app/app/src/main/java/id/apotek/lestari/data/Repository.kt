@@ -1047,7 +1047,9 @@ class Repository {
             cashEntries = db.cashDao().getAll(),
             purchases = db.purchaseDao().getAll(),
             purchaseItems = db.purchaseDao().getAllItems(),
-            suppliers = db.supplierDao().getAll()
+            suppliers = db.supplierDao().getAll(),
+            // S3: kunci bulan ikut backup supaya tidak hilang saat restore.
+            closedMonths = db.closedMonthDao().getAll().map { it.bulan }
         )
         BackupHelper.buildJson(data)
     }
@@ -1105,6 +1107,14 @@ class Repository {
             )
             data.suppliers.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("pemasok") }, kotor = 1) }
                 .forEach { db.supplierDao().insert(it) }
+            // S3: pulihkan kunci bulan sebagai gabungan (union) — bulan
+            // yang sudah tertutup tidak pernah terbuka diam-diam karena
+            // restore; bulan dari backup yang belum ada ikut dikunci.
+            data.closedMonths.filter { bulanValid(it) }.forEach { bulan ->
+                if (db.closedMonthDao().getByBulan(bulan) == null) {
+                    db.closedMonthDao().insert(ClosedMonthEntity(bulan = bulan, ditutupPada = nowMillis()))
+                }
+            }
         }
         tr("Dipulihkan: ${data.medicines.size} obat, ${data.sales.size} penjualan, ${data.saleItems.size} item, ${data.cashEntries.size} kas, ${data.purchases.size} pembelian PBF.", "Restored: ${data.medicines.size} medicines, ${data.sales.size} sales, ${data.saleItems.size} items, ${data.cashEntries.size} cash entries, ${data.purchases.size} PBF purchases.")
     }
@@ -1417,6 +1427,9 @@ class Repository {
         }
         else if (SyncLogic.remoteMenang(e.updatedAt, e.terhapus == 1, ada.updatedAt, ada.terhapus == 1)) {
             dao.update(e.copy(id = ada.id, kotor = 0))
+            // S4 (audit 2026-11-17): tombstone PBF yang menang menandai
+            // juga item-itemnya terhapus — cermin M9 untuk penjualan.
+            if (e.terhapus == 1) dao.deleteItemsForPurchase(ada.id, e.updatedAt)
         } else if (e.updatedAt < ada.updatedAt && ada.kotor == 0) {
             // Versi lokal lebih baru tapi awan masih menyimpan versi lama
             // (mis. pernah tertimpa dorongan buta, S4): tandai kotor
