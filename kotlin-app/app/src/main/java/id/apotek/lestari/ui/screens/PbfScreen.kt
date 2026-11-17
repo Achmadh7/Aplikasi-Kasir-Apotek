@@ -4,7 +4,6 @@ package id.apotek.lestari.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -392,13 +391,16 @@ fun PbfScreen() {
                                         }
                                     }
                                 }
-                                // Hapus gaya FB1 (pilihan Achmad 2026-11-16):
-                                // tombol Outlined merah selebar kartu, 48dp,
-                                // sudut 12dp — menggantikan TextButton kecil.
-                                OutlinedButton(
+                                // Hapus gaya H1 (pilihan Achmad 2026-11-18,
+                                // revamp tombol Hapus): tombol merah penuh
+                                // selebar kartu, 48dp, sudut 12dp, teks +
+                                // ikon putih — aksi berbahaya langsung terbaca.
+                                Button(
                                     onClick = { deleteTarget = p },
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    ),
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier.fillMaxWidth().height(48.dp)
                                 ) {
