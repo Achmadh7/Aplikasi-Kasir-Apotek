@@ -470,7 +470,7 @@ fun KeuanganScreen() {
             // Entri E2 PADAT (pilihan Achmad 2026-11-16): kotak 20dp
             // senada P3/R1/K1/B1 + lingkaran berwarna (bukan putih) +
             // baris lebih pendek (ikon 32dp, padding 10dp).
-            ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.fillMaxWidth().animateItem()) {
+            ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth().animateItem()) {
                 Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = if (isIn) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer, shape = CircleShape) {
                         Icon(

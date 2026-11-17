@@ -291,7 +291,7 @@ private fun KartuBulanTutup(
     gagalMuat: Boolean = false,
     onMuatUlang: (() -> Unit)? = null
 ) {
-    ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest) {
+    ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Column(Modifier.padding(12.dp)) {
             // TB-R1: status jadi pill warna di kanan atas kartu.
             Row(verticalAlignment = Alignment.CenterVertically) {

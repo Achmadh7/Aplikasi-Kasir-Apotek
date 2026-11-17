@@ -425,7 +425,7 @@ fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = false) {
 
 
 // Kolom cari (BasicTextField + decorationBox), dipakai Kasir & Stok.
-// V1 (pilihan Achmad 2026-11-16): kotak 20dp surfaceContainerHighest
+// V1 (pilihan Achmad 2026-11-16): kotak 20dp surfaceContainerHigh
 // tanpa garis tepi — senada kotak stat P3 / baris K1 / shortcut R1,
 // bukan lagi pill 22dp. Tombol X di kanan muncul saat ada teks,
 // untuk hapus pencarian. Tinggi 48dp.
@@ -448,9 +448,9 @@ fun SearchField(
             .height(48.dp),
         decorationBox = { innerTextField ->
             Surface(
-                // Latar surfaceContainerHighest tanpa garis tepi, senada
+                // Latar surfaceContainerHigh tanpa garis tepi, senada
                 // kotak stat P3 / baris K1 / shortcut R1.
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.fillMaxSize()
             ) {

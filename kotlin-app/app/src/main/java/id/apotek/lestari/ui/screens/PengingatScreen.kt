@@ -187,7 +187,7 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
                     ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface), elevation = 0.dp, modifier = Modifier.weight(1f)) {
                         ReminderCount(Icons.Default.Inventory, tr("RENDAH", "LOW"), "${low.size}", MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().padding(16.dp))
                     }
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = if (critical.isNotEmpty()) MaterialTheme.colorScheme.error.copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface) else MaterialTheme.colorScheme.surfaceContainerHighest, elevation = 0.dp, modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = if (critical.isNotEmpty()) MaterialTheme.colorScheme.error.copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface) else MaterialTheme.colorScheme.surfaceContainerHigh, elevation = 0.dp, modifier = Modifier.weight(1f)) {
                         ReminderCount(Icons.Default.PriorityHigh, tr("HABIS", "OUT"), "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
                     }
                 }

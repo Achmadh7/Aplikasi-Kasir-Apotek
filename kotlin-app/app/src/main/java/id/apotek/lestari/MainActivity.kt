@@ -855,11 +855,11 @@ fun LainnyaScreen(
             else -> tr("Aplikasi berjalan lokal sepenuhnya di HP ini", "The app runs fully locally on this phone")
         }
         // O1 WARNA STATUS (pilihan Achmad 2026-11-16): kartu status
-        // tetap 20dp surfaceContainerHighest (N1); kotak ikon 40dp ikut
+        // tetap 20dp surfaceContainerHigh (N1); kotak ikon 40dp ikut
         // status — Online hijau #2E7D32, Offline kuning gelap #8D6E00,
         // ikon awan putih. Mode tetap terbaca juga dari judul.
         Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
             shape = RoundedCornerShape(20.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             modifier = Modifier.fillMaxWidth().padding(vertical = SpaceS)
@@ -901,8 +901,8 @@ fun LainnyaScreen(
             LainnyaTile("pemasok", tr("Pemasok", "Suppliers"), tr("Daftar PBF", "PBF list"), Icons.Default.Store),
             LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
         )
-        // N1: kartu grup 20dp surfaceContainerHighest (ketiga kartu grup).
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest) {
+        // N1: kartu grup 20dp surfaceContainerHigh (ketiga kartu grup).
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column(Modifier.padding(vertical = 8.dp)) {
                 tiles.forEachIndexed { idx, tile ->
                     if (idx > 0) PemisahGrup()
@@ -913,7 +913,7 @@ fun LainnyaScreen(
         Spacer(Modifier.height(SpaceM))
         // Kartu grup pengaturan: tema (saklar), bahasa, sinkronisasi,
         // keluar akun.
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest) {
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column(Modifier.padding(vertical = 8.dp)) {
                 BarisGrupLainnya(
                     if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
@@ -961,7 +961,7 @@ fun LainnyaScreen(
         }
         Spacer(Modifier.height(SpaceM))
         // Kartu Tentang tersendiri, seperti KasBulanan.
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest) {
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column(Modifier.padding(vertical = 8.dp)) {
                 BarisGrupLainnya(
                     Icons.Default.Info,

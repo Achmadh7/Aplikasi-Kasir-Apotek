@@ -201,8 +201,8 @@ fun BackupScreen() {
             Spacer(Modifier.height(SpaceL))
         }
         // Kartu B1 KOTAK SENADA (pilihan Achmad 2026-11-16):
-        // 20dp + surfaceContainerHighest, lingkaran ikon biru.
-        ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.fillMaxWidth()) {
+        // 20dp + surfaceContainerHigh, lingkaran ikon biru.
+        ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -242,7 +242,7 @@ fun BackupScreen() {
         Spacer(Modifier.height(SpaceL))
         // Backup Otomatis (G6): saklar + folder tujuan + frekuensi + jalan sekali.
         // Kartu B1 KOTAK SENADA (pilihan Achmad 2026-11-16).
-        ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.fillMaxWidth()) {
+        ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
@@ -345,7 +345,7 @@ fun BackupScreen() {
         }
         Spacer(Modifier.height(SpaceL))
         // Kartu B1 KOTAK SENADA (pilihan Achmad 2026-11-16).
-        ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.fillMaxWidth()) {
+        ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {

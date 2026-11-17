@@ -212,7 +212,7 @@ fun LabaScreen() {
             }
             item {
                 
-                ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.fillMaxWidth()) {
+                ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         // Rincian (B1, 2026-11-16): baris label-nilai (HPP,
                         // Laba Kotor, Biaya Operasional). Penjualan tidak

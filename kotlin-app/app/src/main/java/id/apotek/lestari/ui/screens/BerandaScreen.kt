@@ -318,7 +318,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                     Triple(tr("Transaksi", "Transactions"), "$panelSales", MaterialTheme.colorScheme.onSurface)
                                 ).forEach { (label, nilai, warna) ->
                                     Surface(
-                                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                         shape = RoundedCornerShape(14.dp),
                                         modifier = Modifier.weight(1f)
                                     ) {
@@ -433,7 +433,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     kotakPengingat.forEach { (label, nilai, warna) ->
                                         Surface(
-                                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                             shape = RoundedCornerShape(14.dp),
                                             modifier = Modifier.weight(1f)
                                         ) {
@@ -497,7 +497,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 d.bestSellers.forEach { b ->
                                     Surface(
-                                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                         shape = RoundedCornerShape(20.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
@@ -537,8 +537,8 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
 @Composable
 fun ShortcutCard(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
     // R1 (pilihan Achmad 2026-11-16): sudut 20dp + latar
-    // surfaceContainerHighest, senada kotak P3.
-    ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = modifier.clickable { onClick() }) {
+    // surfaceContainerHigh, senada kotak P3.
+    ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = modifier.clickable { onClick() }) {
         Column(Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
             Spacer(Modifier.height(SpaceS))
