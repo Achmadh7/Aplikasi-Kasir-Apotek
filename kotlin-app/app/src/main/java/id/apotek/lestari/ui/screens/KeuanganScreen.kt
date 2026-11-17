@@ -113,8 +113,12 @@ fun KeuanganScreen() {
     // entri); bila agregat gagal dimuat, JANGAN diam-diam memakai jumlah
     // periode terpilih — tampilkan 0 dengan keterangan di kartu (di bawah),
     // karena kartu galat S11 sudah menjelaskan kegagalannya.
-    val saldoIn = cashBalance?.totalIn ?: 0
-    val saldoOut = cashBalance?.totalOut ?: 0
+    // TB2 (2026-11-17, permintaan Achmad): Masuk/Keluar di kartu ini
+    // mengikuti pil periode — di "Hari Ini" berarti khusus hari ini (reset
+    // tiap pagi seperti Penjualan Hari Ini), bukan total sejak awal.
+    // Saldo (balance) tetap total sejak awal (uang laci).
+    val masukPeriode = periodEntries.filter { it.type == "in" }.sumOf { it.amount }
+    val keluarPeriode = periodEntries.filter { it.type == "out" }.sumOf { it.amount }
     val saldo = cashBalance?.balance ?: 0
     // Arus kas mengikuti periode yang dipilih, kecuali "Hari Ini" yang tetap
     // menampilkan 7 hari terakhir supaya jelas (1 batang saja di tengah kartu
@@ -237,11 +241,11 @@ fun KeuanganScreen() {
                     Column(Modifier.width(108.dp)) {
                         Text("▲ " + tr("MASUK", "IN"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(4.dp))
-                        AnimatedAmount(saldoIn, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        AnimatedAmount(masukPeriode, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Spacer(Modifier.height(SpaceM))
                         Text("▼ " + tr("KELUAR", "OUT"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(4.dp))
-                        AnimatedAmount(saldoOut, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        AnimatedAmount(keluarPeriode, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
