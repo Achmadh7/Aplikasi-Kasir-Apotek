@@ -296,13 +296,15 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
             // informasinya jelas (sebelumnya hanya satu yang tampil karena
             // rantai if/else berhenti di kondisi pertama yang cocok).
             val stockNote = when {
-                isCritical -> if (showSuggest) tr("Stok habis — restock segera, disarankan $suggest ${m.unit} (target stok Aman 16).", "Out of stock — restock soon, suggested $suggest ${m.unit} (Safe stock target 16).") else tr("Stok habis — restock segera.", "Out of stock — restock soon.")
-                m.stock in 1..9 -> if (showSuggest) tr("Stok rendah — disarankan restock $suggest ${m.unit} (target stok Aman 16).", "Low stock — suggested restock $suggest ${m.unit} (Safe stock target 16).") else tr("Stok rendah — restock segera.", "Low stock — restock soon.")
+                isCritical -> if (showSuggest) tr("Stok habis — restock segera, disarankan $suggest ${m.unit}.", "Out of stock — restock soon, suggested $suggest ${m.unit}.") else tr("Stok habis — restock segera.", "Out of stock — restock soon.")
+                m.stock in 1..9 -> if (showSuggest) tr("Stok rendah — disarankan restock $suggest ${m.unit}.", "Low stock — suggested restock $suggest ${m.unit}.") else tr("Stok rendah — restock segera.", "Low stock — restock soon.")
                 else -> null
             }
+            // PG2 (2026-11-17): "prioritaskan penjualan" hanya bila
+            // kadaluarsa <= 30 hari; exp jauh tidak lagi dibilang mendesak.
             val expiryNote = when {
                 d != null && d < 0 -> tr("Sudah kadaluarsa — jangan dijual, segera pisahkan dari stok.", "Expired — do not sell it, separate it from stock right away.")
-                d != null -> tr("Kedaluwarsa dalam $d hari — prioritaskan penjualan.", "Expires in $d days — prioritize selling it.")
+                d != null && d <= 30 -> tr("Kedaluwarsa dalam $d hari — prioritaskan penjualan.", "Expires in $d days — prioritize selling it.")
                 else -> null
             }
             val advice = listOfNotNull(stockNote, expiryNote).joinToString(" ")
@@ -359,13 +361,12 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
                                         }
                                     }
                                 }
+                                // PG2 (2026-11-17): meta ringkas — status
+                                // ("Habis") sudah di pill, sisa hari sudah
+                                // di saran bila mendesak.
                                 Text(
-                                    "${m.category} • Stok ${m.stock} ${m.unit} • ${stockLabel(m.stock)}" +
-                                        if (m.expiryDate != null) {
-                                            " • Exp ${formatDateID(m.expiryDate)}" + if (d != null) {
-                                                if (d < 0) tr(" • Lewat ${-d} hari", " • ${-d} days overdue") else tr(" • Sisa $d hari", " • $d days left")
-                                            } else ""
-                                        } else " • Tanpa tanggal kadaluarsa",
+                                    "${m.category} • Stok ${m.stock} ${m.unit}" +
+                                        if (m.expiryDate != null) " • Exp ${formatDateID(m.expiryDate)}" else " • Tanpa tanggal kadaluarsa",
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -377,14 +378,19 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
                                 Text(tr("Stok", "Stock"))
                             }
                         }
-                        Spacer(Modifier.height(SpaceS))
-                        Row(verticalAlignment = Alignment.Top) {
-                            Icon(Icons.Default.Lightbulb, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                advice,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                        // PG2 (2026-11-17): saran bisa kosong (stok >= 10
+                        // dan exp > 30 hari) — baris bohlam disembunyikan
+                        // supaya tidak ada baris kosong.
+                        if (advice.isNotBlank()) {
+                            Spacer(Modifier.height(SpaceS))
+                            Row(verticalAlignment = Alignment.Top) {
+                                Icon(Icons.Default.Lightbulb, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    advice,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
                     }
                 }
