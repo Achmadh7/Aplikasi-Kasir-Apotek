@@ -56,9 +56,8 @@ import java.util.TimeZone
 @Composable
 fun KeuanganScreen() {
     var entries by remember { mutableStateOf<List<CashEntry>>(emptyList()) }
-    var cashBalance by remember { mutableStateOf<CashBalance?>(null) }
     // Pesan kegagalan muat (S11, audit 2026-11-15): tanpa ini, kegagalan
-    // muat entri/saldo diam-diam menampilkan angka periode.
+    // muat entri diam-diam menampilkan angka 0.
     var loadError by remember { mutableStateOf<String?>(null) }
     // R10 (audit 2026-11-15): pilihan periode selamat dari rotasi.
     var period by rememberSaveable { mutableStateOf("all") } // today | month | all — awalnya "Semua" (permintaan Achmad 2026-11-17: riwayat tidak reset harian supaya semua catatan terlihat; dulu "Hari Ini" sejak 2026-10-31)
@@ -68,21 +67,13 @@ fun KeuanganScreen() {
     val scope = rememberCoroutineScope()
     fun reload() {
         scope.launch {
-            // S11: kumpulkan galat kedua panggilan supaya kegagalan
-            // salah satunya tidak tertutup keberhasilan yang lain.
-            var gagal: String? = null
+            // S11: kegagalan muat menampilkan kartu galat (bukan angka 0
+            // diam-diam); sukses memuat menghapus galat sebelumnya.
             when (val r = repo.listCashEntries()) {
-                is ApiResult.Success -> entries = r.data.entries
-                is ApiResult.Error -> gagal = r.message
+                is ApiResult.Success -> { entries = r.data.entries; loadError = null }
+                is ApiResult.Error -> loadError = r.message
                 is ApiResult.Loading -> Unit
             }
-            // Saldo dihitung dari SEMUA entri (bukan 200 terbaru saja).
-            when (val r = repo.getCashBalance()) {
-                is ApiResult.Success -> cashBalance = r.data
-                is ApiResult.Error -> gagal = r.message
-                is ApiResult.Loading -> Unit
-            }
-            loadError = gagal
         }
     }
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME) — pola yang
@@ -109,21 +100,19 @@ fun KeuanganScreen() {
         }
     }
     val shown = periodEntries.filter { typeFilter == "all" || it.type == typeFilter }
-    // R18 (audit 2026-11-15): saldo hero memakai total agregat (semua
-    // entri); bila agregat gagal dimuat, JANGAN diam-diam memakai jumlah
-    // periode terpilih — tampilkan 0 dengan keterangan di kartu (di bawah),
+    // R18 (audit 2026-11-15): bila pemuatan entri gagal, JANGAN diam-diam
+    // menampilkan 0 sebagai saldo — tampilkan keterangan di kartu (di bawah),
     // karena kartu galat S11 sudah menjelaskan kegagalannya.
-    // TB2 (2026-11-17, permintaan Achmad): Masuk/Keluar di kartu ini
-    // SELALU khusus hari ini (reset tiap pagi seperti Penjualan Hari Ini),
-    // bukan total sejak awal dan bukan mengikuti pil periode — pil periode
-    // hanya mengatur daftar riwayat + grafik di bawah, supaya riwayat
-    // tidak ikut kereset (permintaan Achmad 2026-11-17: semua catatan
-    // tetap terlihat, terbaru dulu). Saldo (balance) tetap total sejak
-    // awal (uang laci).
+    // TB2 (2026-11-17, permintaan Achmad): SEMUA angka di kartu ini khusus
+    // hari ini (reset tiap pagi seperti Penjualan Hari Ini) — Masuk/Keluar
+    // sejak am165, dan Saldo sejak am166 (permintaan Achmad 2026-11-17:
+    // duit laci diambil tiap hari). Saldo = Masuk hari ini − Keluar hari ini.
+    // Pil periode hanya mengatur daftar riwayat + grafik di bawah, supaya
+    // riwayat tidak ikut kereset (semua catatan tetap terlihat, terbaru dulu).
     val entriHariIni = entries.filter { e -> parseISODate(e.createdAt)?.let { dayKeyID(it) == todayKey } == true }
     val masukHariIni = entriHariIni.filter { it.type == "in" }.sumOf { it.amount }
     val keluarHariIni = entriHariIni.filter { it.type == "out" }.sumOf { it.amount }
-    val saldo = cashBalance?.balance ?: 0
+    val saldo = masukHariIni - keluarHariIni
     // Arus kas mengikuti periode yang dipilih, kecuali "Hari Ini" yang tetap
     // menampilkan 7 hari terakhir supaya jelas (1 batang saja di tengah kartu
     // terlihat kosong dan tidak memberi konteks tren).
@@ -215,10 +204,10 @@ fun KeuanganScreen() {
                         Text(tr("SALDO KAS", "CASH BALANCE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(SpaceS))
                         AnimatedAmount(saldo, MaterialTheme.typography.titleLarge, if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        // R18: bila agregat saldo gagal dimuat, angka 0 di atas
+                        // R18: bila pemuatan entri gagal, angka 0 di atas
                         // bukan saldo sebenarnya — beri keterangan (hanya saat
                         // gagal, bukan saat muat pertama: loadError != null).
-                        if (cashBalance == null && loadError != null) {
+                        if (loadError != null) {
                             Spacer(Modifier.height(4.dp))
                             Text(tr("Saldo tidak tersedia — gagal memuat.", "Balance unavailable — failed to load."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
