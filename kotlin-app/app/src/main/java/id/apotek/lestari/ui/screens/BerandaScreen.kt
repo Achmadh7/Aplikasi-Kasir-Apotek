@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -134,10 +133,10 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
         item {
             
             Column {
-            // Header N2 (pilihan Achmad 2026-11-10, menggantikan K3) + nama gradasi HM1 (2026-11-17):
+            // Header N2 (pilihan Achmad 2026-11-10, menggantikan K3):
             // MODE GELAP tetap batang navy nyaris hitam, logo dalam kotak
-            // putih, nama satu baris bergradasi. MODE LIGHT = H6 (pilihan
-            // Achmad 2026-11-12): kartu biru muda #D3E3F3, nama bergradasi,
+            // putih, nama satu baris putih. MODE LIGHT = H6 (pilihan
+            // Achmad 2026-11-12): kartu biru muda #D3E3F3, nama navy,
             // tombol awan berbingkai biru gelap #0284C7 (merah #B3261E
             // saat GAGAL) supaya tetap terbaca di atas kartu terang.
             // Kanan = tombol awan saja (tanpa tulisan status - permintaan
@@ -165,16 +164,10 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     Spacer(Modifier.width(12.dp))
                     Text(
                         "Apotek Lestari",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    if (gelap) Color.White else WarnaHeaderN2,
-                                    if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7)
-                                )
-                            )
-                        )
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (gelap) Color.White else WarnaHeaderN2
                     )
                     Spacer(Modifier.weight(1f))
                     if (statusSync != StatusSync.NONAKTIF) {
