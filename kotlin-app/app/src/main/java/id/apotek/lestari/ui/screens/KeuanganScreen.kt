@@ -105,6 +105,12 @@ fun KeuanganScreen() {
         }
     }
     val shown = periodEntries.filter { typeFilter == "all" || it.type == typeFilter }
+    // KG1 (2026-11-18, permintaan Achmad): daftar riwayat dikelompokkan per
+    // hari seperti Riwayat - header "Hari Ini"/"Kemarin"/tanggal + jumlah
+    // transaksi & total bersih hari itu, supaya mudah dipindai.
+    val yesterdayKey = dayKeyID(Calendar.getInstance(TimeZone.getTimeZone("Asia/Jakarta")).apply { time = Date(); add(Calendar.DAY_OF_YEAR, -1) }.time)
+    val groupedShown = shown.groupBy { e -> parseISODate(e.createdAt)?.let { dayKeyID(it) } ?: "" }
+        .entries.sortedByDescending { (_, list) -> list.maxOfOrNull { parseISODate(it.createdAt)?.time ?: 0L } ?: 0L }
     // R18 (audit 2026-11-15): bila pemuatan entri gagal, JANGAN diam-diam
     // menampilkan 0 sebagai saldo — tampilkan keterangan di kartu (di bawah),
     // karena kartu galat S11 sudah menjelaskan kegagalannya.
@@ -420,7 +426,33 @@ fun KeuanganScreen() {
             }
             }
         }
-        itemsIndexed(shown, key = { _, e -> e.id }) { _, e ->
+        groupedShown.forEach { (dayKey, dayEntries) ->
+            // Header hari (KG1): label hari + jumlah transaksi & total bersih hari itu.
+            item(key = "header-$dayKey") {
+                val dayDate = dayEntries.firstNotNullOfOrNull { parseISODate(it.createdAt) }
+                val label = when (dayKey) {
+                    todayKey -> tr("Hari Ini", "Today")
+                    yesterdayKey -> tr("Kemarin", "Yesterday")
+                    else -> dayDate?.let {
+                        SimpleDateFormat("d MMM yyyy", if (AppLang.code == "en") Locale.ENGLISH else Locale("id", "ID")).apply { timeZone = jakartaTz }.format(it)
+                    } ?: tr("Tanpa tanggal", "No date")
+                }
+                val dayIn = dayEntries.filter { it.type == "in" }.sumOf { it.amount }
+                val dayOut = dayEntries.filter { it.type == "out" }.sumOf { it.amount }
+                val dayNet = dayIn - dayOut
+                val netText = (if (dayNet >= 0) "+ " else "- ") + formatIDR(if (dayNet >= 0) dayNet else -dayNet)
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                    Text(label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(8.dp))
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "${dayEntries.size} transaksi • $netText",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            itemsIndexed(dayEntries, key = { _, e -> e.id }) { _, e ->
             
             val isIn = e.type == "in"
             // Animasi A1 (2026-11-16, pilihan Achmad): entri baru
@@ -454,6 +486,7 @@ fun KeuanganScreen() {
                 }
             }
             
+        }
         }
     }
 }
