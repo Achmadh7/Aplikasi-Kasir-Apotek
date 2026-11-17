@@ -574,6 +574,23 @@ object BackupHelper {
                 throw IllegalArgumentException(tr("ID item pembelian duplikat di file backup: ${pItem.id} (${pItem.medicineName})", "Duplicate purchase item ID in the backup file: ${pItem.id} (${pItem.medicineName})"))
             }
         }
+        // R4 (audit 2026-11-18): remoteId tak-kosong juga harus unik —
+        // tanpa cek ini, dua baris ber-remoteId sama lolos lalu sync memakai
+        // getByRemoteId(...) LIMIT 1 dan bisa menimpa baris yang salah.
+        val seenRemoteIds = HashSet<String>()
+        fun cekRemoteId(remoteId: String, label: String) {
+            val r = remoteId.trim()
+            if (r.isNotEmpty() && !seenRemoteIds.add(r)) {
+                throw IllegalArgumentException(tr("remoteId duplikat di file backup: $r ($label)", "Duplicate remoteId in the backup file: $r ($label)"))
+            }
+        }
+        for (med in medicines) cekRemoteId(med.remoteId, med.name)
+        for (sale in sales) cekRemoteId(sale.remoteId, sale.invoiceNo)
+        for (item in items) cekRemoteId(item.remoteId, item.medicineName)
+        for (entry in entries) cekRemoteId(entry.remoteId, entry.description)
+        for (purchase in purchases) cekRemoteId(purchase.remoteId, purchase.pbfName)
+        for (pItem in purchaseItems) cekRemoteId(pItem.remoteId, pItem.medicineName)
+        for (supplier in suppliers) cekRemoteId(supplier.remoteId, supplier.name)
 
         return BackupData(medicines, sales, items, entries, purchases, purchaseItems, suppliers, exportedAtMillis, closedMonths)
     }

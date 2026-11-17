@@ -9,6 +9,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import androidx.work.WorkerParameters
 import id.apotek.lestari.data.local.DatabaseProvider
 import java.text.SimpleDateFormat
@@ -78,9 +79,38 @@ fun bacaPengaturanBackupOtomatis(context: Context): PengaturanBackupOtomatis {
  *  hari yang sama tidak menimpa/menduplikasi nama; zona Asia/Jakarta
  *  seperti stempel nama file rekap Excel (R32). */
 fun namaFileBackupOtomatis(tanggal: Date = Date()): String =
-    "backup-otomatis-" + SimpleDateFormat("yyyy-MM-dd-HHmmss", Locale("id", "ID")).apply {
+    "backup-otomatis-" + SimpleDateFormat("yyyy-MM-dd-HHmmssSSS", Locale("id", "ID")).apply {
         timeZone = TimeZone.getTimeZone("Asia/Jakarta")
     }.format(tanggal) + ".json"
+
+/** Hapus file *.tmp di folder backup yang terakhir diubah lebih dari 1 jam
+ *  lalu (sisa worker yang mati di tengah jalan). Batas 1 jam supaya tidak
+ *  mengganggu worker lain yang sedang menulis. */
+private fun sapuTmpLama(context: Context, folderUri: Uri) {
+    val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
+        folderUri, DocumentsContract.getTreeDocumentId(folderUri)
+    )
+    val jamLalu = System.currentTimeMillis() - 3_600_000L
+    context.contentResolver.query(
+        childrenUri,
+        arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_LAST_MODIFIED
+        ), null, null, null
+    )?.use { cursor ->
+        val idIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+        val nameIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+        val modIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+        while (cursor.moveToNext()) {
+            val name = cursor.getString(nameIdx) ?: continue
+            if (!name.endsWith(".tmp")) continue
+            if (modIdx >= 0 && cursor.getLong(modIdx) > jamLalu) continue
+            val docUri = DocumentsContract.buildDocumentUriUsingTree(folderUri, cursor.getString(idIdx))
+            runCatching { DocumentsContract.deleteDocument(context.contentResolver, docUri) }
+        }
+    }
+}
 
 /**
  * Jadwalkan (atau batalkan) backup otomatis sesuai pengaturan tersimpan.
@@ -111,7 +141,11 @@ fun jadwalkanBackupOtomatis(context: Context) {
  * mengamatinya bila belum ada pengamatan berjalan.
  */
 fun jalankanBackupOtomatisSekali(context: Context): UUID {
-    val permintaan = OneTimeWorkRequestBuilder<AutoBackupWorker>().build()
+    // R3: tandai pekerjaan sekali supaya doWork() bisa membedakannya dari
+    // pekerjaan berkala (yang wajib tunduk pada flag aktif).
+    val permintaan = OneTimeWorkRequestBuilder<AutoBackupWorker>()
+        .setInputData(workDataOf("sekali" to true))
+        .build()
     WorkManager.getInstance(context).enqueueUniqueWork(
         AUTO_BACKUP_ONETIME_NAME,
         ExistingWorkPolicy.KEEP,
@@ -127,6 +161,14 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) :
         val folderUriString = prefs.getString(PREF_AUTO_BACKUP_FOLDER_URI, null)
             ?: return Result.success() // belum ada folder = tidak ada yang dikerjakan
         val folderUri = Uri.parse(folderUriString)
+        // R3 (audit 2026-11-18): jangan menulis bila auto-backup sudah
+        // dimatikan (pekerjaan yang sudah antre tetap jalan walau
+        // pengaturannya berubah) — kecuali pekerjaan sekali ("Cadangkan
+        // Sekarang") yang memang diminta pengguna.
+        if (!params.inputData.getBoolean("sekali", false) &&
+            !prefs.getBoolean(PREF_AUTO_BACKUP_AKTIF, false)) return Result.success()
+        // R3: sapu file .tmp lama dari worker yang mati di tengah jalan.
+        runCatching { sapuTmpLama(applicationContext, folderUri) }
         if (!DatabaseProvider.isInitialized()) DatabaseProvider.init(applicationContext)
         val hasil = Repository().exportBackup()
         if (hasil !is ApiResult.Success) return Result.retry()

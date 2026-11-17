@@ -18,6 +18,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.DocumentReference
 import id.apotek.lestari.data.local.DatabaseProvider
 import java.util.concurrent.TimeUnit
@@ -103,7 +104,7 @@ sealed interface HasilSync {
     data object BelumDikonfigurasi : HasilSync
     data object BelumMasuk : HasilSync
     data class Berhasil(val didorong: Int, val ditarik: Int) : HasilSync
-    data class Gagal(val pesan: String) : HasilSync
+    data class Gagal(val pesan: String, val permanen: Boolean = false) : HasilSync
 }
 
 /**
@@ -147,6 +148,16 @@ class SyncManager(private val repository: Repository) {
     ): Boolean {
         val remoteUpdatedAt = petaAwan(akar, koleksi)[remoteId] ?: return false
         return remoteUpdatedAt > lokalUpdatedAt
+    }
+
+    /** R2 (audit 2026-11-18): galat permanen — retry tidak akan pernah
+     *  berhasil (aturan Firestore menolak, kredensial tidak sah, argumen
+     *  tidak valid). Selain itu dianggap transient dan boleh retry. */
+    private fun galatSyncPermanen(e: Exception): Boolean {
+        val firestore = e as? FirebaseFirestoreException ?: return false
+        return firestore.code == FirebaseFirestoreException.Code.PERMISSION_DENIED ||
+            firestore.code == FirebaseFirestoreException.Code.UNAUTHENTICATED ||
+            firestore.code == FirebaseFirestoreException.Code.INVALID_ARGUMENT
     }
 
     suspend fun sinkronSekarang(context: Context): HasilSync {
@@ -327,7 +338,7 @@ class SyncManager(private val repository: Repository) {
             repository.purgeTombstones()
             HasilSync.Berhasil(didorong, ditarik)
         } catch (e: Exception) {
-            HasilSync.Gagal(e.message ?: "Sinkronisasi gagal")
+            HasilSync.Gagal(e.message ?: "Sinkronisasi gagal", galatSyncPermanen(e))
         }
     }
 
@@ -377,7 +388,7 @@ class SyncWorker(context: Context, params: WorkerParameters) :
                     .apply()
                 Result.success()
             }
-            is HasilSync.Gagal -> Result.retry()
+            is HasilSync.Gagal -> if (hasil.permanen) Result.failure() else Result.retry()
             else -> Result.success()
         }
     }

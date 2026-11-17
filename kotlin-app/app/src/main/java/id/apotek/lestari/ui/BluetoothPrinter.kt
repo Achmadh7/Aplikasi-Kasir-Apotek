@@ -273,6 +273,7 @@ fun clearSavedPrinter(context: Context) {
 
 /** Batas waktu connect ke printer (connect() Bluetooth tanpa timeout bisa blokir ±12 detik bila printer mati). */
 private const val CONNECT_TIMEOUT_MS = 10_000L
+private const val WRITE_TIMEOUT_MS = 10_000L
 
 /** Mutex cetak: hanya satu pencetakan dalam satu waktu supaya dua struk tidak interleave bila tombol Cetak diketuk 2×. */
 private val printMutex = Mutex()
@@ -310,9 +311,27 @@ suspend fun printReceiptToPrinter(context: Context, address: String, bytes: Byte
                     } finally {
                         connectExecutor.shutdownNow()
                     }
-                    val out = socket.outputStream
-                    out.write(bytes)
-                    out.flush()
+                    // R25 (audit 2026-11-18): tulis juga diberi timeout
+                    // seperti connect() — tanpa ini, printer yang macet di
+                    // tengah tulis menahan printMutex selamanya.
+                    val writeExecutor = Executors.newSingleThreadExecutor()
+                    try {
+                        val writeFuture = writeExecutor.submit {
+                            val out = socket.outputStream
+                            out.write(bytes)
+                            out.flush()
+                        }
+                        try {
+                            writeFuture.get(WRITE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                        } catch (_: TimeoutException) {
+                            runCatching { socket.close() }
+                            return@withContext Result.failure(IOException("Printer tidak merespons saat mencetak (timeout ${WRITE_TIMEOUT_MS / 1000} dtk) — pastikan printer menyala dan dalam jangkauan"))
+                        } catch (e: java.util.concurrent.ExecutionException) {
+                            throw e.cause ?: e
+                        }
+                    } finally {
+                        writeExecutor.shutdownNow()
+                    }
                 } finally {
                     runCatching { socket.close() }
                 }
