@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -171,7 +172,7 @@ fun TutupBukuScreen(onMintaSync: () -> Unit = {}) {
                     KartuBulanTutup(
                         bulan = bulanLalu,
                         rekap = rekapPerBulan[bulanLalu],
-                        status = tr("Selesai — bisa ditutup", "Ended — can be closed"),
+                        status = tr("Selesai", "Ended"),
                         statusColor = Color(0xFF8D6E00),
                         ditutupPada = null,
                         onTutup = { konfirmasiTutup = bulanLalu },
@@ -188,7 +189,7 @@ fun TutupBukuScreen(onMintaSync: () -> Unit = {}) {
                         KartuBulanTutup(
                             bulan = b,
                             rekap = rekapPerBulan[b],
-                            status = tr("Selesai — bisa ditutup", "Ended — can be closed"),
+                            status = tr("Selesai", "Ended"),
                             statusColor = Color(0xFF8D6E00),
                             ditutupPada = null,
                             onTutup = { konfirmasiTutup = b },
@@ -292,7 +293,14 @@ private fun KartuBulanTutup(
 ) {
     ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest) {
         Column(Modifier.padding(12.dp)) {
-            Text(namaBulanIndonesia(bulan), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            // TB-R1: status jadi pill warna di kanan atas kartu.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(namaBulanIndonesia(bulan), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
+                Surface(color = statusColor.copy(alpha = 0.15f), shape = RoundedCornerShape(12.dp)) {
+                    Text(status, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = statusColor, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp), maxLines = 1)
+                }
+            }
             Spacer(Modifier.height(4.dp))
             Text(
                 if (rekap != null) tr("Transaksi: ", "Transactions: ") + rekap.totalTransactions + "  •  " + formatIDR(rekap.totalRevenue)
@@ -305,8 +313,6 @@ private fun KartuBulanTutup(
                 Spacer(Modifier.height(4.dp))
                 Text(tr("Gagal memuat rekap bulan ini.", "Failed to load this month's recap."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
             }
-            Spacer(Modifier.height(4.dp))
-            Text(status, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = statusColor)
             if (ditutupPada != null) {
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -315,7 +321,10 @@ private fun KartuBulanTutup(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (onTutup != null || onExcel != null || onBuka != null || onMuatUlang != null) {
+            // R17: tombol "Coba lagi" hanya saat rekap gagal dimuat;
+            // sebelumnya tombol itu tampil di semua kartu karena
+            // onMuatUlang selalu diisi (bug am195, diperbaiki am203).
+            if (onTutup != null || onExcel != null || onBuka != null || (gagalMuat && onMuatUlang != null)) {
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (onTutup != null) {
@@ -335,7 +344,7 @@ private fun KartuBulanTutup(
                             Text(tr("Buka Lagi", "Reopen"), maxLines = 1)
                         }
                     }
-                    if (onMuatUlang != null) {
+                    if (gagalMuat && onMuatUlang != null) {
                         OutlinedButton(onClick = onMuatUlang, shape = RoundedCornerShape(20.dp)) {
                             Text(tr("Coba lagi", "Try again"), maxLines = 1)
                         }
