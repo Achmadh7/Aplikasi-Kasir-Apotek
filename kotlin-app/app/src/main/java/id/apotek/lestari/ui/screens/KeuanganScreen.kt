@@ -22,6 +22,11 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.NorthEast
 import androidx.compose.material.icons.filled.SouthWest
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -248,9 +253,19 @@ fun KeuanganScreen() {
             // mengembang tepat di bawah kartu Saldo Kas — bukan bottom sheet
             // lagi. Setelah tersimpan, formulir terlipat dan daftar di bawah
             // memuat entri baru lewat reload() yang sama seperti sebelumnya.
-            if (showForm) {
-                Spacer(Modifier.height(SpaceL))
-                CashEntryFormCard(type = formType, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
+            // Animasi AK2 (2026-11-17): mengembang 300ms saat dibuka dan
+            // mengempis saat ditutup, pola sama seperti buka kartu Riwayat
+            // (B2); isi dibungkus Column dulu karena AnimatedVisibility
+            // menumpuk anak langsung seperti Box.
+            AnimatedVisibility(
+                visible = showForm,
+                enter = expandVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(300)),
+                exit = shrinkVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(animationSpec = tween(300))
+            ) {
+                Column {
+                    Spacer(Modifier.height(SpaceL))
+                    CashEntryFormCard(type = formType, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })
+                }
             }
             Spacer(Modifier.height(SpaceL))
             // Grafik arus kas — judul + isi mengikuti periode yang dipilih.
