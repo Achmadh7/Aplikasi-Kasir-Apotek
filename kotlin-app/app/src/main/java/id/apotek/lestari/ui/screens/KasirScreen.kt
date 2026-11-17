@@ -639,7 +639,6 @@ fun KasirScreen() {
                             OutlinedTextField(
                                 value = uangDiterima,
                                 onValueChange = { uangDiterima = formatDecimalFieldValue(it) },
-                                label = { Text(tr("cth: 50.000", "e.g. 50.000")) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
