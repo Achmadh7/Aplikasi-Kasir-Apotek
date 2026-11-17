@@ -620,7 +620,7 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
     var showCategorySheet by remember { mutableStateOf(false) }
     var showUnitSheet by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
-    var noExpiry by remember(editing) { mutableStateOf(false) }
+    var noExpiry by remember(editing) { mutableStateOf(editing != null && editing.expiryDate.isNullOrBlank()) }
     // Ketukan pada field read-only ditangkap lewat interactionSource:
     // Modifier.clickable di OutlinedTextField tidak jalan karena field
     // menelan ketukan untuk fokus. Pola ini sama seperti dropdown bawaan.

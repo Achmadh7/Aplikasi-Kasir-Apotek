@@ -491,14 +491,21 @@ fun PbfScreen() {
         // pola sama seperti pemilih di formulir (tengah malam UTC supaya
         // tanggal tidak bergeser, "Hapus" untuk mengosongkan). Tanggal masa
         // depan memang tujuan fitur ini, jadi tanpa NoFutureDates.
-        val dueEditState = rememberDatePickerState(initialSelectedDateMillis = utcMidnightMillis(target.dueDate.ifBlank { target.date }))
+        // S10 (audit 2026-11-17): initial null bila belum ada jatuh tempo —
+        // sebelumnya jatuh ke tanggal beli, jadi OK tanpa memilih langsung
+        // menulis tanggal beli sebagai jatuh tempo ("Lewat N hari").
+        val dueEditState = rememberDatePickerState(initialSelectedDateMillis = target.dueDate.takeIf { it.isNotBlank() }?.let { utcMidnightMillis(it) })
         DatePickerDialog(
             onDismissRequest = { dueTarget = null },
             confirmButton = {
                 TextButton(onClick = {
-                    val newDue = dueEditState.selectedDateMillis?.let { dayKeyID(Date(it)) } ?: target.dueDate
-                    dueTarget = null
-                    saveDueDate(target, newDue)
+                    // S10: OK tanpa memilih tanggal diabaikan (dialog tetap
+                    // terbuka) — jangan simpan tanggal beli sebagai jatuh tempo.
+                    val millis = dueEditState.selectedDateMillis
+                    if (millis != null) {
+                        dueTarget = null
+                        saveDueDate(target, dayKeyID(Date(millis)))
+                    }
                 }) { Text("OK") }
             },
             dismissButton = {
@@ -810,7 +817,9 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     if (showDuePicker) {
         // Pemilih tanggal jatuh tempo: pola yang sama seperti Tanggal Beli.
         // "Hapus" mengosongkan tanggal (jatuh tempo memang boleh kosong).
-        val duePickerState = rememberDatePickerState(initialSelectedDateMillis = utcMidnightMillis(dueDate.ifBlank { date }))
+        // S10: initial null bila belum ada jatuh tempo — sebelumnya jatuh
+        // ke tanggal beli, jadi OK tanpa memilih menulis tanggal beli.
+        val duePickerState = rememberDatePickerState(initialSelectedDateMillis = dueDate.takeIf { it.isNotBlank() }?.let { utcMidnightMillis(it) })
         DatePickerDialog(
             onDismissRequest = { showDuePicker = false },
             confirmButton = {

@@ -44,6 +44,9 @@ fun TutupBukuScreen() {
     val scope = rememberCoroutineScope()
     var msg by remember { mutableStateOf("") }
     var tutup by remember { mutableStateOf<List<ClosedMonthEntity>>(emptyList()) }
+    // S11 (audit 2026-11-17): bulan lampau yang terlewat (lebih tua dari
+    // bulan lalu, belum ditutup, ada penjualannya) — supaya bisa ditutup.
+    var terlewat by remember { mutableStateOf<List<String>>(emptyList()) }
     var rekapPerBulan by remember { mutableStateOf<Map<String, RekapPenjualan>>(emptyMap()) }
     var muatUlang by remember { mutableIntStateOf(0) }
     var konfirmasiTutup by remember { mutableStateOf<String?>(null) }
@@ -98,7 +101,18 @@ fun TutupBukuScreen() {
             when (val r = repo.listBulanTertutup()) {
                 is ApiResult.Success -> {
                     tutup = r.data
-                    val kunci = (listOf(bulanIni, bulanLalu) + r.data.map { it.bulan }).distinct().filter { it.isNotEmpty() }
+                    val tutupSetMuatan = r.data.map { it.bulan }.toSet()
+                    // S11: bulan lampau yang terlewat — mundur sampai 12
+                    // bulan dari bulan lalu; yang ada penjualannya ikut
+                    // dimuat supaya bisa ditutup/diekspor.
+                    val kandidat = mutableListOf<String>()
+                    var mundur = bulanSebelumnya(bulanLalu)
+                    repeat(12) {
+                        val b = mundur ?: return@repeat
+                        if (b !in tutupSetMuatan && b != bulanIni) kandidat.add(b)
+                        mundur = bulanSebelumnya(b)
+                    }
+                    val kunci = (listOf(bulanIni, bulanLalu) + kandidat + r.data.map { it.bulan }).distinct().filter { it.isNotEmpty() }
                     val isi = mutableMapOf<String, RekapPenjualan>()
                     for (b in kunci) {
                         when (val rk = repo.getRekapPenjualanBulan(b)) {
@@ -107,6 +121,7 @@ fun TutupBukuScreen() {
                         }
                     }
                     rekapPerBulan = isi
+                    terlewat = kandidat.filter { (isi[it]?.totalTransactions ?: 0) > 0 }
                 }
                 is ApiResult.Error -> msg = pesanGagalMuat + r.message
                 is ApiResult.Loading -> Unit
@@ -156,6 +171,22 @@ fun TutupBukuScreen() {
                         onTutup = { konfirmasiTutup = bulanLalu }
                     )
                     Spacer(Modifier.height(SpaceM))
+                }
+                // S11: bulan yang terlewat — bisa ditutup seperti bulan lalu.
+                if (terlewat.isNotEmpty()) {
+                    Text(tr("Bulan yang terlewat", "Missed months"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(SpaceS))
+                    for (b in terlewat) {
+                        KartuBulanTutup(
+                            bulan = b,
+                            rekap = rekapPerBulan[b],
+                            status = tr("Selesai — bisa ditutup", "Ended — can be closed"),
+                            statusColor = Color(0xFF8D6E00),
+                            ditutupPada = null,
+                            onTutup = { konfirmasiTutup = b }
+                        )
+                        Spacer(Modifier.height(SpaceM))
+                    }
                 }
                 Text(tr("Bulan yang ditutup", "Closed months"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(SpaceS))
