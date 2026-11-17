@@ -107,6 +107,8 @@ fun KeuanganScreen() {
     // hari ini (reset tiap pagi seperti Penjualan Hari Ini) — Masuk/Keluar
     // sejak am165, dan Saldo sejak am166 (permintaan Achmad 2026-11-17:
     // duit laci diambil tiap hari). Saldo = Masuk hari ini − Keluar hari ini.
+    // Ringkasan Masuk/Keluar di kartu grafik juga selalu hari ini (am167) —
+    // batang grafiknya tetap mengikuti periode, tidak direset.
     // Pil periode hanya mengatur daftar riwayat + grafik di bawah, supaya
     // riwayat tidak ikut kereset (semua catatan tetap terlihat, terbaru dulu).
     val entriHariIni = entries.filter { e -> parseISODate(e.createdAt)?.let { dayKeyID(it) == todayKey } == true }
@@ -272,7 +274,7 @@ fun KeuanganScreen() {
                         Text(tr("Keluar", "Out"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.weight(1f))
                         Text(
-                            tr("Masuk Rp ${formatCompactIDR(periodIn)} • Keluar Rp ${formatCompactIDR(periodOut)}", "In Rp ${formatCompactIDR(periodIn)} • Out Rp ${formatCompactIDR(periodOut)}"),
+                            tr("Masuk Rp ${formatCompactIDR(masukHariIni)} • Keluar Rp ${formatCompactIDR(keluarHariIni)}", "In Rp ${formatCompactIDR(masukHariIni)} • Out Rp ${formatCompactIDR(keluarHariIni)}"),
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
