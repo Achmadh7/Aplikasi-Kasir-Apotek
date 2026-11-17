@@ -44,6 +44,7 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
@@ -514,7 +515,10 @@ fun KasirScreen() {
             sheetMaxWidth = adaptiveSheetMaxWidth(),
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         ) {
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding()) {
+            // KT1 Tombol Bayar Menempel: isi sheet dibatasi tingginya dan
+            // bergulir sendiri; tombol Bayar menempel di footer bawah.
+            val tinggiLayar = LocalConfiguration.current.screenHeightDp.dp
+            Column(Modifier.heightIn(max = tinggiLayar * 0.7f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
                         Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
@@ -755,55 +759,6 @@ fun KasirScreen() {
                     Text(tr("Total terlalu besar untuk diproses (melebihi batas Rp 2,1 miliar).", "The total is too large to process (over the Rp 2.1 billion limit)."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
                     Spacer(Modifier.height(SpaceS))
                 }
-                Spacer(Modifier.height(SpaceL))
-                val bayarInteraction = remember { MutableInteractionSource() }
-                val bayarScale = pressBounceScale(bayarInteraction)
-                Button(
-                    onClick = {
-                        scope.launch {
-                            // R44: amt Long -> Int; aman karena canPay
-                            // menjamin total <= Int.MAX_VALUE (paid pun Int).
-                            val amt = (if (method == "Tunai") paid.toLong() else total).toInt()
-                            val result = repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty, it.useWholesale) }, method, amt))
-                            if (result is ApiResult.Success) {
-                                // Masuk fase sukses besar: tangkap rincian
-                                // pembayaran SEBELUM keranjang dikosongkan.
-                                successMethod = method
-                                successTotal = total.toInt()
-                                successChange = change.toInt()
-                                successPhase = true
-                                payMsg = ""
-                                payCount++
-                                cart.clear()
-                                savedCart = emptyList()
-                                uangDiterima = TextFieldValue("")
-                                val after = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
-                                medicines = after
-                                lastSale = (repo.getSaleById(result.data.id) as? ApiResult.Success)?.data
-                                lastSaleId = result.data.id
-                            } else {
-                                // Gagal: keranjang & uang diterima dibiarkan utuh supaya
-                                // kasir bisa mencoba lagi tanpa mengulang input.
-                                payMsg = tr("Pembayaran gagal: ", "Payment failed: ") + ((result as? ApiResult.Error)?.message ?: tr("tidak diketahui", "unknown"))
-                            }
-                        }
-                    },
-                    enabled = canPay,
-                    interactionSource = bayarInteraction,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
-                    shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.fillMaxWidth().height(52.dp).graphicsLayer(scaleX = bayarScale, scaleY = bayarScale)
-                ) { Text(tr("Bayar (${formatIDR(total)})", "Pay (${formatIDR(total)})"), style = MaterialTheme.typography.titleMedium) }
-                }
-                // Pesan galat pembayaran saja (keberhasilan sekarang lewat
-                // fase sukses besar di atas). Sengaja TANPA AnimatedVisibility:
-                // animasi mengembangnya bertabrakan dengan animasi tinggi
-                // sheet (pegas draggable) sehingga gerak sheet terasa jitter.
-                if (payMsg.isNotEmpty()) {
-                    Column {
-                        Spacer(Modifier.height(SpaceS))
-                        Text(payMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                    }
                 }
                 // Blok struk tampil polos seketika (semua animasi dihapus
                 // 2026-11-10), tanpa AnimatedVisibility maupun graphicsLayer.
@@ -820,6 +775,60 @@ fun KasirScreen() {
                                 shape = RoundedCornerShape(28.dp),
                                 modifier = Modifier.fillMaxWidth().height(52.dp)
                             ) { Text(tr("Tutup", "Close")) }
+                        }
+                    }
+                }
+            }
+            // Footer menempel (KT1): tombol Bayar + pesan galat selalu
+            // terlihat saat isi sheet digulir.
+            if (cart.isNotEmpty()) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding()) {
+                    val bayarInteraction = remember { MutableInteractionSource() }
+                    val bayarScale = pressBounceScale(bayarInteraction)
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                // R44: amt Long -> Int; aman karena canPay
+                                // menjamin total <= Int.MAX_VALUE (paid pun Int).
+                                val amt = (if (method == "Tunai") paid.toLong() else total).toInt()
+                                val result = repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty, it.useWholesale) }, method, amt))
+                                if (result is ApiResult.Success) {
+                                    // Masuk fase sukses besar: tangkap rincian
+                                    // pembayaran SEBELUM keranjang dikosongkan.
+                                    successMethod = method
+                                    successTotal = total.toInt()
+                                    successChange = change.toInt()
+                                    successPhase = true
+                                    payMsg = ""
+                                    payCount++
+                                    cart.clear()
+                                    savedCart = emptyList()
+                                    uangDiterima = TextFieldValue("")
+                                    val after = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
+                                    medicines = after
+                                    lastSale = (repo.getSaleById(result.data.id) as? ApiResult.Success)?.data
+                                    lastSaleId = result.data.id
+                                } else {
+                                    // Gagal: keranjang & uang diterima dibiarkan utuh supaya
+                                    // kasir bisa mencoba lagi tanpa mengulang input.
+                                    payMsg = tr("Pembayaran gagal: ", "Payment failed: ") + ((result as? ApiResult.Error)?.message ?: tr("tidak diketahui", "unknown"))
+                                }
+                            }
+                        },
+                        enabled = canPay,
+                        interactionSource = bayarInteraction,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                        shape = RoundedCornerShape(28.dp),
+                        modifier = Modifier.fillMaxWidth().height(52.dp).graphicsLayer(scaleX = bayarScale, scaleY = bayarScale)
+                    ) { Text(tr("Bayar (${formatIDR(total)})", "Pay (${formatIDR(total)})"), style = MaterialTheme.typography.titleMedium) }
+                    // Pesan galat pembayaran saja (keberhasilan sekarang lewat
+                    // fase sukses besar di atas). Sengaja TANPA AnimatedVisibility:
+                    // animasi mengembangnya bertabrakan dengan animasi tinggi
+                    // sheet (pegas draggable) sehingga gerak sheet terasa jitter.
+                    if (payMsg.isNotEmpty()) {
+                        Column {
+                            Spacer(Modifier.height(SpaceS))
+                            Text(payMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
