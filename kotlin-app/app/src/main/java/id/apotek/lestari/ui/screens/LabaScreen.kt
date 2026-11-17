@@ -56,7 +56,7 @@ fun LabaScreen() {
     // Pesan kegagalan muat (audit 2026-11-02, M2): tanpa ini, kegagalan
     // laporan membuat LoadingIndicator berputar selamanya.
     var loadError by remember { mutableStateOf<String?>(null) }
-    var period by remember { mutableStateOf("month") }
+    var period by remember { mutableStateOf("today") }
     // Rekap penjualan Excel (J5): pesan hasil + file yang menunggu dipilih
     // lewat SAF. Pola launcher sama seperti Export Stok (StokScreen).
     val context = LocalContext.current
@@ -389,7 +389,7 @@ fun ObatTerlarisScreen() {
     // Pesan kegagalan muat (audit 2026-11-02, M2): tanpa ini, kegagalan
     // tampil sebagai daftar kosong tanpa penjelasan.
     var loadError by remember { mutableStateOf<String?>(null) }
-    var period by remember { mutableStateOf("month") }
+    var period by remember { mutableStateOf("today") }
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME), supaya
     // penjualan terbaru dari Kasir ikut terhitung.
     val lifecycleOwner = LocalLifecycleOwner.current

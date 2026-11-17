@@ -60,7 +60,7 @@ fun KeuanganScreen() {
     // muat entri diam-diam menampilkan angka 0.
     var loadError by remember { mutableStateOf<String?>(null) }
     // R10 (audit 2026-11-15): pilihan periode selamat dari rotasi.
-    var period by rememberSaveable { mutableStateOf("all") } // today | month | all — awalnya "Semua" (permintaan Achmad 2026-11-17: riwayat tidak reset harian supaya semua catatan terlihat; dulu "Hari Ini" sejak 2026-10-31)
+    var period by rememberSaveable { mutableStateOf("today") } // today | month | all — awalnya "Hari Ini" (permintaan Achmad 2026-11-17: menu dibuka langsung di Hari Ini; dulu "Semua" sejak 2026-11-17)
     var typeFilter by remember { mutableStateOf("all") } // all | in | out
     var showForm by remember { mutableStateOf(false) }
     var formType by remember { mutableStateOf("in") }
