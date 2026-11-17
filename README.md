@@ -16,6 +16,7 @@
 - [Project structure](#project-structure)
 - [Data & privacy](#data--privacy)
 - [FAQ](#faq)
+- [License](#license)
 - [Changelog](#changelog)
 
 ## Features
@@ -136,6 +137,10 @@ Build notes:
 - **How do I move to a new phone?** On the old phone: **Lainnya → Backup & Restore → Backup** and save the JSON file (for example to Google Drive). On the new phone, install the app and choose **Restore** with that file — all data is replaced in one transaction. With Online Mode there is a second way: sign in on the new phone with the same account and let it sync down.
 - **The Bluetooth printer does not appear — what do I check?** Pair the printer in Android's Bluetooth settings first; the app prints only to already-paired printers and remembers the one you pick.
 - **Which Excel format does stock import use?** Use the template the app provides in the Stock menu — imports match medicines by name + category + unit, so existing rows update instead of duplicating.
+
+## License
+
+Proprietary — Copyright © 2026 Achmad Hidayatullah. All rights reserved. See [LICENSE](LICENSE) for the full terms.
 
 ## Changelog
 
