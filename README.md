@@ -1,4 +1,4 @@
-# Pharmacy Cashier App — Cashier & Inventory Management for Pharmacies
+# Pharmacy Cashier App & Inventory Management for Pharmacies
 
 > An Android app for pharmacies: sales cashier, medicine stock, cash book, profit reports, expiry/restock reminders, and purchase records from distributors (PBF). **Offline-first** — all data stays on the device, with an optional **Online Mode** that mirrors it to your own Firebase project when you sign in.
 
