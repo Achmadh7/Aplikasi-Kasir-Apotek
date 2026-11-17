@@ -58,6 +58,9 @@
 
 ## Screenshots
 
+<details>
+<summary>Click to view screenshots</summary>
+
 | Home | Medicine Stock |
 |:---:|:---:|
 | <img src="docs/screenshots/beranda.jpg" width="280" alt="Home"> | <img src="docs/screenshots/stok-obat.jpg" width="280" alt="Medicine Stock"> |
@@ -79,6 +82,8 @@
 | <img src="docs/screenshots/riwayat-penjualan.jpg" width="280" alt="Sales History"> | <img src="docs/screenshots/faktur-pbf.jpg" width="280" alt="Supplier Invoices"> |
 
 *Note: screenshots are from 5 November 2026 (version 1.2.0) and predate Online Mode and the current headers; they will be refreshed from a newer build.*
+
+</details>
 
 ## Installation
 
