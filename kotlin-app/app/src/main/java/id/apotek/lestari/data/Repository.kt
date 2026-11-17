@@ -339,11 +339,11 @@ class Repository {
                     // lagi, bukan disisipkan baru menabrak indeks unik.
                     dao.findByBarcodeAny(barcode)
                 } else {
-                    dao.getAll().firstOrNull {
-                        it.name.trim().equals(item.name.trim(), ignoreCase = true) &&
-                            it.category.trim().equals(item.category.trim(), ignoreCase = true) &&
-                            it.unit.trim().equals(item.unit.trim(), ignoreCase = true)
-                    }
+                    // OPT (2026-11-17): cocokkan di SQL — dulu getAll()
+                    // memuat SEMUA obat per baris impor lalu firstOrNull
+                    // di Kotlin. Urutan id DESC dipertahankan supaya baris
+                    // yang dipilih sama persis dengan sebelumnya.
+                    dao.cariDuplikatPerIdDesc(item.name, item.category, item.unit)
                 }
                 if (existing != null) {
                     dao.update(
@@ -487,16 +487,39 @@ class Repository {
     suspend fun listSales(limit: Int = Int.MAX_VALUE): ApiResult<ListSalesResponse> = call {
         val db = DatabaseProvider.db
         // R45 (audit 2026-11-15): dulu N+1 — satu getItemsForSale per
-        // penjualan. Sekarang satu getAllItems() lalu dikelompokkan per
+        // penjualan. Sekarang item diambil sekali lalu dikelompokkan per
         // saleId (pola yang sama seperti getProfitReport).
-        val itemsBySale = db.saleDao().getAllItems().groupBy { it.saleId }
-        val sales = db.saleDao().getAll().take(limit).map { s ->
+        // OPT (2026-11-17): jendela + item dibatasi di SQL — dulu getAll()
+        // memuat SEMUA penjualan dan getAllItems() SEMUA item, baru
+        // .take(limit) di Kotlin. Hasilnya sama persis, hanya yang dibaca
+        // berkurang (Riwayat memakai limit 50+1).
+        val saleRows = db.saleDao().getRecent(limit)
+        val itemRows = if (saleRows.isEmpty()) emptyList() else db.saleDao().getItemsForSales(saleRows.map { it.id })
+        val itemsBySale = itemRows.groupBy { it.saleId }
+        val sales = saleRows.map { s ->
             val items = itemsBySale[s.id].orEmpty().map {
                 SaleItem(it.medicineName, it.qty, it.price, it.subtotal, it.category, it.unit, it.priceType)
             }
             Sale(s.id, s.invoiceNo, s.total, s.paymentMethod, s.amountPaid, s.changeAmount, s.createdAt, items)
         }
         ListSalesResponse(sales)
+    }
+
+    // OPT (2026-11-17): satu penjualan by id — dulu Kasir memuat SEMUA
+    // penjualan lewat listSales() hanya untuk mencari satu struk terakhir
+    // (restore rotasi + sesudah bayar). getByIdAny tidak menyaring
+    // terhapus, jadi tombstone disaring di sini supaya hasilnya sama
+    // persis dengan listSales() (yang hanya memuat terhapus = 0).
+    suspend fun getSaleById(id: Int): ApiResult<Sale?> = call {
+        val db = DatabaseProvider.db
+        val s = db.saleDao().getByIdAny(id)
+        if (s == null || s.terhapus != 0) null
+        else {
+            val items = db.saleDao().getItemsForSale(id).map {
+                SaleItem(it.medicineName, it.qty, it.price, it.subtotal, it.category, it.unit, it.priceType)
+            }
+            Sale(s.id, s.invoiceNo, s.total, s.paymentMethod, s.amountPaid, s.changeAmount, s.createdAt, items)
+        }
     }
 
     // MB1 (pilihan Achmad 2026-11-16): total penjualan BULAN INI per cara
@@ -517,13 +540,6 @@ class Repository {
     }
 
     // ---- Kas ----
-
-    suspend fun getCashBalance(): ApiResult<CashBalance> = call {
-        val dao = DatabaseProvider.db.cashDao()
-        // M5: DAO menjumlahkan sebagai Long; jepit ke Int di sini supaya
-        // CashBalance (Int) dan layarnya tidak perlu berubah.
-        CashBalance(dao.sumIn().toIntClamped(), dao.sumOut().toIntClamped())
-    }
 
     // Bawaan: muat SEMUA entri (bukan 200 teratas). Keuangan menyaring per
     // periode di UI dari daftar ini dan Saldo Kas dihitung dari data lengkap,
@@ -561,7 +577,7 @@ class Repository {
     suspend fun deleteCashEntry(id: Int): ApiResult<OkResponse> = call {
         // Kas dari penjualan tidak bisa dihapus — kalau bisa, Saldo Kas dan
         // laporan tidak lagi cocok dengan riwayat penjualan.
-        val entry = DatabaseProvider.db.cashDao().getAll().firstOrNull { it.id == id }
+        val entry = DatabaseProvider.db.cashDao().getById(id)
         if (entry?.source == "sale") throw IllegalStateException("Kas penjualan tidak bisa dihapus")
         // TB1: entri kas di bulan yang sudah ditutup tidak bisa dihapus.
         val bulanKasHapus = entry?.createdAt?.let { bulanKeyDariIso(it) }

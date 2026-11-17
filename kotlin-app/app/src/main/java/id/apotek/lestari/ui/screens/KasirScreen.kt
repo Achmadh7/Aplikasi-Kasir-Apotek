@@ -272,7 +272,7 @@ fun KasirScreen() {
     // Muat ulang struk terakhir dari id tersimpan (untuk restore setelah rotasi).
     LaunchedEffect(lastSaleId) {
         if (lastSaleId != 0 && lastSale?.id != lastSaleId) {
-            lastSale = (repo.listSales() as? ApiResult.Success)?.data?.sales?.firstOrNull { it.id == lastSaleId }
+            lastSale = (repo.getSaleById(lastSaleId) as? ApiResult.Success)?.data
         }
     }
     // Filter+urut HANYA dihitung ulang saat data/pencarian/urutan berubah
@@ -780,8 +780,7 @@ fun KasirScreen() {
                                 uangDiterima = TextFieldValue("")
                                 val after = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
                                 medicines = after
-                                val fresh = (repo.listSales() as? ApiResult.Success)?.data?.sales.orEmpty()
-                                lastSale = fresh.firstOrNull { it.id == result.data.id }
+                                lastSale = (repo.getSaleById(result.data.id) as? ApiResult.Success)?.data
                                 lastSaleId = result.data.id
                             } else {
                                 // Gagal: keranjang & uang diterima dibiarkan utuh supaya

@@ -49,10 +49,6 @@ data class CashEntry(
     val createdAt: String = ""
 )
 
-data class CashBalance(val totalIn: Int = 0, val totalOut: Int = 0) {
-    val balance: Int get() = totalIn - totalOut
-}
-
 // Catatan pembelian dari PBF — murni catatan, tidak terkait Stok/Kas.
 data class PurchaseItem(
     val medicineName: String = "",

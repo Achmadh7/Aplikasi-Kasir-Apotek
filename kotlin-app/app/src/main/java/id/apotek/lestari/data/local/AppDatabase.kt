@@ -222,6 +222,14 @@ interface MedicineDao {
     @Query("SELECT * FROM medicines WHERE LOWER(TRIM(name)) = LOWER(TRIM(:nama)) AND LOWER(TRIM(category)) = LOWER(TRIM(:kategori)) AND LOWER(TRIM(unit)) = LOWER(TRIM(:satuan)) AND terhapus = 0 ORDER BY updatedAt DESC, id ASC LIMIT 1")
     suspend fun cariDuplikat(nama: String, kategori: String, satuan: String): MedicineEntity?
 
+    // OPT (2026-11-17): varian untuk impor Excel — urutan id DESC supaya
+    // hasilnya sama persis dengan getAll().firstOrNull lama (cariDuplikat
+    // mengurutkan by updatedAt, bisa memilih baris berbeda bila ada
+    // duplikat). LOWER() SQLite hanya melipat huruf ASCII — sama dengan
+    // equals(ignoreCase) Kotlin untuk nama obat yang ada.
+    @Query("SELECT * FROM medicines WHERE LOWER(TRIM(name)) = LOWER(TRIM(:nama)) AND LOWER(TRIM(category)) = LOWER(TRIM(:kategori)) AND LOWER(TRIM(unit)) = LOWER(TRIM(:satuan)) AND terhapus = 0 ORDER BY id DESC LIMIT 1")
+    suspend fun cariDuplikatPerIdDesc(nama: String, kategori: String, satuan: String): MedicineEntity?
+
     @Query("SELECT * FROM medicines WHERE id = :id")
     suspend fun getByIdAny(id: Int): MedicineEntity?
 
@@ -270,6 +278,12 @@ interface SaleDao {
     @Query("SELECT * FROM sales WHERE terhapus = 0 ORDER BY id DESC")
     suspend fun getAll(): List<SaleEntity>
 
+    // OPT (2026-11-17): jendela LIMIT di SQL — dulu listSales() memuat
+    // SEMUA penjualan lalu .take(limit) di Kotlin. Hasilnya sama persis
+    // (getAll sudah ORDER BY id DESC), hanya baris yang dibaca berkurang.
+    @Query("SELECT * FROM sales WHERE terhapus = 0 ORDER BY id DESC LIMIT :limit")
+    suspend fun getRecent(limit: Int): List<SaleEntity>
+
     @Insert
     suspend fun insert(sale: SaleEntity): Long
 
@@ -296,6 +310,11 @@ interface SaleDao {
 
     @Query("SELECT * FROM sale_items WHERE saleId = :saleId AND terhapus = 0 ORDER BY id")
     suspend fun getItemsForSale(saleId: Int): List<SaleItemEntity>
+
+    // OPT (2026-11-17): item hanya untuk penjualan yang ditampilkan —
+    // dulu listSales() memuat SEMUA item lalu dikelompokkan di Kotlin.
+    @Query("SELECT * FROM sale_items WHERE saleId IN (:saleIds) AND terhapus = 0 ORDER BY id")
+    suspend fun getItemsForSales(saleIds: List<Int>): List<SaleItemEntity>
 
     @Query("SELECT * FROM sale_items WHERE terhapus = 0")
     suspend fun getAllItems(): List<SaleItemEntity>
@@ -356,6 +375,12 @@ interface CashDao {
     @Query("SELECT * FROM cash_entries WHERE terhapus = 0 ORDER BY id DESC")
     suspend fun getAll(): List<CashEntryEntity>
 
+    // OPT (2026-11-17): cari satu entri by id — dulu deleteCashEntry()
+    // memuat SEMUA entri lalu firstOrNull di Kotlin. Filter terhapus = 0
+    // dipertahankan supaya hasilnya sama persis dengan getAll().
+    @Query("SELECT * FROM cash_entries WHERE id = :id AND terhapus = 0 LIMIT 1")
+    suspend fun getById(id: Int): CashEntryEntity?
+
     @Insert
     suspend fun insert(entry: CashEntryEntity): Long
 
@@ -384,14 +409,6 @@ interface CashDao {
 
     @Query("DELETE FROM cash_entries")
     suspend fun deleteAll()
-
-    // M5 (audit 2026-11-16): jumlahkan sebagai Long — SUM di atas
-    // Rp 2,1 miliar tidak lagi meluber sebelum dijepit di Repository.
-    @Query("SELECT COALESCE(SUM(amount), 0) FROM cash_entries WHERE type = 'in' AND terhapus = 0")
-    suspend fun sumIn(): Long
-
-    @Query("SELECT COALESCE(SUM(amount), 0) FROM cash_entries WHERE type = 'out' AND terhapus = 0")
-    suspend fun sumOut(): Long
 }
 
 @Dao
