@@ -40,7 +40,7 @@ import java.util.TimeZone
 // (format J5 yang sama seperti ekspor Laba).
 
 @Composable
-fun TutupBukuScreen() {
+fun TutupBukuScreen(onMintaSync: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var msg by remember { mutableStateOf("") }
@@ -49,6 +49,9 @@ fun TutupBukuScreen() {
     // bulan lalu, belum ditutup, ada penjualannya) — supaya bisa ditutup.
     var terlewat by remember { mutableStateOf<List<String>>(emptyList()) }
     var rekapPerBulan by remember { mutableStateOf<Map<String, RekapPenjualan>>(emptyMap()) }
+    // R17 (audit 2026-11-18): bulan yang rekapnya gagal dimuat — kartunya
+    // menampilkan galat + tombol coba lagi, bukan "Memuat…" selamanya.
+    var gagalMuat by remember { mutableStateOf<Set<String>>(emptySet()) }
     var muatUlang by remember { mutableIntStateOf(0) }
     var konfirmasiTutup by remember { mutableStateOf<String?>(null) }
     var konfirmasiBuka by remember { mutableStateOf<String?>(null) }
@@ -117,8 +120,8 @@ fun TutupBukuScreen() {
                     val isi = mutableMapOf<String, RekapPenjualan>()
                     for (b in kunci) {
                         when (val rk = repo.getRekapPenjualanBulan(b)) {
-                            is ApiResult.Success -> isi[b] = rk.data
-                            else -> Unit
+                            is ApiResult.Success -> { isi[b] = rk.data; gagalMuat = gagalMuat - b }
+                            else -> { gagalMuat = gagalMuat + b }
                         }
                     }
                     rekapPerBulan = isi
@@ -159,7 +162,9 @@ fun TutupBukuScreen() {
                     rekap = rekapPerBulan[bulanIni],
                     status = tr("Berjalan", "In progress"),
                     statusColor = Color(0xFF2E7D32),
-                    ditutupPada = null
+                    ditutupPada = null,
+                    gagalMuat = gagalMuat.contains(bulanIni),
+                    onMuatUlang = { muatUlang++ }
                 )
                 Spacer(Modifier.height(SpaceM))
                 if (bulanLalu.isNotEmpty() && bulanLalu !in tutupSet) {
@@ -169,7 +174,9 @@ fun TutupBukuScreen() {
                         status = tr("Selesai — bisa ditutup", "Ended — can be closed"),
                         statusColor = Color(0xFF8D6E00),
                         ditutupPada = null,
-                        onTutup = { konfirmasiTutup = bulanLalu }
+                        onTutup = { konfirmasiTutup = bulanLalu },
+                        gagalMuat = gagalMuat.contains(bulanLalu),
+                        onMuatUlang = { muatUlang++ }
                     )
                     Spacer(Modifier.height(SpaceM))
                 }
@@ -184,7 +191,9 @@ fun TutupBukuScreen() {
                             status = tr("Selesai — bisa ditutup", "Ended — can be closed"),
                             statusColor = Color(0xFF8D6E00),
                             ditutupPada = null,
-                            onTutup = { konfirmasiTutup = b }
+                            onTutup = { konfirmasiTutup = b },
+                            gagalMuat = gagalMuat.contains(b),
+                            onMuatUlang = { muatUlang++ }
                         )
                         Spacer(Modifier.height(SpaceM))
                     }
@@ -204,7 +213,9 @@ fun TutupBukuScreen() {
                 statusColor = Color(0xFF8D6E00),
                 ditutupPada = row.ditutupPada,
                 onExcel = { exportBulan(row.bulan) },
-                onBuka = { konfirmasiBuka = row.bulan }
+                onBuka = { konfirmasiBuka = row.bulan },
+                gagalMuat = gagalMuat.contains(row.bulan),
+                onMuatUlang = { muatUlang++ }
             )
         }
     }
@@ -246,6 +257,11 @@ fun TutupBukuScreen() {
                             is ApiResult.Success -> {
                                 msg = awalanBerhasil + namaBulanIndonesia(bulan) + akhiranBuka
                                 muatUlang++
+                                // R1 (audit 2026-11-18): sinkronkan supaya
+                                // perubahan awan yang tertunda di bulan itu
+                                // (mis. tombstone penghapusan) langsung
+                                // diterapkan.
+                                onMintaSync()
                             }
                             is ApiResult.Error -> msg = r.message
                             is ApiResult.Loading -> Unit
@@ -270,7 +286,9 @@ private fun KartuBulanTutup(
     ditutupPada: Long?,
     onTutup: (() -> Unit)? = null,
     onExcel: (() -> Unit)? = null,
-    onBuka: (() -> Unit)? = null
+    onBuka: (() -> Unit)? = null,
+    gagalMuat: Boolean = false,
+    onMuatUlang: (() -> Unit)? = null
 ) {
     ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest) {
         Column(Modifier.padding(12.dp)) {
@@ -282,6 +300,11 @@ private fun KartuBulanTutup(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            // R17: bila rekap gagal dimuat, beri tahu pengguna (bukan "Memuat…").
+            if (gagalMuat) {
+                Spacer(Modifier.height(4.dp))
+                Text(tr("Gagal memuat rekap bulan ini.", "Failed to load this month's recap."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+            }
             Spacer(Modifier.height(4.dp))
             Text(status, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = statusColor)
             if (ditutupPada != null) {
@@ -292,7 +315,7 @@ private fun KartuBulanTutup(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (onTutup != null || onExcel != null || onBuka != null) {
+            if (onTutup != null || onExcel != null || onBuka != null || onMuatUlang != null) {
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (onTutup != null) {
@@ -310,6 +333,11 @@ private fun KartuBulanTutup(
                     if (onBuka != null) {
                         TextButton(onClick = onBuka) {
                             Text(tr("Buka Lagi", "Reopen"), maxLines = 1)
+                        }
+                    }
+                    if (onMuatUlang != null) {
+                        OutlinedButton(onClick = onMuatUlang, shape = RoundedCornerShape(20.dp)) {
+                            Text(tr("Coba lagi", "Try again"), maxLines = 1)
                         }
                     }
                 }

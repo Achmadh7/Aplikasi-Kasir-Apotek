@@ -402,7 +402,9 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
             }
             
         }
-        if (shown.isEmpty()) {
+        // R13 (audit 2026-11-18): teks "semua aman" jangan tampil saat
+        // pemuatan gagal — kartu galat di atas sudah menjelaskannya.
+        if (shown.isEmpty() && loadError == null) {
             item { Text(tr("Tidak ada pengingat — semua stok dan kadaluarsa aman.", "No reminders — all stock and expiry dates are safe."), style = MaterialTheme.typography.bodyMedium) }
         }
         item {

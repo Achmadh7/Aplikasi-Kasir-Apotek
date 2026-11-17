@@ -196,10 +196,14 @@ fun PbfScreen() {
                                         // R24a: gulir daftar ke kartu itu
                                         // supaya terlihat, bukan cuma dibuka.
                                         // Indeks datar = 1 item header atas +
-                                        // tiap grup sebelumnya (1 header +
-                                        // jumlah itemnya) + 1 header grup ini.
+                                        // 1 kartu kredit bila ada + tiap grup
+                                        // sebelumnya (1 header + jumlah
+                                        // itemnya) + 1 header grup ini.
                                         scope.launch {
-                                            var flatIndex = 1
+                                            // R12 (audit 2026-11-18): kartu
+                                            // kredit menempati indeks 1 bila
+                                            // ada, jadi grup mulai di 2.
+                                            var flatIndex = if (outstanding.isNotEmpty()) 2 else 1
                                             var found = -1
                                             for ((_, dayPurchases) in sortedGroups) {
                                                 val idx = dayPurchases.indexOfFirst { it.id == p.id }

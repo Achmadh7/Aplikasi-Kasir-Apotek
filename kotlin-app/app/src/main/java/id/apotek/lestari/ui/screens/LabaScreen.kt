@@ -24,6 +24,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -56,7 +57,7 @@ fun LabaScreen() {
     // Pesan kegagalan muat (audit 2026-11-02, M2): tanpa ini, kegagalan
     // laporan membuat LoadingIndicator berputar selamanya.
     var loadError by remember { mutableStateOf<String?>(null) }
-    var period by remember { mutableStateOf("today") }
+    var period by rememberSaveable { mutableStateOf("today") }
     // Rekap penjualan Excel (J5): pesan hasil + file yang menunggu dipilih
     // lewat SAF. Pola launcher sama seperti Export Stok (StokScreen).
     val context = LocalContext.current
@@ -304,11 +305,13 @@ fun LabaScreen() {
                                                 // Jepit jeda animasi supaya grafik panjang
                                                 // tidak butuh waktu lama untuk selesai tumbuh.
                                                 LaunchedEffect(period) { grow.animateTo(1f, tween(durationMillis = 600, delayMillis = (barIndex * 70).coerceAtMost(500), easing = FastOutSlowInEasing)) }
-                                                val barH = ((110f * day.profit / maxProfit * grow.value).coerceIn(0f, 110f)).let { if (day.profit > 0) it.coerceAtLeast(4f) else 0f }
+                                                // R15 (audit 2026-11-18): hari rugi digambar sebagai
+                                                // batang merah pendek, bukan 0 seperti hari tanpa laba.
+                                                val barH = ((110f * day.profit / maxProfit * grow.value).coerceIn(0f, 110f)).let { when { day.profit > 0 -> it.coerceAtLeast(4f); day.profit < 0 -> 4f; else -> 0f } }
                                                 Box(
                                                     Modifier.width(28.dp).height(barH.dp)
                                                         .background(
-                                                            if (isMax) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                                                            if (day.profit < 0) MaterialTheme.colorScheme.error else if (isMax) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
                                                             RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
                                                         )
                                                 )
@@ -389,7 +392,7 @@ fun ObatTerlarisScreen() {
     // Pesan kegagalan muat (audit 2026-11-02, M2): tanpa ini, kegagalan
     // tampil sebagai daftar kosong tanpa penjelasan.
     var loadError by remember { mutableStateOf<String?>(null) }
-    var period by remember { mutableStateOf("today") }
+    var period by rememberSaveable { mutableStateOf("today") }
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME), supaya
     // penjualan terbaru dari Kasir ikut terhitung.
     val lifecycleOwner = LocalLifecycleOwner.current

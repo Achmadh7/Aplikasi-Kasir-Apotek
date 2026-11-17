@@ -287,7 +287,14 @@ fun KasirScreen() {
     // R44 (audit 2026-11-15): total dihitung dengan Long supaya harga x qty
     // tidak meluber diam-diam menjadi negatif; repo (dan entity Room) tetap
     // Int, jadi total di atas Int.MAX_VALUE ditolak lewat canPay.
-    val total = cart.sumOf { it.unitPrice.toLong() * it.qty }
+    // R18 (audit 2026-11-18): harga diambil dari daftar obat TERKINI,
+    // bukan snapshot saat obat masuk keranjang — supaya total yang tampil
+    // sama dengan yang ditagih createSale (yang membaca harga dari DB).
+    val total = cart.sumOf { item ->
+        val terbaru = medicines.firstOrNull { it.id == item.medicine.id }
+        val harga = terbaru?.let { if (item.useWholesale && it.wholesalePrice > 0) it.wholesalePrice else it.sellPrice } ?: item.unitPrice
+        harga.toLong() * item.qty
+    }
     val cartQty = cart.sumOf { it.qty }
     val paid = parseDecimal(uangDiterima.text)
     val change = if (method == "Tunai") (paid - total).coerceAtLeast(0) else 0

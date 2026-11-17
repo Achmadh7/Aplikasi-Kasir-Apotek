@@ -417,6 +417,17 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                     Text(reminderSummary, style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
                                 }
                             }
+                            // R14 (audit 2026-11-18): bila pemuatan pengingat
+                            // gagal tapi kartu tidak kosong (ada tagihan PBF),
+                            // ringkasan galat di atas tidak tampil — tampilkan
+                            // baris galat kecil di sini.
+                            if (reminderLoadFailed && !tampilkanRingkasan) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Warning, null, tint = warningAmber(), modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(tr("Gagal memuat data pengingat.", "Failed to load reminder data."), style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
+                                }
+                            }
                             if (kotakPengingat.isNotEmpty()) {
                                 Spacer(Modifier.height(SpaceM))
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -66,7 +66,7 @@ fun KeuanganScreen() {
     var loadError by remember { mutableStateOf<String?>(null) }
     // R10 (audit 2026-11-15): pilihan periode selamat dari rotasi.
     var period by rememberSaveable { mutableStateOf("today") } // today | month | all — awalnya "Hari Ini" (permintaan Achmad 2026-11-17: menu dibuka langsung di Hari Ini; dulu "Semua" sejak 2026-11-17)
-    var typeFilter by remember { mutableStateOf("all") } // all | in | out
+    var typeFilter by rememberSaveable { mutableStateOf("all") } // all | in | out
     var showForm by remember { mutableStateOf(false) }
     var formType by remember { mutableStateOf("in") }
     val scope = rememberCoroutineScope()
@@ -172,6 +172,10 @@ fun KeuanganScreen() {
     }
     val periodIn = dailyFlow.sumOf { it.second }
     val periodOut = dailyFlow.sumOf { it.third }
+    // R16 (audit 2026-11-18): penentuan "kosong" memakai periodEntries
+    // (tanpa cap 365 hari) — periodIn/periodOut dari dailyFlow terpotong.
+    val periodInSemua = periodEntries.filter { it.type == "in" }.sumOf { it.amount }
+    val periodOutSemua = periodEntries.filter { it.type == "out" }.sumOf { it.amount }
     val maxFlow = dailyFlow.maxOfOrNull { maxOf(it.second, it.third) }?.coerceAtLeast(1) ?: 1
     // Satu LazyColumn untuk seluruh layar (header + daftar) supaya layar bisa
     // digulir penuh saat lanskap — header tetap + LazyColumn weight(1f) membuat
@@ -301,7 +305,7 @@ fun KeuanganScreen() {
                         )
                     }
                     Spacer(Modifier.height(SpaceL))
-                    if (periodIn + periodOut == 0) {
+                    if (periodInSemua + periodOutSemua == 0) {
                         Text(
                             when (period) {
                                 "today" -> tr("Belum ada arus kas 7 hari terakhir.", "No cash flow in the last 7 days.")

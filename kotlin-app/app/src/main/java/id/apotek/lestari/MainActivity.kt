@@ -591,7 +591,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 composable("pbf", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { PbfScreen() }
                 composable("pemasok", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { PemasokScreen() }
                 composable("tentang", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { TentangScreen() }
-                composable("tutupBuku", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { TutupBukuScreen() }
+                composable("tutupBuku", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { TutupBukuScreen(onMintaSync = { jalankanSync() }) }
             }
         }
     }

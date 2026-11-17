@@ -47,6 +47,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 
 // Layar Backup & Restore dan Tentang Aplikasi.
@@ -228,7 +229,7 @@ fun BackupScreen() {
                 Spacer(Modifier.height(SpaceM))
                 Button(
                     onClick = {
-                        val stamp = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).format(Date())
+                        val stamp = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).apply { timeZone = TimeZone.getTimeZone("Asia/Jakarta") }.format(Date())
                         suggestedBackupName = "backup-apotek-lestari-$stamp.json"
                         backupLauncher.launch(suggestedBackupName)
                     },
@@ -322,8 +323,14 @@ fun BackupScreen() {
                         // R49: hanya amati bila belum ada pengamatan berjalan —
                         // ketukan kedua saat pekerjaan masih antre/berjalan tidak
                         // boleh menimpa pengamatan pertama dengan id yang KEEP.
-                        if (autoWorkId == null) autoWorkId = jalankanBackupOtomatisSekali(context)
-                        msg = tr("Backup otomatis dimulai — periksa folder sebentar lagi.", "Automatic backup started — check the folder shortly.")
+                        // R19 (audit 2026-11-18): ketukan kedua tidak lagi
+                        // mengklaim backup "dimulai" padahal sedang berjalan.
+                        if (autoWorkId == null) {
+                            autoWorkId = jalankanBackupOtomatisSekali(context)
+                            msg = tr("Backup otomatis dimulai — periksa folder sebentar lagi.", "Automatic backup started — check the folder shortly.")
+                        } else {
+                            msg = tr("Backup otomatis sedang berjalan — periksa folder sebentar lagi.", "Automatic backup is running — check the folder shortly.")
+                        }
                     },
                     enabled = !autoFolderUri.isNullOrBlank(),
                     shape = RoundedCornerShape(28.dp),
@@ -408,7 +415,7 @@ fun BackupScreen() {
 
 /** Cap waktu backup ("4 Nov 2026, 13.05") dalam bahasa aplikasi aktif. */
 private fun formatBackupStamp(millis: Long): String =
-    SimpleDateFormat("d MMM yyyy, HH.mm", appLocale()).format(Date(millis))
+    SimpleDateFormat("d MMM yyyy, HH.mm", appLocale()).apply { timeZone = TimeZone.getTimeZone("Asia/Jakarta") }.format(Date(millis))
 
 
 

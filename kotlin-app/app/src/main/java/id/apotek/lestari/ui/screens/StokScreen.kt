@@ -748,6 +748,13 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                             val cat = category.ifBlank { "Umum" }
                             val unt = unit.ifBlank { "Strip" }
                             val s = parseDecimal(sell.text)
+                            // R10 (audit 2026-11-18): stok 10 digit meluber
+                            // jadi null di toIntOrNull() — jangan diam-diam
+                            // jadi 0 ("Habis"), tolak dengan pesan jelas.
+                            if (stock.isNotBlank() && stock.toIntOrNull() == null) {
+                                formError = tr("Jumlah stok terlalu besar — periksa lagi angkanya.", "Stock amount is too large — please check the number.")
+                                return@launch
+                            }
                             val st = stock.toIntOrNull() ?: 0
                             val exp = expiry.ifBlank { null }
                             // Barcode tidak lagi diisi lewat formulir (kolomnya
