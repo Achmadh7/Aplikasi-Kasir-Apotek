@@ -19,10 +19,8 @@ import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.time.DateTimeException
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.ResolverStyle
-import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
@@ -261,9 +259,14 @@ object ExcelHelper {
                         if (c == dateCol) {
                             val parsed = runCatching { LocalDate.parse(s, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
                             if (parsed != null) {
-                                cell.setCellValue(Date.from(parsed.atStartOfDay(ZoneId.of("Asia/Jakarta")).toInstant()))
+                                cell.setCellValue(DateUtil.getExcelDate(parsed))
                                 cell.cellStyle = if (banded) dateStyleBand else dateStyle
-                            } else cell.setCellValue(s)
+                            } else {
+                                // R23 (audit 2026-11-18): label TOTAL juga
+                                // bergaya tebal seperti angka di baris sama.
+                                cell.setCellValue(s)
+                                if (bold) cell.cellStyle = boldStyle
+                            }
                         } else {
                             cell.setCellValue(s)
                             if (bold) cell.cellStyle = boldStyle
@@ -277,7 +280,9 @@ object ExcelHelper {
         writeRow(rows.size + 2, totalRow, true)
         widths.forEachIndexed { i, w -> sheet.setColumnWidth(i, w * 256) }
         sheet.createFreezePane(0, 2)
-        sheet.setAutoFilter(CellRangeAddress(1, 1, 0, headers.size - 1))
+        // R26 (audit 2026-11-18): filter hanya sampai baris data terakhir —
+        // baris TOTAL tidak ikut terfilter.
+        sheet.setAutoFilter(CellRangeAddress(1, rows.size + 1, 0, headers.size - 1))
         // EX2: setelan cetak — landscape, muat 1 halaman lebar, judul +
         // header diulang di tiap halaman cetak. (XSSFPrintSetup memakai
         // nama fitWidth/fitHeight — BUKAN fitToWidth/fitToHeight.)
@@ -339,9 +344,13 @@ object ExcelHelper {
                     val category = text(row, "Kategori", 1).ifBlank { "Umum" }
                     val unit = text(row, "Satuan", 2).ifBlank { "Strip" }
                     // A7: angka rusak (null dari parser) jangan diam-diam jadi 0 —
-                    // baris dilewati dan dicatat di skippedRows.
-                    val sell = text(row, "Harga Jual", 3).toIntOrNullStrict()
-                    val stock = text(row, "Stok", 6).toIntOrNullStrict()
+                    // baris dilewati dan dicatat di skippedRows. R24: sel KOSONG
+                    // berarti 0 (sesuai Petunjuk); hanya isi yang tidak bisa
+                    // di-parse yang membuat baris dilewati.
+                    val sellText = text(row, "Harga Jual", 3)
+                    val stockText = text(row, "Stok", 6)
+                    val sell = if (sellText.isBlank()) 0 else sellText.toIntOrNullStrict()
+                    val stock = if (stockText.isBlank()) 0 else stockText.toIntOrNullStrict()
                     if (sell == null || stock == null) {
                         skipped.add(row.rowNum + 1)
                         continue
@@ -433,11 +442,11 @@ object ExcelHelper {
                         val s = v.toString()
                         if (c == 7 && s.isNotBlank()) {
                             // Kolom Kadaluarsa: tulis sebagai sel tanggal
-                            // (tengah malam WIB, sama seperti yang dibaca
-                            // readExpiry) bila formatnya tanggal valid.
+                            // (serial tanggal tanpa zona, R22) bila formatnya
+                            // tanggal valid.
                             val parsed = runCatching { LocalDate.parse(s, DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
                             if (parsed != null) {
-                                cell.setCellValue(Date.from(parsed.atStartOfDay(ZoneId.of("Asia/Jakarta")).toInstant()))
+                                cell.setCellValue(DateUtil.getExcelDate(parsed))
                                 cell.cellStyle = dateStyle
                             } else cell.setCellValue(s)
                         } else cell.setCellValue(s)
