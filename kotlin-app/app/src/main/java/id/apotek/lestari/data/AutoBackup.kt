@@ -165,7 +165,7 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) :
         // dimatikan (pekerjaan yang sudah antre tetap jalan walau
         // pengaturannya berubah) — kecuali pekerjaan sekali ("Cadangkan
         // Sekarang") yang memang diminta pengguna.
-        if (!params.inputData.getBoolean("sekali", false) &&
+        if (!inputData.getBoolean("sekali", false) &&
             !prefs.getBoolean(PREF_AUTO_BACKUP_AKTIF, false)) return Result.success()
         // R3: sapu file .tmp lama dari worker yang mati di tengah jalan.
         runCatching { sapuTmpLama(applicationContext, folderUri) }
