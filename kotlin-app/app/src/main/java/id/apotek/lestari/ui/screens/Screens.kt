@@ -47,6 +47,7 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
 import id.apotek.lestari.data.*
 import id.apotek.lestari.ui.theme.*
 import java.util.Date
@@ -107,6 +108,7 @@ fun adaptiveSheetMaxWidth() = when {
 /** Warna batang header N2 (tetap di dua mode). */
 val WarnaHeaderN2 = Color(0xFF0B1526)
 
+// HC1 Header Ramping (2026-11-17): ikon 40dp + judul 20sp + padding 12dp — berlaku untuk semua layar.
 @Composable
 fun KartuHeaderPremium(judul: String, ikon: ImageVector, subjudul: String? = null) {
     val gelap = LocalIsDarkTheme.current
@@ -117,17 +119,18 @@ fun KartuHeaderPremium(judul: String, ikon: ImageVector, subjudul: String? = nul
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            Modifier.padding(14.dp),
+            Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(color = if (gelap) Color(0xFF1B385C) else Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(46.dp)) {
-                Icon(ikon, null, tint = if (gelap) Color(0xFF9FCAFF) else Color(0xFF2E5A88), modifier = Modifier.padding(11.dp).fillMaxSize())
+            Surface(color = if (gelap) Color(0xFF1B385C) else Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
+                Icon(ikon, null, tint = if (gelap) Color(0xFF9FCAFF) else Color(0xFF2E5A88), modifier = Modifier.padding(9.dp).fillMaxSize())
             }
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(
                     judul,
                     style = MaterialTheme.typography.headlineSmall.copy(
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold,
                         brush = Brush.linearGradient(
                             colors = listOf(

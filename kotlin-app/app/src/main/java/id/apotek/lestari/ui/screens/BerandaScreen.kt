@@ -143,6 +143,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             // Kanan = tombol awan saja (tanpa tulisan status - permintaan
             // Achmad) yang tetap menjadi tombol sinkron. Tanggal tidak
             // di header; kartu ini adalah header Beranda.
+            // HC1 (2026-11-17): header ramping — logo 40dp, nama 20sp, awan 36dp, padding 12dp.
             Card(
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = if (gelap) WarnaHeaderN2 else Color(0xFFD3E3F3)),
@@ -150,21 +151,22 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    Modifier.padding(14.dp),
+                    Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val logo = rememberLogoBitmap()
-                    Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(46.dp)) {
+                    Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
                         if (logo != null) {
                             Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(6.dp).fillMaxSize())
                         } else {
-                            Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF16324F), modifier = Modifier.padding(11.dp).fillMaxSize())
+                            Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF16324F), modifier = Modifier.padding(9.dp).fillMaxSize())
                         }
                     }
                     Spacer(Modifier.width(12.dp))
                     Text(
                         "Apotek Lestari",
                         style = MaterialTheme.typography.headlineSmall.copy(
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.ExtraBold,
                             brush = Brush.linearGradient(
                                 colors = listOf(
@@ -183,7 +185,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 1.5.dp,
                                 if (statusSync == StatusSync.GAGAL) MaterialTheme.colorScheme.error else (if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7))
                             ),
-                            modifier = Modifier.size(38.dp).clickable { onSyncTap() }
+                            modifier = Modifier.size(36.dp).clickable { onSyncTap() }
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 when (statusSync) {
