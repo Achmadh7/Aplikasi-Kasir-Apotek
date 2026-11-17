@@ -279,11 +279,12 @@ object ExcelHelper {
         sheet.createFreezePane(0, 2)
         sheet.setAutoFilter(CellRangeAddress(1, 1, 0, headers.size - 1))
         // EX2: setelan cetak — landscape, muat 1 halaman lebar, judul +
-        // header diulang di tiap halaman cetak.
+        // header diulang di tiap halaman cetak. (XSSFPrintSetup memakai
+        // nama fitWidth/fitHeight — BUKAN fitToWidth/fitToHeight.)
         sheet.printSetup.orientation = PrintOrientation.LANDSCAPE
         sheet.setFitToPage(true)
-        sheet.printSetup.fitToWidth = 1
-        sheet.printSetup.fitToHeight = 0
+        sheet.printSetup.fitWidth = 1
+        sheet.printSetup.fitHeight = 0
         sheet.setRepeatingRows(CellRangeAddress(0, 1, 0, headers.size - 1))
     }
 
