@@ -60,7 +60,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.rememberScrollState
@@ -419,9 +418,6 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             pesanStatus = null
         }
     }
-    // Arah navigasi antar tab (1 = maju/ke kanan, -1 = mundur/ke kiri) —
-    // dipakai transisi NavHost supaya layar mengikuti arah ketukan.
-    var navDirection by remember { mutableIntStateOf(1) }
     // R24 (audit 2026-11-15): query pencarian awal Stok saat dibuka dari
     // Pengingat — nonce membuat ketukan pada obat yang sama dua kali tetap
     // diterapkan (kunci LaunchedEffect di StokScreen harus berubah).
@@ -438,7 +434,6 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
         else -> 4 // Lainnya + sub-menunya
     }
     fun goToTab(route: String) {
-        navDirection = if (tabPosition(route) >= tabPosition(current)) 1 else -1
         // Kembali ke tab induk dari sub-menu (mis. Tentang -> Lainnya lewat
         // bar bawah) harus POP: navigate() biasa memainkan transisi MAJU
         // (sub-menu keluar hanya -1/4 ke kiri) sehingga terasa seperti
@@ -532,44 +527,49 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             // 300ms FastOutSlowInEasing. Maju: halaman baru masuk dari
             // +30dp, Lainnya keluar ke -30dp. Mundur (tombol Kembali /
             // bar bawah): kebalikannya — sub-halaman keluar ke +30dp,
-            // Lainnya masuk dari -30dp. Transisi antar tab utama tetap
-            // T3 (fade + skala mikro, 150ms) di NavHost.
+            // Lainnya masuk dari -30dp. Transisi antar tab utama kini
+            // TB1 (pilihan Achmad 2026-11-18): pola S3 yang sama, arahnya
+            // mengikuti urutan tab (dihitung dari rute awal/tujuan).
             val geserSumbuX = with(density) { 30.dp.toPx().toInt() }
             val subEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { geserSumbuX } + fadeIn(tween(300)) }
             val subExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { -geserSumbuX } + fadeOut(tween(300)) }
             val subPopEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { -geserSumbuX } + fadeIn(tween(300)) }
             val subPopExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { geserSumbuX } + fadeOut(tween(300)) }
-            // T3 tab (150ms fade + skala mikro) — sama persis dengan default
-            // NavHost di bawah; dipakai cabang kondisional saat layar lawan
-            // adalah tab utama.
-            val t3Masuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { fadeIn(tween(150)) + scaleIn(initialScale = 0.98f, animationSpec = tween(150)) }
-            val t3Keluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { fadeOut(tween(150)) }
-            // Transisi kondisional (perbaikan 2026-11-15): S3 300ms hanya bila
-            // layar lawan adalah Lainnya/sub-halaman; bila lawan tab utama,
-            // pakai T3 150ms. Tanpa ini, satu sisi selesai 150ms sementara
-            // sisi lain masih bergeser sampai 300ms — animasi buka/tutup
-            // terasa patah, terutama Kembali dari sub-halaman ke Lainnya.
+            // TB1 (pilihan Achmad 2026-11-18): transisi antar tab = S3 yang
+            // sama dengan sub-halaman (geser 30dp + memudar, 300ms) — arah
+            // mengikuti urutan tab, dihitung dari rute awal/tujuan di dalam
+            // lambda (bukan navDirection: nilainya basi saat tombol Kembali
+            // sistem ditekan, jadi arahnya bisa terbalik). Dipakai default
+            // NavHost + cabang kondisional saat layar lawan adalah tab
+            // utama. Masuk: dari +30dp bila tujuan di kanan, dari -30dp
+            // bila di kiri; keluar kebalikannya.
+            val tabMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { if (tabPosition(targetState.destination.route ?: "") >= tabPosition(initialState.destination.route ?: "")) geserSumbuX else -geserSumbuX } + fadeIn(tween(300)) }
+            val tabKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { if (tabPosition(targetState.destination.route ?: "") >= tabPosition(initialState.destination.route ?: "")) -geserSumbuX else geserSumbuX } + fadeOut(tween(300)) }
+            // Transisi kondisional (perbaikan 2026-11-15, TB1 2026-11-18):
+            // S3 300ms hanya bila layar lawan adalah Lainnya/sub-halaman;
+            // bila lawan tab utama, pakai TB1 300ms (arah dari rute).
+            // Tanpa ini, satu sisi selesai 150ms sementara sisi lain masih
+            // bergeser sampai 300ms — animasi buka/tutup terasa patah,
+            // terutama Kembali dari sub-halaman ke Lainnya.
             val diSubAtauLainnya = { route: String? -> route == "lainnya" || route in subRoutes }
-            val subMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { if (diSubAtauLainnya(initialState.destination.route)) subEnter() else t3Masuk() }
-            val subKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { if (diSubAtauLainnya(targetState.destination.route)) subExit() else t3Keluar() }
-            val subPopMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { if (diSubAtauLainnya(initialState.destination.route)) subPopEnter() else t3Masuk() }
-            val subPopKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { if (diSubAtauLainnya(targetState.destination.route)) subPopExit() else t3Keluar() }
-            val lainnyaMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { if (initialState.destination.route in subRoutes) subPopEnter() else t3Masuk() }
-            val lainnyaKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { if (targetState.destination.route in subRoutes) subExit() else t3Keluar() }
-            val lainnyaPopMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { if (initialState.destination.route in subRoutes) subPopEnter() else t3Masuk() }
-            val lainnyaPopKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { if (targetState.destination.route in subRoutes) subPopExit() else t3Keluar() }
+            val subMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { if (diSubAtauLainnya(initialState.destination.route)) subEnter() else tabMasuk() }
+            val subKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { if (diSubAtauLainnya(targetState.destination.route)) subExit() else tabKeluar() }
+            val subPopMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { if (diSubAtauLainnya(initialState.destination.route)) subPopEnter() else tabMasuk() }
+            val subPopKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { if (diSubAtauLainnya(targetState.destination.route)) subPopExit() else tabKeluar() }
+            val lainnyaMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { if (initialState.destination.route in subRoutes) subPopEnter() else tabMasuk() }
+            val lainnyaKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { if (targetState.destination.route in subRoutes) subExit() else tabKeluar() }
+            val lainnyaPopMasuk: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = { if (initialState.destination.route in subRoutes) subPopEnter() else tabMasuk() }
+            val lainnyaPopKeluar: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = { if (targetState.destination.route in subRoutes) subPopExit() else tabKeluar() }
             NavHost(
                 navController = nav,
                 startDestination = "beranda",
-                // Transisi antar tab = T3 (pilihan Achmad 2026-11-10 dari
-                // preview GIF T1-T5): layar baru memudar masuk sambil
-                // membesar mikro dari skala 0,98 ke penuh, 150ms; layar
-                // lama cukup memudar keluar. Enteng, tanpa geser sama
-                // sekali (geser 200-350ms dulu terasa jitter/bergulir).
-                enterTransition = { fadeIn(tween(150)) + scaleIn(initialScale = 0.98f, animationSpec = tween(150)) },
-                exitTransition = { fadeOut(tween(150)) },
-                popEnterTransition = { fadeIn(tween(150)) + scaleIn(initialScale = 0.98f, animationSpec = tween(150)) },
-                popExitTransition = { fadeOut(tween(150)) },
+                // Transisi antar tab = TB1 (pilihan Achmad 2026-11-18):
+                // pola S3 yang sama dengan sub-halaman — geser 30dp +
+                // memudar, 300ms, arah mengikuti urutan tab.
+                enterTransition = tabMasuk,
+                exitTransition = tabKeluar,
+                popEnterTransition = tabMasuk,
+                popExitTransition = tabKeluar,
                 modifier = Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()
             ) {
                 composable("beranda") { BerandaScreen(onGoStok = { goToTab("stok") }, onGoPengingat = { goToTab("pengingat") }, onGoLaba = { goToTab("laba") }, onGoRiwayat = { goToTab("riwayat") }, statusSync = statusSync, onSyncTap = { aksiSinkronTap() }) }
@@ -582,7 +582,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 // mendarat di Beranda, bukan di Lainnya (laporan Achmad
                 // 2026-11-04). Dengan tumpukan biasa, Kembali dari
                 // Laba/Pengingat/dll. kembali ke halaman Lainnya.
-                composable("lainnya", enterTransition = lainnyaMasuk, exitTransition = lainnyaKeluar, popEnterTransition = lainnyaPopMasuk, popExitTransition = lainnyaPopKeluar) { LainnyaScreen(onGo = { route -> navDirection = 1; nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = onToggleTheme, appLang = appLang, onLanguageChange = onLanguageChange, onlineSiap = onlineSiap, emailOnline = emailOnline, statusSync = statusSync, syncTerakhir = syncTerakhir, onSinkronTap = { aksiSinkronTap() }, onKeluarTap = { tampilKonfirmasiKeluar = true }, onResetTap = { tampilKonfirmasiReset = true }) }
+                composable("lainnya", enterTransition = lainnyaMasuk, exitTransition = lainnyaKeluar, popEnterTransition = lainnyaPopMasuk, popExitTransition = lainnyaPopKeluar) { LainnyaScreen(onGo = { route -> nav.navigate(route) { launchSingleTop = true } }, isDark = isDark, onToggleTheme = onToggleTheme, appLang = appLang, onLanguageChange = onLanguageChange, onlineSiap = onlineSiap, emailOnline = emailOnline, statusSync = statusSync, syncTerakhir = syncTerakhir, onSinkronTap = { aksiSinkronTap() }, onKeluarTap = { tampilKonfirmasiKeluar = true }, onResetTap = { tampilKonfirmasiReset = true }) }
                 composable("laba", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { LabaScreen() }
                 composable("pengingat", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { PengingatScreen(onGoStok = { nama -> stokCariAwal = nama; stokCariNonce++; goToTab("stok") }, onGoPbf = { goToTab("pbf") }) }
                 composable("riwayat", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { RiwayatScreen() }
