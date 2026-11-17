@@ -179,6 +179,13 @@ class SyncManager(private val repository: Repository) {
             }
             for (e in repository.penjualanKotor()) {
                 if (e.remoteId.isBlank()) continue
+                // TB1 (S1, audit 2026-11-17): jangan dorong baris di bulan
+                // tertutup — kuncinya tidak boleh ditembus sinkronisasi.
+                val bulanJual = bulanKeyDariIso(e.createdAt)
+                if (bulanJual != null && repository.bulanTerkunci(bulanJual)) {
+                    Log.w("TutupBuku", "Lewati dorong penjualan di bulan tertutup $bulanJual")
+                    continue
+                }
                 if (awanLebihBaru(akar, "penjualan", e.remoteId, e.updatedAt)) continue
                 akar.collection("penjualan").document(e.remoteId)
                     .set(SyncLogic.penjualanKePeta(e)).await()
@@ -187,6 +194,12 @@ class SyncManager(private val repository: Repository) {
             }
             for (e in repository.pbfKotor()) {
                 if (e.remoteId.isBlank()) continue
+                // TB1 (S1): faktur di bulan tertutup tidak didorong.
+                val bulanPbf = bulanKeyDariIso(e.date)
+                if (bulanPbf != null && repository.bulanTerkunci(bulanPbf)) {
+                    Log.w("TutupBuku", "Lewati dorong PBF di bulan tertutup $bulanPbf")
+                    continue
+                }
                 if (awanLebihBaru(akar, "pbf", e.remoteId, e.updatedAt)) continue
                 akar.collection("pbf").document(e.remoteId)
                     .set(SyncLogic.pbfKePeta(e)).await()
@@ -195,6 +208,12 @@ class SyncManager(private val repository: Repository) {
             }
             for (e in repository.kasKotor()) {
                 if (e.remoteId.isBlank()) continue
+                // TB1 (S1): kas di bulan tertutup tidak didorong.
+                val bulanKas = bulanKeyDariIso(e.createdAt)
+                if (bulanKas != null && repository.bulanTerkunci(bulanKas)) {
+                    Log.w("TutupBuku", "Lewati dorong kas di bulan tertutup $bulanKas")
+                    continue
+                }
                 if (awanLebihBaru(akar, "kas", e.remoteId, e.updatedAt)) continue
                 akar.collection("kas").document(e.remoteId)
                     .set(SyncLogic.kasKePeta(e)).await()
@@ -212,6 +231,12 @@ class SyncManager(private val repository: Repository) {
             for (e in repository.itemJualKotor()) {
                 if (e.remoteId.isBlank()) continue
                 val induk = repository.penjualanByIdSync(e.saleId) ?: continue
+                // TB1 (S1): item yang induknya di bulan tertutup tidak didorong.
+                val bulanInduk = bulanKeyDariIso(induk.createdAt)
+                if (bulanInduk != null && repository.bulanTerkunci(bulanInduk)) {
+                    Log.w("TutupBuku", "Lewati dorong item jual di bulan tertutup $bulanInduk")
+                    continue
+                }
                 val obat = repository.obatByIdSync(e.medicineId)
                 if (awanLebihBaru(akar, "penjualan_item", e.remoteId, e.updatedAt)) continue
                 akar.collection("penjualan_item").document(e.remoteId)
@@ -222,6 +247,12 @@ class SyncManager(private val repository: Repository) {
             for (e in repository.itemPbfKotor()) {
                 if (e.remoteId.isBlank()) continue
                 val induk = repository.pembelianByIdSync(e.purchaseId) ?: continue
+                // TB1 (S1): item yang induknya di bulan tertutup tidak didorong.
+                val bulanInduk = bulanKeyDariIso(induk.date)
+                if (bulanInduk != null && repository.bulanTerkunci(bulanInduk)) {
+                    Log.w("TutupBuku", "Lewati dorong item PBF di bulan tertutup $bulanInduk")
+                    continue
+                }
                 if (awanLebihBaru(akar, "pbf_item", e.remoteId, e.updatedAt)) continue
                 akar.collection("pbf_item").document(e.remoteId)
                     .set(SyncLogic.itemPbfKePeta(e, induk.remoteId)).await()

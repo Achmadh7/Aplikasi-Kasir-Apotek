@@ -743,8 +743,9 @@ class Repository {
 
     // ---- Tutup Buku Bulanan (TB1) ----
 
-    /** Benar bila bulan ("yyyy-MM") sudah ditutup. Dipakai guard di atas. */
-    private suspend fun bulanTerkunci(bulan: String): Boolean =
+    /** Benar bila bulan ("yyyy-MM") sudah ditutup. Dipakai guard di atas
+     *  dan guard dorong di OnlineSync (S1) — karena itu publik. */
+    suspend fun bulanTerkunci(bulan: String): Boolean =
         DatabaseProvider.db.closedMonthDao().getByBulan(bulan) != null
 
     /** Daftar bulan yang sudah ditutup, terbaru dulu. */
@@ -866,6 +867,11 @@ class Repository {
         // tidak kosong ("" berarti tanpa jatuh tempo).
         if (!tanggalValid(args.date)) throw IllegalArgumentException(tr("Tanggal beli tidak valid (format yyyy-MM-dd)", "Purchase date is invalid (yyyy-MM-dd format)"))
         if (args.paymentType == "KREDIT" && args.dueDate.isNotBlank() && !tanggalValid(args.dueDate)) throw IllegalArgumentException(tr("Tanggal jatuh tempo tidak valid (format yyyy-MM-dd)", "Due date is invalid (yyyy-MM-dd format)"))
+        // TB1 (audit 2026-11-17, S2): faktur bertanggal di bulan yang
+        // sudah ditutup ditolak — PBF adalah bagian dari laporan bulan itu.
+        val bulanBeli = bulanKeyDariIso(args.date)
+        if (bulanBeli != null && bulanTerkunci(bulanBeli))
+            throw IllegalArgumentException(tr("Bulan $bulanBeli sudah ditutup, faktur PBF tidak bisa ditambah", "Month $bulanBeli is closed, PBF invoices cannot be added"))
         val db = DatabaseProvider.db
         val dao = db.purchaseDao()
         var newId = 0
@@ -909,6 +915,10 @@ class Repository {
     suspend fun deletePurchase(id: Int): ApiResult<OkResponse> = call {
         val db = DatabaseProvider.db
         val dao = db.purchaseDao()
+        // TB1 (S2): faktur di bulan tertutup tidak bisa dihapus.
+        val ada = dao.getByIdAny(id) ?: throw IllegalStateException("Catatan pembelian tidak ditemukan")
+        val bulanHapus = bulanKeyDariIso(ada.date)
+        if (bulanHapus != null && bulanTerkunci(bulanHapus)) throw IllegalStateException(tr("Bulan $bulanHapus sudah ditutup, faktur PBF tidak bisa dihapus", "Month $bulanHapus is closed, PBF invoices cannot be deleted"))
         db.withTransaction {
             val cap = nowMillis()
             val deleted = dao.deleteById(id, cap)
@@ -921,6 +931,10 @@ class Repository {
     /** Tandai pembelian Kredit sebagai lunas: paymentType diubah ke CASH,
      *  sehingga nominalnya masuk ringkasan belanja (sesuai tanggal belinya). */
     suspend fun markPurchasePaid(id: Int): ApiResult<OkResponse> = call {
+        // TB1 (S2): pelunasan mengubah ringkasan bulan faktur itu.
+        val ada = DatabaseProvider.db.purchaseDao().getByIdAny(id) ?: throw IllegalStateException("Catatan pembelian tidak ditemukan")
+        val bulanLunas = bulanKeyDariIso(ada.date)
+        if (bulanLunas != null && bulanTerkunci(bulanLunas)) throw IllegalStateException(tr("Bulan $bulanLunas sudah ditutup, status faktur tidak bisa diubah", "Month $bulanLunas is closed, invoice status cannot be changed"))
         val changed = DatabaseProvider.db.purchaseDao().updatePaymentType(id, "CASH", nowMillis())
         if (changed == 0) throw IllegalStateException("Catatan pembelian tidak ditemukan")
         OkResponse(true)
@@ -936,6 +950,10 @@ class Repository {
         // M8 (audit 2026-11-16): jatuh tempo wajib yyyy-MM-dd yang valid;
         // "" berarti hapus tanggalnya (tetap diizinkan).
         if (dueDate.isNotBlank() && !tanggalValid(dueDate)) throw IllegalArgumentException(tr("Tanggal jatuh tempo tidak valid (format yyyy-MM-dd)", "Due date is invalid (yyyy-MM-dd format)"))
+        // TB1 (S2): jatuh tempo faktur di bulan tertutup tidak bisa diubah.
+        val ada = DatabaseProvider.db.purchaseDao().getByIdAny(id) ?: throw IllegalStateException("Catatan pembelian tidak ditemukan")
+        val bulanTempo = bulanKeyDariIso(ada.date)
+        if (bulanTempo != null && bulanTerkunci(bulanTempo)) throw IllegalStateException(tr("Bulan $bulanTempo sudah ditutup, jatuh tempo tidak bisa diubah", "Month $bulanTempo is closed, due date cannot be changed"))
         val changed = DatabaseProvider.db.purchaseDao().updateDueDate(id, dueDate.trim(), nowMillis())
         if (changed == 0) throw IllegalStateException("Catatan pembelian tidak ditemukan")
         OkResponse(true)
@@ -1254,6 +1272,19 @@ class Repository {
                 var stokBerubah = false
                 for (lain in baris) {
                     if (lain.id == dipertahankan.id) continue
+                    // S5 (audit 2026-11-17): jangan ubah item penjualan
+                    // di bulan tertutup — bila satu saja item baris kalah
+                    // ada di bulan tertutup, lewati penggabungan baris
+                    // ini sepenuhnya (duplikat dibiarkan sampai bulannya
+                    // dibuka lagi).
+                    val saleIds = db.saleDao().saleIdsForMedicine(lain.id)
+                    var adaTertutup = false
+                    for (sid in saleIds) {
+                        val induk = db.saleDao().getByIdAny(sid)
+                        val bulan = induk?.createdAt?.let { bulanKeyDariIso(it) }
+                        if (bulan != null && bulanTerkunci(bulan)) { adaTertutup = true; break }
+                    }
+                    if (adaTertutup) continue
                     // Rekonsiliasi stok (S1): penjualan pada baris kalah
                     // belum tentu tercermin di stok baris yang
                     // dipertahankan. Kurangkan seluruh penjualan baris
@@ -1369,6 +1400,13 @@ class Repository {
     }
 
     suspend fun terapkanRemotePbf(e: PurchaseEntity) {
+        // TB1 (S2, audit 2026-11-17): perubahan awan untuk PBF di bulan
+        // tertutup dilewati (log saja, preseden M3) — seperti penjualan dan kas.
+        val bulanPbf = bulanKeyDariIso(e.date)
+        if (bulanPbf != null && bulanTerkunci(bulanPbf)) {
+            Log.w("TutupBuku", "Lewati PBF awan di bulan tertutup $bulanPbf")
+            return
+        }
         val dao = DatabaseProvider.db.purchaseDao()
         val ada = dao.getByRemoteId(e.remoteId)
         if (ada == null) {
@@ -1388,7 +1426,15 @@ class Repository {
     }
 
     suspend fun terapkanRemoteItemPbf(e: PurchaseItemEntity) {
+        // TB1 (S2): item mengikuti induknya — bila faktur induk
+        // bertanggal di bulan tertutup, item dilewati juga.
         val dao = DatabaseProvider.db.purchaseDao()
+        val induk = dao.getByIdAny(e.purchaseId)
+        val bulanInduk = induk?.date?.let { bulanKeyDariIso(it) }
+        if (bulanInduk != null && bulanTerkunci(bulanInduk)) {
+            Log.w("TutupBuku", "Lewati item PBF awan di bulan tertutup $bulanInduk")
+            return
+        }
         val ada = dao.getItemByRemoteId(e.remoteId)
         if (ada == null) {
             // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —

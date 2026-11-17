@@ -315,6 +315,11 @@ interface SaleDao {
     @Query("UPDATE sale_items SET kotor = 0 WHERE remoteId = :remoteId AND updatedAt = :updatedAt")
     suspend fun tandaiBersihItem(remoteId: String, updatedAt: Long): Int
 
+    // S5 (audit 2026-11-17): id penjualan untuk item-item satu obat —
+    // dipakai dedup untuk memeriksa bulan induk sebelum mengalihkan.
+    @Query("SELECT DISTINCT saleId FROM sale_items WHERE medicineId = :medicineId")
+    suspend fun saleIdsForMedicine(medicineId: Int): List<Int>
+
     // Alihkan item penjualan dari obat yang digabung ke obat yang
     // dipertahankan (penggabungan duplikat). Tandai kotor + cap waktu
     // baru supaya pengalihan ikut terdorong ke awan (S3) — tanpa ini,
