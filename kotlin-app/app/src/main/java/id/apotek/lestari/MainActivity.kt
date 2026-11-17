@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocalPharmacy
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.MoreHoriz
@@ -428,7 +429,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     var stokCariNonce by remember { mutableIntStateOf(0) }
     // Sub-menu yang ditumpuk di atas tab (dari Beranda/Lainnya) — dipakai
     // logika Kembali di goToTab dan penyama durasi transisi NavHost.
-    val subRoutes = listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf", "pemasok")
+    val subRoutes = listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf", "pemasok", "tutupBuku")
     fun tabPosition(route: String): Int = when (route) {
         "beranda" -> 0
         "stok" -> 1
@@ -493,7 +494,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                         "stok" -> current == "stok"
                         "kasir" -> current == "kasir"
                         "keuangan" -> current == "keuangan"
-                        else -> current == "lainnya" || current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf", "pemasok")
+                        else -> current == "lainnya" || current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf", "pemasok", "tutupBuku")
                     }
                     ShortNavigationBarItem(
                         selected = selected,
@@ -524,9 +525,9 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
         // supaya daftar tidak merentang dari ujung ke ujung. Navigasi bawah tetap selebar layar.
         Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
             // Transisi sub-halaman S3 SUMBU-X MATERIAL (pilihan Achmad
-            // 2026-11-12 dari demo S1-S6): ketujuh sub-halaman dari
+            // 2026-11-12 dari demo S1-S6): kedelapan sub-halaman dari
             // Lainnya (laba, pengingat, riwayat, backup, terlaris, pbf,
-            // tentang) memakai pola shared axis resmi Material — kedua
+            // tentang, tutupBuku) memakai pola shared axis resmi Material — kedua
             // layar bergeser hanya 30dp berlawanan arah + memudar,
             // 300ms FastOutSlowInEasing. Maju: halaman baru masuk dari
             // +30dp, Lainnya keluar ke -30dp. Mundur (tombol Kembali /
@@ -590,6 +591,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 composable("pbf", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { PbfScreen() }
                 composable("pemasok", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { PemasokScreen() }
                 composable("tentang", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { TentangScreen() }
+                composable("tutupBuku", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { TutupBukuScreen() }
             }
         }
     }
@@ -887,12 +889,13 @@ fun LainnyaScreen(
             }
         }
         Spacer(Modifier.height(SpaceM))
-        // Kartu grup tujuan: tujuh menu sebagai baris (dulu petak A2).
+        // Kartu grup tujuan: delapan menu sebagai baris (dulu petak A2).
         val tiles = listOf(
             LainnyaTile("laba", tr("Laba", "Profit"), tr("Laba & margin", "Profit & margins"), Icons.Default.TrendingUp),
             LainnyaTile("terlaris", tr("Terlaris", "Best Sellers"), tr("Peringkat penjualan", "Sales ranking"), Icons.Default.Leaderboard),
             LainnyaTile("pengingat", tr("Pengingat", "Reminders"), tr("Stok & tagihan", "Stock & bills"), Icons.Default.NotificationsActive),
             LainnyaTile("riwayat", tr("Riwayat", "History"), tr("Semua penjualan", "All sales"), Icons.Default.ReceiptLong),
+            LainnyaTile("tutupBuku", tr("Tutup Buku", "Close Books"), tr("Kunci bulan lalu", "Lock past months"), Icons.Default.Lock),
             LainnyaTile("pbf", tr("Faktur PBF", "PBF Invoices"), tr("Pembelian distributor", "Distributor purchases"), Icons.Default.LocalShipping),
             LainnyaTile("pemasok", tr("Pemasok", "Suppliers"), tr("Daftar PBF", "PBF list"), Icons.Default.Store),
             LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)

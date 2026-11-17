@@ -2,6 +2,7 @@ package id.apotek.lestari.data
 
 import android.util.Log
 import id.apotek.lestari.data.local.CashEntryEntity
+import id.apotek.lestari.data.local.ClosedMonthEntity
 import id.apotek.lestari.data.local.DatabaseProvider
 import id.apotek.lestari.data.local.MedicineEntity
 import id.apotek.lestari.data.local.PurchaseEntity
@@ -398,6 +399,10 @@ class Repository {
     // ---- Penjualan ----
 
     suspend fun createSale(args: CreateSaleArgs): ApiResult<CreateSaleResponse> = call {
+        // TB1: penjualan selalu "sekarang" — bulan berjalan tidak bisa
+        // ditutup (aturan tutup), jadi cek ini mustahil terpicu; tetap
+        // ada sebagai jaring pengaman bila aturan berubah.
+        if (bulanTerkunci(bulanKeyDariMillis(nowMillis()))) throw IllegalStateException(tr("Bulan ini sudah ditutup, penjualan tidak bisa ditambah", "This month is closed, sales cannot be added"))
         val db = DatabaseProvider.db
         if (args.items.isEmpty()) throw IllegalArgumentException(tr("Keranjang kosong", "The cart is empty"))
         for (item in args.items) {
@@ -537,6 +542,12 @@ class Repository {
             throw IllegalArgumentException(tr("Jumlah kas tidak boleh negatif", "Cash amount must not be negative"))
         if (args.createdAt != null && parseISODate(args.createdAt) == null)
             throw IllegalArgumentException(tr("Tanggal kas tidak valid", "Invalid cash date"))
+        // TB1: entri kas bertanggal di bulan yang sudah ditutup ditolak —
+        // kas adalah bagian dari laporan bulan itu. Tanpa tanggal berarti
+        // "sekarang" (bulan berjalan, tidak bisa ditutup).
+        val bulanKasBaru = args.createdAt?.let { bulanKeyDariIso(it) }
+        if (bulanKasBaru != null && bulanTerkunci(bulanKasBaru))
+            throw IllegalArgumentException(tr("Bulan $bulanKasBaru sudah ditutup, entri kas tidak bisa ditambah", "Month $bulanKasBaru is closed, cash entries cannot be added"))
         val id = DatabaseProvider.db.cashDao().insert(
             CashEntryEntity(
                 type = args.type, category = args.category, description = args.description,
@@ -552,6 +563,9 @@ class Repository {
         // laporan tidak lagi cocok dengan riwayat penjualan.
         val entry = DatabaseProvider.db.cashDao().getAll().firstOrNull { it.id == id }
         if (entry?.source == "sale") throw IllegalStateException("Kas penjualan tidak bisa dihapus")
+        // TB1: entri kas di bulan yang sudah ditutup tidak bisa dihapus.
+        val bulanKasHapus = entry?.createdAt?.let { bulanKeyDariIso(it) }
+        if (bulanKasHapus != null && bulanTerkunci(bulanKasHapus)) throw IllegalStateException(tr("Bulan $bulanKasHapus sudah ditutup, entri kas tidak bisa dihapus", "Month $bulanKasHapus is closed, cash entries cannot be deleted"))
         val deleted = DatabaseProvider.db.cashDao().deleteById(id, nowMillis())
         if (deleted == 0) throw IllegalStateException("Kas tidak ditemukan")
         OkResponse(true)
@@ -725,6 +739,47 @@ class Repository {
         }
         val end = if (period == "all") Long.MAX_VALUE else endToday
         agregatRekapPenjualan(salesRows, items, medById, start, end, period)
+    }
+
+    // ---- Tutup Buku Bulanan (TB1) ----
+
+    /** Benar bila bulan ("yyyy-MM") sudah ditutup. Dipakai guard di atas. */
+    private suspend fun bulanTerkunci(bulan: String): Boolean =
+        DatabaseProvider.db.closedMonthDao().getByBulan(bulan) != null
+
+    /** Daftar bulan yang sudah ditutup, terbaru dulu. */
+    suspend fun listBulanTertutup(): ApiResult<List<ClosedMonthEntity>> = call {
+        DatabaseProvider.db.closedMonthDao().getAll()
+    }
+
+    /** Tutup satu bulan: hanya bulan yang sudah lewat dan belum ditutup. */
+    suspend fun tutupBulan(bulan: String): ApiResult<OkResponse> = call {
+        if (!bulanValid(bulan)) throw IllegalArgumentException(tr("Bulan tidak valid: $bulan", "Invalid month: $bulan"))
+        if (!bulanSelesai(bulan)) throw IllegalStateException(tr("Bulan $bulan belum selesai", "Month $bulan has not ended yet"))
+        val dao = DatabaseProvider.db.closedMonthDao()
+        if (dao.getByBulan(bulan) != null) throw IllegalStateException(tr("Bulan $bulan sudah ditutup", "Month $bulan is already closed"))
+        dao.insert(ClosedMonthEntity(bulan = bulan, ditutupPada = nowMillis()))
+        OkResponse(true)
+    }
+
+    /** Buka lagi bulan yang sudah ditutup (dengan konfirmasi di UI). */
+    suspend fun bukaBulan(bulan: String): ApiResult<OkResponse> = call {
+        val hapus = DatabaseProvider.db.closedMonthDao().deleteByBulan(bulan)
+        if (hapus == 0) throw IllegalStateException(tr("Bulan $bulan belum ditutup", "Month $bulan is not closed"))
+        OkResponse(true)
+    }
+
+    /** Rekap penjualan satu bulan ("yyyy-MM") untuk kartu ringkasan dan
+     *  ekspor Excel bulan tertutup — memakai agregat yang sama dengan J5. */
+    suspend fun getRekapPenjualanBulan(bulan: String): ApiResult<RekapPenjualan> = call {
+        val (start, end) = rentangBulan(bulan)
+            ?: throw IllegalArgumentException(tr("Bulan tidak valid: $bulan", "Invalid month: $bulan"))
+        val db = DatabaseProvider.db
+        val salesRows = db.saleDao().getAll()
+        val items = db.saleDao().getAllItems()
+        val meds = db.medicineDao().getAll()
+        val medById = meds.associateBy { it.id }
+        agregatRekapPenjualan(salesRows, items, medById, start, end, bulan)
     }
 
     // ---- Obat Terlaris (diurutkan jumlah terjual, terbanyak dulu) ----
@@ -1226,6 +1281,13 @@ class Repository {
     }
 
     suspend fun terapkanRemotePenjualan(e: SaleEntity) {
+        // TB1: perubahan awan untuk penjualan di bulan tertutup dilewati
+        // (log saja, preseden M3) — kunci bulan tidak boleh ditembus sinkronisasi.
+        val bulanJual = bulanKeyDariIso(e.createdAt)
+        if (bulanJual != null && bulanTerkunci(bulanJual)) {
+            Log.w("TutupBuku", "Lewati penjualan awan di bulan tertutup $bulanJual")
+            return
+        }
         val dao = DatabaseProvider.db.saleDao()
         val ada = dao.getByRemoteId(e.remoteId)
         if (ada == null) {
@@ -1252,7 +1314,17 @@ class Repository {
     }
 
     suspend fun terapkanRemoteItemJual(e: SaleItemEntity) {
+        // TB1: item mengikuti induknya — bila penjualan induk bertanggal
+        // di bulan tertutup, item dilewati juga. Induk dicari lokal;
+        // bila belum ada (penjualannya sendiri akan dilewati terpisah),
+        // item tetap diterapkan.
         val dao = DatabaseProvider.db.saleDao()
+        val induk = dao.getByIdAny(e.saleId)
+        val bulanInduk = induk?.createdAt?.let { bulanKeyDariIso(it) }
+        if (bulanInduk != null && bulanTerkunci(bulanInduk)) {
+            Log.w("TutupBuku", "Lewati item jual awan di bulan tertutup $bulanInduk")
+            return
+        }
         val ada = dao.getItemByRemoteId(e.remoteId)
         if (ada == null) {
             // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —
@@ -1271,6 +1343,13 @@ class Repository {
     }
 
     suspend fun terapkanRemoteKas(e: CashEntryEntity) {
+        // TB1: sama seperti penjualan — perubahan awan untuk kas di bulan
+        // tertutup dilewati (log saja, preseden M3).
+        val bulanKasAwan = bulanKeyDariIso(e.createdAt)
+        if (bulanKasAwan != null && bulanTerkunci(bulanKasAwan)) {
+            Log.w("TutupBuku", "Lewati kas awan di bulan tertutup $bulanKasAwan")
+            return
+        }
         val dao = DatabaseProvider.db.cashDao()
         val ada = dao.getByRemoteId(e.remoteId)
         if (ada == null) {

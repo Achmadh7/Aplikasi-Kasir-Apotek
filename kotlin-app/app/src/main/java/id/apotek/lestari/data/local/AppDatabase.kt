@@ -181,6 +181,20 @@ data class SupplierEntity(
     @ColumnInfo(defaultValue = "1") val kotor: Int = 1
 )
 
+// Bulan yang ditutup (Tutup Buku Bulanan TB1, pilihan Achmad
+// 2026-11-17): satu baris per bulan yang dikunci ("yyyy-MM", WIB).
+// LOCAL-ONLY, SENGAJA tanpa kolom sinkronisasi dan tanpa koleksi
+// Firestore: kunci adalah status lokal satu perangkat; backup JSON
+// tidak menyertakannya dan restore tidak menyentuhnya, jadi bulan
+// yang sudah ditutup tetap terkunci setelah restore. "Reset Semua
+// Data" (clearAllTables) tetap menghapusnya bersama semua data.
+@Entity(tableName = "tutup_buku", indices = [Index(value = ["bulan"], unique = true)])
+data class ClosedMonthEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val bulan: String, // "yyyy-MM" (Asia/Jakarta)
+    val ditutupPada: Long // epoch ms saat bulan ditutup
+)
+
 // ---- DAOs ----
 
 @Dao
@@ -493,6 +507,21 @@ interface SupplierDao {
     suspend fun deleteAll()
 }
 
+@Dao
+interface ClosedMonthDao {
+    @Query("SELECT * FROM tutup_buku ORDER BY bulan DESC")
+    suspend fun getAll(): List<ClosedMonthEntity>
+
+    @Query("SELECT * FROM tutup_buku WHERE bulan = :bulan LIMIT 1")
+    suspend fun getByBulan(bulan: String): ClosedMonthEntity?
+
+    @Insert
+    suspend fun insert(row: ClosedMonthEntity): Long
+
+    @Query("DELETE FROM tutup_buku WHERE bulan = :bulan")
+    suspend fun deleteByBulan(bulan: String): Int
+}
+
 // ---- Database ----
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -696,13 +725,23 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
     }
 }
 
+// TB1 (Tutup Buku Bulanan, 2026-11-17): tabel bulan tertutup.
+// Bentuk SQL mengikuti persis yang Room hasilkan untuk entity di
+// atas (tanpa UNIQUE di CREATE TABLE — keunikan dijamin index).
+val MIGRATION_17_18 = object : Migration(17, 18) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS `tutup_buku` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `bulan` TEXT NOT NULL, `ditutupPada` INTEGER NOT NULL)")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_tutup_buku_bulan` ON `tutup_buku` (`bulan`)")
+    }
+}
+
 // R22 (audit 2026-11-15): versi skema sebagai satu sumber — anotasi Room
 // dan layar Tentang membaca konstanta yang sama, jadi migrasi berikutnya
 // tidak bisa membuat angka di Tentang basi.
-const val DATABASE_VERSION = 17
+const val DATABASE_VERSION = 18
 
 @Database(
-    entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class, SupplierEntity::class],
+    entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class, SupplierEntity::class, ClosedMonthEntity::class],
     version = DATABASE_VERSION,
     exportSchema = false
 )
@@ -712,6 +751,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cashDao(): CashDao
     abstract fun purchaseDao(): PurchaseDao
     abstract fun supplierDao(): SupplierDao
+    abstract fun closedMonthDao(): ClosedMonthDao
 }
 
 object DatabaseProvider {
@@ -768,7 +808,7 @@ object DatabaseProvider {
                         context.applicationContext,
                         AppDatabase::class.java,
                         "apotek-lestari.db"
-                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18).build()
                 }
             }
         }
