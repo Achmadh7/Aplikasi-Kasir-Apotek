@@ -308,13 +308,14 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
             // E2 (pilihan Achmad 2026-11-16): tombol Tambah Obat di kiri
             // baris ini (FAB dihapus); tombol Pilih + urut tetap kanan.
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                // Tombol Tambah Obat — sedikit compact dari mock papan:
-                // tinggi 32dp (bukan 36dp), ikon 16dp, padding 8dp.
+                // Tombol Tambah Obat — SB1 (pilihan Achmad 2026-11-18):
+                // rata dengan Pilih/A-Z: tinggi 36dp, sudut 18dp,
+                // ikon 16dp, padding 8dp.
                 Button(
                     onClick = { editing = null; showForm = true },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(18.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp),
-                    modifier = Modifier.height(32.dp)
+                    modifier = Modifier.height(36.dp)
                 ) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
@@ -328,7 +329,7 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                         if (selectMode) { selectMode = false; selectedMeds = emptyMap() }
                         else selectMode = true
                     },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(18.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp),
                     modifier = Modifier.height(36.dp)
                 ) {
@@ -345,7 +346,7 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                             else -> "az"
                         }
                     },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(18.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp),
                     modifier = Modifier.height(36.dp)
                 ) {
