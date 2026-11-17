@@ -403,6 +403,10 @@ class Repository {
         // ditutup (aturan tutup), jadi cek ini mustahil terpicu; tetap
         // ada sebagai jaring pengaman bila aturan berubah.
         if (bulanTerkunci(bulanKeyDariMillis(nowMillis()))) throw IllegalStateException(tr("Bulan ini sudah ditutup, penjualan tidak bisa ditambah", "This month is closed, sales cannot be added"))
+        // R7 (audit 2026-11-18): cara bayar wajib salah satu yang dikenal —
+        // seperti validasi type kas; metode tak dikenal membuat uangnya hilang
+        // dari ringkasan per metode (MB1) tapi tetap masuk total.
+        if (args.paymentMethod !in setOf("Tunai", "QRIS", "Transfer")) throw IllegalArgumentException(tr("Cara bayar tidak dikenal: ${args.paymentMethod}", "Unknown payment method: ${args.paymentMethod}"))
         val db = DatabaseProvider.db
         if (args.items.isEmpty()) throw IllegalArgumentException(tr("Keranjang kosong", "The cart is empty"))
         for (item in args.items) {
@@ -881,6 +885,8 @@ class Repository {
         // PPN ikut divalidasi (audit 2026-11-02, M5): PPN negatif menggerus
         // total pembelian sampai di bawah jumlah subtotal itemnya.
         if (args.ppn < 0) throw IllegalArgumentException(tr("PPN tidak boleh negatif", "PPN/VAT must not be negative"))
+        // R7: jenis pembayaran PBF wajib CASH/KREDIT (alasan sama seperti di atas).
+        if (args.paymentType !in setOf("CASH", "KREDIT")) throw IllegalArgumentException(tr("Jenis pembayaran PBF tidak dikenal: ${args.paymentType}", "Unknown PBF payment type: ${args.paymentType}"))
         // M8 (audit 2026-11-16): tanggal beli wajib yyyy-MM-dd yang
         // valid — tanggal cacat membuat catatan hilang dari Pengingat /
         // riwayat tanpa penjelasan (jatuh tempo cacat juga tidak pernah
@@ -1352,6 +1358,15 @@ class Repository {
         }
         val dao = DatabaseProvider.db.saleDao()
         val ada = dao.getByRemoteId(e.remoteId)
+        // R9 (audit 2026-11-18): versi awan tidak boleh memindahkan baris
+        // KELUAR dari bulan tertutup — periksa juga bulan baris lokal.
+        if (ada != null) {
+            val bulanLokal = bulanKeyDariIso(ada.createdAt)
+            if (bulanLokal != null && bulanTerkunci(bulanLokal)) {
+                Log.w("TutupBuku", "Lewati penjualan awan: baris lokal di bulan tertutup $bulanLokal")
+                return
+            }
+        }
         if (ada == null) {
             // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —
             // jangan sisipkan; lihat terapkanRemoteObat.
@@ -1377,12 +1392,16 @@ class Repository {
 
     suspend fun terapkanRemoteItemJual(e: SaleItemEntity) {
         // TB1: item mengikuti induknya — bila penjualan induk bertanggal
-        // di bulan tertutup, item dilewati juga. Induk dicari lokal;
-        // bila belum ada (penjualannya sendiri akan dilewati terpisah),
-        // item tetap diterapkan.
+        // di bulan tertutup, item dilewati juga.
+        // R8 (audit 2026-11-18): item tanpa induk yang dikenal dilewati —
+        // pemanggil (OnlineSync) sudah memastikan induknya ada secara lokal.
         val dao = DatabaseProvider.db.saleDao()
         val induk = dao.getByIdAny(e.saleId)
-        val bulanInduk = induk?.createdAt?.let { bulanKeyDariIso(it) }
+        if (induk == null) {
+            Log.w("TutupBuku", "Lewati item jual awan tanpa induk (saleId ${e.saleId})")
+            return
+        }
+        val bulanInduk = bulanKeyDariIso(induk.createdAt)
         if (bulanInduk != null && bulanTerkunci(bulanInduk)) {
             Log.w("TutupBuku", "Lewati item jual awan di bulan tertutup $bulanInduk")
             return
@@ -1414,6 +1433,14 @@ class Repository {
         }
         val dao = DatabaseProvider.db.cashDao()
         val ada = dao.getByRemoteId(e.remoteId)
+        // R9: seperti penjualan — periksa juga bulan baris lokal.
+        if (ada != null) {
+            val bulanLokal = bulanKeyDariIso(ada.createdAt)
+            if (bulanLokal != null && bulanTerkunci(bulanLokal)) {
+                Log.w("TutupBuku", "Lewati kas awan: baris lokal di bulan tertutup $bulanLokal")
+                return
+            }
+        }
         if (ada == null) {
             // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —
             // jangan sisipkan; lihat terapkanRemoteObat.
@@ -1440,6 +1467,14 @@ class Repository {
         }
         val dao = DatabaseProvider.db.purchaseDao()
         val ada = dao.getByRemoteId(e.remoteId)
+        // R9: seperti penjualan — periksa juga bulan baris lokal.
+        if (ada != null) {
+            val bulanLokal = bulanKeyDariIso(ada.date)
+            if (bulanLokal != null && bulanTerkunci(bulanLokal)) {
+                Log.w("TutupBuku", "Lewati PBF awan: baris lokal di bulan tertutup $bulanLokal")
+                return
+            }
+        }
         if (ada == null) {
             // R4 (audit 2026-11-15): tombstone awan tanpa baris lokal —
             // jangan sisipkan; lihat terapkanRemoteObat.
@@ -1462,9 +1497,14 @@ class Repository {
     suspend fun terapkanRemoteItemPbf(e: PurchaseItemEntity) {
         // TB1 (S2): item mengikuti induknya — bila faktur induk
         // bertanggal di bulan tertutup, item dilewati juga.
+        // R8: seperti item jual — tanpa induk yang dikenal, item dilewati.
         val dao = DatabaseProvider.db.purchaseDao()
         val induk = dao.getByIdAny(e.purchaseId)
-        val bulanInduk = induk?.date?.let { bulanKeyDariIso(it) }
+        if (induk == null) {
+            Log.w("TutupBuku", "Lewati item PBF awan tanpa induk (purchaseId ${e.purchaseId})")
+            return
+        }
+        val bulanInduk = bulanKeyDariIso(induk.date)
         if (bulanInduk != null && bulanTerkunci(bulanInduk)) {
             Log.w("TutupBuku", "Lewati item PBF awan di bulan tertutup $bulanInduk")
             return

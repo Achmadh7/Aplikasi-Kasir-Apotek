@@ -46,6 +46,11 @@ class TutupBukuLogicTest {
         assertEquals("2026-11", bulanKeyDariIso("2026-11-17T10:30:00.000Z"))
         // Tanggal saja (tanpa jam) juga diterima.
         assertEquals("2026-11", bulanKeyDariIso("2026-11-05"))
+        // R5 (audit 2026-11-18): pola tanpa milidetik juga dibaca sebagai
+        // UTC — 31 Okt 17:30 UTC = 1 Nov 00:30 WIB.
+        assertEquals("2026-11", bulanKeyDariIso("2026-10-31T17:30:00Z"))
+        assertEquals("2026-11", bulanKeyDariIso("2026-10-31T17:30:00"))
+        assertEquals("2026-10", bulanKeyDariIso("2026-10-31T16:30:00Z"))
         assertNull(bulanKeyDariIso(null))
         assertNull(bulanKeyDariIso(""))
         assertNull(bulanKeyDariIso("2026-13-01"))

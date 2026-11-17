@@ -24,22 +24,35 @@ fun bulanValid(bulan: String): Boolean {
 fun bulanKeyDariMillis(ms: Long): String =
     SimpleDateFormat("yyyy-MM", Locale.US).apply { timeZone = ZONA_WIB }.format(Date(ms))
 
-/** Kunci bulan dari string ISO UTC ("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
- *  null bila tidak terbaca. Tanggal "yyyy-MM-dd" saja juga diterima. */
+/** Kunci bulan dari string ISO UTC ("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+ *  "yyyy-MM-dd'T'HH:mm:ss'Z'", "yyyy-MM-dd'T'HH:mm:ss", atau tanggal
+ *  "yyyy-MM-dd" saja); null bila tidak terbaca. Semua pola dibaca sebagai
+ *  UTC lalu dikonversi ke WIB — jangan potong mentah 7 karakter pertama,
+ *  karena jam-jam sebelum tengah malam UTC bisa sudah bulan berikutnya
+ *  di WIB (R5, audit 2026-11-18). */
 fun bulanKeyDariIso(iso: String?): String? {
     if (iso.isNullOrBlank()) return null
-    val parsed = try {
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-            isLenient = false
-        }.parse(iso.trim())
-    } catch (_: Exception) {
-        null
-    }
-    if (parsed != null) return bulanKeyDariMillis(parsed.time)
-    // Fallback: tujuh karakter pertama tanggal "yyyy-MM-dd".
     val s = iso.trim()
-    return if (s.length >= 7 && bulanValid(s.substring(0, 7))) s.substring(0, 7) else null
+    val patterns = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss",
+        "yyyy-MM-dd HH:mm:ss",
+        "yyyy-MM-dd"
+    )
+    for (p in patterns) {
+        val parsed = try {
+            SimpleDateFormat(p, Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+                isLenient = false
+            }.parse(s)
+        } catch (_: Exception) {
+            null
+        }
+        if (parsed != null) return bulanKeyDariMillis(parsed.time)
+    }
+    // Fallback: kunci bulan mentah "yyyy-MM" saja.
+    return if (s.length == 7 && bulanValid(s)) s else null
 }
 
 /** Rentang [awal, akhir) satu bulan dalam epoch ms WIB; null bila kunci tak valid. */
