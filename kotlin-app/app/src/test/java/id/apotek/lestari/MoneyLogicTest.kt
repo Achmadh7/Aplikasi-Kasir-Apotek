@@ -396,6 +396,35 @@ class MoneyLogicTest {
     }
 
     @Test
+    fun rekap_overflow_dijepitBukanDibungkus() {
+        // S8 (audit 2026-11-17): tiga item @ Rp 1 miliar = Rp 3 miliar —
+        // tanpa perbaikan, revenue/HPP harian dan per obat membungkus
+        // jadi negatif (-1.294.967.296); total sudah benar sejak M5.
+        val meds = mapOf(
+            1 to MedicineEntity(id = 1, name = "Obat Mahal", category = "Pereda Nyeri", unit = "Strip", buyPrice = 0, sellPrice = 12000, stock = 37, expiryDate = null, barcode = null, createdAt = "2026-11-04T00:15:00.000Z")
+        )
+        val sales = listOf(
+            SaleEntity(id = 1, invoiceNo = "INV-1", total = 1000000000, paymentMethod = "Tunai", amountPaid = 1000000000, changeAmount = 0, createdAt = "2026-11-04T05:21:00.000Z")
+        )
+        val items = (1..3).map { i ->
+            SaleItemEntity(id = i, saleId = 1, medicineId = 1, medicineName = "Obat Mahal", category = "Pereda Nyeri", unit = "Strip", qty = 1, price = 1000000000, priceType = "ECER", buyPrice = 1000000000, subtotal = 1000000000)
+        }
+        val start = parseISODate("2026-11-01T00:00:00.000Z")!!.time
+        val end = parseISODate("2026-12-01T00:00:00.000Z")!!.time
+        val rekap = agregatRekapPenjualan(sales, items, meds, start, end, "month")
+        assertEquals(Int.MAX_VALUE, rekap.totalRevenue)
+        assertEquals(Int.MAX_VALUE, rekap.totalHpp)
+        assertEquals(
+            listOf(RekapHarian("2026-11-04", 1, 3, Int.MAX_VALUE, Int.MAX_VALUE)),
+            rekap.daily
+        )
+        assertEquals(
+            listOf(ProfitByMedicine("Obat Mahal", "Pereda Nyeri", 3, Int.MAX_VALUE, Int.MAX_VALUE)),
+            rekap.byMedicine
+        )
+    }
+
+    @Test
     fun rekap_bytes_hasTwoSheetsWithHeadersTotalsAndRealDates() {
         val rekap = RekapPenjualan(
             period = "month",
@@ -447,9 +476,12 @@ class MoneyLogicTest {
         assertEquals(20000.0, obat.getRow(2).getCell(5).numericCellValue, 0.0)
         val obatTotal = obat.getRow(4)
         assertEquals("TOTAL", obatTotal.getCell(0).stringCellValue)
-        assertEquals(148000.0, obatTotal.getCell(3).numericCellValue, 0.0)
-        assertEquals(112000.0, obatTotal.getCell(4).numericCellValue, 0.0)
-        assertEquals(36000.0, obatTotal.getCell(5).numericCellValue, 0.0)
+        // S8: TOTAL per obat diambil dari total rekap — bukan jumlah baris —
+        // jadi selalu cocok dengan TOTAL sheet Rekap Harian (176000/132000/44000),
+        // bukan jumlah baris per obat (148000/112000/36000).
+        assertEquals(176000.0, obatTotal.getCell(3).numericCellValue, 0.0)
+        assertEquals(132000.0, obatTotal.getCell(4).numericCellValue, 0.0)
+        assertEquals(44000.0, obatTotal.getCell(5).numericCellValue, 0.0)
         wb.close()
     }
 
@@ -483,6 +515,20 @@ class MoneyLogicTest {
         assertEquals(-50000, hasil.netProfit)
         assertEquals(0.0, hasil.grossMarginPct, 0.001)
         assertEquals(0.0, hasil.marginPct, 0.001)
+    }
+
+    @Test
+    fun laba_overflow_dijepitBukanDibungkus() {
+        // S7 (audit 2026-11-17): selisih yang melewati Int.MAX harus
+        // dijepit, bukan membungkus jadi positif (tanpa perbaikan, laba
+        // bersih di bawah ini jadi +794.967.396).
+        val hasil = hitungLaba(100, 2_000_000_000, 1_500_000_000)
+        assertEquals(-1_999_999_900, hasil.grossProfit)
+        assertEquals(Int.MIN_VALUE, hasil.netProfit)
+        // Batas atas juga dijepit.
+        val besar = hitungLaba(Int.MAX_VALUE, 0, 0)
+        assertEquals(Int.MAX_VALUE, besar.grossProfit)
+        assertEquals(Int.MAX_VALUE, besar.netProfit)
     }
 
     @Test

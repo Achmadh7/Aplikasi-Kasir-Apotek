@@ -153,7 +153,10 @@ object ExcelHelper {
             intArrayOf(32, 20, 14, 22, 22, 22),
             rekap.byMedicine.map { listOf<Any>(it.name, it.category, it.qty, it.revenue, it.hpp, it.revenue - it.hpp) },
             dateCol = -1,
-            totalRow = listOf<Any>("TOTAL", "", rekap.byMedicine.sumOf { it.qty }, rekap.byMedicine.sumOf { it.revenue }, rekap.byMedicine.sumOf { it.hpp }, rekap.byMedicine.sumOf { it.revenue - it.hpp })
+            // S8: TOTAL per obat diambil dari total rekap (Long+jepit),
+            // bukan jumlah baris — supaya selalu cocok dengan TOTAL
+            // sheet Rekap Harian.
+            totalRow = listOf<Any>("TOTAL", "", rekap.byMedicine.sumOf { it.qty }, rekap.totalRevenue, rekap.totalHpp, rekap.totalRevenue - rekap.totalHpp)
         )
         return wbBytes(wb)
     }

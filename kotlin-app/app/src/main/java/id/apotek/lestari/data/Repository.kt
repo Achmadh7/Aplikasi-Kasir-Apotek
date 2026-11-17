@@ -614,13 +614,16 @@ class Repository {
         val hpp = periodItems.sumOf { it.qty.toLong() * it.buyPrice.toLong() }.toIntClamped()
 
         val periodOut = entries.filter { it.type == "out" && inPeriod(it.createdAt) }
-        val operationalExpense = periodOut.filter { !it.category.trim().equals("Beli Stok", ignoreCase = true) }.sumOf { it.amount }
-        val stockPurchaseExpense = periodOut.filter { it.category.trim().equals("Beli Stok", ignoreCase = true) }.sumOf { it.amount }
+        // S7 (audit 2026-11-17): jumlahkan sebagai Long lalu jepit (pola M5/R1).
+        val operationalExpense = periodOut.filter { !it.category.trim().equals("Beli Stok", ignoreCase = true) }.sumOf { it.amount.toLong() }.toIntClamped()
+        val stockPurchaseExpense = periodOut.filter { it.category.trim().equals("Beli Stok", ignoreCase = true) }.sumOf { it.amount.toLong() }.toIntClamped()
         val laba = hitungLaba(revenue, hpp, operationalExpense)
         val netProfit = laba.netProfit
         val marginPct = laba.marginPct
 
-        data class Agg(var qty: Int = 0, var revenue: Int = 0)
+        // S8 (audit 2026-11-17): revenue sebagai Long (pola M5) supaya
+        // tidak meluber di periode panjang; dijepit saat model dibangun.
+        data class Agg(var qty: Int = 0, var revenue: Long = 0)
         val medAgg = linkedMapOf<Int, Agg>()
         val medName = mutableMapOf<Int, String>()
         val medCategory = mutableMapOf<Int, String>()
@@ -628,18 +631,18 @@ class Repository {
         for (it in periodItems) {
             val category = medById[it.medicineId]?.category ?: "Lainnya"
             val cur = medAgg.getOrPut(it.medicineId) { Agg() }
-            cur.qty += it.qty; cur.revenue += it.subtotal
+            cur.qty += it.qty; cur.revenue += it.subtotal.toLong()
             // Nama tampilan: nama obat saat ini, fallback ke snapshot nama item.
             medName[it.medicineId] = medById[it.medicineId]?.name ?: it.medicineName
             medCategory[it.medicineId] = category
             val cc = catAgg.getOrPut(category) { Agg() }
-            cc.qty += it.qty; cc.revenue += it.subtotal
+            cc.qty += it.qty; cc.revenue += it.subtotal.toLong()
         }
         val byMedicine = medAgg.entries.map { (id, a) ->
-            ProfitByMedicine(medName[id] ?: "", medCategory[id] ?: "Lainnya", a.qty, a.revenue)
+            ProfitByMedicine(medName[id] ?: "", medCategory[id] ?: "Lainnya", a.qty, a.revenue.toIntClamped())
         }.sortedByDescending { it.revenue }
         val byCategory = catAgg.entries.map { (category, a) ->
-            ProfitByCategory(category, a.qty, a.revenue)
+            ProfitByCategory(category, a.qty, a.revenue.toIntClamped())
         }.sortedByDescending { it.revenue }
 
         // Laba harian untuk grafik: mengikuti periode, kecuali "Hari Ini" yang
@@ -667,20 +670,21 @@ class Repository {
         // pemindaian: item dan entri dikelompokkan per kunci hari dulu, lalu
         // tiap hari tinggal membaca bucket-nya (hasil agregasi sama, karena
         // kunci hari dihitung di zona Asia/Jakarta seperti batas harinya).
-        val revByDay = mutableMapOf<String, Int>()
+        // R46: bucket revenue harian — S8: sebagai Long (pola M5).
+        val revByDay = mutableMapOf<String, Long>()
         for (it in items) {
             val sale = saleById[it.saleId] ?: continue
             val t = parseISODate(sale.createdAt)?.time ?: continue
             val key = dayKeyID(Date(t))
-            revByDay[key] = (revByDay[key] ?: 0) + it.subtotal
+            revByDay[key] = (revByDay[key] ?: 0L) + it.subtotal.toLong()
         }
-        val opxByDay = mutableMapOf<String, Int>()
+        val opxByDay = mutableMapOf<String, Long>()
         for (e in entries) {
             if (e.type != "out") continue
             if (e.category.trim().equals("Beli Stok", ignoreCase = true)) continue
             val t = parseISODate(e.createdAt)?.time ?: continue
             val key = dayKeyID(Date(t))
-            opxByDay[key] = (opxByDay[key] ?: 0) + e.amount
+            opxByDay[key] = (opxByDay[key] ?: 0L) + e.amount.toLong()
         }
         // R46: bucket HPP harian dengan pola yang sama (satu pemindaian).
         val hppByDay = mutableMapOf<String, Int>()
@@ -695,12 +699,13 @@ class Repository {
             val dayStart = jakartaDayStartMillis(-offset)
             val date = Date(dayStart)
             val key = dayKeyID(date)
-            val rev = revByDay[key] ?: 0
-            val opx = opxByDay[key] ?: 0
+            val rev = (revByDay[key] ?: 0L).toIntClamped()
+            val opx = (opxByDay[key] ?: 0L).toIntClamped()
             val hppDay = hppByDay[key] ?: 0
             // Label tanggal ("27 Okt") supaya tidak ambigu bila grafik panjang
             // (nama hari saja berulang); Keuangan tetap pakai dayLabelID.
-            ProfitDaily(key, dayDateLabelID(date), rev, rev - hppDay - opx)
+            // S8: laba harian sebagai Long lalu jepit (pola M5).
+            ProfitDaily(key, dayDateLabelID(date), rev, (rev.toLong() - hppDay - opx).toIntClamped())
         }
 
         ProfitReport(
@@ -1561,8 +1566,10 @@ data class HasilLaba(
 
 /** Laba Kotor = Penjualan - HPP; Laba Bersih = Laba Kotor - Biaya Operasional. */
 fun hitungLaba(revenue: Int, hpp: Int, operationalExpense: Int): HasilLaba {
-    val grossProfit = revenue - hpp
-    val netProfit = grossProfit - operationalExpense
+    // S7: kurangi sebagai Long lalu jepit — Int murni membungkus bila
+    // selisihnya melewati Int.MAX (mis. laba kotor negatif besar).
+    val grossProfit = (revenue.toLong() - hpp).toIntClamped()
+    val netProfit = (grossProfit.toLong() - operationalExpense).toIntClamped()
     return HasilLaba(
         hpp = hpp,
         grossProfit = grossProfit,
@@ -1634,7 +1641,8 @@ fun agregatRekapPenjualan(
     val periodItems = items.filter { it.saleId in periodSaleIds }
     val saleById = periodSales.associateBy { it.id }
 
-    data class AggHarian(var transactions: Int = 0, var itemsSold: Int = 0, var revenue: Int = 0, var hpp: Long = 0)
+    // S8: revenue harian sebagai Long (pola M5); dijepit saat RekapHarian dibuat.
+    data class AggHarian(var transactions: Int = 0, var itemsSold: Int = 0, var revenue: Long = 0, var hpp: Long = 0)
     val harian = linkedMapOf<String, AggHarian>()
     for (s in periodSales) {
         val key = parseISODate(s.createdAt)?.let { dayKeyID(it) } ?: continue
@@ -1645,16 +1653,17 @@ fun agregatRekapPenjualan(
         val key = parseISODate(sale.createdAt)?.let { dayKeyID(it) } ?: continue
         val a = harian.getOrPut(key) { AggHarian() }
         a.itemsSold += it.qty
-        a.revenue += it.subtotal
+        a.revenue += it.subtotal.toLong()
         // HPP harian: qty * buyPrice snapshot per item (0 untuk item lama).
         // M5: jumlahkan sebagai Long (pola R1), dijepit saat RekapHarian dibuat.
         a.hpp += it.qty.toLong() * it.buyPrice.toLong()
     }
     val daily = harian.entries.sortedBy { it.key }.map { (date, a) ->
-        RekapHarian(date, a.transactions, a.itemsSold, a.revenue, a.hpp.toIntClamped())
+        RekapHarian(date, a.transactions, a.itemsSold, a.revenue.toIntClamped(), a.hpp.toIntClamped())
     }
 
-    data class Agg(var qty: Int = 0, var revenue: Int = 0, var hpp: Int = 0)
+    // S8: revenue/HPP per obat sebagai Long (pola M5); dijepit saat model dibuat.
+    data class Agg(var qty: Int = 0, var revenue: Long = 0, var hpp: Long = 0)
     // R30 (audit 2026-11-15): kelompokkan per (medicineId, nama tampil) —
     // dulu hanya per medicineId, jadi semua item medicineId == 0 (atau dua
     // nama berbeda yang berbagi satu id) runtuh jadi satu baris salah label.
@@ -1664,12 +1673,12 @@ fun agregatRekapPenjualan(
         val nama = medById[it.medicineId]?.name ?: it.medicineName
         val key = it.medicineId to nama
         val cur = medAgg.getOrPut(key) { Agg() }
-        cur.qty += it.qty; cur.revenue += it.subtotal; cur.hpp += it.qty * it.buyPrice
+        cur.qty += it.qty; cur.revenue += it.subtotal.toLong(); cur.hpp += it.qty.toLong() * it.buyPrice.toLong()
         medCategory[key] =
             (medById[it.medicineId]?.category ?: it.category).ifBlank { "Lainnya" }
     }
     val byMedicine = medAgg.entries.map { (key, a) ->
-        ProfitByMedicine(key.second, medCategory[key] ?: "Lainnya", a.qty, a.revenue, a.hpp)
+        ProfitByMedicine(key.second, medCategory[key] ?: "Lainnya", a.qty, a.revenue.toIntClamped(), a.hpp.toIntClamped())
     }.sortedByDescending { it.revenue }
 
     return RekapPenjualan(
