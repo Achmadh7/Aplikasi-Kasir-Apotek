@@ -35,6 +35,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
@@ -124,7 +125,18 @@ fun KartuHeaderPremium(judul: String, ikon: ImageVector, subjudul: String? = nul
             }
             Spacer(Modifier.width(12.dp))
             Column {
-                Text(judul, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = if (gelap) Color.White else WarnaHeaderN2)
+                Text(
+                    judul,
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                if (gelap) Color.White else WarnaHeaderN2,
+                                if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7)
+                            )
+                        )
+                    )
+                )
                 if (subjudul != null) {
                     Text(subjudul, style = MaterialTheme.typography.bodySmall, color = if (gelap) Color.White.copy(alpha = 0.7f) else Color(0xFF3D5A75))
                 }
