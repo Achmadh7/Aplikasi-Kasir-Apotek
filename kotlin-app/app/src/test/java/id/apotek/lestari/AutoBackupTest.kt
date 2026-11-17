@@ -3,6 +3,7 @@ package id.apotek.lestari
 import id.apotek.lestari.data.FrekuensiBackup
 import id.apotek.lestari.data.namaFileBackupOtomatis
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -18,15 +19,22 @@ class AutoBackupTest {
             timeZone = TimeZone.getTimeZone("Asia/Jakarta")
         }.parse("2026-11-12")!!
         // R5 (audit 2026-11-15): stempel jam-menit-detik ditambahkan.
-        assertEquals("backup-otomatis-2026-11-12-000000.json", namaFileBackupOtomatis(tanggal))
+        // R3 (audit 2026-11-18): + milidetik (SSS) — tengah malam = 000.
+        assertEquals("backup-otomatis-2026-11-12-000000000.json", namaFileBackupOtomatis(tanggal))
     }
 
     @Test
     fun namaFile_tanpaArgumen_memakaiHariIni() {
-        val hariIni = SimpleDateFormat("yyyy-MM-dd-HHmmss", Locale("id", "ID")).apply {
+        // R3 (audit 2026-11-18): nama memakai milidetik, jadi kesamaan
+        // persis dengan "sekarang" yang ditangkap terpisah bisa meleset
+        // bila batas milidetik terlewati di antara dua panggilan — cek
+        // bentuknya saja (tanggal hari ini + 9 digit jam + .json).
+        val hariIni = SimpleDateFormat("yyyy-MM-dd", Locale("id", "ID")).apply {
             timeZone = TimeZone.getTimeZone("Asia/Jakarta")
         }.format(Date())
-        assertEquals("backup-otomatis-$hariIni.json", namaFileBackupOtomatis())
+        val nama = namaFileBackupOtomatis()
+        assertTrue(nama.startsWith("backup-otomatis-$hariIni-"))
+        assertTrue(nama.matches(Regex("backup-otomatis-\\d{4}-\\d{2}-\\d{2}-\\d{9}\\.json")))
     }
 
     @Test

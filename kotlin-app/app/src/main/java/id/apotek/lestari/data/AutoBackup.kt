@@ -74,10 +74,12 @@ fun bacaPengaturanBackupOtomatis(context: Context): PengaturanBackupOtomatis {
     )
 }
 
-/** Nama file backup otomatis, mis. "backup-otomatis-2026-11-12-143022.json".
+/** Nama file backup otomatis, mis. "backup-otomatis-2026-11-12-143022123.json".
  *  R5 (audit 2026-11-15): stempel jam-menit-detik supaya dua backup di
  *  hari yang sama tidak menimpa/menduplikasi nama; zona Asia/Jakarta
- *  seperti stempel nama file rekap Excel (R32). */
+ *  seperti stempel nama file rekap Excel (R32).
+ *  R3 (audit 2026-11-18): + milidetik supaya dua backup dalam satu detik
+ *  yang sama tidak bertabrakan nama. */
 fun namaFileBackupOtomatis(tanggal: Date = Date()): String =
     "backup-otomatis-" + SimpleDateFormat("yyyy-MM-dd-HHmmssSSS", Locale("id", "ID")).apply {
         timeZone = TimeZone.getTimeZone("Asia/Jakarta")
