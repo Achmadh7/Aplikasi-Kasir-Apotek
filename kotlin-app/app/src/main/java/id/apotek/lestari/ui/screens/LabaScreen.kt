@@ -188,7 +188,7 @@ fun LabaScreen() {
                 val bersihLabel = if (bersihDark) Color(0xFFA0DCC0) else Color(0xFF2E7D32)
                 val bersihAmount = if (r.netProfit < 0) MaterialTheme.colorScheme.error else bersihOn
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                    ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.weight(1f)) {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Text(tr("PENJUALAN", "REVENUE"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceS))
@@ -197,7 +197,7 @@ fun LabaScreen() {
                             Text(tr("${r.itemsSold} item terjual", "${r.itemsSold} items sold"), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                    ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = bersihBg, modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = bersihBg, modifier = Modifier.weight(1f)) {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Text(tr("LABA BERSIH", "NET PROFIT"), color = bersihLabel, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceS))
@@ -211,7 +211,7 @@ fun LabaScreen() {
             }
             item {
                 
-                ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+                ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         // Rincian (B1, 2026-11-16): baris label-nilai (HPP,
                         // Laba Kotor, Biaya Operasional). Penjualan tidak

@@ -439,8 +439,8 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
         itemsIndexed(sorted, key = { _, m -> m.id }) { _, m ->
             
             ExpressiveCard(
-                shape = RoundedCornerShape(12.dp),
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = RoundedCornerShape(20.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 modifier = Modifier.fillMaxWidth().animateItem().clickable {
                     if (selectMode) {
                         selectedMeds = if (selectedMeds.containsKey(m.id)) selectedMeds - m.id else selectedMeds + (m.id to m)

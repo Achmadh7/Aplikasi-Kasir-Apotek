@@ -339,10 +339,10 @@ fun KasirScreen() {
             }
             itemsIndexed(sorted, key = { _, m -> m.id }) { _, m ->
                 val out = m.stock <= 0
-                // K1 (pilihan Achmad 2026-11-16): kotak 12dp senada P3.
+                // K1 (pilihan Achmad 2026-11-16): kotak 20dp senada P3.
                 ExpressiveCard(
-                    shape = RoundedCornerShape(12.dp),
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = RoundedCornerShape(20.dp),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                     modifier = Modifier.fillMaxWidth()
                         .onGloballyPositioned { layoutPos.cardCenters[m.id] = it.boundsInWindow().center }
                         .clickable(enabled = !out) {
@@ -412,10 +412,10 @@ fun KasirScreen() {
             exit = ExitTransition.None,
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            // K1: bar keranjang ikut kotak 12dp senada P3.
+            // K1: bar keranjang ikut kotak 20dp senada P3.
             ExpressiveCard(
-                shape = RoundedCornerShape(12.dp),
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = RoundedCornerShape(20.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
                     .onGloballyPositioned { layoutPos.cartCenter = it.boundsInWindow().center }
                     .clickable { showSheet = true }

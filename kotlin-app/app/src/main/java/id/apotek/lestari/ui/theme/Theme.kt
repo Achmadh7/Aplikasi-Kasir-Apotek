@@ -92,7 +92,7 @@ fun ExpressiveCard(
     modifier: Modifier = Modifier,
     shape: Shape = MaterialTheme.shapes.extraLarge,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
-    elevation: Dp = 1.dp,
+    elevation: Dp = 0.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(

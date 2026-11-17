@@ -158,7 +158,7 @@ fun PbfScreen() {
                 // Hari Ini dengan jumlah pembelian, Bulan Ini dengan nama
                 // bulan berjalan. Tetap hanya menghitung pembelian CASH.
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
-                    ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.weight(1f)) {
                         Column(Modifier.padding(12.dp)) {
                             Text(tr("BELANJA HARI INI", "TODAY'S PURCHASES"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceXS))
@@ -166,7 +166,7 @@ fun PbfScreen() {
                             Text(tr("${todayPurchases.size} pembelian", "${todayPurchases.size} purchases"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    ExpressiveCard(shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.weight(1f)) {
                         Column(Modifier.padding(12.dp)) {
                             Text(tr("BELANJA BULAN INI", "THIS MONTH'S PURCHASES"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceXS))
@@ -279,10 +279,10 @@ fun PbfScreen() {
                     
                     val isOpen = expanded == p.id
                     // Kartu F1 KOTAK SENADA (pilihan Achmad 2026-11-16):
-                    // 12dp + surfaceContainerHigh.
+                    // 20dp + surfaceContainerHighest.
                     ExpressiveCard(
-                        shape = RoundedCornerShape(12.dp),
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(20.dp),
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         modifier = Modifier.fillMaxWidth().clickable { expanded = if (isOpen) null else p.id }
                     ) {
                         Column(Modifier.padding(12.dp)) {
@@ -336,8 +336,8 @@ fun PbfScreen() {
                                 // FB2 DETAIL DALAM KOTAK (pilihan Achmad 2026-11-16):
                                 // blok detail (No. Faktur + item + Subtotal/
                                 // PPN/Total) dalam satu kotak surfaceContainer
-                                // 12dp di dalam kartu.
-                                Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(12.dp)) {
+                                // 14dp di dalam kartu.
+                                Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(14.dp)) {
                                     Column(Modifier.padding(12.dp)) {
                                         if (p.invoiceNo.isNotBlank()) {
                                             Text(tr("No. Faktur: ${p.invoiceNo}", "Invoice No.: ${p.invoiceNo}"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

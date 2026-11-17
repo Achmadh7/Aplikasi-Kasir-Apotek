@@ -626,13 +626,13 @@ fun RiwayatScreen() {
         }
         Spacer(Modifier.height(SpaceL))
         // MB1 (pilihan Achmad 2026-11-16): ringkasan total penjualan BULAN
-        // INI per cara bayar — tiga kotak senada 12dp surfaceContainerHigh
+        // INI per cara bayar — tiga kotak senada 14dp surfaceContainerHighest
         // (angka penuh 12sp bold + Ellipsis, pola perbaikan N1).
         Text(tr("Bulan ini", "This month"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(SpaceXS))
         Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.fillMaxWidth()) {
             listOf("Tunai" to tr("Tunai", "Cash"), "QRIS" to "QRIS", "Transfer" to tr("Transfer", "Transfer")).forEach { (k, l) ->
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f)) {
                     Column(Modifier.padding(horizontal = 8.dp, vertical = 10.dp)) {
                         Text(l, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(formatIDR(monthByMethod[k] ?: 0L), style = MaterialTheme.typography.titleSmall.copy(fontSize = 12.sp), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -726,10 +726,10 @@ fun RiwayatScreen() {
                     val isOpen = expanded == s.id
                     
                     // Kartu H1 KOTAK SENADA (pilihan Achmad 2026-11-16):
-                    // 12dp + surfaceContainerHigh, lingkaran ikon biru.
+                    // 20dp + surfaceContainerHighest, lingkaran ikon biru.
                     ExpressiveCard(
-                        shape = RoundedCornerShape(12.dp),
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(20.dp),
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         modifier = Modifier.fillMaxWidth().clickable { expanded = if (isOpen) null else s.id }
                     ) {
                         Column(Modifier.padding(12.dp)) {

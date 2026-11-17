@@ -272,7 +272,7 @@ private fun KartuBulanTutup(
     onExcel: (() -> Unit)? = null,
     onBuka: (() -> Unit)? = null
 ) {
-    ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+    ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHighest) {
         Column(Modifier.padding(12.dp)) {
             Text(namaBulanIndonesia(bulan), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
