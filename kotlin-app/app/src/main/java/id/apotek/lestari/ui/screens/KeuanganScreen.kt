@@ -22,11 +22,16 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.NorthEast
 import androidx.compose.material.icons.filled.SouthWest
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -36,6 +41,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -530,21 +536,37 @@ fun CashEntryFormCard(type: String, onDismiss: () -> Unit, onSaved: () -> Unit) 
                 Triple("in", tr("Kas Masuk", "Cash In"), Icons.Default.SouthWest),
                 Triple("out", tr("Kas Keluar", "Cash Out"), Icons.Default.NorthEast)
             )
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                kasTypes.forEachIndexed { index, (t, label, icon) ->
-                    val activeColor = if (t == "in") KasMasukBlue else MaterialTheme.colorScheme.error
-                    SegmentedButton(
-                        selected = entryType == t,
-                        onClick = { entryType = t },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = kasTypes.size),
-                        colors = SegmentedButtonDefaults.colors(
-                            activeContainerColor = activeColor,
-                            activeContentColor = Color.White,
-                            activeBorderColor = activeColor
-                        ),
-                        icon = { Icon(icon, null, modifier = Modifier.size(18.dp)) },
-                        modifier = Modifier.weight(1f)
-                    ) { Text(label, maxLines = 1) }
+            // Animasi pindah jenis (permintaan Achmad 2026-11-18, CK2):
+            // baris pemilih meluncur 30dp + memudar 300ms searah pilihan
+            // (ke Keluar = dari kanan, ke Masuk = dari kiri) — bahasa gerak
+            // yang sama dengan S3/TB1; warna tombol Simpan ikut berubah
+            // biru <-> merah secara bergradasi, bukan mendadak.
+            val geserJenis = with(LocalDensity.current) { 30.dp.toPx().toInt() }
+            AnimatedContent(
+                targetState = entryType,
+                transitionSpec = {
+                    val keKeluar = targetState == "out"
+                    (slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { if (keKeluar) geserJenis else -geserJenis } + fadeIn(tween(300))) togetherWith
+                        (slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { if (keKeluar) -geserJenis else geserJenis } + fadeOut(tween(300)))
+                },
+                label = "pindahJenisKas"
+            ) { jenis ->
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    kasTypes.forEachIndexed { index, (t, label, icon) ->
+                        val activeColor = if (t == "in") KasMasukBlue else MaterialTheme.colorScheme.error
+                        SegmentedButton(
+                            selected = jenis == t,
+                            onClick = { entryType = t },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = kasTypes.size),
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = activeColor,
+                                activeContentColor = Color.White,
+                                activeBorderColor = activeColor
+                            ),
+                            icon = { Icon(icon, null, modifier = Modifier.size(18.dp)) },
+                            modifier = Modifier.weight(1f)
+                        ) { Text(label, maxLines = 1) }
+                    }
                 }
             }
             OutlinedTextField(category, { category = it }, label = { Text(tr("Kategori", "Category")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -562,12 +584,15 @@ fun CashEntryFormCard(type: String, onDismiss: () -> Unit, onSaved: () -> Unit) 
             if (formError.isNotEmpty()) {
                 Text(formError, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.weight(1f).height(52.dp)
-                ) { Text(tr("Batal", "Cancel")) }
+            // CK2 (pilihan Achmad 2026-11-18): Simpan selebar kartu,
+            // Batal jadi teks di bawahnya. Warna Simpan bergradasi
+            // biru <-> merah mengikuti jenis (300ms).
+            val warnaSimpan by animateColorAsState(
+                targetValue = if (isIn) KasMasukBlue else MaterialTheme.colorScheme.error,
+                animationSpec = tween(300),
+                label = "warnaSimpan"
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.fillMaxWidth()) {
                 Button(
                     onClick = {
                         scope.launch {
@@ -589,12 +614,16 @@ fun CashEntryFormCard(type: String, onDismiss: () -> Unit, onSaved: () -> Unit) 
                     },
                     enabled = parseDecimal(amount.text) > 0,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isIn) KasMasukBlue else MaterialTheme.colorScheme.error,
+                        containerColor = warnaSimpan,
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.weight(1f).height(52.dp)
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
                 ) { Text(tr("Simpan", "Save")) }
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(tr("Batal", "Cancel")) }
             }
         }
     }
