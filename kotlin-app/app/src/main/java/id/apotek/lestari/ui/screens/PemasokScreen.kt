@@ -3,6 +3,8 @@
 package id.apotek.lestari.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.*
@@ -45,6 +48,7 @@ fun PemasokScreen() {
     var deleteTarget by remember { mutableStateOf<Supplier?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Muat ulang setiap kali layar kembali tampil (ON_RESUME), pola yang
     // sama seperti Faktur PBF.
@@ -155,32 +159,45 @@ fun PemasokScreen() {
 
     if (showForm) {
         val target = formTarget
-        AlertDialog(
+        // DF1 (2026-11-18, pilihan Achmad): form jadi bottom sheet
+        // seperti Tambah Obat (TO1); kedua field dalam 1 kartu PBF,
+        // Simpan full-width (CK2) + Batal teks di bawah.
+        ModalBottomSheet(
             onDismissRequest = { showForm = false },
-            title = { Text(if (target == null) tr("Tambah Pemasok", "Add Supplier") else tr("Ubah Pemasok", "Edit Supplier")) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(SpaceS)) {
-                    OutlinedTextField(
-                        value = formNama,
-                        onValueChange = { formNama = it },
-                        label = { Text(tr("Nama PBF", "PBF Name")) },
-                        placeholder = { Text(tr("cth: Kimia Farma", "e.g. Kimia Farma")) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = formKontak,
-                        onValueChange = { formKontak = it },
-                        label = { Text(tr("Kontak (boleh kosong)", "Contact (optional)")) },
-                        placeholder = { Text(tr("mis. nomor WA/telepon", "e.g. WhatsApp/phone number")) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (formError.isNotEmpty()) Text(formError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+            sheetState = sheetState,
+            // Lebar sheet adaptif (lihat adaptiveSheetMaxWidth): selebar layar di HP potret, 360dp di HP lanskap, 640dp di tablet.
+            sheetMaxWidth = adaptiveSheetMaxWidth(),
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        ) {
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (target == null) tr("Tambah Pemasok", "Add Supplier") else tr("Ubah Pemasok", "Edit Supplier"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { showForm = false }) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
                 }
-            },
-            confirmButton = {
-                TextButton(
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
+                        Text(tr("PBF", "PBF"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        OutlinedTextField(
+                            value = formNama,
+                            onValueChange = { formNama = it },
+                            label = { Text(tr("Nama PBF", "PBF Name")) },
+                            placeholder = { Text(tr("cth: Kimia Farma", "e.g. Kimia Farma")) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = formKontak,
+                            onValueChange = { formKontak = it },
+                            label = { Text(tr("Kontak (boleh kosong)", "Contact (optional)")) },
+                            placeholder = { Text(tr("mis. nomor WA/telepon", "e.g. WhatsApp/phone number")) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (formError.isNotEmpty()) Text(formError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                Button(
                     onClick = {
                         scope.launch {
                             formError = ""
@@ -198,11 +215,13 @@ fun PemasokScreen() {
                             }
                         }
                     },
-                    enabled = formNama.isNotBlank()
+                    enabled = formNama.isNotBlank(),
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
                 ) { Text(tr("Simpan", "Save")) }
-            },
-            dismissButton = { TextButton(onClick = { showForm = false }) { Text(tr("Batal", "Cancel")) } }
-        )
+                TextButton(onClick = { showForm = false }, modifier = Modifier.fillMaxWidth()) { Text(tr("Batal", "Cancel")) }
+            }
+        }
     }
 
     deleteTarget?.let { target ->
