@@ -175,20 +175,15 @@ fun ReceiptPreviewCard(
                     )
                 }
             }
-            Spacer(Modifier.height(SpaceL))
+            Spacer(Modifier.height(SpaceM))
             DashedDivider()
-            Spacer(Modifier.height(SpaceL))
+            Spacer(Modifier.height(SpaceM))
             Text(tr("RINCIAN OBAT", "MEDICINE DETAILS"), color = InvoiceMuted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Spacer(Modifier.height(SpaceS))
             items.forEachIndexed { index, ci ->
-                if (index > 0) DashedDivider(modifier = Modifier.padding(vertical = 10.dp))
+                if (index > 0) DashedDivider(modifier = Modifier.padding(vertical = 8.dp))
+                // SR1: tanpa lingkaran nomor.
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                    Surface(color = InvoiceBlue.copy(alpha = 0.12f), shape = CircleShape) {
-                        Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
-                            Text("${index + 1}", color = InvoiceBlue, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(ci.medicine.name, color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                         if (ci.medicine.category.isNotBlank() || ci.medicine.unit.isNotBlank()) {
@@ -277,7 +272,7 @@ fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphicsLayer: 
                     bitmap = logo,
                     contentDescription = "Logo Apotek Lestari",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(72.dp).align(Alignment.CenterHorizontally)
+                    modifier = Modifier.size(56.dp).align(Alignment.CenterHorizontally)
                 )
                 Spacer(Modifier.height(SpaceS))
             }
@@ -302,12 +297,14 @@ fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphicsLayer: 
                     }
                 }
             }
-            Spacer(Modifier.height(SpaceL))
+            Spacer(Modifier.height(SpaceM))
             DashedDivider()
-            Spacer(Modifier.height(SpaceL))
-            InvoiceInfoBox(tr("NO. INVOICE", "INVOICE NO."), sale.invoiceNo, Modifier.fillMaxWidth())
-            Spacer(Modifier.height(SpaceS))
-            InvoiceInfoBox(tr("TANGGAL", "DATE"), formatFullDateID(sale.createdAt), Modifier.fillMaxWidth())
+            Spacer(Modifier.height(SpaceM))
+            // SR1: kotak info jadi grid 2x2.
+            Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.fillMaxWidth()) {
+                InvoiceInfoBox(tr("NO. INVOICE", "INVOICE NO."), sale.invoiceNo, Modifier.weight(1f))
+                InvoiceInfoBox(tr("TANGGAL", "DATE"), formatFullDateID(sale.createdAt), Modifier.weight(1f))
+            }
             Spacer(Modifier.height(SpaceS))
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.fillMaxWidth()) {
                 InvoiceInfoBox(tr("METODE BAYAR", "PAYMENT METHOD"), if (sale.paymentMethod == "Tunai") tr("Tunai", "Cash") else sale.paymentMethod, Modifier.weight(1f))
@@ -317,14 +314,9 @@ fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphicsLayer: 
             Text(tr("RINCIAN OBAT", "MEDICINE DETAILS"), color = InvoiceMuted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Spacer(Modifier.height(SpaceS))
             sale.items.forEachIndexed { index, it ->
-                if (index > 0) DashedDivider(modifier = Modifier.padding(vertical = 10.dp))
+                if (index > 0) DashedDivider(modifier = Modifier.padding(vertical = 8.dp))
+                // SR1: tanpa lingkaran nomor.
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                    Surface(color = InvoiceBlue.copy(alpha = 0.12f), shape = CircleShape) {
-                        Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
-                            Text("${index + 1}", color = InvoiceBlue, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(it.medicineName, color = InvoiceInk, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                         if (it.category.isNotBlank() || it.unit.isNotBlank()) {
