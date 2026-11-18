@@ -287,17 +287,14 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
             // Pill KADALUARSA (15 Nov 2026): obat sudah lewat tanggal
             // kadaluarsa (d < 0) — sama gentingnya dengan stok habis.
             val isExpired = d != null && d < 0
-            // Saran restock: jumlah untuk mencapai batas Aman (16) pada skala
-            // status baru; hanya ditampilkan bila sarannya > 0.
-            val suggest = (16 - m.stock).coerceAtLeast(0)
-            val showSuggest = suggest > 0
             // Keterangan digabung: kalau obat bebarengan bermasalah stok
             // (habis/menipis) DAN kadaluarsa, kedua keterangan ditulis supaya
             // informasinya jelas (sebelumnya hanya satu yang tampil karena
             // rantai if/else berhenti di kondisi pertama yang cocok).
             val stockNote = when {
-                isCritical -> if (showSuggest) tr("Stok habis — restock segera, disarankan $suggest ${m.unit}.", "Out of stock — restock soon, suggested $suggest ${m.unit}.") else tr("Stok habis — restock segera.", "Out of stock — restock soon.")
-                m.stock in 1..9 -> if (showSuggest) tr("Stok rendah — disarankan restock $suggest ${m.unit}.", "Low stock — suggested restock $suggest ${m.unit}.") else tr("Stok rendah — restock segera.", "Low stock — restock soon.")
+                // am208: tanpa jumlah "disarankan ..." lagi.
+                isCritical -> tr("Stok habis — restock segera.", "Out of stock — restock soon.")
+                m.stock in 1..9 -> tr("Stok rendah — restock segera.", "Low stock — restock soon.")
                 else -> null
             }
             // PG2 (2026-11-17): "prioritaskan penjualan" hanya bila
@@ -409,7 +406,7 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
         }
         item {
             Text(
-                tr("Jumlah restock adalah saran otomatis (target stok Aman, 16). Untuk mengubah stok atau tanggal kadaluarsa, buka obatnya di menu Stok.", "Restock amounts are automatic suggestions (Safe stock target, 16). To change stock or an expiry date, open the medicine in the Stock menu."),
+                tr("Untuk mengubah stok atau tanggal kadaluarsa, buka obatnya di menu Stok.", "To change stock or an expiry date, open the medicine in the Stock menu."),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
