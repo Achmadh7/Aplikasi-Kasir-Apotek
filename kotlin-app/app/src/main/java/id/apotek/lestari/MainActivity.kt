@@ -743,6 +743,7 @@ private fun BarisGrupLainnya(
     judul: String,
     sub: String?,
     warnaIkon: Color? = null,
+    warnaKotak: Color? = null,
     onClick: (() -> Unit)? = null,
     trailing: @Composable () -> Unit = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
 ) {
@@ -750,8 +751,10 @@ private fun BarisGrupLainnya(
         Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable { onClick() } else Modifier).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val kotakIkon = if (warnaIkon != null) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
-        val tintIkon = if (warnaIkon != null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
+        // LM5: warnaKotak menimpa kotak ikon (mis. hijau/kuning
+        // status akun) dengan ikon putih; warnaIkon = errorContainer.
+        val kotakIkon = warnaKotak ?: if (warnaIkon != null) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+        val tintIkon = if (warnaKotak != null) Color.White else if (warnaIkon != null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
         Surface(color = kotakIkon, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
             // A4 (animasi Lainnya, 2026-11-15): ikon crossfade saat berganti
             // (tema bulan<->matahari) — fade 250ms, tanpa geser/skala.
@@ -854,79 +857,27 @@ fun LainnyaScreen(
             onlineSiap -> tr("Mode tamu \u2014 data hanya tersimpan di HP ini", "Guest mode \u2014 data is only stored on this phone")
             else -> tr("Aplikasi berjalan lokal sepenuhnya di HP ini", "The app runs fully locally on this phone")
         }
-        // O1 WARNA STATUS (pilihan Achmad 2026-11-16): kartu status
-        // tetap 20dp surfaceContainerHigh (N1); kotak ikon 40dp ikut
-        // status — Online hijau #2E7D32, Offline kuning gelap #8D6E00,
-        // ikon awan putih. Mode tetap terbaca juga dari judul.
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            modifier = Modifier.fillMaxWidth().padding(vertical = SpaceS)
-        ) {
-            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                val kotakStatus = if (emailOnline != null) Color(0xFF2E7D32) else Color(0xFF8D6E00)
-                Surface(color = kotakStatus, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
-                    Icon(
-                        if (emailOnline != null) Icons.Default.CloudDone else Icons.Default.CloudOff,
-                        null,
-                        tint = Color.White,
-                        modifier = Modifier.padding(9.dp).fillMaxSize()
-                    )
-                }
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(
-                        if (emailOnline != null) tr("Mode Online", "Online Mode") else tr("Mode Offline", "Offline Mode"),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        subStatus,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.height(SpaceM))
-        // Kartu grup tujuan: delapan menu sebagai baris (dulu petak A2).
-        val tiles = listOf(
-            LainnyaTile("laba", tr("Laba", "Profit"), tr("Laba & margin", "Profit & margins"), Icons.Default.TrendingUp),
-            LainnyaTile("terlaris", tr("Terlaris", "Best Sellers"), tr("Peringkat penjualan", "Sales ranking"), Icons.Default.Leaderboard),
-            LainnyaTile("pengingat", tr("Pengingat", "Reminders"), tr("Stok & tagihan", "Stock & bills"), Icons.Default.NotificationsActive),
-            LainnyaTile("riwayat", tr("Riwayat", "History"), tr("Semua penjualan", "All sales"), Icons.Default.ReceiptLong),
-            LainnyaTile("tutupBuku", tr("Tutup Buku", "Close Books"), tr("Kunci bulan lalu", "Lock past months"), Icons.Default.Lock),
-            LainnyaTile("pbf", tr("Faktur PBF", "PBF Invoices"), tr("Pembelian distributor", "Distributor purchases"), Icons.Default.LocalShipping),
-            LainnyaTile("pemasok", tr("Pemasok", "Suppliers"), tr("Daftar PBF", "PBF list"), Icons.Default.Store),
-            LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
+        // O1 WARNA STATUS (pilihan Achmad 2026-11-16): kotak ikon
+        // baris status ikut status — Online hijau #2E7D32, Offline
+        // kuning gelap #8D6E00, ikon awan putih.
+        val kotakStatus = if (emailOnline != null) Color(0xFF2E7D32) else Color(0xFF8D6E00)
+        // LM5 GRUP AKUN: status Mode Online/Offline (dulu kartu O1
+        // tersendiri) + sinkronisasi + keluar akun jadi satu kartu.
+        Text(
+            tr("AKUN", "ACCOUNT"),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
         )
-        // N1: kartu grup 20dp surfaceContainerHigh (ketiga kartu grup).
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Column(Modifier.padding(vertical = 8.dp)) {
-                tiles.forEachIndexed { idx, tile ->
-                    if (idx > 0) PemisahGrup()
-                    BarisGrupLainnya(tile.icon, tile.label, tile.sub, onClick = { onGo(tile.route) })
-                }
-            }
-        }
-        Spacer(Modifier.height(SpaceM))
-        // Kartu grup pengaturan: tema (saklar), bahasa, sinkronisasi,
-        // keluar akun.
         ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column(Modifier.padding(vertical = 8.dp)) {
                 BarisGrupLainnya(
-                    if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
-                    tr("Mode Gelap", "Dark Mode"),
-                    if (isDark) tr("Aktif", "On") else tr("Nonaktif", "Off"),
-                    trailing = { Switch(checked = isDark, onCheckedChange = { onToggleTheme() }) }
-                )
-                PemisahGrup()
-                BarisGrupLainnya(
-                    Icons.Default.Language,
-                    tr("Bahasa", "Language"),
-                    if (appLang == "en") "English" else "Bahasa Indonesia",
-                    onClick = { onLanguageChange(if (appLang == "en") "id" else "en") }
+                    if (emailOnline != null) Icons.Default.CloudDone else Icons.Default.CloudOff,
+                    if (emailOnline != null) tr("Mode Online", "Online Mode") else tr("Mode Offline", "Offline Mode"),
+                    subStatus,
+                    warnaKotak = kotakStatus,
+                    trailing = { }
                 )
                 PemisahGrup()
                 BarisGrupLainnya(
@@ -957,6 +908,61 @@ fun LainnyaScreen(
                         onClick = { onKeluarTap() }
                     )
                 }
+            }
+        }
+        Spacer(Modifier.height(SpaceM))
+        // Kartu grup tujuan: delapan menu sebagai baris (dulu petak A2).
+        val tiles = listOf(
+            LainnyaTile("laba", tr("Laba", "Profit"), tr("Laba & margin", "Profit & margins"), Icons.Default.TrendingUp),
+            LainnyaTile("terlaris", tr("Terlaris", "Best Sellers"), tr("Peringkat penjualan", "Sales ranking"), Icons.Default.Leaderboard),
+            LainnyaTile("pengingat", tr("Pengingat", "Reminders"), tr("Stok & tagihan", "Stock & bills"), Icons.Default.NotificationsActive),
+            LainnyaTile("riwayat", tr("Riwayat", "History"), tr("Semua penjualan", "All sales"), Icons.Default.ReceiptLong),
+            LainnyaTile("tutupBuku", tr("Tutup Buku", "Close Books"), tr("Kunci bulan lalu", "Lock past months"), Icons.Default.Lock),
+            LainnyaTile("pbf", tr("Faktur PBF", "PBF Invoices"), tr("Pembelian distributor", "Distributor purchases"), Icons.Default.LocalShipping),
+            LainnyaTile("pemasok", tr("Pemasok", "Suppliers"), tr("Daftar PBF", "PBF list"), Icons.Default.Store),
+            LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
+        )
+        // N1: kartu grup 20dp surfaceContainerHigh (ketiga kartu grup).
+        Text(
+            tr("MENU", "MENU"),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+        )
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            Column(Modifier.padding(vertical = 8.dp)) {
+                tiles.forEachIndexed { idx, tile ->
+                    if (idx > 0) PemisahGrup()
+                    BarisGrupLainnya(tile.icon, tile.label, tile.sub, onClick = { onGo(tile.route) })
+                }
+            }
+        }
+        Spacer(Modifier.height(SpaceM))
+        // Kartu grup pengaturan: tema (saklar) + bahasa saja
+        // (LM5: sinkronisasi + keluar akun pindah ke kartu AKUN).
+        Text(
+            tr("PENGATURAN", "SETTINGS"),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+        )
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            Column(Modifier.padding(vertical = 8.dp)) {
+                BarisGrupLainnya(
+                    if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
+                    tr("Mode Gelap", "Dark Mode"),
+                    if (isDark) tr("Aktif", "On") else tr("Nonaktif", "Off"),
+                    trailing = { Switch(checked = isDark, onCheckedChange = { onToggleTheme() }) }
+                )
+                PemisahGrup()
+                BarisGrupLainnya(
+                    Icons.Default.Language,
+                    tr("Bahasa", "Language"),
+                    if (appLang == "en") "English" else "Bahasa Indonesia",
+                    onClick = { onLanguageChange(if (appLang == "en") "id" else "en") }
+                )
             }
         }
         Spacer(Modifier.height(SpaceM))
