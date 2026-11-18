@@ -43,6 +43,8 @@ import java.util.TimeZone
 @Composable
 fun TutupBukuScreen(onMintaSync: () -> Unit = {}) {
     val context = LocalContext.current
+    // am214: warna pill per tema (gelap = terang, terang = pekat).
+    val gelap = LocalIsDarkTheme.current
     val scope = rememberCoroutineScope()
     var msg by remember { mutableStateOf("") }
     var tutup by remember { mutableStateOf<List<ClosedMonthEntity>>(emptyList()) }
@@ -162,7 +164,7 @@ fun TutupBukuScreen(onMintaSync: () -> Unit = {}) {
                     bulan = bulanIni,
                     rekap = rekapPerBulan[bulanIni],
                     status = tr("Berjalan", "In progress"),
-                    statusColor = Color(0xFF66BB6A),
+                    statusColor = if (gelap) Color(0xFF66BB6A) else Color(0xFF2E7D32),
                     ditutupPada = null,
                     gagalMuat = gagalMuat.contains(bulanIni),
                     onMuatUlang = { muatUlang++ }
@@ -173,7 +175,7 @@ fun TutupBukuScreen(onMintaSync: () -> Unit = {}) {
                         bulan = bulanLalu,
                         rekap = rekapPerBulan[bulanLalu],
                         status = tr("Selesai", "Ended"),
-                        statusColor = Color(0xFFFFCA28),
+                        statusColor = if (gelap) Color(0xFFFFCA28) else Color(0xFF8D6E00),
                         ditutupPada = null,
                         onTutup = { konfirmasiTutup = bulanLalu },
                         gagalMuat = gagalMuat.contains(bulanLalu),
@@ -190,7 +192,7 @@ fun TutupBukuScreen(onMintaSync: () -> Unit = {}) {
                             bulan = b,
                             rekap = rekapPerBulan[b],
                             status = tr("Selesai", "Ended"),
-                            statusColor = Color(0xFFFFCA28),
+                            statusColor = if (gelap) Color(0xFFFFCA28) else Color(0xFF8D6E00),
                             ditutupPada = null,
                             onTutup = { konfirmasiTutup = b },
                             gagalMuat = gagalMuat.contains(b),
@@ -211,7 +213,7 @@ fun TutupBukuScreen(onMintaSync: () -> Unit = {}) {
                 bulan = row.bulan,
                 rekap = rekapPerBulan[row.bulan],
                 status = tr("Terkunci", "Locked"),
-                statusColor = Color(0xFFFFCA28),
+                statusColor = if (gelap) Color(0xFFFFCA28) else Color(0xFF8D6E00),
                 ditutupPada = row.ditutupPada,
                 onExcel = { exportBulan(row.bulan) },
                 onBuka = { konfirmasiBuka = row.bulan },
