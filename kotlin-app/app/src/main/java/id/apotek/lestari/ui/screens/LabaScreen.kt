@@ -92,13 +92,13 @@ fun LabaScreen() {
                             "today" -> tr("Hari Ini", "Today")
                             "month" -> tr("Bulan Ini", "This Month")
                             "last30" -> tr("30 Hari", "Last 30 Days")
-                            else -> tr("Semua", "All Time")
+                            else -> tr("Semua Periode", "All Periods")
                         }
                         val slug = when (periode) {
                             "today" -> "hari-ini"
                             "month" -> "bulan-ini"
                             "last30" -> "30-hari"
-                            else -> "semua"
+                            else -> "semua-periode"
                         }
                         val bytes = withContext(Dispatchers.IO) {
                             ExcelHelper.rekapPenjualanBytes(r.data, label)
@@ -592,7 +592,7 @@ fun ObatTerlarisScreen() {
                     OutlinedButton(
                         onClick = { tampilPilihExport = false; exportRekap("all") },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text(tr("Semua", "All Time")) }
+                    ) { Text(tr("Semua Periode", "All Periods")) }
                 }
             },
             confirmButton = {},
