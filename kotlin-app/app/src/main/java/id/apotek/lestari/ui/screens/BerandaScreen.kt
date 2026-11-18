@@ -491,10 +491,12 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 // lengkap tetap ada lewat pintasan Riwayat).
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        Text(tr("Obat Terjual", "Items Sold"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        // am212: teks kartu Obat Terjual hitam pekat
+                        // (terang) / putih pekat (gelap) supaya tegas.
+                        Text(tr("Obat Terjual", "Items Sold"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (gelap) Color.White else Color.Black)
                         Spacer(Modifier.height(SpaceS))
                         if (d.bestSellers.isEmpty()) {
-                            Text(tr("Belum ada obat terjual hari ini.", "No items sold today yet."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Belum ada obat terjual hari ini.", "No items sold today yet."), style = MaterialTheme.typography.bodyMedium, color = if (gelap) Color.White else Color.Black)
                         } else {
                             // R1: tiap baris jadi kotak kecil senada kartu P3.
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -505,9 +507,9 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                            Text(b.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(b.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = if (gelap) Color.White else Color.Black, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             Spacer(Modifier.width(8.dp))
-                                            Text(tr("${b.qty} item • ${formatIDR(b.revenue)}", "${b.qty} items • ${formatIDR(b.revenue)}"), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                                            Text(tr("${b.qty} item • ${formatIDR(b.revenue)}", "${b.qty} items • ${formatIDR(b.revenue)}"), style = MaterialTheme.typography.bodyMedium, color = if (gelap) Color.White else Color.Black, maxLines = 1)
                                         }
                                     }
                                 }
