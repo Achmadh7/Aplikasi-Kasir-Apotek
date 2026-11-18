@@ -32,6 +32,9 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.togetherWith
@@ -769,9 +772,19 @@ fun KasirScreen() {
                     Spacer(Modifier.height(SpaceS))
                 }
                 }
-                // Blok struk tampil polos seketika (semua animasi dihapus
-                // 2026-11-10), tanpa AnimatedVisibility maupun graphicsLayer.
-                if (!successPhase && lastSale != null) {
+                // Struk muncul dengan animasi (2026-11-18, permintaan
+                // Achmad): memudar + naik dari bawah selama 300ms, selaras
+                // dengan animasi tab TB1 dan form Catat Kas AK2. Dipilih
+                // slide+fade (bukan expandVertically) supaya tinggi layout
+                // tidak ikut beranimasi dan sheet tidak bergetar.
+                AnimatedVisibility(
+                    visible = !successPhase && lastSale != null,
+                    enter = fadeIn(animationSpec = tween(300)) + slideInVertically(
+                        initialOffsetY = { it / 3 },
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ),
+                    exit = fadeOut(animationSpec = tween(200))
+                ) {
                     Column {
                         Spacer(Modifier.height(SpaceL))
                         lastSale?.let {
