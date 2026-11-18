@@ -44,7 +44,6 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
@@ -674,7 +673,7 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                     Text(tr("IDENTITAS", "IDENTITY"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    OutlinedTextField(name, { name = it; formError = "" }, label = { Text(tr("Nama Obat", "Medicine Name")) }, textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(name, { name = it; formError = "" }, label = { Text(tr("Nama Obat", "Medicine Name")) }, textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), colors = OutlinedTextFieldDefaults.colors(cursorColor = MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.fillMaxWidth())
                     Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                         OutlinedTextField(
                             value = category, onValueChange = {}, label = { Text(tr("Kategori", "Category")) },
@@ -696,16 +695,16 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                     Text(tr("HARGA", "PRICE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    OutlinedTextField(sell, { sell = formatDecimalFieldValue(it); formError = "" }, label = { Text(tr("Harga Jual", "Sell Price")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(grosir, { grosir = formatDecimalFieldValue(it); formError = "" }, label = { Text(tr("Harga Jual Grosir (boleh kosong)", "Wholesale Sell Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(beli, { beli = formatDecimalFieldValue(it); formError = "" }, label = { Text(tr("Harga Beli (boleh kosong)", "Buy Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(sell, { sell = formatDecimalFieldValue(it); formError = "" }, label = { Text(tr("Harga Jual", "Sell Price")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), colors = OutlinedTextFieldDefaults.colors(cursorColor = MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(grosir, { grosir = formatDecimalFieldValue(it); formError = "" }, label = { Text(tr("Harga Jual Grosir (boleh kosong)", "Wholesale Sell Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), colors = OutlinedTextFieldDefaults.colors(cursorColor = MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(beli, { beli = formatDecimalFieldValue(it); formError = "" }, label = { Text(tr("Harga Beli (boleh kosong)", "Buy Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), colors = OutlinedTextFieldDefaults.colors(cursorColor = MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
             }
             ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                     Text(tr("STOK & KADALUWARSA", "STOCK & EXPIRY"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                        OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() }; formError = "" }, label = { Text(tr("Stok", "Stock")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.weight(1f))
+                        OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() }; formError = "" }, label = { Text(tr("Stok", "Stock")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), colors = OutlinedTextFieldDefaults.colors(cursorColor = MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.weight(1f))
                         OutlinedTextField(
                             value = if (expiry.isBlank()) "" else formatDateID(expiry),
                             onValueChange = {},
