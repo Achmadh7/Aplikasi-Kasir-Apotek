@@ -394,15 +394,18 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     }
                     "${p.pbfName} • $dueLabel"
                 } else null
+                // am211: kartu Pengingat selalu kuning #FFB74D di
+                // kedua tema (permintaan Achmad) — warningAmber()
+                // global tetap dipakai di tempat lain.
                 ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
-                        Box(Modifier.width(6.dp).fillMaxHeight().background(warningAmber()))
+                        Box(Modifier.width(6.dp).fillMaxHeight().background(Color(0xFFFFB74D)))
                         Column(Modifier.weight(1f).padding(16.dp)) {
                             // R1: jumlah habis / kadaluarsa jadi kotak kecil
                             // senada kartu P3 (hanya yang jumlahnya > 0).
                             val kotakPengingat = listOfNotNull(
                                 if (outOfStockNames.isNotEmpty()) Triple(tr("Habis", "Out of stock"), tr("${outOfStockNames.size} obat", "${outOfStockNames.size} medicines"), MaterialTheme.colorScheme.error) else null,
-                                if (d.expiringCount > 0) Triple(tr("Dekat kadaluarsa", "Expiring soon"), tr("${d.expiringCount} obat", "${d.expiringCount} medicines"), warningAmber()) else null
+                                if (d.expiringCount > 0) Triple(tr("Dekat kadaluarsa", "Expiring soon"), tr("${d.expiringCount} obat", "${d.expiringCount} medicines"), Color(0xFFFFB74D)) else null
                             )
                             // Baris ringkasan atas DIHAPUS 2026-11-16
                             // (pilihan Achmad): angkanya sudah ada di kotak
@@ -412,7 +415,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             val tampilkanRingkasan = kotakPengingat.isEmpty() && reminderTampil.isEmpty() && reminderTagihan == null
                             if (tampilkanRingkasan) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Warning, null, tint = warningAmber(), modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Default.Warning, null, tint = Color(0xFFFFB74D), modifier = Modifier.size(20.dp))
                                     Spacer(Modifier.width(8.dp))
                                     Text(reminderSummary, style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
                                 }
@@ -423,7 +426,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             // baris galat kecil di sini.
                             if (reminderLoadFailed && !tampilkanRingkasan) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Warning, null, tint = warningAmber(), modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Default.Warning, null, tint = Color(0xFFFFB74D), modifier = Modifier.size(20.dp))
                                     Spacer(Modifier.width(8.dp))
                                     Text(tr("Gagal memuat data pengingat.", "Failed to load reminder data."), style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
                                 }
