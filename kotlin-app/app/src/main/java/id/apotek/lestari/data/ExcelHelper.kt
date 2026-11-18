@@ -13,7 +13,6 @@ import org.apache.poi.ss.util.CellRangeAddressList
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.apache.poi.xssf.usermodel.XSSFColor
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import java.awt.Color
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
@@ -180,10 +179,15 @@ object ExcelHelper {
         // biru muda + teks navy + garis atas. Warna custom WAJIB lewat
         // setter eksplisit (setFillForegroundColor/setColor) — assignment
         // properti mengikat overload Short dan gagal kompilasi.
-        val biruBaja = XSSFColor(Color(46, 117, 182), null)
-        val biruMuda = XSSFColor(Color(217, 226, 243), null)
-        val navyTeks = XSSFColor(Color(31, 56, 100), null)
-        val abuBaris = XSSFColor(Color(242, 242, 242), null)
+        // am215: java.awt.Color TIDAK ADA di Android (crash ekspor
+        // di HP) — bangun XSSFColor dari byte[] RGB saja, konstruktor
+        // ini terverifikasi ada di POI 5.5.1.
+        fun xwarna(r: Int, g: Int, b: Int) =
+            XSSFColor(byteArrayOf(r.toByte(), g.toByte(), b.toByte()), null)
+        val biruBaja = xwarna(46, 117, 182)
+        val biruMuda = xwarna(217, 226, 243)
+        val navyTeks = xwarna(31, 56, 100)
+        val abuBaris = xwarna(242, 242, 242)
         val titleStyle = wb.createCellStyle().apply {
             setFont(wb.createFont().apply {
                 bold = true
