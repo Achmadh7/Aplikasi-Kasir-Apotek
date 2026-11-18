@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.Lightbulb
@@ -307,7 +308,10 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
             val advice = listOfNotNull(stockNote, expiryNote).joinToString(" ")
             
             Column {
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+            // PG4 (2026-11-18): seluruh kartu bisa diketuk — buka
+            // obat di Stok; nama diteruskan supaya kolom pencarian
+            // Stok langsung terisi (dulu tombol "Stok", R24).
+            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth().clickable { onGoStok(m.name) }) {
                 Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
                     // PG8 (pilihan Achmad 2026-11-14): garis aksen di tepi
                     // kiri kartu — merah bila stok habis ATAU kadaluarsa,
@@ -367,13 +371,8 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            // R24 (audit 2026-11-15): teruskan nama obat ke
-                            // Stok supaya kolom pencariannya langsung terisi.
-                            OutlinedButton(onClick = { onGoStok(m.name) }, shape = RoundedCornerShape(20.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)) {
-                                Icon(Icons.Default.Inventory, null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text(tr("Stok", "Stock"))
-                            }
+                            // PG4: chevron hanya penanda kartu bisa diketuk.
+                            Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         // PG2 (2026-11-17): saran bisa kosong (stok >= 10
                         // dan exp > 30 hari) — baris bohlam disembunyikan
