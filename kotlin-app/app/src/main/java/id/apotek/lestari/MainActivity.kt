@@ -861,8 +861,36 @@ fun LainnyaScreen(
         // baris status ikut status — Online hijau #2E7D32, Offline
         // kuning gelap #8D6E00, ikon awan putih.
         val kotakStatus = if (emailOnline != null) Color(0xFF2E7D32) else Color(0xFF8D6E00)
-        // LM5 GRUP AKUN: status Mode Online/Offline (dulu kartu O1
-        // tersendiri) + sinkronisasi + keluar akun jadi satu kartu.
+        // Kartu grup tujuan: delapan menu sebagai baris (dulu petak A2).
+        val tiles = listOf(
+            LainnyaTile("laba", tr("Laba", "Profit"), tr("Laba & margin", "Profit & margins"), Icons.Default.TrendingUp),
+            LainnyaTile("terlaris", tr("Terlaris", "Best Sellers"), tr("Peringkat penjualan", "Sales ranking"), Icons.Default.Leaderboard),
+            LainnyaTile("pengingat", tr("Pengingat", "Reminders"), tr("Stok & tagihan", "Stock & bills"), Icons.Default.NotificationsActive),
+            LainnyaTile("riwayat", tr("Riwayat", "History"), tr("Semua penjualan", "All sales"), Icons.Default.ReceiptLong),
+            LainnyaTile("tutupBuku", tr("Tutup Buku", "Close Books"), tr("Kunci bulan lalu", "Lock past months"), Icons.Default.Lock),
+            LainnyaTile("pbf", tr("Faktur PBF", "PBF Invoices"), tr("Pembelian distributor", "Distributor purchases"), Icons.Default.LocalShipping),
+            LainnyaTile("pemasok", tr("Pemasok", "Suppliers"), tr("Daftar PBF", "PBF list"), Icons.Default.Store),
+            LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
+        )
+        // N1: kartu grup 20dp surfaceContainerHigh (ketiga kartu grup).
+        Text(
+            tr("MENU", "MENU"),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+        )
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            Column(Modifier.padding(vertical = 8.dp)) {
+                tiles.forEachIndexed { idx, tile ->
+                    if (idx > 0) PemisahGrup()
+                    BarisGrupLainnya(tile.icon, tile.label, tile.sub, onClick = { onGo(tile.route) })
+                }
+            }
+        }
+        Spacer(Modifier.height(SpaceM))
+        // LM5 GRUP AKUN (am213: pindah ke bawah MENU): status Mode Online/Offline
+        // (dulu kartu O1 tersendiri) + sinkronisasi + keluar akun jadi satu kartu.
         Text(
             tr("AKUN", "ACCOUNT"),
             style = MaterialTheme.typography.labelMedium,
@@ -907,34 +935,6 @@ fun LainnyaScreen(
                         warnaIkon = MaterialTheme.colorScheme.error,
                         onClick = { onKeluarTap() }
                     )
-                }
-            }
-        }
-        Spacer(Modifier.height(SpaceM))
-        // Kartu grup tujuan: delapan menu sebagai baris (dulu petak A2).
-        val tiles = listOf(
-            LainnyaTile("laba", tr("Laba", "Profit"), tr("Laba & margin", "Profit & margins"), Icons.Default.TrendingUp),
-            LainnyaTile("terlaris", tr("Terlaris", "Best Sellers"), tr("Peringkat penjualan", "Sales ranking"), Icons.Default.Leaderboard),
-            LainnyaTile("pengingat", tr("Pengingat", "Reminders"), tr("Stok & tagihan", "Stock & bills"), Icons.Default.NotificationsActive),
-            LainnyaTile("riwayat", tr("Riwayat", "History"), tr("Semua penjualan", "All sales"), Icons.Default.ReceiptLong),
-            LainnyaTile("tutupBuku", tr("Tutup Buku", "Close Books"), tr("Kunci bulan lalu", "Lock past months"), Icons.Default.Lock),
-            LainnyaTile("pbf", tr("Faktur PBF", "PBF Invoices"), tr("Pembelian distributor", "Distributor purchases"), Icons.Default.LocalShipping),
-            LainnyaTile("pemasok", tr("Pemasok", "Suppliers"), tr("Daftar PBF", "PBF list"), Icons.Default.Store),
-            LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
-        )
-        // N1: kartu grup 20dp surfaceContainerHigh (ketiga kartu grup).
-        Text(
-            tr("MENU", "MENU"),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
-        )
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Column(Modifier.padding(vertical = 8.dp)) {
-                tiles.forEachIndexed { idx, tile ->
-                    if (idx > 0) PemisahGrup()
-                    BarisGrupLainnya(tile.icon, tile.label, tile.sub, onClick = { onGo(tile.route) })
                 }
             }
         }
