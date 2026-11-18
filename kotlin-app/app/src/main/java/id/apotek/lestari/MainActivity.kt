@@ -51,6 +51,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.AnimatedVisibility
@@ -67,11 +68,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.core.view.drawToBitmap
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -143,23 +148,60 @@ class MainActivity : ComponentActivity() {
             // ke AppLang.code yang dibaca tr() di semua layar.
             var appLang by remember { mutableStateOf(prefs.getString("app_language", "id") ?: "id") }
             AppLang.code = appLang
+            // BM2 Memudar (2026-11-18, pilihan Achmad): ganti mode/bahasa
+            // tidak lagi instan — layar lama ditangkap jadi bitmap SEBELUM
+            // state berubah, lalu bitmap itu memudar 300ms di atas layar
+            // baru (anak terakhir Box akar, di bawah). Satu mekanisme
+            // untuk mode dan bahasa. Bila tangkapan gagal, ganti seketika.
+            val rootView = LocalView.current
+            var gambarLama by remember { mutableStateOf<ImageBitmap?>(null) }
+            val alphaLama by animateFloatAsState(
+                targetValue = if (gambarLama == null) 1f else 0f,
+                animationSpec = tween(300), label = "memudar tema/bahasa"
+            )
+            LaunchedEffect(gambarLama) {
+                if (gambarLama != null) {
+                    delay(300)
+                    gambarLama = null
+                }
+            }
+            fun tangkapLalu(aksi: () -> Unit) {
+                if (gambarLama != null) return // sedang memudar — abaikan
+                gambarLama = runCatching { rootView.drawToBitmap().asImageBitmap() }.getOrNull()
+                aksi()
+            }
             // Kelas lebar jendela (HP/tablet, portrait/landscape) untuk layout adaptif.
             val windowSizeClass = calculateWindowSizeClass(this)
             CompositionLocalProvider(LocalWindowWidthClass provides windowSizeClass.widthSizeClass) {
                 ApotikLestariTheme(darkTheme = isDark) {
-                    ApotekApp(
-                        isDark = isDark,
-                        onToggleTheme = {
-                            val next = !isDark
-                            isDark = next
-                            prefs.edit().putBoolean("dark_theme", next).apply()
-                        },
-                        appLang = appLang,
-                        onLanguageChange = { next ->
-                            appLang = next
-                            prefs.edit().putString("app_language", next).apply()
+                    Box(Modifier.fillMaxSize()) {
+                        ApotekApp(
+                            isDark = isDark,
+                            onToggleTheme = {
+                                tangkapLalu {
+                                    val next = !isDark
+                                    isDark = next
+                                    prefs.edit().putBoolean("dark_theme", next).apply()
+                                }
+                            },
+                            appLang = appLang,
+                            onLanguageChange = { next ->
+                                tangkapLalu {
+                                    appLang = next
+                                    prefs.edit().putString("app_language", next).apply()
+                                }
+                            }
+                        )
+                        // Bitmap layar lama di atas segalanya, memudar 300ms.
+                        gambarLama?.let { bmp ->
+                            Image(
+                                bitmap = bmp,
+                                contentDescription = null,
+                                contentScale = ContentScale.FillBounds,
+                                modifier = Modifier.fillMaxSize().alpha(alphaLama)
+                            )
                         }
-                    )
+                    }
                 }
             }
         }
@@ -192,17 +234,10 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     val current = backStack?.destination?.route ?: "beranda"
     // Halaman "Lainnya" (redesain A2, pilihan Achmad 2026-11-04): dulu sheet
     // bawah, kini layar penuh berisi petak besar menu + baris pengaturan.
-    // Animasi lingkaran tema (dipilih Achmad 2026-11-01, opsi 1 — sama seperti
-    // di Image HD Upscale): tangkapan layar tema lama ditumpuk di atas tema
-    // baru, dilubangi lingkaran yang membesar, sehingga tema baru tersingkap
-    // mulai dari titik awalnya. Titik awalnya adalah ikon tab "Lainnya" di bar
-    // bawah, karena saat itu baris tema masih di dalam sheet bawah yang
-    // posisinya tidak stabil. Sejak A2 baris tema tinggal di halaman penuh,
-    // jadi AN3 (pilihan Achmad 2026-11-04) memindahkan titik awalnya ke
-    // tengah baris tema itu sendiri — lingkaran membesar dari persis yang
-    // diketuk; ikon tab tetap jadi cadangan bila baris belum terukur.
-    // Bila tangkapan gagal, tema berganti seketika seperti sebelumnya.
-    val rootView = LocalView.current
+    // Animasi ganti tema/bahasa (BM2, pilihan Achmad 2026-11-18)
+    // tinggal di setContent: layar lama ditangkap jadi bitmap lalu
+    // memudar 300ms di atas layar baru. (AN3 lingkaran tema dulu di
+    // sini — dihapus 2026-11-16.)
     val appScope = rememberCoroutineScope()
     // ---- Mode Online (Firebase): gerbang login + status sinkronisasi.
     // onlineSiap hanya benar bila build memuat google-services.json;
