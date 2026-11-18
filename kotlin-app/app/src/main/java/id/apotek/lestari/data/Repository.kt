@@ -1037,31 +1037,6 @@ class Repository {
         OkResponse(true)
     }
 
-    /** Impor satu kali dari riwayat pembelian: nama PBF yang pernah
-     *  dipakai di catatan pembelian tapi belum ada di daftar pemasok
-     *  ditambahkan (kontak kosong, bisa dilengkapi nanti). Mengembalikan
-     *  jumlah nama yang diimpor. */
-    suspend fun importSuppliersFromPurchases(): ApiResult<Int> = call {
-        val dao = DatabaseProvider.db.supplierDao()
-        val ada = dao.getAll().map { it.name.lowercase() }.toSet()
-        val namaBaru = DatabaseProvider.db.purchaseDao().getAll()
-            .map { it.pbfName.trim() }
-            .filter { it.isNotBlank() }
-            .distinctBy { it.lowercase() }
-            .filter { it.lowercase() !in ada }
-        for (nama in namaBaru) {
-            dao.insert(
-                SupplierEntity(
-                    name = nama,
-                    contact = "",
-                    createdAt = nowIso(),
-                    remoteId = genRemoteId("pemasok"), updatedAt = nowMillis()
-                )
-            )
-        }
-        namaBaru.size
-    }
-
     // ---- Backup & Restore (semua data lokal dalam satu file JSON) ----
 
     /** Seluruh isi database (obat, penjualan, item, kas) sebagai string JSON. */

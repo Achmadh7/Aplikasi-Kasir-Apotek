@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -95,30 +94,6 @@ fun PemasokScreen() {
                     tr("Daftar PBF untuk Faktur Pembelian", "PBF list for purchase invoices")
                 )
                 Spacer(Modifier.height(SpaceL))
-                // Impor satu kali dari riwayat: nama PBF yang pernah
-                // dipakai di catatan pembelian tapi belum ada di daftar.
-                OutlinedButton(
-                    onClick = {
-                        scope.launch {
-                            val res = repo.importSuppliersFromPurchases()
-                            if (res is ApiResult.Success) {
-                                resumeKey++
-                                snackbarHostState.showSnackbar(
-                                    if (res.data > 0) tr("${res.data} pemasok diimpor dari riwayat pembelian.", "${res.data} suppliers imported from purchase history.")
-                                    else tr("Tidak ada nama baru di riwayat pembelian.", "No new names in the purchase history.")
-                                )
-                            } else {
-                                snackbarHostState.showSnackbar((res as? ApiResult.Error)?.message ?: tr("Gagal mengimpor", "Failed to import"))
-                            }
-                        }
-                    },
-                    shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
-                ) {
-                    Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(tr("Impor dari Riwayat Pembelian", "Import from Purchase History"))
-                }
             }
             // S11: kartu galat muat + tombol coba lagi (pola Beranda S10).
             if (loadError != null) {
@@ -144,7 +119,7 @@ fun PemasokScreen() {
                             Spacer(Modifier.height(SpaceM))
                             Text(tr("Belum ada pemasok", "No suppliers yet"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceXS))
-                            Text(tr("Tambah pemasok lewat tombol + di kanan bawah, atau impor nama PBF dari riwayat pembelian di atas.", "Add a supplier with the + button at the bottom right, or import PBF names from the purchase history above."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                            Text(tr("Tambah pemasok lewat tombol + di kanan bawah.", "Add a supplier with the + button at the bottom right."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                         }
                     }
                 }
