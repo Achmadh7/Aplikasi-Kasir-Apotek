@@ -360,6 +360,38 @@ fun LabaScreen() {
             }
         }
     }
+
+    // Dialog pilih periode export (am222, permintaan Achmad
+    // 2026-11-18): sebelum file dibuat, tanyakan dulu mau export
+    // penjualan Hari Ini atau Semua — tombol Export sebelumnya
+    // langsung mengekspor periode pil yang sedang aktif tanpa
+    // memberi tahu.
+    // am224: dipindah ke dalam LabaScreen — sebelumnya nyangkut di
+    // ObatTerlarisScreen sehingga tampilPilihExport/exportRekap
+    // tidak ketemu (build gagal).
+    if (tampilPilihExport) {
+        AlertDialog(
+            onDismissRequest = { tampilPilihExport = false },
+            title = { Text(tr("Export Rekap Excel", "Export Sales Recap")) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(SpaceS)) {
+                    Text(tr("Pilih penjualan yang mau diexport ke Excel:", "Choose which sales to export to Excel:"))
+                    Button(
+                        onClick = { tampilPilihExport = false; exportRekap("today") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(tr("Hari Ini", "Today")) }
+                    OutlinedButton(
+                        onClick = { tampilPilihExport = false; exportRekap("all") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(tr("Semua Periode", "All Periods")) }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { tampilPilihExport = false }) { Text(tr("Batal", "Cancel")) }
+            }
+        )
+    }
 }
 
 
@@ -572,34 +604,6 @@ fun ObatTerlarisScreen() {
                 }
             }
         }
-    }
-    // Dialog pilih periode export (am222, permintaan Achmad
-    // 2026-11-18): sebelum file dibuat, tanyakan dulu mau export
-    // penjualan Hari Ini atau Semua — tombol Export sebelumnya
-    // langsung mengekspor periode pil yang sedang aktif tanpa
-    // memberi tahu.
-    if (tampilPilihExport) {
-        AlertDialog(
-            onDismissRequest = { tampilPilihExport = false },
-            title = { Text(tr("Export Rekap Excel", "Export Sales Recap")) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(SpaceS)) {
-                    Text(tr("Pilih penjualan yang mau diexport ke Excel:", "Choose which sales to export to Excel:"))
-                    Button(
-                        onClick = { tampilPilihExport = false; exportRekap("today") },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text(tr("Hari Ini", "Today")) }
-                    OutlinedButton(
-                        onClick = { tampilPilihExport = false; exportRekap("all") },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text(tr("Semua Periode", "All Periods")) }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { tampilPilihExport = false }) { Text(tr("Batal", "Cancel")) }
-            }
-        )
     }
 }
 
