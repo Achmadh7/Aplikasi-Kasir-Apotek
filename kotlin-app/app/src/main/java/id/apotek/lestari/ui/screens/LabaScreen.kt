@@ -64,6 +64,8 @@ fun LabaScreen() {
     val scope = rememberCoroutineScope()
     var msg by remember { mutableStateOf("") }
     var pendingRekap by remember { mutableStateOf<ByteArray?>(null) }
+    // Dialog pilih periode export (am222): Hari Ini atau Semua.
+    var tampilPilihExport by remember { mutableStateOf(false) }
     val rekapLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(ExcelHelper.MIME_XLSX)) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val bytes = pendingRekap ?: return@rememberLauncherForActivityResult
@@ -78,21 +80,21 @@ fun LabaScreen() {
             else tr("Gagal menyimpan rekap Excel.", "Failed to save the sales recap Excel.")
         }
     }
-    fun exportRekap() {
+    fun exportRekap(periode: String) {
         scope.launch {
             // R31 (audit 2026-11-15): pembuatan byte Excel (POI) dulu tidak
             // terlindungi — exception lolos tanpa pesan. Seluruh badan export
             // kini di-runCatching dan kegagalan dilaporkan lewat msg.
             runCatching {
-                when (val r = repo.getRekapPenjualan(period)) {
+                when (val r = repo.getRekapPenjualan(periode)) {
                     is ApiResult.Success -> {
-                        val label = when (period) {
+                        val label = when (periode) {
                             "today" -> tr("Hari Ini", "Today")
                             "month" -> tr("Bulan Ini", "This Month")
                             "last30" -> tr("30 Hari", "Last 30 Days")
                             else -> tr("Semua", "All Time")
                         }
-                        val slug = when (period) {
+                        val slug = when (periode) {
                             "today" -> "hari-ini"
                             "month" -> "bulan-ini"
                             "last30" -> "30-hari"
@@ -156,7 +158,7 @@ fun LabaScreen() {
             }
             Spacer(Modifier.height(SpaceM))
             OutlinedButton(
-                onClick = { exportRekap() },
+                onClick = { tampilPilihExport = true },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp)
             ) {
@@ -570,6 +572,34 @@ fun ObatTerlarisScreen() {
                 }
             }
         }
+    }
+    // Dialog pilih periode export (am222, permintaan Achmad
+    // 2026-11-18): sebelum file dibuat, tanyakan dulu mau export
+    // penjualan Hari Ini atau Semua — tombol Export sebelumnya
+    // langsung mengekspor periode pil yang sedang aktif tanpa
+    // memberi tahu.
+    if (tampilPilihExport) {
+        AlertDialog(
+            onDismissRequest = { tampilPilihExport = false },
+            title = { Text(tr("Export Rekap Excel", "Export Sales Recap")) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(SpaceS)) {
+                    Text(tr("Pilih penjualan yang mau diexport ke Excel:", "Choose which sales to export to Excel:"))
+                    Button(
+                        onClick = { tampilPilihExport = false; exportRekap("today") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(tr("Hari Ini", "Today")) }
+                    OutlinedButton(
+                        onClick = { tampilPilihExport = false; exportRekap("all") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(tr("Semua", "All Time")) }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { tampilPilihExport = false }) { Text(tr("Batal", "Cancel")) }
+            }
+        )
     }
 }
 
