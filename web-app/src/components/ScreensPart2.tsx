@@ -119,7 +119,7 @@ export const KeuanganScreen: React.FC = () => {
         <div className="lg:col-span-4">
           <form
             onSubmit={handleAdd}
-            className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5 space-y-3.5 text-sm"
+            className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3.5 text-sm"
           >
             <h3 className="font-extrabold text-base">Catat Kas Manual</h3>
             <div className="grid grid-cols-2 gap-2">
@@ -131,8 +131,8 @@ export const KeuanganScreen: React.FC = () => {
                 }}
                 className={`py-2.5 rounded-xl font-bold text-xs ${
                   type === 'in'
-                    ? 'bg-[#0061A4] text-white'
-                    : 'bg-[#E6E8EE] dark:bg-[#272A2F]'
+                    ? 'bg-[#15803D] text-white'
+                    : 'bg-[#FAF8F4] dark:bg-[#0F241E]'
                 }`}
               >
                 + Kas Masuk
@@ -146,7 +146,7 @@ export const KeuanganScreen: React.FC = () => {
                 className={`py-2.5 rounded-xl font-bold text-xs ${
                   type === 'out'
                     ? 'bg-[#BA1A1A] text-white'
-                    : 'bg-[#E6E8EE] dark:bg-[#272A2F]'
+                    : 'bg-[#FAF8F4] dark:bg-[#0F241E]'
                 }`}
               >
                 - Kas Keluar
@@ -157,7 +157,7 @@ export const KeuanganScreen: React.FC = () => {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
               >
                 {type === 'out'
                   ? ['Operasional', 'Beli Stok', 'Listrik & Air', 'Gaji', 'Lainnya'].map(
@@ -183,7 +183,7 @@ export const KeuanganScreen: React.FC = () => {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="50000"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
               />
             </div>
             <div>
@@ -192,12 +192,12 @@ export const KeuanganScreen: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Contoh: Token listrik apotek"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
               />
             </div>
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-[#0061A4] text-white font-bold"
+              className="w-full py-3 rounded-xl bg-[#15803D] text-white font-bold"
             >
               Simpan Catatan Kas
             </button>
@@ -207,7 +207,7 @@ export const KeuanganScreen: React.FC = () => {
         {/* Daftar Riwayat Kas */}
         <div className="lg:col-span-8 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] p-1 text-xs font-bold">
+            <div className="flex rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] p-1 text-xs font-bold">
               {(
                 [
                   ['today', 'Hari Ini'],
@@ -219,7 +219,7 @@ export const KeuanganScreen: React.FC = () => {
                   key={k}
                   onClick={() => setPeriod(k)}
                   className={`px-3.5 py-1.5 rounded-xl ${
-                    period === k ? 'bg-[#0061A4] text-white' : 'opacity-70'
+                    period === k ? 'bg-[#15803D] text-white' : 'opacity-70'
                   }`}
                 >
                   {lbl}
@@ -236,7 +236,7 @@ export const KeuanganScreen: React.FC = () => {
             </div>
           </div>
 
-          <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] divide-y divide-black/5 dark:divide-white/5 overflow-hidden">
+          <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] divide-y divide-black/5 dark:divide-white/5 overflow-hidden">
             {filtered.length === 0 ? (
               <p className="py-10 text-center text-sm opacity-60">
                 Belum ada catatan kas pada periode ini.
@@ -252,7 +252,7 @@ export const KeuanganScreen: React.FC = () => {
                       <span
                         className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
                           e.type === 'in'
-                            ? 'bg-[#0061A4]/20 text-[#0061A4] dark:text-[#9FCAFF]'
+                            ? 'bg-[#15803D]/20 text-[#15803D] dark:text-[#86EFAC]'
                             : 'bg-[#BA1A1A]/20 text-[#BA1A1A]'
                         }`}
                       >
@@ -427,14 +427,14 @@ export const LabaScreen: React.FC = () => {
         action={
           <button
             onClick={exportRekapExcel}
-            className="px-3.5 py-2 rounded-xl bg-[#0061A4] text-white text-xs font-bold flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5"
           >
             <Download className="w-4 h-4" /> Ekspor Rekap Excel
           </button>
         }
       />
 
-      <div className="flex rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] p-1 text-xs font-bold w-fit">
+      <div className="flex rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] p-1 text-xs font-bold w-fit">
         {(
           [
             ['today', 'Hari Ini'],
@@ -447,7 +447,7 @@ export const LabaScreen: React.FC = () => {
             key={k}
             onClick={() => setPeriod(k)}
             className={`px-4 py-2 rounded-xl ${
-              period === k ? 'bg-[#0061A4] text-white' : 'opacity-70'
+              period === k ? 'bg-[#15803D] text-white' : 'opacity-70'
             }`}
           >
             {lbl}
@@ -456,7 +456,7 @@ export const LabaScreen: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5">
+        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5">
           <span className="text-xs opacity-70">Total Penjualan (Omzet)</span>
           <p className="text-2xl font-extrabold mt-1">
             <AnimatedNumber value={report.revenue} format={formatIDR} />
@@ -465,7 +465,7 @@ export const LabaScreen: React.FC = () => {
             {report.transactionCount} transaksi • {report.itemsSold} unit
           </span>
         </div>
-        <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5">
+        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5">
           <span className="text-xs opacity-70">HPP (Modal Obat Terjual)</span>
           <p className="text-2xl font-extrabold mt-1 text-amber-500">
             <AnimatedNumber value={report.hpp} format={formatIDR} />
@@ -475,7 +475,7 @@ export const LabaScreen: React.FC = () => {
             {report.grossMarginPct.toFixed(1)}%)
           </span>
         </div>
-        <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5">
+        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5">
           <span className="text-xs opacity-70">Biaya Operasional</span>
           <p className="text-2xl font-extrabold mt-1 text-[#BA1A1A]">
             <AnimatedNumber value={report.operationalExpense} format={formatIDR} />
@@ -484,8 +484,8 @@ export const LabaScreen: React.FC = () => {
             Kas keluar selain Beli Stok ({formatIDR(report.stockPurchaseExpense)})
           </span>
         </div>
-        <div className="rounded-3xl bg-[#0B1526] text-white p-5">
-          <span className="text-xs text-[#9FCAFF]">Laba Bersih</span>
+        <div className="rounded-3xl bg-[#142E27] text-white p-5">
+          <span className="text-xs text-[#86EFAC]">Laba Bersih</span>
           <p className="text-2xl font-extrabold mt-1 text-[#7EDC9A]">
             <AnimatedNumber value={report.netProfit} format={formatIDR} />
           </p>
@@ -496,13 +496,13 @@ export const LabaScreen: React.FC = () => {
       </div>
 
       {/* Breakdown per Medicine */}
-      <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] overflow-hidden">
+      <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] overflow-hidden">
         <div className="p-4 font-extrabold text-sm border-b border-black/5 dark:border-white/5">
           Rincian Penjualan & Laba per Obat ({report.byMedicine.length} jenis)
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#E1E2E8] dark:bg-[#272A2F] text-xs uppercase opacity-75">
+            <thead className="bg-[#E1E2E8] dark:bg-[#0F241E] text-xs uppercase opacity-75">
               <tr>
                 <th className="py-3 px-4">Nama Obat</th>
                 <th className="py-3 px-3">Kategori</th>
@@ -602,7 +602,7 @@ export const PbfScreen: React.FC = () => {
             <button
               onClick={() => setTab('FAKTUR')}
               className={`px-3 py-1.5 rounded-lg ${
-                tab === 'FAKTUR' ? 'bg-[#0061A4] text-white' : ''
+                tab === 'FAKTUR' ? 'bg-[#15803D] text-white' : ''
               }`}
             >
               Faktur PBF ({purchases.length})
@@ -610,7 +610,7 @@ export const PbfScreen: React.FC = () => {
             <button
               onClick={() => setTab('PEMASOK')}
               className={`px-3 py-1.5 rounded-lg ${
-                tab === 'PEMASOK' ? 'bg-[#0061A4] text-white' : ''
+                tab === 'PEMASOK' ? 'bg-[#15803D] text-white' : ''
               }`}
             >
               Pemasok ({suppliers.length})
@@ -623,7 +623,7 @@ export const PbfScreen: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           <form
             onSubmit={handleSavePurchase}
-            className="lg:col-span-5 rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5 space-y-3 text-sm h-fit"
+            className="lg:col-span-5 rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3 text-sm h-fit"
           >
             <h3 className="font-extrabold text-base">Catat Faktur PBF Baru</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -635,7 +635,7 @@ export const PbfScreen: React.FC = () => {
                   value={pbfName}
                   onChange={(e) => setPbfName(e.target.value)}
                   placeholder="Pilih / ketik PBF"
-                  className="w-full px-3 py-2 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                  className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                 />
                 <datalist id="pbf-suppliers-list">
                   {suppliers.map((s) => (
@@ -649,7 +649,7 @@ export const PbfScreen: React.FC = () => {
                   value={invoiceNo}
                   onChange={(e) => setInvoiceNo(e.target.value)}
                   placeholder="Opsional"
-                  className="w-full px-3 py-2 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                  className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                 />
               </div>
             </div>
@@ -662,7 +662,7 @@ export const PbfScreen: React.FC = () => {
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                  className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                 />
               </div>
               <div>
@@ -672,7 +672,7 @@ export const PbfScreen: React.FC = () => {
                   onChange={(e) =>
                     setPaymentType(e.target.value as 'CASH' | 'KREDIT')
                   }
-                  className="w-full px-3 py-2 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                  className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                 >
                   <option value="CASH">TUNAI (CASH)</option>
                   <option value="KREDIT">KREDIT (TEMPO)</option>
@@ -686,7 +686,7 @@ export const PbfScreen: React.FC = () => {
                   value={ppn}
                   onChange={(e) => setPpn(e.target.value)}
                   placeholder="0"
-                  className="w-full px-3 py-2 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                  className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                 />
               </div>
             </div>
@@ -700,7 +700,7 @@ export const PbfScreen: React.FC = () => {
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                  className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                 />
               </div>
             )}
@@ -716,7 +716,7 @@ export const PbfScreen: React.FC = () => {
                       { medicineName: '', qty: '1', unit: 'Box', buyPrice: '' },
                     ])
                   }
-                  className="text-xs font-bold text-[#0061A4] dark:text-[#9FCAFF]"
+                  className="text-xs font-bold text-[#15803D] dark:text-[#86EFAC]"
                 >
                   + Tambah Baris
                 </button>
@@ -734,7 +734,7 @@ export const PbfScreen: React.FC = () => {
                         )
                       )
                     }
-                    className="col-span-5 px-2.5 py-2 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F] text-xs"
+                    className="col-span-5 px-2.5 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] text-xs"
                   />
                   <input
                     required
@@ -749,7 +749,7 @@ export const PbfScreen: React.FC = () => {
                         )
                       )
                     }
-                    className="col-span-2 px-2 py-2 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F] text-xs"
+                    className="col-span-2 px-2 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] text-xs"
                   />
                   <input
                     required
@@ -764,7 +764,7 @@ export const PbfScreen: React.FC = () => {
                         )
                       )
                     }
-                    className="col-span-4 px-2.5 py-2 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F] text-xs"
+                    className="col-span-4 px-2.5 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] text-xs"
                   />
                   {items.length > 1 && (
                     <button
@@ -781,7 +781,7 @@ export const PbfScreen: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-[#0061A4] text-white font-bold"
+              className="w-full py-3 rounded-xl bg-[#15803D] text-white font-bold"
             >
               Simpan Faktur PBF
             </button>
@@ -789,7 +789,7 @@ export const PbfScreen: React.FC = () => {
 
           <div className="lg:col-span-7 space-y-3">
             {purchases.length === 0 ? (
-              <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-10 text-center text-sm opacity-60">
+              <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-10 text-center text-sm opacity-60">
                 Belum ada catatan faktur pembelian PBF.
               </div>
             ) : (
@@ -799,7 +799,7 @@ export const PbfScreen: React.FC = () => {
                 return (
                   <div
                     key={p.id}
-                    className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5 space-y-3"
+                    className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -811,7 +811,7 @@ export const PbfScreen: React.FC = () => {
                             className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                               p.paymentType === 'KREDIT'
                                 ? 'bg-amber-500/20 text-amber-500'
-                                : 'bg-[#0061A4]/20 text-[#0061A4] dark:text-[#9FCAFF]'
+                                : 'bg-[#15803D]/20 text-[#15803D] dark:text-[#86EFAC]'
                             }`}
                           >
                             {p.paymentType}
@@ -828,7 +828,7 @@ export const PbfScreen: React.FC = () => {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-extrabold text-base text-[#0061A4] dark:text-[#9FCAFF]">
+                        <p className="font-extrabold text-base text-[#15803D] dark:text-[#86EFAC]">
                           {formatIDR(p.total)}
                         </p>
                         {p.ppn > 0 && (
@@ -839,7 +839,7 @@ export const PbfScreen: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="text-xs space-y-1 bg-[#E6E8EE] dark:bg-[#272A2F] p-3 rounded-2xl">
+                    <div className="text-xs space-y-1 bg-[#FAF8F4] dark:bg-[#0F241E] p-3 rounded-2xl">
                       {pItems.map((it) => (
                         <div key={it.id} className="flex justify-between">
                           <span>
@@ -898,7 +898,7 @@ export const PbfScreen: React.FC = () => {
                 notify(err.message, 'error');
               }
             }}
-            className="lg:col-span-4 rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5 space-y-3 text-sm h-fit"
+            className="lg:col-span-4 rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3 text-sm h-fit"
           >
             <h3 className="font-extrabold text-base">Tambah Pemasok PBF</h3>
             <div>
@@ -908,7 +908,7 @@ export const PbfScreen: React.FC = () => {
                 value={supName}
                 onChange={(e) => setSupName(e.target.value)}
                 placeholder="Contoh: PT Enseval Putera"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
               />
             </div>
             <div>
@@ -919,18 +919,18 @@ export const PbfScreen: React.FC = () => {
                 value={supContact}
                 onChange={(e) => setSupContact(e.target.value)}
                 placeholder="0812..."
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
               />
             </div>
             <button
               type="submit"
-              className="w-full py-2.5 rounded-xl bg-[#0061A4] text-white font-bold"
+              className="w-full py-2.5 rounded-xl bg-[#15803D] text-white font-bold"
             >
               Simpan Pemasok
             </button>
           </form>
 
-          <div className="lg:col-span-8 rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] divide-y divide-black/5 dark:divide-white/5">
+          <div className="lg:col-span-8 rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] divide-y divide-black/5 dark:divide-white/5">
             {suppliers.length === 0 ? (
               <p className="p-10 text-center text-sm opacity-60">
                 Belum ada pemasok terdaftar.
@@ -1009,7 +1009,7 @@ export const PengingatScreen: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Stok Menipis */}
-        <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5 space-y-3">
+        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3">
           <h3 className="font-extrabold text-base flex items-center justify-between">
             <span>Stok Rendah / Habis</span>
             <span className="px-2.5 py-0.5 rounded-full bg-[#BA1A1A] text-white text-xs">
@@ -1025,7 +1025,7 @@ export const PengingatScreen: React.FC = () => {
               {lowStock.map((m) => (
                 <div
                   key={m.id}
-                  className="p-3 rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] flex items-center justify-between"
+                  className="p-3 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] flex items-center justify-between"
                 >
                   <div>
                     <p className="font-bold text-sm">{m.name}</p>
@@ -1039,7 +1039,7 @@ export const PengingatScreen: React.FC = () => {
         </div>
 
         {/* Kadaluarsa */}
-        <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5 space-y-3">
+        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3">
           <h3 className="font-extrabold text-base flex items-center justify-between">
             <span>Kadaluarsa ≤ 30 Hari</span>
             <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-xs">
@@ -1057,7 +1057,7 @@ export const PengingatScreen: React.FC = () => {
                 return (
                   <div
                     key={m.id}
-                    className="p-3 rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] flex items-center justify-between"
+                    className="p-3 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] flex items-center justify-between"
                   >
                     <div>
                       <p className="font-bold text-sm">{m.name}</p>
@@ -1080,10 +1080,10 @@ export const PengingatScreen: React.FC = () => {
         </div>
 
         {/* Tagihan Kredit PBF */}
-        <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5 space-y-3">
+        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3">
           <h3 className="font-extrabold text-base flex items-center justify-between">
             <span>Faktur Kredit PBF</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-[#0061A4] text-white text-xs">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#15803D] text-white text-xs">
               {creditPbf.length}
             </span>
           </h3>
@@ -1098,7 +1098,7 @@ export const PengingatScreen: React.FC = () => {
                 return (
                   <div
                     key={p.id}
-                    className="p-3 rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] space-y-2"
+                    className="p-3 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] space-y-2"
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -1140,9 +1140,12 @@ export const PengingatScreen: React.FC = () => {
 // ============================================================================
 // 8. RIWAYAT PENJUALAN SCREEN (Matches RiwayatScreen.kt)
 // ============================================================================
+type PaymentFilter = 'ALL' | 'Tunai' | 'QRIS' | 'Transfer';
+
 export const RiwayatScreen: React.FC = () => {
   const { sales, saleItems } = useStore();
   const [search, setSearch] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('ALL');
   const [selectedSale, setSelectedSale] = useState<{
     sale: Sale;
     items: SaleItem[];
@@ -1171,6 +1174,16 @@ export const RiwayatScreen: React.FC = () => {
     return res;
   }, [sales]);
 
+  const methodCounts = useMemo(() => {
+    const counts = { ALL: sales.length, Tunai: 0, QRIS: 0, Transfer: 0 };
+    for (const s of sales) {
+      if (s.paymentMethod === 'Tunai') counts.Tunai += 1;
+      else if (s.paymentMethod === 'QRIS') counts.QRIS += 1;
+      else if (s.paymentMethod === 'Transfer') counts.Transfer += 1;
+    }
+    return counts;
+  }, [sales]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return [...sales]
@@ -1180,6 +1193,7 @@ export const RiwayatScreen: React.FC = () => {
           (parseISODate(a.createdAt)?.getTime() ?? 0)
       )
       .filter((s) => {
+        if (paymentFilter !== 'ALL' && s.paymentMethod !== paymentFilter) return false;
         if (!q) return true;
         const its = itemsBySale.get(s.id) || [];
         return (
@@ -1188,78 +1202,159 @@ export const RiwayatScreen: React.FC = () => {
           its.some((i) => i.medicineName.toLowerCase().includes(q))
         );
       });
-  }, [sales, itemsBySale, search]);
+  }, [sales, itemsBySale, search, paymentFilter]);
+
+  const filteredTotal = useMemo(
+    () => filtered.reduce((sum, s) => sum + s.total, 0),
+    [filtered]
+  );
+
+  const PILLS: { id: PaymentFilter; label: string; activeCls: string }[] = [
+    {
+      id: 'ALL',
+      label: 'Semua',
+      activeCls: 'bg-[#142E27] text-white border-[#142E27] dark:bg-[#15803D] dark:border-[#15803D]',
+    },
+    {
+      id: 'Tunai',
+      label: 'Cash',
+      activeCls: 'bg-[#DCFCE7] text-[#166534] border-[#86EFAC] dark:bg-[#15803D]/30 dark:text-[#86EFAC] dark:border-[#15803D]',
+    },
+    {
+      id: 'QRIS',
+      label: 'QRIS',
+      activeCls: 'bg-[#E0F2FE] text-[#0369A1] border-[#7DD3FC] dark:bg-[#0369A1]/30 dark:text-[#7DD3FC] dark:border-[#0369A1]',
+    },
+    {
+      id: 'Transfer',
+      label: 'Transfer',
+      activeCls: 'bg-[#FEF3C7] text-[#B45309] border-[#FCD34D] dark:bg-[#B45309]/30 dark:text-[#FDE68A] dark:border-[#B45309]',
+    },
+  ];
+
+  const activePillLabel = PILLS.find((p) => p.id === paymentFilter)?.label || 'Semua';
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 min-w-0">
       <PageHeader
         title="Riwayat Penjualan"
         subtitle={`${sales.length} transaksi tercatat • Klik Cetak Struk untuk mencetak ulang`}
       />
 
       {/* MB1 Month Summary by Payment Method */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {(['Tunai', 'QRIS', 'Transfer'] as const).map((m) => (
           <div
             key={m}
-            className="rounded-2xl bg-[#ECEEF4] dark:bg-[#1D2024] p-4"
+            className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 shadow-xs min-w-0"
           >
-            <span className="text-xs opacity-70">Bulan Ini • {m}</span>
-            <p className="text-lg font-extrabold mt-0.5 text-[#0061A4] dark:text-[#9FCAFF]">
+            <span className="text-xs text-[#78716C] dark:text-[#93B5A9]">
+              Bulan Ini • {m === 'Tunai' ? 'Cash' : m}
+            </span>
+            <p className="text-lg font-extrabold mt-0.5 text-[#15803D] dark:text-[#86EFAC] tabular-nums">
               <AnimatedNumber value={monthByMethod[m]} format={formatIDR} />
             </p>
           </div>
         ))}
       </div>
 
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Cari nomor invoice, nama obat, atau cara bayar..."
-        className="w-full px-4 py-2.5 rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] text-sm"
-      />
+      {/* Filter Card: Payment Pill Group + Search + Dynamic Summary Bar */}
+      <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs space-y-3 min-w-0">
+        <div className="flex flex-wrap gap-2 min-w-0" role="group" aria-label="Filter metode pembayaran">
+          {PILLS.map((p) => {
+            const isActive = paymentFilter === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPaymentFilter(p.id)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
+                  isActive
+                    ? p.activeCls
+                    : 'bg-[#FAF8F4] dark:bg-[#0F241E] text-[#78716C] dark:text-[#93B5A9] border-[#E7E3D8] dark:border-[#244C41] hover:border-[#15803D]/50 hover:text-[#1C1917] dark:hover:text-white'
+                }`}
+              >
+                <span>{p.label}</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[11px] font-bold tabular-nums ${
+                    isActive
+                      ? p.id === 'ALL'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-black/10 dark:bg-white/15'
+                      : 'bg-[#E7E3D8]/70 dark:bg-white/10 text-[#1C1917] dark:text-white'
+                  }`}
+                >
+                  {methodCounts[p.id]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-      <div className="space-y-3">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cari nomor invoice, nama obat, atau cara bayar..."
+          className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41] text-sm text-[#1C1917] dark:text-white placeholder:text-[#78716C] focus:outline-none focus:border-[#15803D]"
+        />
+
+        <div className="pt-2.5 border-t border-dashed border-[#E7E3D8] dark:border-[#244C41] flex flex-wrap items-center justify-between gap-2 text-xs text-[#78716C] dark:text-[#93B5A9]">
+          <span>
+            Menampilkan <strong className="text-[#1C1917] dark:text-white">{filtered.length}</strong> transaksi ({activePillLabel})
+          </span>
+          <span className="font-extrabold text-[#1C1917] dark:text-white tabular-nums">
+            {formatIDR(filteredTotal)}
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-3 min-w-0">
         {filtered.length === 0 ? (
-          <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-10 text-center text-sm opacity-60">
+          <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-10 text-center text-sm text-[#78716C] dark:text-[#93B5A9]">
             Belum ada riwayat transaksi penjualan.
           </div>
         ) : (
           filtered.map((s) => {
             const its = itemsBySale.get(s.id) || [];
+            const methodTone =
+              s.paymentMethod === 'QRIS'
+                ? 'bg-[#E0F2FE] text-[#0369A1] dark:bg-[#0369A1]/30 dark:text-[#7DD3FC]'
+                : s.paymentMethod === 'Transfer'
+                ? 'bg-[#FEF3C7] text-[#B45309] dark:bg-[#B45309]/30 dark:text-[#FDE68A]'
+                : 'bg-[#DCFCE7] text-[#166534] dark:bg-[#15803D]/30 dark:text-[#86EFAC]';
             return (
               <div
                 key={s.id}
-                className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-4 flex flex-wrap items-center justify-between gap-4"
+                className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 min-w-0"
               >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-sm">{s.invoiceNo}</span>
-                    <span className="px-2 py-0.5 rounded-md bg-[#0061A4]/15 text-[#0061A4] dark:text-[#9FCAFF] text-xs font-bold">
-                      {s.paymentMethod}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <span className="font-extrabold text-sm text-[#1C1917] dark:text-white">{s.invoiceNo}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${methodTone}`}>
+                      {s.paymentMethod === 'Tunai' ? 'Cash' : s.paymentMethod}
                     </span>
-                    <span className="text-xs opacity-60">
+                    <span className="text-xs text-[#78716C] dark:text-[#93B5A9]">
                       {formatDateTimeID(s.createdAt)}
                     </span>
                   </div>
-                  <p className="text-xs opacity-80 mt-1">
+                  <p className="text-xs text-[#78716C] dark:text-[#93B5A9] mt-1 break-words">
                     {its.map((i) => `${i.medicineName} (${i.qty})`).join(', ')}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 shrink-0 ml-auto">
                   <div className="text-right">
-                    <p className="font-extrabold text-base text-[#0061A4] dark:text-[#9FCAFF]">
+                    <p className="font-extrabold text-base text-[#15803D] dark:text-[#86EFAC] tabular-nums">
                       {formatIDR(s.total)}
                     </p>
-                    <p className="text-[11px] opacity-65">
+                    <p className="text-[11px] text-[#78716C] dark:text-[#93B5A9] tabular-nums">
                       Bayar: {formatIDR(s.amountPaid)} • Kembali:{' '}
                       {formatIDR(s.changeAmount)}
                     </p>
                   </div>
                   <button
                     onClick={() => setSelectedSale({ sale: s, items: its })}
-                    className="px-3 py-2 rounded-xl bg-[#0061A4] text-white text-xs font-bold flex items-center gap-1.5"
+                    className="px-3 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5 transition"
                   >
                     <Printer className="w-3.5 h-3.5" /> Struk
                   </button>
@@ -1339,14 +1434,14 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
       />
 
       {msg && (
-        <div className="p-4 rounded-2xl bg-[#0061A4]/15 border border-[#0061A4]/30 text-sm font-bold">
+        <div className="p-4 rounded-2xl bg-[#15803D]/15 border border-[#15803D]/30 text-sm font-bold">
           {msg}
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Backup & Restore JSON */}
-        <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5 space-y-4">
+        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-4">
           <h3 className="font-extrabold text-base">
             Backup & Restore (.json Android / Web)
           </h3>
@@ -1356,11 +1451,11 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
           <div className="flex flex-wrap gap-3">
             <button
               onClick={handleDownloadBackup}
-              className="px-4 py-2.5 rounded-xl bg-[#0061A4] text-white text-xs font-bold flex items-center gap-2"
+              className="px-4 py-2.5 rounded-xl bg-[#15803D] text-white text-xs font-bold flex items-center gap-2"
             >
               <Download className="w-4 h-4" /> Unduh Backup (.json)
             </button>
-            <label className="cursor-pointer px-4 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F] text-xs font-bold flex items-center gap-2">
+            <label className="cursor-pointer px-4 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] text-xs font-bold flex items-center gap-2">
               <Upload className="w-4 h-4" /> Restore dari File (.json)
               <input
                 type="file"
@@ -1392,7 +1487,7 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
         </div>
 
         {/* Tutup Buku Bulanan */}
-        <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5 space-y-3">
+        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3">
           <h3 className="font-extrabold text-base">
             Tutup Buku Bulanan (Kunci Periode)
           </h3>
@@ -1405,7 +1500,7 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
               return (
                 <div
                   key={b}
-                  className="p-3 rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] flex items-center justify-between"
+                  className="p-3 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 opacity-60" />
@@ -1423,7 +1518,7 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
                   ) : (
                     <button
                       onClick={() => tutupBulan(b)}
-                      className="px-3 py-1.5 rounded-xl bg-[#0061A4] text-white text-xs font-bold flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-xl bg-[#15803D] text-white text-xs font-bold flex items-center gap-1"
                     >
                       <Lock className="w-3.5 h-3.5" /> Tutup Bulan
                     </button>

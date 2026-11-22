@@ -18,11 +18,18 @@ import {
 import {
   auth,
   onAuthStateChanged,
+  logoutFirebase,
   User,
   FirestoreMapper,
   fetchCollectionDocs,
   pushSingleDoc,
   resetAllCloudData,
+  DEFAULT_AUTHORITY_EMAILS,
+  fetchAuthorityEmails,
+  saveAuthorityEmails,
+  subscribeAuthorityEmails,
+  isEmailAuthorized,
+  normalizeEmail,
 } from './firebase';
 import { idbGet, idbSet } from './idb';
 
@@ -92,6 +99,11 @@ interface StoreContextType {
   // Auth & Sync
   user: User | null;
   authLoading: boolean;
+  authError: string | null;
+  clearAuthError: () => void;
+  authorityEmails: string[];
+  addAuthorityEmail: (email: string) => Promise<void>;
+  removeAuthorityEmail: (email: string) => Promise<void>;
   syncStatus: SyncStatus;
   lastSyncAt: number;
   syncMessage: string | null;
@@ -162,6 +174,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [idbReady, setIdbReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authorityEmails, setAuthorityEmails] = useState<string[]>(DEFAULT_AUTHORITY_EMAILS);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('BELUM_MASUK');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const dbRef = useRef(dbState);
@@ -201,18 +215,86 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [dbState, idbReady]);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
+    let active = true;
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (!active) return;
+      if (!u) {
+        setUser(null);
+        setAuthLoading(false);
+        setSyncStatus('BELUM_MASUK');
+        return;
+      }
+      setAuthLoading(true);
+      const allowed = await fetchAuthorityEmails(true);
+      if (!active) return;
+      if (!isEmailAuthorized(u.email, allowed)) {
+        await logoutFirebase().catch(() => {});
+        if (!active) return;
+        setUser(null);
+        setAuthLoading(false);
+        setSyncStatus('BELUM_MASUK');
+        setAuthError(
+          `Akses ditolak: email ${u.email || '(tanpa email)'} tidak terdaftar di kolom Authority.`
+        );
+        return;
+      }
+      setAuthError(null);
+      setAuthorityEmails(allowed);
       setUser(u);
       setAuthLoading(false);
-      if (u) {
-        // Trigger initial sync upon sign-in
-        setTimeout(() => syncNow(false, u), 200);
-      } else {
-        setSyncStatus('BELUM_MASUK');
+      // Trigger initial sync upon sign-in
+      setTimeout(() => syncNow(false, u), 200);
+    });
+    return () => {
+      active = false;
+      unsub();
+    };
+  }, []);
+
+  // Auto-logout immediately when the signed-in email is removed from Authority
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    const unsub = subscribeAuthorityEmails((allowed) => {
+      if (!active) return;
+      setAuthorityEmails(allowed);
+      if (!isEmailAuthorized(user.email, allowed)) {
+        setAuthError(
+          `Akses dicabut: email ${user.email || '(tanpa email)'} telah dihapus dari kolom Authority.`
+        );
+        void logoutFirebase().catch(() => {});
       }
     });
-    return () => unsub();
-  }, []);
+    return () => {
+      active = false;
+      unsub();
+    };
+  }, [user]);
+
+  const addAuthorityEmail = async (email: string) => {
+    const clean = normalizeEmail(email);
+    if (!clean || !clean.includes('@')) {
+      throw new Error('Format email tidak valid.');
+    }
+    if (authorityEmails.includes(clean)) {
+      throw new Error('Email sudah terdaftar di kolom Authority.');
+    }
+    const updated = await saveAuthorityEmails([...authorityEmails, clean]);
+    setAuthorityEmails(updated);
+  };
+
+  const removeAuthorityEmail = async (email: string) => {
+    const clean = normalizeEmail(email);
+    const next = authorityEmails.filter((e) => e !== clean);
+    if (next.length === 0) {
+      throw new Error('Minimal harus tersisa 1 email di kolom Authority.');
+    }
+    const updated = await saveAuthorityEmails(next);
+    setAuthorityEmails(updated);
+    if (user && normalizeEmail(user.email) === clean) {
+      await logoutFirebase();
+    }
+  };
 
   const bulanTerkunci = (bulan: string | null): boolean => {
     if (!bulan) return false;
@@ -1204,6 +1286,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         closedMonths: dbState.closedMonths,
         user,
         authLoading,
+        authError,
+        clearAuthError: () => setAuthError(null),
+        authorityEmails,
+        addAuthorityEmail,
+        removeAuthorityEmail,
         syncStatus,
         lastSyncAt: dbState.lastSyncAt,
         syncMessage,

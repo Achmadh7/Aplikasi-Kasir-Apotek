@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+﻿import React, { createContext, useCallback, useContext, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 
 type ToastType = 'info' | 'success' | 'error';
@@ -103,7 +103,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             <div className="flex items-start gap-3">
               <div
                 className={`p-2 rounded-xl shrink-0 ${
-                  confirmState.danger ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-[#0061A4]'
+                  confirmState.danger ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-[#15803D]'
                 }`}
               >
                 <AlertTriangle className="w-5 h-5" />
@@ -131,7 +131,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 className={`px-4 py-2 rounded-xl text-sm font-medium text-white ${
                   confirmState.danger
                     ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-[#0061A4] hover:bg-[#004f87]'
+                    : 'bg-[#15803D] hover:bg-[#004f87]'
                 }`}
               >
                 {confirmState.confirmLabel}

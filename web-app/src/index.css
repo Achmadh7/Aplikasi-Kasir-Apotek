@@ -2,6 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg: #F6F4EF;
+  --sidebar: #142E27;
+  --sidebar-border: #244C41;
+  --card: #FFFFFF;
+  --card-border: #E7E3D8;
+  --card-soft: #FAF8F4;
+  --text: #1C1917;
+  --muted: #78716C;
+  --accent: #15803D;
+  --accent-soft: #DCFCE7;
+  --accent-text: #166534;
+  --danger: #DC2626;
+  --danger-soft: #FEE2E2;
+  --warn: #B45309;
+  --warn-soft: #FEF3C7;
+  --blue: #0369A1;
+  --blue-soft: #E0F2FE;
+}
+
+.alert-row-warn {
+  background: #FEF3C7;
+  border: 1px solid #FCD34D;
+  color: #92400E;
+}
+
+.alert-row-danger {
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  color: #991B1B;
+}
+
+.alert-row-info {
+  background: #EFF6FF;
+  border: 1px solid #93C5FD;
+  color: #1E40AF;
+}
+
+.dark .alert-row-warn {
+  background: rgba(180, 83, 9, 0.22);
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #FDE68A;
+}
+
+.dark .alert-row-danger {
+  background: rgba(220, 38, 38, 0.22);
+  border-color: rgba(248, 113, 113, 0.45);
+  color: #FECACA;
+}
+
+.dark .alert-row-info {
+  background: rgba(3, 105, 161, 0.22);
+  border-color: rgba(125, 211, 252, 0.45);
+  color: #BAE6FD;
+}
+
 @media print {
   html,
   body {

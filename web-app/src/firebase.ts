@@ -14,7 +14,9 @@ import {
   getFirestore,
   collection,
   doc,
+  getDoc,
   getDocs,
+  onSnapshot,
   setDoc,
   deleteDoc,
   writeBatch,
@@ -42,6 +44,82 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+export const DEFAULT_AUTHORITY_EMAILS = [
+  'achmadhida66@gmail.com',
+  'hanyrahayu19@gmail.com',
+];
+
+export function normalizeEmail(email?: string | null): string {
+  return (email || '').trim().toLowerCase();
+}
+
+function normalizeEmailList(list: unknown): string[] {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set<string>();
+  for (const item of list) {
+    if (typeof item !== 'string') continue;
+    const clean = normalizeEmail(item);
+    if (clean && clean.includes('@')) seen.add(clean);
+  }
+  return Array.from(seen);
+}
+
+export async function fetchAuthorityEmails(seedIfEmpty = false): Promise<string[]> {
+  const ref = doc(db, 'authority', 'config');
+  try {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const parsed = normalizeEmailList(snap.data()?.emails);
+      if (parsed.length > 0) return parsed;
+    }
+    if (seedIfEmpty) {
+      await setDoc(ref, {
+        emails: DEFAULT_AUTHORITY_EMAILS,
+        updatedAt: Date.now(),
+      }).catch(() => {});
+    }
+  } catch {
+    // Fallback to default owner emails if Firestore rules/network block read
+  }
+  return [...DEFAULT_AUTHORITY_EMAILS];
+}
+
+export async function saveAuthorityEmails(emails: string[]): Promise<string[]> {
+  const clean = normalizeEmailList(emails);
+  if (clean.length === 0) {
+    throw new Error('Minimal harus ada 1 email di kolom Authority.');
+  }
+  await setDoc(doc(db, 'authority', 'config'), {
+    emails: clean,
+    updatedAt: Date.now(),
+  });
+  return clean;
+}
+
+export function isEmailAuthorized(email: string | null | undefined, allowed: string[]): boolean {
+  const norm = normalizeEmail(email);
+  return Boolean(norm) && allowed.includes(norm);
+}
+
+export function subscribeAuthorityEmails(onUpdate: (emails: string[]) => void): () => void {
+  const ref = doc(db, 'authority', 'config');
+  return onSnapshot(
+    ref,
+    (snap) => {
+      if (!snap.exists()) {
+        onUpdate([...DEFAULT_AUTHORITY_EMAILS]);
+        return;
+      }
+      const parsed = normalizeEmailList(snap.data()?.emails);
+      onUpdate(parsed.length > 0 ? parsed : [...DEFAULT_AUTHORITY_EMAILS]);
+    },
+    () => {
+      // Ignore transient listener errors during sign-out or offline state
+    }
+  );
+}
 
 export async function loginWithGoogle(): Promise<User> {
   const res = await signInWithPopup(auth, googleProvider);

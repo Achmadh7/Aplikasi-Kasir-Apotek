@@ -36,20 +36,20 @@ import {
   X,
 } from 'lucide-react';
 
-// ---- Shared Header matching KartuHeaderPremium (N2 dark #0B1526 / H6 light #D3E3F3) ----
+// ---- Shared Header (Opsi 3: Warm Paper & Forest) ----
 export const PageHeader: React.FC<{
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
 }> = ({ title, subtitle, action }) => (
-  <div className="rounded-[22px] bg-[#D3E3F3] dark:bg-[#0B1526] dark:border dark:border-white/15 p-4 mb-5 flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <h1 className="text-xl font-extrabold text-[#0B1526] dark:text-white">{title}</h1>
+  <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] shadow-xs p-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+    <div className="min-w-0">
+      <h1 className="text-xl font-extrabold tracking-tight text-[#1C1917] dark:text-white">{title}</h1>
       {subtitle && (
-        <p className="text-xs text-[#3D5A75] dark:text-white/70 mt-0.5">{subtitle}</p>
+        <p className="text-xs text-[#78716C] dark:text-[#93B5A9] mt-0.5">{subtitle}</p>
       )}
     </div>
-    {action && <div className="flex items-center gap-2">{action}</div>}
+    {action && <div className="flex items-center gap-2 flex-wrap">{action}</div>}
   </div>
 );
 
@@ -78,33 +78,24 @@ export const StockPill: React.FC<{ stock: number }> = ({ stock }) => {
 export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
   onNavigate,
 }) => {
-  const { medicines, sales, saleItems, cashEntries } = useStore();
+  const { medicines, sales, saleItems, cashEntries, purchases } = useStore();
 
   const dash = useMemo(() => {
     const startToday = jakartaDayStartMillis(0);
     const endToday = jakartaDayStartMillis(1);
     const startYesterday = jakartaDayStartMillis(-1);
-    const startMonth = jakartaMonthStartMillis();
 
     let todayIn = 0,
-      yesterdayIn = 0,
-      todayOut = 0,
-      monthIn = 0,
-      monthOut = 0;
+      yesterdayIn = 0;
 
     for (const e of cashEntries) {
       const t = parseISODate(e.createdAt)?.getTime();
       if (!t) continue;
       if (t >= startToday && t < endToday) {
         if (e.type === 'in' && e.source === 'sale') todayIn += e.amount;
-        else if (e.type === 'out') todayOut += e.amount;
       }
       if (t >= startYesterday && t < startToday) {
         if (e.type === 'in' && e.source === 'sale') yesterdayIn += e.amount;
-      }
-      if (t >= startMonth && t < endToday) {
-        if (e.type === 'in' && e.source === 'sale') monthIn += e.amount;
-        else if (e.type === 'out') monthOut += e.amount;
       }
     }
 
@@ -113,78 +104,62 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
       const d = daysUntilExpiry(m.expiryDate);
       return d !== null && d <= 30;
     }).length;
+    const creditPbfCount = purchases.filter((p) => p.paymentType === 'KREDIT').length;
 
     const todaySales = sales.filter((s) => {
       const t = parseISODate(s.createdAt)?.getTime() ?? -1;
       return t >= startToday && t < endToday;
     });
-    const monthSales = sales.filter((s) => {
-      const t = parseISODate(s.createdAt)?.getTime() ?? -1;
-      return t >= startMonth && t < endToday;
-    });
 
-    const medById = new Map(medicines.map((m) => [m.id, m]));
-    const todaySaleIds = new Set(todaySales.map((s) => s.id));
-    const medMap = new Map<string, { name: string; qty: number; revenue: number }>();
+    const recentSales = [...sales]
+      .sort(
+        (a, b) =>
+          (parseISODate(b.createdAt)?.getTime() ?? 0) -
+          (parseISODate(a.createdAt)?.getTime() ?? 0)
+      )
+      .slice(0, 4);
+
+    const itemsCountBySale = new Map<number, number>();
     for (const it of saleItems) {
-      if (!todaySaleIds.has(it.saleId)) continue;
-      const key = it.medicineId > 0 ? String(it.medicineId) : `name:${it.medicineName}`;
-      const displayName = medById.get(it.medicineId)?.name || it.medicineName;
-      const cur = medMap.get(key) || {
-        name: displayName,
-        qty: 0,
-        revenue: 0,
-      };
-      cur.qty += it.qty;
-      cur.revenue += it.subtotal;
-      medMap.set(key, cur);
+      itemsCountBySale.set(it.saleId, (itemsCountBySale.get(it.saleId) || 0) + 1);
     }
-    const bestSellers = Array.from(medMap.values())
-      .sort((a, b) => b.qty - a.qty)
-      .slice(0, 6);
 
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const offset = 6 - i;
       const dStart = jakartaDayStartMillis(-offset);
       const dEnd = dStart + 86_400_000;
-      let inc = 0,
-        exp = 0;
+      let inc = 0;
       for (const e of cashEntries) {
         const t = parseISODate(e.createdAt)?.getTime();
         if (!t || t < dStart || t >= dEnd) continue;
         if (e.type === 'in' && e.source === 'sale') inc += e.amount;
-        else if (e.type === 'out') exp += e.amount;
       }
       const d = new Date(dStart);
       const label = new Intl.DateTimeFormat('id-ID', {
         timeZone: 'Asia/Jakarta',
         weekday: 'short',
       }).format(d);
-      return { label, inc, exp };
+      return { label, inc, isToday: offset === 0 };
     });
+
+    const total7Days = last7Days.reduce((sum, d) => sum + d.inc, 0);
 
     return {
       todayIn,
       yesterdayIn,
-      todayOut,
-      todayProfit: todayIn - todayOut,
-      monthIn,
-      monthOut,
-      monthProfit: monthIn - monthOut,
       lowStockCount,
       expiringCount,
+      creditPbfCount,
       totalSalesToday: todaySales.length,
-      totalSalesMonth: monthSales.length,
-      bestSellers,
       last7Days,
-      recentSales: todaySales.slice(0, 5),
+      total7Days,
+      avg7Days: Math.round(total7Days / 7),
+      recentSales,
+      itemsCountBySale,
     };
-  }, [medicines, sales, saleItems, cashEntries]);
+  }, [medicines, sales, saleItems, cashEntries, purchases]);
 
-  const maxBar = Math.max(
-    1,
-    ...dash.last7Days.map((d) => Math.max(d.inc, d.exp))
-  );
+  const maxBar = Math.max(1, ...dash.last7Days.map((d) => d.inc));
 
   const [chartReady, setChartReady] = useState(false);
   useEffect(() => {
@@ -192,158 +167,279 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
     return () => cancelAnimationFrame(id);
   }, []);
 
+  const diffYesterday = dash.todayIn - dash.yesterdayIn;
+  const totalAlerts = dash.lowStockCount + dash.expiringCount + dash.creditPbfCount;
+  const avgTicket = dash.totalSalesToday > 0 ? Math.round(dash.todayIn / dash.totalSalesToday) : 0;
+
   return (
-    <div className="space-y-5">
-      {/* Hero Card */}
-      <div className="rounded-3xl bg-[#0B1526] text-white p-6 border border-white/10 shadow-lg">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-wider text-[#9FCAFF] font-semibold">
-              Pemasukan Penjualan Hari Ini
+    <div className="space-y-4">
+      {/* Top Bar: Ringkasan & Aksi Cepat */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-[#1C1917] dark:text-white">
+            Ringkasan Apotek
+          </h1>
+          <p className="text-xs text-[#78716C] dark:text-[#93B5A9]">
+            {dash.totalSalesToday} transaksi hari ini • Kemarin {formatIDR(dash.yesterdayIn)}
+          </p>
+        </div>
+        <button
+          onClick={() => onNavigate('kasir')}
+          className="px-4 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm transition"
+        >
+          <ShoppingBag className="w-4 h-4" /> Buka Kasir
+        </button>
+      </div>
+
+      {/* 2-Card KPI Strip: Penjualan Hari Ini & Transaksi Hari Ini ONLY */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[#78716C] dark:text-[#93B5A9] truncate">
+              Penjualan Hari Ini
             </p>
-            <p className="text-3xl sm:text-4xl font-extrabold mt-1">
-              <AnimatedNumber value={dash.todayIn} format={formatIDR} />
-            </p>
-            <p className="text-xs text-white/70 mt-1">
-              Kemarin: {formatIDR(dash.yesterdayIn)} • {dash.totalSalesToday} transaksi hari ini
-            </p>
+            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#DCFCE7] text-[#166534] dark:bg-[#15803D]/30 dark:text-[#86EFAC]">
+              {diffYesterday >= 0 ? 'Naik' : 'Turun'}
+            </span>
           </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => onNavigate('kasir')}
-              className="px-4 py-2.5 rounded-2xl bg-[#0061A4] hover:bg-[#00497D] text-white font-bold text-sm flex items-center gap-2 transition"
-            >
-              <ShoppingBag className="w-4 h-4" /> Buka Kasir
-            </button>
-            <button
-              onClick={() => onNavigate('laba')}
-              className="px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm flex items-center gap-2 transition"
-            >
-              <TrendingUp className="w-4 h-4" /> Laporan Laba
-            </button>
-          </div>
+          <p className="text-lg sm:text-2xl font-extrabold mt-1.5 tabular-nums text-[#1C1917] dark:text-white truncate">
+            <AnimatedNumber value={dash.todayIn} format={formatIDR} />
+          </p>
+          <p className="text-[11px] mt-1 text-[#78716C] dark:text-[#93B5A9] truncate">
+            {diffYesterday >= 0 ? '+' : ''}
+            {formatCompactIDR(diffYesterday)} vs kemarin
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-white/10">
-          <div>
-            <span className="text-xs text-white/60">Pengeluaran Hari Ini</span>
-            <p className="text-base font-bold text-red-300">
-              <AnimatedNumber value={dash.todayOut} format={formatIDR} />
+        <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[#78716C] dark:text-[#93B5A9] truncate">
+              Transaksi Hari Ini
             </p>
+            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E0F2FE] text-[#0369A1] dark:bg-[#0369A1]/30 dark:text-[#7DD3FC]">
+              Struk
+            </span>
           </div>
-          <div>
-            <span className="text-xs text-white/60">Selisih Kas Hari Ini</span>
-            <p className="text-base font-bold text-[#7EDC9A]">
-              <AnimatedNumber value={dash.todayProfit} format={formatIDR} />
-            </p>
-          </div>
-          <div>
-            <span className="text-xs text-white/60">Penjualan Bulan Ini</span>
-            <p className="text-base font-bold text-white">
-              <AnimatedNumber value={dash.monthIn} format={formatIDR} /> ({dash.totalSalesMonth}x)
-            </p>
-          </div>
-          <div>
-            <span className="text-xs text-white/60">Total Jenis Obat</span>
-            <p className="text-base font-bold text-[#9FCAFF]">
-              <AnimatedNumber value={medicines.length} /> Obat
-            </p>
-          </div>
+          <p className="text-lg sm:text-2xl font-extrabold mt-1.5 tabular-nums text-[#1C1917] dark:text-white">
+            <AnimatedNumber value={dash.totalSalesToday} /> Struk
+          </p>
+          <p className="text-[11px] mt-1 text-[#78716C] dark:text-[#93B5A9] truncate">
+            Rata-rata {formatCompactIDR(avgTicket)} / struk
+          </p>
         </div>
       </div>
 
-      {/* Warning Banners */}
-      {(dash.lowStockCount > 0 || dash.expiringCount > 0) && (
-        <div
-          onClick={() => onNavigate('pengingat')}
-          className="cursor-pointer rounded-2xl bg-amber-500/15 border border-amber-500/30 p-4 flex items-center justify-between hover:bg-amber-500/20 transition"
-        >
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
+      {/* Main Content: 7-col Sales Chart with Numbers + 5-col Transaksi Terbaru & Pengingat Penting */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 sm:p-5 shadow-xs min-w-0">
+          <div className="flex items-center justify-between gap-2 mb-3">
             <div>
-              <p className="font-bold text-sm">Perhatian Stok & Kadaluarsa</p>
-              <p className="text-xs opacity-80">
-                {dash.lowStockCount} obat stok rendah/habis • {dash.expiringCount} obat mendekati/sudah kadaluarsa (≤30 hari)
+              <h3 className="font-bold text-sm sm:text-base text-[#1C1917] dark:text-white">
+                Penjualan 7 Hari Terakhir
+              </h3>
+              <p className="text-[11px] text-[#78716C] dark:text-[#93B5A9]">
+                Total omzet harian beserta angka nominal
               </p>
             </div>
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#DCFCE7] text-[#166534] dark:bg-[#15803D]/30 dark:text-[#86EFAC] shrink-0">
+              7 Hari
+            </span>
           </div>
-          <span className="text-xs font-bold text-amber-500">Lihat Pengingat →</span>
-        </div>
-      )}
 
-      {/* 7-day chart & Today's Best Sellers */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5">
-          <h3 className="font-bold text-base mb-4">Arus Kas 7 Hari Terakhir</h3>
-          <div className="flex items-end justify-between gap-2 h-40 pt-4">
-            {dash.last7Days.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full flex justify-center items-end gap-1 h-28">
+          <div className="pt-4">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 items-end h-44 sm:h-52 border-b border-[#E7E3D8] dark:border-[#244C41] pb-2">
+              {dash.last7Days.map((d, i) => (
+                <div key={i} className="flex flex-col items-center justify-end h-full gap-1.5 min-w-0">
+                  <span className="text-[9.5px] sm:text-[11px] font-bold text-[#1C1917] dark:text-white tabular-nums whitespace-nowrap">
+                    {d.inc > 0 ? formatCompactIDR(d.inc) : '0'}
+                  </span>
                   <div
-                    title={`Masuk: ${formatIDR(d.inc)}`}
+                    title={`${d.label}: ${formatIDR(d.inc)}`}
                     style={{
-                      height: chartReady ? `${Math.max(6, (d.inc / maxBar) * 100)}%` : '0%',
+                      height: chartReady ? `${Math.max(4, (d.inc / maxBar) * 78)}%` : '0%',
                       transition: 'height 620ms cubic-bezier(0.22, 1, 0.36, 1)',
                       transitionDelay: `${i * 55}ms`,
                     }}
-                    className="w-3 sm:w-4 bg-[#0061A4] dark:bg-[#9FCAFF] rounded-t"
-                  />
-                  <div
-                    title={`Keluar: ${formatIDR(d.exp)}`}
-                    style={{
-                      height: chartReady ? `${Math.max(6, (d.exp / maxBar) * 100)}%` : '0%',
-                      transition: 'height 620ms cubic-bezier(0.22, 1, 0.36, 1)',
-                      transitionDelay: `${i * 55 + 40}ms`,
-                    }}
-                    className="w-3 sm:w-4 bg-[#BA1A1A] rounded-t opacity-80"
+                    className={`w-full max-w-[40px] rounded-t-lg ${
+                      d.isToday
+                        ? 'bg-gradient-to-b from-[#22C55E] to-[#15803D]'
+                        : 'bg-gradient-to-b from-[#86EFAC] to-[#4ADE80] dark:from-[#4ADE80]/80 dark:to-[#15803D]/80'
+                    }`}
                   />
                 </div>
-                <span className="text-[11px] opacity-75">{d.label}</span>
-              </div>
-            ))}
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 mt-2 text-center">
+              {dash.last7Days.map((d, i) => (
+                <span
+                  key={i}
+                  className={`text-[10px] sm:text-[11.5px] font-semibold ${
+                    d.isToday
+                      ? 'text-[#166534] dark:text-[#86EFAC] font-bold'
+                      : 'text-[#78716C] dark:text-[#93B5A9]'
+                  }`}
+                >
+                  {d.label}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center justify-center gap-6 mt-3 text-xs opacity-75">
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-[#0061A4] dark:bg-[#9FCAFF]" /> Penjualan
+
+          <div className="mt-3.5 pt-3 border-t border-dashed border-[#E7E3D8] dark:border-[#244C41] flex flex-wrap justify-between gap-2 text-xs text-[#78716C] dark:text-[#93B5A9]">
+            <span>
+              Total 7 Hari:{' '}
+              <strong className="text-[#1C1917] dark:text-white tabular-nums">
+                {formatIDR(dash.total7Days)}
+              </strong>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-[#BA1A1A]" /> Pengeluaran
+            <span>
+              Rata-rata / Hari:{' '}
+              <strong className="text-[#1C1917] dark:text-white tabular-nums">
+                {formatIDR(dash.avg7Days)}
+              </strong>
             </span>
           </div>
         </div>
 
-        <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-base">Obat Terjual Hari Ini</h3>
-            <button
-              onClick={() => onNavigate('riwayat')}
-              className="text-xs font-bold text-[#0061A4] dark:text-[#9FCAFF]"
-            >
-              Riwayat Transaksi →
-            </button>
-          </div>
-          {dash.bestSellers.length === 0 ? (
-            <p className="text-sm opacity-60 py-8 text-center">
-              Belum ada penjualan hari ini.
-            </p>
-          ) : (
-            <div className="space-y-2.5">
-              {dash.bestSellers.map((b, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-3 rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F]"
-                >
-                  <div>
-                    <p className="font-bold text-sm">{b.name}</p>
-                    <p className="text-xs opacity-70">{b.qty} unit terjual</p>
-                  </div>
-                  <p className="font-bold text-sm text-[#0061A4] dark:text-[#9FCAFF]">
-                    {formatIDR(b.revenue)}
-                  </p>
-                </div>
-              ))}
+        {/* Right Stack: Transaksi Terbaru ABOVE Pengingat Penting */}
+        <div className="lg:col-span-5 space-y-4 min-w-0">
+          {/* 1. Transaksi Terbaru */}
+          <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 sm:p-5 shadow-xs">
+            <div className="flex items-center justify-between mb-3 gap-2">
+              <div>
+                <h3 className="font-bold text-sm text-[#1C1917] dark:text-white">
+                  Transaksi Terbaru
+                </h3>
+                <p className="text-[11px] text-[#78716C] dark:text-[#93B5A9]">
+                  {dash.recentSales.length} penjualan terakhir
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigate('riwayat')}
+                className="text-xs font-bold text-[#15803D] dark:text-[#86EFAC] hover:underline shrink-0"
+              >
+                Lihat Semua →
+              </button>
             </div>
-          )}
+            {dash.recentSales.length === 0 ? (
+              <p className="text-xs text-[#78716C] dark:text-[#93B5A9] py-4 text-center">
+                Belum ada transaksi.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {dash.recentSales.map((s) => {
+                  const itemCount = dash.itemsCountBySale.get(s.id) || 0;
+                  const payTone =
+                    s.paymentMethod === 'QRIS'
+                      ? 'bg-[#E0F2FE] text-[#0369A1]'
+                      : s.paymentMethod === 'Transfer'
+                      ? 'bg-[#FEF3C7] text-[#B45309]'
+                      : 'bg-[#DCFCE7] text-[#166534]';
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => onNavigate('riwayat')}
+                      className="cursor-pointer rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41] px-3 py-2.5 flex items-center justify-between gap-2.5 hover:border-[#15803D]/50 transition"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs text-[#1C1917] dark:text-white truncate">
+                          {s.invoiceNo}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[#78716C] dark:text-[#93B5A9] flex-wrap">
+                          <span>{formatDateTimeID(s.createdAt)}</span>
+                          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${payTone}`}>
+                            {s.paymentMethod === 'Tunai' ? 'Cash' : s.paymentMethod}
+                          </span>
+                          {itemCount > 0 && <span>• {itemCount} item</span>}
+                        </div>
+                      </div>
+                      <span className="font-extrabold text-xs sm:text-sm text-[#1C1917] dark:text-white tabular-nums shrink-0">
+                        {formatIDR(s.total)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 2. Pengingat Penting (High-contrast rows on white background) */}
+          <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 sm:p-5 shadow-xs">
+            <div className="flex items-center justify-between mb-3 gap-2">
+              <div>
+                <h3 className="font-bold text-sm text-[#1C1917] dark:text-white">
+                  Pengingat Penting
+                </h3>
+                <p className="text-[11px] text-[#78716C] dark:text-[#93B5A9]">
+                  Stok menipis, kadaluarsa & tagihan
+                </p>
+              </div>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  totalAlerts > 0
+                    ? 'bg-[#FEE2E2] text-[#DC2626]'
+                    : 'bg-[#DCFCE7] text-[#166534]'
+                }`}
+              >
+                {totalAlerts} info
+              </span>
+            </div>
+
+            {totalAlerts === 0 ? (
+              <div className="alert-row-info rounded-xl px-3 py-2.5 flex items-center gap-2 text-xs font-semibold">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>Semua stok, ED, dan faktur dalam kondisi aman.</span>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {dash.expiringCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('pengingat')}
+                    className="w-full text-left alert-row-danger rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs font-semibold transition hover:opacity-90"
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <span className="truncate">
+                        {dash.expiringCount} obat kadaluarsa / ED ≤ 30 hari
+                      </span>
+                    </span>
+                    <span className="font-extrabold shrink-0">Cek →</span>
+                  </button>
+                )}
+                {dash.lowStockCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('pengingat')}
+                    className="w-full text-left alert-row-warn rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs font-semibold transition hover:opacity-90"
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      <Package className="w-4 h-4 shrink-0" />
+                      <span className="truncate">
+                        {dash.lowStockCount} obat stok menipis / habis (&lt; 10)
+                      </span>
+                    </span>
+                    <span className="font-extrabold shrink-0">Cek →</span>
+                  </button>
+                )}
+                {dash.creditPbfCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('pbf')}
+                    className="w-full text-left alert-row-info rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs font-semibold transition hover:opacity-90"
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      <TrendingUp className="w-4 h-4 shrink-0" />
+                      <span className="truncate">
+                        {dash.creditPbfCount} faktur PBF kredit belum lunas
+                      </span>
+                    </span>
+                    <span className="font-extrabold shrink-0">Lihat →</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -535,7 +631,7 @@ export const StokScreen: React.FC = () => {
             </button>
             <button
               onClick={openAdd}
-              className="px-4 py-2 rounded-xl bg-[#0061A4] hover:bg-[#00497D] text-white text-xs font-bold flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" /> Tambah Obat
             </button>
@@ -544,7 +640,7 @@ export const StokScreen: React.FC = () => {
       />
 
       {msg && (
-        <div className="mb-4 p-3 rounded-2xl bg-[#0061A4]/15 border border-[#0061A4]/30 text-sm flex items-center justify-between">
+        <div className="mb-4 p-3 rounded-2xl bg-[#15803D]/15 border border-[#15803D]/30 text-sm flex items-center justify-between">
           <span>{msg}</span>
           <button onClick={() => setMsg(null)} className="text-xs font-bold">
             Tutup
@@ -561,13 +657,13 @@ export const StokScreen: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari nama obat, kategori, atau scan barcode..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] text-sm focus:outline-none focus:ring-2 focus:ring-[#0061A4]"
+            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#15803D]"
           />
         </div>
         <select
           value={catFilter}
           onChange={(e) => setCatFilter(e.target.value)}
-          className="px-3.5 py-2.5 rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] text-sm font-medium"
+          className="px-3.5 py-2.5 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] text-sm font-medium"
         >
           <option value="Semua">Semua Kategori</option>
           {CATEGORIES.map((c) => (
@@ -576,7 +672,7 @@ export const StokScreen: React.FC = () => {
             </option>
           ))}
         </select>
-        <div className="flex rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] p-1 text-xs font-bold">
+        <div className="flex rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] p-1 text-xs font-bold">
           {(
             [
               ['ALL', 'Semua'],
@@ -588,7 +684,7 @@ export const StokScreen: React.FC = () => {
               key={k}
               onClick={() => setStockFilter(k)}
               className={`px-3 py-1.5 rounded-xl transition ${
-                stockFilter === k ? 'bg-[#0061A4] text-white' : 'opacity-70'
+                stockFilter === k ? 'bg-[#15803D] text-white' : 'opacity-70'
               }`}
             >
               {lbl}
@@ -597,17 +693,17 @@ export const StokScreen: React.FC = () => {
         </div>
         <button
           onClick={() => setSortAz(!sortAz)}
-          className="px-3.5 py-2.5 rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] text-xs font-bold"
+          className="px-3.5 py-2.5 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] text-xs font-bold"
         >
           Urut: {sortAz ? 'A-Z' : 'Z-A'}
         </button>
       </div>
 
       {/* Desktop Table / Card List */}
-      <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] overflow-hidden">
+      <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#E1E2E8] dark:bg-[#272A2F] text-xs uppercase opacity-75">
+            <thead className="bg-[#E1E2E8] dark:bg-[#0F241E] text-xs uppercase opacity-75">
               <tr>
                 <th className="py-3.5 px-4">Nama Obat</th>
                 <th className="py-3.5 px-3">Kategori / Satuan</th>
@@ -648,7 +744,7 @@ export const StokScreen: React.FC = () => {
                       <td className="py-3 px-3 text-right opacity-80">
                         {m.buyPrice > 0 ? formatIDR(m.buyPrice) : '-'}
                       </td>
-                      <td className="py-3 px-3 text-right font-bold text-[#0061A4] dark:text-[#9FCAFF]">
+                      <td className="py-3 px-3 text-right font-bold text-[#15803D] dark:text-[#86EFAC]">
                         {formatIDR(m.sellPrice)}
                       </td>
                       <td className="py-3 px-3 text-right opacity-80">
@@ -714,7 +810,7 @@ export const StokScreen: React.FC = () => {
       {/* Add/Edit Medicine Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-[#F8F9FF] dark:bg-[#1D2024] rounded-3xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#F8F9FF] dark:bg-[#142E27] rounded-3xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-extrabold">
                 {editing ? 'Ubah Data Obat' : 'Tambah Obat Baru'}
@@ -730,7 +826,7 @@ export const StokScreen: React.FC = () => {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                   placeholder="Contoh: Paracetamol 500mg"
                 />
               </div>
@@ -740,7 +836,7 @@ export const StokScreen: React.FC = () => {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c} value={c}>
@@ -754,7 +850,7 @@ export const StokScreen: React.FC = () => {
                   <select
                     value={unit}
                     onChange={(e) => setUnit(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                   >
                     {UNITS.map((u) => (
                       <option key={u} value={u}>
@@ -772,7 +868,7 @@ export const StokScreen: React.FC = () => {
                     min="0"
                     value={buyPrice}
                     onChange={(e) => setBuyPrice(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                     placeholder="0"
                   />
                 </div>
@@ -784,7 +880,7 @@ export const StokScreen: React.FC = () => {
                     min="1"
                     value={sellPrice}
                     onChange={(e) => setSellPrice(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                     placeholder="10000"
                   />
                 </div>
@@ -795,7 +891,7 @@ export const StokScreen: React.FC = () => {
                     min="0"
                     value={wholesalePrice}
                     onChange={(e) => setWholesalePrice(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                     placeholder="0"
                   />
                 </div>
@@ -809,7 +905,7 @@ export const StokScreen: React.FC = () => {
                     min="0"
                     value={stock}
                     onChange={(e) => setStock(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                   />
                 </div>
                 <div>
@@ -818,7 +914,7 @@ export const StokScreen: React.FC = () => {
                     type="date"
                     value={expiryDate}
                     onChange={(e) => setExpiryDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                   />
                 </div>
                 <div>
@@ -826,7 +922,7 @@ export const StokScreen: React.FC = () => {
                   <input
                     value={barcode}
                     onChange={(e) => setBarcode(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                     placeholder="Opsional"
                   />
                 </div>
@@ -841,7 +937,7 @@ export const StokScreen: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-[#0061A4] text-white font-bold"
+                  className="px-5 py-2.5 rounded-xl bg-[#15803D] text-white font-bold"
                 >
                   Simpan Obat
                 </button>
@@ -955,7 +1051,7 @@ export const ReceiptModal: React.FC<{
                 onClick={() => selectPaper('58')}
                 className={`px-3 py-1 rounded-md ${
                   paperWidth === '58'
-                    ? 'bg-[#0061A4] text-white'
+                    ? 'bg-[#15803D] text-white'
                     : 'text-gray-700'
                 }`}
               >
@@ -966,7 +1062,7 @@ export const ReceiptModal: React.FC<{
                 onClick={() => selectPaper('80')}
                 className={`px-3 py-1 rounded-md ${
                   paperWidth === '80'
-                    ? 'bg-[#0061A4] text-white'
+                    ? 'bg-[#15803D] text-white'
                     : 'text-gray-700'
                 }`}
               >
@@ -977,7 +1073,7 @@ export const ReceiptModal: React.FC<{
           <div className="flex gap-2">
             <button
               onClick={() => window.print()}
-              className="flex-1 py-2.5 rounded-xl bg-[#0061A4] text-white font-bold text-sm flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-xl bg-[#15803D] text-white font-bold text-sm flex items-center justify-center gap-2"
             >
               <Printer className="w-4 h-4" /> Cetak Struk
             </button>
@@ -1143,7 +1239,7 @@ export const KasirScreen: React.FC = () => {
                 }
               }}
               placeholder="Cari obat atau scan barcode lalu tekan Enter..."
-              className="w-full pl-10 pr-14 py-2.5 rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] text-sm focus:outline-none focus:ring-2 focus:ring-[#0061A4]"
+              className="w-full pl-10 pr-14 py-2.5 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#15803D]"
             />
             <kbd className="hidden sm:inline-block absolute right-3 top-2.5 px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[10px] font-bold opacity-70">
               F2
@@ -1160,15 +1256,15 @@ export const KasirScreen: React.FC = () => {
                   onClick={() => addToCart(m)}
                   className={`text-left p-4 rounded-2xl transition flex flex-col justify-between border ${
                     inCart > 0
-                      ? 'bg-[#0061A4]/15 border-[#0061A4]'
-                      : 'bg-[#ECEEF4] dark:bg-[#1D2024] border-transparent hover:border-[#0061A4]/40'
+                      ? 'bg-[#15803D]/15 border-[#15803D]'
+                      : 'bg-[#FFFFFF] dark:bg-[#142E27] border-transparent hover:border-[#15803D]/40'
                   } ${m.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-bold text-sm">{m.name}</p>
                       {inCart > 0 && (
-                        <span className="px-2 py-0.5 rounded-full bg-[#0061A4] text-white text-xs font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-[#15803D] text-white text-xs font-bold">
                           {inCart}x
                         </span>
                       )}
@@ -1179,7 +1275,7 @@ export const KasirScreen: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between mt-3 pt-2 border-t border-black/5 dark:border-white/5">
                     <div>
-                      <p className="font-extrabold text-sm text-[#0061A4] dark:text-[#9FCAFF]">
+                      <p className="font-extrabold text-sm text-[#15803D] dark:text-[#86EFAC]">
                         {formatIDR(m.sellPrice)}
                       </p>
                       {m.wholesalePrice > 0 && (
@@ -1198,7 +1294,7 @@ export const KasirScreen: React.FC = () => {
 
         {/* Cart & Payment Panel */}
         <div className="lg:col-span-5">
-          <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5 sticky top-4 space-y-4">
+          <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 sticky top-4 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-extrabold text-base">
                 Keranjang ({cart.reduce((a, c) => a + c.qty, 0)} item)
@@ -1229,7 +1325,7 @@ export const KasirScreen: React.FC = () => {
                   return (
                     <div
                       key={c.medicineId}
-                      className="p-3 rounded-2xl bg-[#E6E8EE] dark:bg-[#272A2F] space-y-2"
+                      className="p-3 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] space-y-2"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -1249,7 +1345,7 @@ export const KasirScreen: React.FC = () => {
                               onClick={() => c.useWholesale && toggleWholesale(m.id)}
                               className={`px-2.5 py-1 rounded-lg ${
                                 !c.useWholesale
-                                  ? 'bg-[#0061A4] text-white'
+                                  ? 'bg-[#15803D] text-white'
                                   : 'bg-black/10 dark:bg-white/10'
                               }`}
                             >
@@ -1259,7 +1355,7 @@ export const KasirScreen: React.FC = () => {
                               onClick={() => !c.useWholesale && toggleWholesale(m.id)}
                               className={`px-2.5 py-1 rounded-lg ${
                                 c.useWholesale
-                                  ? 'bg-[#0061A4] text-white'
+                                  ? 'bg-[#15803D] text-white'
                                   : 'bg-black/10 dark:bg-white/10'
                               }`}
                             >
@@ -1296,7 +1392,7 @@ export const KasirScreen: React.FC = () => {
             <div className="border-t border-black/10 dark:border-white/10 pt-4 space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-bold opacity-75">Total Tagihan</span>
-                <span className="text-2xl font-extrabold text-[#0061A4] dark:text-[#9FCAFF]">
+                <span className="text-2xl font-extrabold text-[#15803D] dark:text-[#86EFAC]">
                   {formatIDR(cartTotal)}
                 </span>
               </div>
@@ -1314,8 +1410,8 @@ export const KasirScreen: React.FC = () => {
                       onClick={() => setPaymentMethod(pm)}
                       className={`py-2 rounded-xl text-xs font-bold transition ${
                         paymentMethod === pm
-                          ? 'bg-[#0061A4] text-white'
-                          : 'bg-[#E6E8EE] dark:bg-[#272A2F]'
+                          ? 'bg-[#15803D] text-white'
+                          : 'bg-[#FAF8F4] dark:bg-[#0F241E]'
                       }`}
                     >
                       {pm}
@@ -1335,7 +1431,7 @@ export const KasirScreen: React.FC = () => {
                     value={formatThousands(amountPaidStr)}
                     onChange={(e) => setAmountPaidStr(e.target.value.replace(/\D/g, ''))}
                     placeholder={formatThousands(String(cartTotal))}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#E6E8EE] dark:bg-[#272A2F] font-bold text-sm"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] font-bold text-sm"
                   />
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {[cartTotal, 20000, 50000, 100000]
@@ -1345,7 +1441,7 @@ export const KasirScreen: React.FC = () => {
                           key={nom}
                           type="button"
                           onClick={() => setAmountPaidStr(String(nom))}
-                          className="px-2.5 py-1 rounded-lg bg-[#E6E8EE] dark:bg-[#272A2F] text-xs font-bold hover:bg-[#0061A4] hover:text-white transition"
+                          className="px-2.5 py-1 rounded-lg bg-[#FAF8F4] dark:bg-[#0F241E] text-xs font-bold hover:bg-[#15803D] hover:text-white transition"
                         >
                           {nom === cartTotal ? 'Uang Pas' : formatCompactIDR(nom)}
                         </button>
@@ -1364,7 +1460,7 @@ export const KasirScreen: React.FC = () => {
               <button
                 disabled={cart.length === 0 || paidNum < cartTotal}
                 onClick={handleCheckout}
-                className="w-full py-3.5 rounded-2xl bg-[#0061A4] hover:bg-[#00497D] disabled:opacity-40 text-white font-extrabold text-sm flex items-center justify-center gap-2 transition"
+                className="w-full py-3.5 rounded-2xl bg-[#15803D] hover:bg-[#166534] disabled:opacity-40 text-white font-extrabold text-sm flex items-center justify-center gap-2 transition"
               >
                 <CheckCircle2 className="w-5 h-5" /> Bayar & Cetak Struk
                 <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-white/20 text-[10px] font-bold">
