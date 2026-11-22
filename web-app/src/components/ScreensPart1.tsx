@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { useFeedback } from './Feedback';
+import { AnimatedNumber } from './AnimatedNumber';
+import { exportRowsToXlsx, readSpreadsheetMatrix } from '../excel';
 import {
   CATEGORIES,
   UNITS,
@@ -184,6 +186,12 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
     ...dash.last7Days.map((d) => Math.max(d.inc, d.exp))
   );
 
+  const [chartReady, setChartReady] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setChartReady(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   return (
     <div className="space-y-5">
       {/* Hero Card */}
@@ -194,7 +202,7 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
               Pemasukan Penjualan Hari Ini
             </p>
             <p className="text-3xl sm:text-4xl font-extrabold mt-1">
-              {formatIDR(dash.todayIn)}
+              <AnimatedNumber value={dash.todayIn} format={formatIDR} />
             </p>
             <p className="text-xs text-white/70 mt-1">
               Kemarin: {formatIDR(dash.yesterdayIn)} • {dash.totalSalesToday} transaksi hari ini
@@ -219,23 +227,27 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-white/10">
           <div>
             <span className="text-xs text-white/60">Pengeluaran Hari Ini</span>
-            <p className="text-base font-bold text-red-300">{formatIDR(dash.todayOut)}</p>
+            <p className="text-base font-bold text-red-300">
+              <AnimatedNumber value={dash.todayOut} format={formatIDR} />
+            </p>
           </div>
           <div>
             <span className="text-xs text-white/60">Selisih Kas Hari Ini</span>
             <p className="text-base font-bold text-[#7EDC9A]">
-              {formatIDR(dash.todayProfit)}
+              <AnimatedNumber value={dash.todayProfit} format={formatIDR} />
             </p>
           </div>
           <div>
             <span className="text-xs text-white/60">Penjualan Bulan Ini</span>
             <p className="text-base font-bold text-white">
-              {formatIDR(dash.monthIn)} ({dash.totalSalesMonth}x)
+              <AnimatedNumber value={dash.monthIn} format={formatIDR} /> ({dash.totalSalesMonth}x)
             </p>
           </div>
           <div>
             <span className="text-xs text-white/60">Total Jenis Obat</span>
-            <p className="text-base font-bold text-[#9FCAFF]">{medicines.length} Obat</p>
+            <p className="text-base font-bold text-[#9FCAFF]">
+              <AnimatedNumber value={medicines.length} /> Obat
+            </p>
           </div>
         </div>
       </div>
@@ -269,12 +281,20 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
                 <div className="w-full flex justify-center items-end gap-1 h-28">
                   <div
                     title={`Masuk: ${formatIDR(d.inc)}`}
-                    style={{ height: `${Math.max(6, (d.inc / maxBar) * 100)}%` }}
+                    style={{
+                      height: chartReady ? `${Math.max(6, (d.inc / maxBar) * 100)}%` : '0%',
+                      transition: 'height 620ms cubic-bezier(0.22, 1, 0.36, 1)',
+                      transitionDelay: `${i * 55}ms`,
+                    }}
                     className="w-3 sm:w-4 bg-[#0061A4] dark:bg-[#9FCAFF] rounded-t"
                   />
                   <div
                     title={`Keluar: ${formatIDR(d.exp)}`}
-                    style={{ height: `${Math.max(6, (d.exp / maxBar) * 100)}%` }}
+                    style={{
+                      height: chartReady ? `${Math.max(6, (d.exp / maxBar) * 100)}%` : '0%',
+                      transition: 'height 620ms cubic-bezier(0.22, 1, 0.36, 1)',
+                      transitionDelay: `${i * 55 + 40}ms`,
+                    }}
                     className="w-3 sm:w-4 bg-[#BA1A1A] rounded-t opacity-80"
                   />
                 </div>
@@ -407,75 +427,66 @@ export const StokScreen: React.FC = () => {
     }
   };
 
-  const handleExportCSV = () => {
-    const headers = [
-      'Nama Obat',
-      'Kategori',
-      'Satuan',
-      'Harga Beli',
-      'Harga Jual Ecer',
-      'Harga Grosir',
-      'Stok',
-      'Kadaluarsa (YYYY-MM-DD)',
-      'Barcode',
-    ];
-    const lines = medicines.map((m) =>
-      [
-        `"${m.name.replace(/"/g, '""')}"`,
-        `"${m.category}"`,
-        `"${m.unit}"`,
-        m.buyPrice,
-        m.sellPrice,
-        m.wholesalePrice,
-        m.stock,
-        m.expiryDate || '',
-        m.barcode || '',
-      ].join(',')
+  const handleExportExcel = () => {
+    const rows = medicines.map((m) => ({
+      'Nama Obat': m.name,
+      Kategori: m.category,
+      Satuan: m.unit,
+      'Harga Beli': m.buyPrice,
+      'Harga Jual Ecer': m.sellPrice,
+      'Harga Grosir': m.wholesalePrice,
+      Stok: m.stock,
+      'Kadaluarsa (YYYY-MM-DD)': m.expiryDate || '',
+      Barcode: m.barcode || '',
+      'Nilai Stok (Rp)': m.buyPrice * m.stock,
+    }));
+    exportRowsToXlsx(
+      `stok-apotek-lestari-${dayKeyID()}.xlsx`,
+      'Stok Obat',
+      rows,
+      {
+        title: 'APOTEK LESTARI — LAPORAN STOK OBAT',
+        subtitle: `Dicetak: ${new Date().toLocaleString('id-ID')} | Total SKU: ${rows.length}`,
+        currencyColumns: ['Harga Beli', 'Harga Jual Ecer', 'Harga Grosir', 'Nilai Stok (Rp)'],
+        sumColumns: ['Stok', 'Nilai Stok (Rp)'],
+      }
     );
-    const csv = '\uFEFF' + [headers.join(','), ...lines].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `stok-apotek-lestari-${dayKeyID()}.csv`;
-    a.click();
   };
 
-  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportSpreadsheet = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const text = String(reader.result || '');
-        const lines = text.split(/\r?\n/).filter((l) => l.trim());
-        if (lines.length < 2) throw new Error('File CSV kosong');
-        const rows = lines.slice(1).map((line) => {
-          const cols = line
-            .split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
-            .map((c) => c.replace(/^"|"$/g, '').trim());
-          return {
-            name: cols[0] || '',
-            category: cols[1] || 'Umum',
-            unit: cols[2] || 'Strip',
-            buyPrice: parseInt(cols[3], 10) || 0,
-            sellPrice: parseInt(cols[4], 10) || 0,
-            wholesalePrice: parseInt(cols[5], 10) || 0,
-            stock: parseInt(cols[6], 10) || 0,
-            expiryDate: cols[7] || null,
-            barcode: cols[8] || null,
-          };
-        });
-        const res = bulkImportMedicines(rows);
-        setMsg(
-          `Impor CSV selesai: ${res.inserted} baru, ${res.updated} diperbarui, ${res.skipped} dilewati.`
-        );
-      } catch (err: any) {
-        notify('Gagal membaca CSV: ' + err.message, 'error');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
+    try {
+      const matrix = await readSpreadsheetMatrix(file);
+      if (matrix.length < 2) throw new Error('File kosong');
+      const headerIdx = matrix.findIndex(
+        (cols) => cols[0]?.trim().toLowerCase() === 'nama obat'
+      );
+      const dataRows = headerIdx >= 0 ? matrix.slice(headerIdx + 1) : matrix.slice(1);
+      const rows = dataRows
+        .filter((cols) => cols[0] && cols[0].trim().toUpperCase() !== 'TOTAL')
+        .map((cols) => ({
+        name: cols[0] || '',
+        category: cols[1] || 'Umum',
+        unit: cols[2] || 'Strip',
+        buyPrice: parseInt(cols[3], 10) || 0,
+        sellPrice: parseInt(cols[4], 10) || 0,
+        wholesalePrice: parseInt(cols[5], 10) || 0,
+        stock: parseInt(cols[6], 10) || 0,
+        expiryDate: cols[7] || null,
+        barcode: cols[8] || null,
+      }));
+      const res = bulkImportMedicines(rows);
+      setMsg(
+        `Impor selesai: ${res.inserted} baru, ${res.updated} diperbarui, ${res.skipped} dilewati.`
+      );
+    } catch (err: any) {
+      notify('Gagal membaca Excel/CSV: ' + err.message, 'error');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const filtered = useMemo(() => {
@@ -508,19 +519,19 @@ export const StokScreen: React.FC = () => {
         action={
           <>
             <label className="cursor-pointer px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-bold flex items-center gap-1.5">
-              <Upload className="w-4 h-4" /> Impor CSV
+              <Upload className="w-4 h-4" /> Impor Excel/CSV
               <input
                 type="file"
-                accept=".csv"
-                onChange={handleImportCSV}
+                accept=".xlsx,.xls,.csv"
+                onChange={handleImportSpreadsheet}
                 className="hidden"
               />
             </label>
             <button
-              onClick={handleExportCSV}
+              onClick={handleExportExcel}
               className="px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-bold flex items-center gap-1.5"
             >
-              <Download className="w-4 h-4" /> Ekspor CSV
+              <Download className="w-4 h-4" /> Ekspor Excel
             </button>
             <button
               onClick={openAdd}
@@ -850,74 +861,138 @@ export const ReceiptModal: React.FC<{
   sale: Sale;
   items: SaleItem[];
   onClose: () => void;
-}> = ({ sale, items, onClose }) => (
-  <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-    <div className="bg-white text-black rounded-3xl max-w-sm w-full p-6 shadow-2xl">
-      <div id="printable-receipt" className="text-xs font-mono space-y-2">
-        <div className="text-center border-b border-dashed border-gray-400 pb-2">
-          <h2 className="text-base font-extrabold tracking-wide">APOTEK LESTARI</h2>
-          <p className="text-[11px]">Struk Pembayaran Resmi</p>
-          <p className="text-[11px]">{formatDateTimeID(sale.createdAt)} WIB</p>
-          <p className="text-[11px] font-bold">{sale.invoiceNo}</p>
-        </div>
-        <div className="space-y-1.5 border-b border-dashed border-gray-400 pb-2">
-          {items.map((it, idx) => (
-            <div key={idx}>
-              <div className="font-bold">
-                {it.medicineName}{' '}
-                {it.priceType === 'GROSIR' && (
-                  <span className="text-[10px] font-normal">(GROSIR)</span>
-                )}
-              </div>
-              <div className="flex justify-between">
-                <span>
-                  {it.qty} {it.unit} x {formatIDR(it.price)}
-                </span>
-                <span className="font-bold">{formatIDR(it.subtotal)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="space-y-1 text-xs">
-          <div className="flex justify-between font-bold text-sm">
-            <span>TOTAL</span>
-            <span>{formatIDR(sale.total)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Metode Bayar</span>
-            <span>{sale.paymentMethod}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Dibayar</span>
-            <span>{formatIDR(sale.amountPaid)}</span>
-          </div>
-          <div className="flex justify-between font-bold">
-            <span>Kembalian</span>
-            <span>{formatIDR(sale.changeAmount)}</span>
-          </div>
-        </div>
-        <div className="text-center border-t border-dashed border-gray-400 pt-2 text-[11px]">
-          Terima kasih, semoga lekas sembuh!
-        </div>
-      </div>
+}> = ({ sale, items, onClose }) => {
+  const [paperWidth, setPaperWidth] = useState<'58' | '80'>(() =>
+    localStorage.getItem('apotek_receipt_paper') === '58' ? '58' : '80'
+  );
 
-      <div className="no-print flex gap-2 mt-5">
-        <button
-          onClick={() => window.print()}
-          className="flex-1 py-2.5 rounded-xl bg-[#0061A4] text-white font-bold text-sm flex items-center justify-center gap-2"
+  const selectPaper = (w: '58' | '80') => {
+    setPaperWidth(w);
+    localStorage.setItem('apotek_receipt_paper', w);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <style>{`@media print { @page { size: ${paperWidth}mm auto; margin: 0; } }`}</style>
+      <div className="bg-white text-black rounded-3xl max-w-sm w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
+        <div
+          id="printable-receipt"
+          data-paper={paperWidth}
+          className={`font-mono space-y-2 ${
+            paperWidth === '58' ? 'max-w-[220px] mx-auto text-[10px]' : 'text-xs'
+          }`}
         >
-          <Printer className="w-4 h-4" /> Cetak Struk
-        </button>
-        <button
-          onClick={onClose}
-          className="px-4 py-2.5 rounded-xl bg-gray-200 text-gray-800 font-bold text-sm"
-        >
-          Selesai
-        </button>
+          <div className="text-center border-b border-dashed border-gray-400 pb-2">
+            <img
+              src="/logo-512.jpg"
+              alt="Logo Apotek Lestari"
+              className={`mx-auto mb-1 object-contain grayscale contrast-125 ${
+                paperWidth === '58' ? 'w-10 h-10' : 'w-12 h-12'
+              }`}
+            />
+            <h2
+              className={`font-extrabold tracking-wide ${
+                paperWidth === '58' ? 'text-sm' : 'text-base'
+              }`}
+            >
+              APOTEK LESTARI
+            </h2>
+            <p className="text-[11px]">Struk Pembayaran Resmi</p>
+            <p className="text-[11px]">{formatDateTimeID(sale.createdAt)} WIB</p>
+            <p className="text-[11px] font-bold">{sale.invoiceNo}</p>
+          </div>
+          <div className="space-y-1.5 border-b border-dashed border-gray-400 pb-2">
+            {items.map((it, idx) => (
+              <div key={idx}>
+                <div className="font-bold">
+                  {it.medicineName}{' '}
+                  {it.priceType === 'GROSIR' && (
+                    <span className="text-[10px] font-normal">(GROSIR)</span>
+                  )}
+                </div>
+                <div className="flex justify-between">
+                  <span>
+                    {it.qty} {it.unit} x {formatIDR(it.price)}
+                  </span>
+                  <span className="font-bold">{formatIDR(it.subtotal)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-1">
+            <div
+              className={`flex justify-between font-bold ${
+                paperWidth === '58' ? 'text-xs' : 'text-sm'
+              }`}
+            >
+              <span>TOTAL</span>
+              <span>{formatIDR(sale.total)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Metode Bayar</span>
+              <span>{sale.paymentMethod}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Dibayar</span>
+              <span>{formatIDR(sale.amountPaid)}</span>
+            </div>
+            <div className="flex justify-between font-bold">
+              <span>Kembalian</span>
+              <span>{formatIDR(sale.changeAmount)}</span>
+            </div>
+          </div>
+          <div className="text-center border-t border-dashed border-gray-400 pt-2 text-[11px]">
+            Terima kasih, semoga lekas sembuh!
+          </div>
+        </div>
+
+        <div className="no-print mt-4 space-y-2.5">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="font-semibold text-gray-600">Ukuran Kertas:</span>
+            <div className="flex rounded-lg bg-gray-100 p-0.5 font-bold">
+              <button
+                type="button"
+                onClick={() => selectPaper('58')}
+                className={`px-3 py-1 rounded-md ${
+                  paperWidth === '58'
+                    ? 'bg-[#0061A4] text-white'
+                    : 'text-gray-700'
+                }`}
+              >
+                58mm
+              </button>
+              <button
+                type="button"
+                onClick={() => selectPaper('80')}
+                className={`px-3 py-1 rounded-md ${
+                  paperWidth === '80'
+                    ? 'bg-[#0061A4] text-white'
+                    : 'text-gray-700'
+                }`}
+              >
+                80mm
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => window.print()}
+              className="flex-1 py-2.5 rounded-xl bg-[#0061A4] text-white font-bold text-sm flex items-center justify-center gap-2"
+            >
+              <Printer className="w-4 h-4" /> Cetak Struk
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl bg-gray-200 text-gray-800 font-bold text-sm"
+            >
+              Selesai
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const formatThousands = (digits: string) =>
   digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';

@@ -1,0 +1,18 @@
+{
+  "name": "Apotek Lestari — Kasir & Stok",
+  "short_name": "Apotek Lestari",
+  "description": "Aplikasi kasir, manajemen stok obat, dan laporan apotek offline-ready.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111418",
+  "theme_color": "#0061A4",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "/logo-512.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

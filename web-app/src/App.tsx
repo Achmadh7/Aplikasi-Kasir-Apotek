@@ -108,9 +108,11 @@ const MainLayout: React.FC = () => {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="w-8 h-8 rounded-xl bg-[#0061A4] flex items-center justify-center font-extrabold text-sm shrink-0">
-            AL
-          </div>
+          <img
+            src="/logo-512.jpg"
+            alt="Logo Apotek Lestari"
+            className="w-8 h-8 rounded-xl object-cover shrink-0 bg-white"
+          />
           <div className="truncate">
             <p className="font-extrabold text-sm leading-tight truncate">
               {activeNav.label}
@@ -161,9 +163,11 @@ const MainLayout: React.FC = () => {
           {/* Brand Identity */}
           <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#0061A4] flex items-center justify-center font-extrabold text-lg">
-                AL
-              </div>
+              <img
+                src="/logo-512.jpg"
+                alt="Logo Apotek Lestari"
+                className="w-10 h-10 rounded-2xl object-cover shrink-0 bg-white"
+              />
               <div>
                 <h1 className="font-extrabold text-base leading-tight">
                   Apotek Lestari

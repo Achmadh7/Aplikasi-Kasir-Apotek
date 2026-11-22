@@ -24,6 +24,7 @@ import {
   pushSingleDoc,
   resetAllCloudData,
 } from './firebase';
+import { idbGet, idbSet } from './idb';
 
 export type SyncStatus = 'NONAKTIF' | 'BELUM_MASUK' | 'PROSES' | 'BERHASIL' | 'GAGAL';
 
@@ -41,34 +42,40 @@ interface LocalDB {
 
 const STORAGE_KEY = 'apotek_lestari_web_db_v1';
 
+const emptyDB = (): LocalDB => ({
+  medicines: [],
+  sales: [],
+  saleItems: [],
+  cashEntries: [],
+  purchases: [],
+  purchaseItems: [],
+  suppliers: [],
+  closedMonths: [],
+  lastSyncAt: 0,
+});
+
+function normalizeDB(parsed: any): LocalDB {
+  if (!parsed || typeof parsed !== 'object') return emptyDB();
+  return {
+    medicines: Array.isArray(parsed.medicines) ? parsed.medicines : [],
+    sales: Array.isArray(parsed.sales) ? parsed.sales : [],
+    saleItems: Array.isArray(parsed.saleItems) ? parsed.saleItems : [],
+    cashEntries: Array.isArray(parsed.cashEntries) ? parsed.cashEntries : [],
+    purchases: Array.isArray(parsed.purchases) ? parsed.purchases : [],
+    purchaseItems: Array.isArray(parsed.purchaseItems) ? parsed.purchaseItems : [],
+    suppliers: Array.isArray(parsed.suppliers) ? parsed.suppliers : [],
+    closedMonths: Array.isArray(parsed.closedMonths) ? parsed.closedMonths : [],
+    lastSyncAt: Number(parsed.lastSyncAt) || 0,
+  };
+}
+
 function loadLocalDB(): LocalDB {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) throw new Error('empty');
-    const parsed = JSON.parse(raw);
-    return {
-      medicines: Array.isArray(parsed.medicines) ? parsed.medicines : [],
-      sales: Array.isArray(parsed.sales) ? parsed.sales : [],
-      saleItems: Array.isArray(parsed.saleItems) ? parsed.saleItems : [],
-      cashEntries: Array.isArray(parsed.cashEntries) ? parsed.cashEntries : [],
-      purchases: Array.isArray(parsed.purchases) ? parsed.purchases : [],
-      purchaseItems: Array.isArray(parsed.purchaseItems) ? parsed.purchaseItems : [],
-      suppliers: Array.isArray(parsed.suppliers) ? parsed.suppliers : [],
-      closedMonths: Array.isArray(parsed.closedMonths) ? parsed.closedMonths : [],
-      lastSyncAt: Number(parsed.lastSyncAt) || 0,
-    };
+    if (!raw) return emptyDB();
+    return normalizeDB(JSON.parse(raw));
   } catch {
-    return {
-      medicines: [],
-      sales: [],
-      saleItems: [],
-      cashEntries: [],
-      purchases: [],
-      purchaseItems: [],
-      suppliers: [],
-      closedMonths: [],
-      lastSyncAt: 0,
-    };
+    return emptyDB();
   }
 }
 
@@ -151,6 +158,7 @@ const StoreContext = createContext<StoreContextType | null>(null);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [dbState, setDbState] = useState<LocalDB>(() => loadLocalDB());
+  const [idbReady, setIdbReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('BELUM_MASUK');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
@@ -159,12 +167,36 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const syncingRef = useRef(false);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dbState));
-    } catch (e) {
-      console.error('Failed saving local DB', e);
-    }
-  }, [dbState]);
+    let active = true;
+    (async () => {
+      try {
+        const saved = await idbGet<LocalDB>(STORAGE_KEY);
+        if (saved && active) {
+          const normalized = normalizeDB(saved);
+          dbRef.current = normalized;
+          setDbState(normalized);
+        } else if (localStorage.getItem(STORAGE_KEY)) {
+          // One-time migration from localStorage to IndexedDB
+          await idbSet(STORAGE_KEY, dbRef.current);
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch (e) {
+        console.error('Failed loading IndexedDB', e);
+      } finally {
+        if (active) setIdbReady(true);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!idbReady) return;
+    idbSet(STORAGE_KEY, dbState).catch((e) => {
+      console.error('Failed saving IndexedDB', e);
+    });
+  }, [dbState, idbReady]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {

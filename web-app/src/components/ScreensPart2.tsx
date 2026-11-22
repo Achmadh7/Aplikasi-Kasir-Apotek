@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../store';
 import { useFeedback } from './Feedback';
+import { exportRowsToXlsx } from '../excel';
 import {
   UNITS,
   Sale,
@@ -18,6 +19,7 @@ import {
   namaBulanIndonesia,
 } from '../types';
 import { PageHeader, StockPill, ReceiptModal } from './ScreensPart1';
+import { AnimatedNumber } from './AnimatedNumber';
 import {
   Plus,
   Trash2,
@@ -226,10 +228,10 @@ export const KeuanganScreen: React.FC = () => {
             </div>
             <div className="flex gap-4 text-xs font-bold">
               <span className="text-[#2E7D32] dark:text-[#7EDC9A]">
-                Masuk: {formatIDR(totals.totalIn)}
+                Masuk: <AnimatedNumber value={totals.totalIn} format={formatIDR} />
               </span>
               <span className="text-[#BA1A1A]">
-                Keluar: {formatIDR(totals.totalOut)}
+                Keluar: <AnimatedNumber value={totals.totalOut} format={formatIDR} />
               </span>
             </div>
           </div>
@@ -381,31 +383,40 @@ export const LabaScreen: React.FC = () => {
     };
   }, [medicines, sales, saleItems, cashEntries, period]);
 
-  const exportRekapCSV = () => {
-    const headers = [
-      'Nama Obat',
-      'Kategori',
-      'Qty Terjual',
-      'Omzet (Rp)',
-      'HPP (Rp)',
-      'Laba Kotor (Rp)',
-    ];
-    const rows = report.byMedicine.map((m) =>
-      [
-        `"${m.name.replace(/"/g, '""')}"`,
-        `"${m.category}"`,
-        m.qty,
-        m.revenue,
-        m.hpp,
-        m.revenue - m.hpp,
-      ].join(',')
+  const exportRekapExcel = () => {
+    const periodLabel =
+      period === 'today'
+        ? 'Hari Ini'
+        : period === 'month'
+          ? 'Bulan Ini'
+          : period === 'last30'
+            ? '30 Hari Terakhir'
+            : 'Semua Waktu';
+    const rows = report.byMedicine.map((m) => {
+      const laba = m.revenue - m.hpp;
+      return {
+        'Nama Obat': m.name,
+        Kategori: m.category,
+        'Qty Terjual': m.qty,
+        'Omzet (Rp)': m.revenue,
+        'HPP (Rp)': m.hpp,
+        'Laba Kotor (Rp)': laba,
+        'Margin (%)': m.revenue > 0 ? laba / m.revenue : 0,
+      };
+    });
+    exportRowsToXlsx(
+      `rekap-laba-apotek-${period}-${dayKeyID()}.xlsx`,
+      'Rekap Laba',
+      rows,
+      {
+        title: `APOTEK LESTARI — REKAP LABA & HPP (${periodLabel.toUpperCase()})`,
+        subtitle: `Dicetak: ${new Date().toLocaleString('id-ID')} | Produk Terjual: ${rows.length}`,
+        currencyColumns: ['Omzet (Rp)', 'HPP (Rp)', 'Laba Kotor (Rp)'],
+        percentColumns: ['Margin (%)'],
+        sumColumns: ['Qty Terjual', 'Omzet (Rp)', 'HPP (Rp)', 'Laba Kotor (Rp)'],
+        totalRatioColumns: { 'Margin (%)': ['Laba Kotor (Rp)', 'Omzet (Rp)'] },
+      }
     );
-    const csv = '\uFEFF' + [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `rekap-laba-apotek-${period}-${dayKeyID()}.csv`;
-    a.click();
   };
 
   return (
@@ -415,10 +426,10 @@ export const LabaScreen: React.FC = () => {
         subtitle="Perhitungan Laba Kotor (Omzet − HPP snapshot) & Laba Bersih"
         action={
           <button
-            onClick={exportRekapCSV}
+            onClick={exportRekapExcel}
             className="px-3.5 py-2 rounded-xl bg-[#0061A4] text-white text-xs font-bold flex items-center gap-1.5"
           >
-            <Download className="w-4 h-4" /> Ekspor Rekap CSV
+            <Download className="w-4 h-4" /> Ekspor Rekap Excel
           </button>
         }
       />
@@ -448,7 +459,7 @@ export const LabaScreen: React.FC = () => {
         <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5">
           <span className="text-xs opacity-70">Total Penjualan (Omzet)</span>
           <p className="text-2xl font-extrabold mt-1">
-            {formatIDR(report.revenue)}
+            <AnimatedNumber value={report.revenue} format={formatIDR} />
           </p>
           <span className="text-xs opacity-60">
             {report.transactionCount} transaksi • {report.itemsSold} unit
@@ -457,7 +468,7 @@ export const LabaScreen: React.FC = () => {
         <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5">
           <span className="text-xs opacity-70">HPP (Modal Obat Terjual)</span>
           <p className="text-2xl font-extrabold mt-1 text-amber-500">
-            {formatIDR(report.hpp)}
+            <AnimatedNumber value={report.hpp} format={formatIDR} />
           </p>
           <span className="text-xs opacity-60">
             Laba Kotor: {formatIDR(report.grossProfit)} (
@@ -467,7 +478,7 @@ export const LabaScreen: React.FC = () => {
         <div className="rounded-3xl bg-[#ECEEF4] dark:bg-[#1D2024] p-5">
           <span className="text-xs opacity-70">Biaya Operasional</span>
           <p className="text-2xl font-extrabold mt-1 text-[#BA1A1A]">
-            {formatIDR(report.operationalExpense)}
+            <AnimatedNumber value={report.operationalExpense} format={formatIDR} />
           </p>
           <span className="text-xs opacity-60">
             Kas keluar selain Beli Stok ({formatIDR(report.stockPurchaseExpense)})
@@ -476,7 +487,7 @@ export const LabaScreen: React.FC = () => {
         <div className="rounded-3xl bg-[#0B1526] text-white p-5">
           <span className="text-xs text-[#9FCAFF]">Laba Bersih</span>
           <p className="text-2xl font-extrabold mt-1 text-[#7EDC9A]">
-            {formatIDR(report.netProfit)}
+            <AnimatedNumber value={report.netProfit} format={formatIDR} />
           </p>
           <span className="text-xs text-white/70">
             Margin Bersih: {report.marginPct.toFixed(1)}%
@@ -1195,7 +1206,7 @@ export const RiwayatScreen: React.FC = () => {
           >
             <span className="text-xs opacity-70">Bulan Ini • {m}</span>
             <p className="text-lg font-extrabold mt-0.5 text-[#0061A4] dark:text-[#9FCAFF]">
-              {formatIDR(monthByMethod[m])}
+              <AnimatedNumber value={monthByMethod[m]} format={formatIDR} />
             </p>
           </div>
         ))}
