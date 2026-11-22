@@ -32,8 +32,6 @@ import {
   RefreshCw,
   LogIn,
   LogOut,
-  Sun,
-  Moon,
   Menu,
   X,
 } from 'lucide-react';
