@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { useFeedback } from './Feedback';
 import { AnimatedNumber } from './AnimatedNumber';
@@ -523,6 +524,20 @@ export const StokScreen: React.FC = () => {
     }
   };
 
+  const exportMedicineSheet = (
+    filename: string,
+    title: string,
+    subtitle: string,
+    rows: Record<string, string | number>[]
+  ) => {
+    exportRowsToXlsx(filename, 'Stok Obat', rows, {
+      title,
+      subtitle,
+      currencyColumns: ['Harga Beli', 'Harga Jual Ecer', 'Harga Grosir', 'Nilai Stok (Rp)'],
+      sumColumns: ['Stok', 'Nilai Stok (Rp)'],
+    });
+  };
+
   const handleExportExcel = () => {
     const rows = medicines.map((m) => ({
       'Nama Obat': m.name,
@@ -536,16 +551,34 @@ export const StokScreen: React.FC = () => {
       Barcode: m.barcode || '',
       'Nilai Stok (Rp)': m.buyPrice * m.stock,
     }));
-    exportRowsToXlsx(
+    exportMedicineSheet(
       `stok-apotek-lestari-${dayKeyID()}.xlsx`,
-      'Stok Obat',
-      rows,
+      'APOTEK LESTARI — LAPORAN STOK OBAT',
+      `Dicetak: ${new Date().toLocaleString('id-ID')} | Total SKU: ${rows.length}`,
+      rows
+    );
+  };
+
+  const handleDownloadTemplate = () => {
+    const sampleRows = [
       {
-        title: 'APOTEK LESTARI — LAPORAN STOK OBAT',
-        subtitle: `Dicetak: ${new Date().toLocaleString('id-ID')} | Total SKU: ${rows.length}`,
-        currencyColumns: ['Harga Beli', 'Harga Jual Ecer', 'Harga Grosir', 'Nilai Stok (Rp)'],
-        sumColumns: ['Stok', 'Nilai Stok (Rp)'],
-      }
+        'Nama Obat': 'Paracetamol 500mg',
+        Kategori: 'Obat Bebas',
+        Satuan: 'Strip',
+        'Harga Beli': 2500,
+        'Harga Jual Ecer': 4000,
+        'Harga Grosir': 3500,
+        Stok: 50,
+        'Kadaluarsa (YYYY-MM-DD)': '2027-12-31',
+        Barcode: '8991234567890',
+        'Nilai Stok (Rp)': 125000,
+      },
+    ];
+    exportMedicineSheet(
+      'template-stok-obat-apotek-lestari.xlsx',
+      'APOTEK LESTARI — TEMPLATE IMPOR STOK OBAT',
+      'Isi data obat di bawah header (hapus/ganti baris contoh). Kolom Nilai Stok (Rp) opsional saat impor.',
+      sampleRows
     );
   };
 
@@ -614,6 +647,12 @@ export const StokScreen: React.FC = () => {
         subtitle={`${medicines.length} jenis obat terdaftar • Sinkron otomatis dengan aplikasi Android`}
         action={
           <>
+            <button
+              onClick={handleDownloadTemplate}
+              className="px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-bold flex items-center gap-1.5"
+            >
+              <Download className="w-4 h-4" /> Template Excel
+            </button>
             <label className="cursor-pointer px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-bold flex items-center gap-1.5">
               <Upload className="w-4 h-4" /> Impor Excel/CSV
               <input
@@ -967,8 +1006,11 @@ export const ReceiptModal: React.FC<{
     localStorage.setItem('apotek_receipt_paper', w);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+  return createPortal(
+    <div
+      id="receipt-print-portal"
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+    >
       <style>{`@media print { @page { size: ${paperWidth}mm auto; margin: 0; } }`}</style>
       <div className="bg-white text-black rounded-3xl max-w-sm w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
         <div
@@ -1086,7 +1128,8 @@ export const ReceiptModal: React.FC<{
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

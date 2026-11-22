@@ -484,12 +484,12 @@ export const LabaScreen: React.FC = () => {
             Kas keluar selain Beli Stok ({formatIDR(report.stockPurchaseExpense)})
           </span>
         </div>
-        <div className="rounded-3xl bg-[#142E27] text-white p-5">
-          <span className="text-xs text-[#86EFAC]">Laba Bersih</span>
-          <p className="text-2xl font-extrabold mt-1 text-[#7EDC9A]">
+        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5">
+          <span className="text-xs opacity-70">Laba Bersih</span>
+          <p className="text-2xl font-extrabold mt-1 text-emerald-600 dark:text-[#7EDC9A]">
             <AnimatedNumber value={report.netProfit} format={formatIDR} />
           </p>
-          <span className="text-xs text-white/70">
+          <span className="text-xs opacity-60">
             Margin Bersih: {report.marginPct.toFixed(1)}%
           </span>
         </div>
