@@ -91,6 +91,7 @@ interface StoreContextType {
   closedMonths: string[];
   // Auth & Sync
   user: User | null;
+  authLoading: boolean;
   syncStatus: SyncStatus;
   lastSyncAt: number;
   syncMessage: string | null;
@@ -160,6 +161,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [dbState, setDbState] = useState<LocalDB>(() => loadLocalDB());
   const [idbReady, setIdbReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('BELUM_MASUK');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const dbRef = useRef(dbState);
@@ -201,6 +203,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
+      setAuthLoading(false);
       if (u) {
         // Trigger initial sync upon sign-in
         setTimeout(() => syncNow(false, u), 200);
@@ -1200,6 +1203,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         suppliers: dbState.suppliers.filter((x) => !x.terhapus),
         closedMonths: dbState.closedMonths,
         user,
+        authLoading,
         syncStatus,
         lastSyncAt: dbState.lastSyncAt,
         syncMessage,

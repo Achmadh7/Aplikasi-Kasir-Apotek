@@ -49,12 +49,13 @@ const NAV_ITEMS = [
 ];
 
 const MainLayout: React.FC = () => {
-  const { user, syncStatus, syncMessage, syncNow, medicines, purchases } = useStore();
+  const { user, authLoading, syncStatus, syncMessage, syncNow, medicines, purchases } = useStore();
   const { notify } = useFeedback();
   const [activeTab, setActiveTab] = useState('beranda');
   const [dark, setDark] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [loggingIn, setLoggingIn] = useState(false);
   const prevSyncStatus = useRef(syncStatus);
 
   useEffect(() => {
@@ -82,12 +83,15 @@ const MainLayout: React.FC = () => {
 
   const handleGoogleLogin = async () => {
     setAuthError(null);
+    setLoggingIn(true);
     try {
       await loginWithGoogle();
     } catch (e: any) {
       const msg = e?.message || 'Gagal login Google';
       setAuthError(msg);
       notify(msg, 'error');
+    } finally {
+      setLoggingIn(false);
     }
   };
 
@@ -95,6 +99,60 @@ const MainLayout: React.FC = () => {
     setActiveTab(id);
     setMobileMenuOpen(false);
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#0B1526] text-white flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <img
+            src="/logo-512.jpg"
+            alt="Logo Apotek Lestari"
+            className="w-14 h-14 rounded-2xl object-cover bg-white shadow-lg"
+          />
+          <p className="text-sm font-bold text-[#9FCAFF]">Memeriksa sesi login...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#0B1526] text-white flex items-center justify-center p-4">
+        <div className="w-full max-w-sm sm:max-w-lg rounded-2xl sm:rounded-3xl bg-[#101F38] border border-white/10 p-6 sm:p-12 shadow-2xl space-y-5 sm:space-y-8 text-center">
+          <div className="flex flex-col items-center gap-3 sm:gap-4">
+            <img
+              src="/logo-512.jpg"
+              alt="Logo Apotek Lestari"
+              className="w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl object-cover bg-white shadow-md"
+            />
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Apotek Lestari</h1>
+              <p className="text-xs sm:text-sm text-[#9FCAFF] mt-1 font-medium">Sistem Kasir & Stok Obat</p>
+            </div>
+          </div>
+
+          <p className="text-sm sm:text-base text-white/75 leading-relaxed">
+            Silakan login untuk mengakses kasir, stok obat, dan laporan.
+          </p>
+
+          {authError && (
+            <div className="rounded-xl bg-red-500/15 border border-red-500/30 px-3 py-2 text-xs text-red-200 text-left">
+              {authError}
+            </div>
+          )}
+
+          <button
+            onClick={handleGoogleLogin}
+            disabled={loggingIn}
+            className="w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-white text-[#0B1526] font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 hover:bg-gray-100 transition disabled:opacity-60"
+          >
+            <LogIn className="w-4 h-4" />
+            {loggingIn ? 'Membuka Google...' : 'Login dengan Google'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
