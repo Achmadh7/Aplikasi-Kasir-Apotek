@@ -1,6 +1,6 @@
 // Top-level build file — Apotik Lestari (Kotlin native, no version catalog)
 plugins {
-    id("com.android.application") version "9.5.1" apply false
+    id("com.android.application") version "9.5.2" apply false
     // Sejak AGP 9 Kotlin melekat di AGP (built-in Kotlin): plugin
     // org.jetbrains.kotlin.android tidak lagi dipasang di modul — baris
     // ini hanya mematok versi KGP yang dipakai AGP (di sini 2.4.21,
