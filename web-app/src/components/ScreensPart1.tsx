@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { useFeedback } from './Feedback';
 import { AnimatedNumber } from './AnimatedNumber';
-import { exportRowsToXlsx, readSpreadsheetMatrix } from '../excel';
+import { exportRowsToXlsx, exportMedicineTemplateXlsx, readSpreadsheetMatrix } from '../excel';
 import {
   CATEGORIES,
   UNITS,
@@ -560,25 +560,10 @@ export const StokScreen: React.FC = () => {
   };
 
   const handleDownloadTemplate = () => {
-    const sampleRows = [
-      {
-        'Nama Obat': 'Paracetamol 500mg',
-        Kategori: 'Obat Bebas',
-        Satuan: 'Strip',
-        'Harga Beli': 2500,
-        'Harga Jual Ecer': 4000,
-        'Harga Grosir': 3500,
-        Stok: 50,
-        'Kadaluarsa (YYYY-MM-DD)': '2027-12-31',
-        Barcode: '8991234567890',
-        'Nilai Stok (Rp)': 125000,
-      },
-    ];
-    exportMedicineSheet(
+    exportMedicineTemplateXlsx(
       'template-stok-obat-apotek-lestari.xlsx',
-      'APOTEK LESTARI — TEMPLATE IMPOR STOK OBAT',
-      'Isi data obat di bawah header (hapus/ganti baris contoh). Kolom Nilai Stok (Rp) opsional saat impor.',
-      sampleRows
+      CATEGORIES,
+      UNITS
     );
   };
 
@@ -591,7 +576,7 @@ export const StokScreen: React.FC = () => {
       const matrix = await readSpreadsheetMatrix(file);
       if (matrix.length < 2) throw new Error('File kosong');
       const headerIdx = matrix.findIndex(
-        (cols) => cols[0]?.trim().toLowerCase() === 'nama obat'
+        (cols) => cols[0]?.trim().toLowerCase().replace(/\s*\*$/, '') === 'nama obat'
       );
       const dataRows = headerIdx >= 0 ? matrix.slice(headerIdx + 1) : matrix.slice(1);
       const rows = dataRows

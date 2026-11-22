@@ -1,22 +1,39 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { StoreProvider, useStore } from './store';
 import { loginWithGoogle, logoutFirebase } from './firebase';
 import { daysUntilExpiry } from './types';
 import { FeedbackProvider, useFeedback } from './components/Feedback';
-import {
-  BerandaScreen,
-  StokScreen,
-  KasirScreen,
-} from './components/ScreensPart1';
-import {
-  KeuanganScreen,
-  LabaScreen,
-  PbfScreen,
-  PengingatScreen,
-  RiwayatScreen,
-  BackupAndTutupBukuScreen,
-} from './components/ScreensPart2';
-import { AuthorityScreen } from './components/AuthorityScreen';
+
+const BerandaScreen = lazy(() =>
+  import('./components/ScreensPart1').then((m) => ({ default: m.BerandaScreen }))
+);
+const StokScreen = lazy(() =>
+  import('./components/ScreensPart1').then((m) => ({ default: m.StokScreen }))
+);
+const KasirScreen = lazy(() =>
+  import('./components/ScreensPart1').then((m) => ({ default: m.KasirScreen }))
+);
+const KeuanganScreen = lazy(() =>
+  import('./components/ScreensPart2').then((m) => ({ default: m.KeuanganScreen }))
+);
+const LabaScreen = lazy(() =>
+  import('./components/ScreensPart2').then((m) => ({ default: m.LabaScreen }))
+);
+const PbfScreen = lazy(() =>
+  import('./components/ScreensPart2').then((m) => ({ default: m.PbfScreen }))
+);
+const PengingatScreen = lazy(() =>
+  import('./components/ScreensPart2').then((m) => ({ default: m.PengingatScreen }))
+);
+const RiwayatScreen = lazy(() =>
+  import('./components/ScreensPart2').then((m) => ({ default: m.RiwayatScreen }))
+);
+const BackupAndTutupBukuScreen = lazy(() =>
+  import('./components/ScreensPart2').then((m) => ({ default: m.BackupAndTutupBukuScreen }))
+);
+const AuthorityScreen = lazy(() =>
+  import('./components/AuthorityScreen').then((m) => ({ default: m.AuthorityScreen }))
+);
 import {
   Home,
   Pill,
@@ -504,16 +521,25 @@ const MainLayout: React.FC = () => {
               <span>Menyinkronkan data dengan Cloud Firebase...</span>
             </div>
           )}
-          {activeTab === 'beranda' && <BerandaScreen onNavigate={selectTab} />}
-          {activeTab === 'kasir' && <KasirScreen />}
-          {activeTab === 'stok' && <StokScreen />}
-          {activeTab === 'keuangan' && <KeuanganScreen />}
-          {activeTab === 'laba' && <LabaScreen />}
-          {activeTab === 'pbf' && <PbfScreen />}
-          {activeTab === 'pengingat' && <PengingatScreen />}
-          {activeTab === 'riwayat' && <RiwayatScreen />}
-          {activeTab === 'backup' && <BackupAndTutupBukuScreen />}
-          {activeTab === 'authority' && <AuthorityScreen />}
+          <Suspense
+            fallback={
+              <div className="bg-white dark:bg-[#142E27] rounded-2xl border border-[#E7E3D8] dark:border-[#244C41] p-8 flex items-center justify-center gap-3 text-sm font-semibold text-[#78716C] dark:text-[#93B5A9]">
+                <RefreshCw className="w-4 h-4 animate-spin text-[#15803D]" />
+                <span>Memuat halaman...</span>
+              </div>
+            }
+          >
+            {activeTab === 'beranda' && <BerandaScreen onNavigate={selectTab} />}
+            {activeTab === 'kasir' && <KasirScreen />}
+            {activeTab === 'stok' && <StokScreen />}
+            {activeTab === 'keuangan' && <KeuanganScreen />}
+            {activeTab === 'laba' && <LabaScreen />}
+            {activeTab === 'pbf' && <PbfScreen />}
+            {activeTab === 'pengingat' && <PengingatScreen />}
+            {activeTab === 'riwayat' && <RiwayatScreen />}
+            {activeTab === 'backup' && <BackupAndTutupBukuScreen />}
+            {activeTab === 'authority' && <AuthorityScreen />}
+          </Suspense>
         </main>
 
         {/* Mobile Bottom Navigation Bar with SVG Icons */}

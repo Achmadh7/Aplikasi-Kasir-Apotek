@@ -31,6 +31,8 @@ import {
   Unlock,
   AlertTriangle,
   Calendar,
+  ArrowDownLeft,
+  ArrowUpRight,
 } from 'lucide-react';
 
 // Helper for previous months list in Tutup Buku
@@ -49,15 +51,28 @@ function getPastMonthsList(count = 12): string[] {
   return list;
 }
 
+function formatThousandID(raw: string): string {
+  const digits = raw.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+  if (!digits) return '';
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function parseThousandID(formatted: string): number {
+  const digits = formatted.replace(/\D/g, '');
+  return digits ? parseInt(digits, 10) : 0;
+}
+
 // ============================================================================
 // 4. KEUANGAN / KAS SCREEN (Matches KeuanganScreen.kt)
 // ============================================================================
 export const KeuanganScreen: React.FC = () => {
   const { cashEntries, createCashEntry, deleteCashEntry } = useStore();
   const { notify } = useFeedback();
-  const [period, setPeriod] = useState<'today' | 'month' | 'all'>('month');
+  const [period, setPeriod] = useState<'today' | 'month' | 'all'>('today');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'in' | 'out'>('all');
   const [type, setType] = useState<'in' | 'out'>('out');
   const [category, setCategory] = useState('Operasional');
+  const [customCategory, setCustomCategory] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
 
@@ -83,22 +98,50 @@ export const KeuanganScreen: React.FC = () => {
   const totals = useMemo(() => {
     let totalIn = 0,
       totalOut = 0,
+      inCount = 0,
+      outCount = 0,
       allBalance = 0;
     for (const e of cashEntries) {
       if (e.type === 'in') allBalance += e.amount;
       else allBalance -= e.amount;
     }
     for (const e of filtered) {
-      if (e.type === 'in') totalIn += e.amount;
-      else totalOut += e.amount;
+      if (e.type === 'in') {
+        totalIn += e.amount;
+        inCount += 1;
+      } else {
+        totalOut += e.amount;
+        outCount += 1;
+      }
     }
-    return { totalIn, totalOut, allBalance };
+    return {
+      totalIn,
+      totalOut,
+      inCount,
+      outCount,
+      netFlow: totalIn - totalOut,
+      allBalance,
+    };
   }, [cashEntries, filtered]);
+
+  const visibleEntries = useMemo(
+    () =>
+      typeFilter === 'all'
+        ? filtered
+        : filtered.filter((e) => e.type === typeFilter),
+    [filtered, typeFilter]
+  );
+
+  const periodLabel =
+    period === 'today' ? 'Hari Ini' : period === 'month' ? 'Bulan Ini' : 'Semua';
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      createCashEntry(type, category, description, parseInt(amount, 10) || 0);
+      const finalCategory =
+        category === 'Lainnya' ? customCategory.trim() || 'Lainnya' : category;
+      createCashEntry(type, finalCategory, description, parseThousandID(amount));
+      setCustomCategory('');
       setDescription('');
       setAmount('');
       notify('Catatan kas tersimpan', 'success');
@@ -114,42 +157,134 @@ export const KeuanganScreen: React.FC = () => {
         subtitle={`Saldo Kas Keseluruhan: ${formatIDR(totals.allBalance)}`}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div
+        className="flex flex-wrap gap-2 min-w-0"
+        role="group"
+        aria-label="Filter periode keuangan"
+      >
+        {(
+          [
+            ['today', 'Hari Ini'],
+            ['month', 'Bulan Ini'],
+            ['all', 'Semua'],
+          ] as const
+        ).map(([k, lbl]) => {
+          const isActive = period === k;
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setPeriod(k)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
+                isActive
+                  ? 'bg-[#142E27] text-white border-[#142E27] dark:bg-[#15803D] dark:border-[#15803D]'
+                  : 'bg-[#FAF8F4] dark:bg-[#0F241E] text-[#78716C] dark:text-[#93B5A9] border-[#E7E3D8] dark:border-[#244C41] hover:border-[#15803D]/50 hover:text-[#1C1917] dark:hover:text-white'
+              }`}
+            >
+              {lbl}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 3-KPI Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 shadow-xs">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-[#78716C] dark:text-[#93B5A9]">
+              Uang Masuk
+            </span>
+            <span className="w-7 h-7 rounded-lg bg-[#15803D]/10 text-[#15803D] dark:text-[#86EFAC] flex items-center justify-center">
+              <ArrowDownLeft className="w-4 h-4" />
+            </span>
+          </div>
+          <p className="mt-2 text-xl sm:text-2xl font-extrabold tabular-nums text-[#15803D] dark:text-[#7EDC9A]">
+            + <AnimatedNumber value={totals.totalIn} format={formatIDR} />
+          </p>
+          <p className="mt-1 text-xs text-[#78716C] dark:text-[#93B5A9]">
+            {totals.inCount} transaksi masuk
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 shadow-xs">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-[#78716C] dark:text-[#93B5A9]">
+              Uang Keluar
+            </span>
+            <span className="w-7 h-7 rounded-lg bg-[#BA1A1A]/10 text-[#BA1A1A] flex items-center justify-center">
+              <ArrowUpRight className="w-4 h-4" />
+            </span>
+          </div>
+          <p className="mt-2 text-xl sm:text-2xl font-extrabold tabular-nums text-[#BA1A1A]">
+            - <AnimatedNumber value={totals.totalOut} format={formatIDR} />
+          </p>
+          <p className="mt-1 text-xs text-[#78716C] dark:text-[#93B5A9]">
+            {totals.outCount} transaksi keluar
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 shadow-xs">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-[#78716C] dark:text-[#93B5A9]">
+              Arus Kas Bersih
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FAF8F4] dark:bg-[#0F241E] text-[#78716C] dark:text-[#93B5A9] border border-[#E7E3D8] dark:border-[#244C41]">
+              {periodLabel}
+            </span>
+          </div>
+          <p
+            className={`mt-2 text-xl sm:text-2xl font-extrabold tabular-nums ${
+              totals.netFlow >= 0 ? 'text-[#15803D] dark:text-[#7EDC9A]' : 'text-[#BA1A1A]'
+            }`}
+          >
+            {totals.netFlow >= 0 ? '+' : '-'}{' '}
+            <AnimatedNumber
+              value={Math.abs(totals.netFlow)}
+              format={formatIDR}
+            />
+          </p>
+          <p className="mt-1 text-xs text-[#78716C] dark:text-[#93B5A9]">Selisih masuk &amp; keluar</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Form Catat Kas */}
         <div className="lg:col-span-4">
           <form
             onSubmit={handleAdd}
-            className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3.5 text-sm"
+            className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-5 space-y-3.5 text-sm shadow-xs"
           >
             <h3 className="font-extrabold text-base">Catat Kas Manual</h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41]">
               <button
                 type="button"
                 onClick={() => {
                   setType('in');
                   setCategory('Tambah Modal');
+                  setCustomCategory('');
                 }}
-                className={`py-2.5 rounded-xl font-bold text-xs ${
+                className={`py-2 rounded-lg font-bold text-xs transition ${
                   type === 'in'
-                    ? 'bg-[#15803D] text-white'
-                    : 'bg-[#FAF8F4] dark:bg-[#0F241E]'
+                    ? 'bg-[#15803D] text-white shadow-xs'
+                    : 'text-[#78716C] dark:text-[#93B5A9] hover:text-[#1C1917] dark:hover:text-white'
                 }`}
               >
-                + Kas Masuk
+                + Uang Masuk
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setType('out');
                   setCategory('Operasional');
+                  setCustomCategory('');
                 }}
-                className={`py-2.5 rounded-xl font-bold text-xs ${
+                className={`py-2 rounded-lg font-bold text-xs transition ${
                   type === 'out'
-                    ? 'bg-[#BA1A1A] text-white'
-                    : 'bg-[#FAF8F4] dark:bg-[#0F241E]'
+                    ? 'bg-[#BA1A1A] text-white shadow-xs'
+                    : 'text-[#78716C] dark:text-[#93B5A9] hover:text-[#1C1917] dark:hover:text-white'
                 }`}
               >
-                - Kas Keluar
+                - Uang Keluar
               </button>
             </div>
             <div>
@@ -157,7 +292,7 @@ export const KeuanganScreen: React.FC = () => {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41]"
               >
                 {type === 'out'
                   ? ['Operasional', 'Beli Stok', 'Listrik & Air', 'Gaji', 'Lainnya'].map(
@@ -174,16 +309,30 @@ export const KeuanganScreen: React.FC = () => {
                     ))}
               </select>
             </div>
+            {category === 'Lainnya' && (
+              <div>
+                <label className="block text-xs font-bold mb-1">
+                  Kategori Lainnya *
+                </label>
+                <input
+                  required
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  placeholder="Tulis nama kategori..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41]"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-xs font-bold mb-1">Nominal (Rp) *</label>
               <input
                 required
-                type="number"
-                min="1"
+                type="text"
+                inputMode="numeric"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="50000"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                onChange={(e) => setAmount(formatThousandID(e.target.value))}
+                placeholder="50.000"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41]"
               />
             </div>
             <div>
@@ -192,12 +341,12 @@ export const KeuanganScreen: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Contoh: Token listrik apotek"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41]"
               />
             </div>
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-[#15803D] text-white font-bold"
+              className="w-full py-3 rounded-xl bg-[#142E27] hover:bg-[#1C3D34] dark:bg-[#15803D] dark:hover:bg-[#166534] text-white font-bold transition"
             >
               Simpan Catatan Kas
             </button>
@@ -205,89 +354,111 @@ export const KeuanganScreen: React.FC = () => {
         </div>
 
         {/* Daftar Riwayat Kas */}
-        <div className="lg:col-span-8 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] p-1 text-xs font-bold">
-              {(
-                [
-                  ['today', 'Hari Ini'],
-                  ['month', 'Bulan Ini'],
-                  ['all', 'Semua'],
-                ] as const
-              ).map(([k, lbl]) => (
-                <button
-                  key={k}
-                  onClick={() => setPeriod(k)}
-                  className={`px-3.5 py-1.5 rounded-xl ${
-                    period === k ? 'bg-[#15803D] text-white' : 'opacity-70'
-                  }`}
-                >
-                  {lbl}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-4 text-xs font-bold">
-              <span className="text-[#2E7D32] dark:text-[#7EDC9A]">
-                Masuk: <AnimatedNumber value={totals.totalIn} format={formatIDR} />
-              </span>
-              <span className="text-[#BA1A1A]">
-                Keluar: <AnimatedNumber value={totals.totalOut} format={formatIDR} />
-              </span>
-            </div>
-          </div>
-
-          <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] divide-y divide-black/5 dark:divide-white/5 overflow-hidden">
-            {filtered.length === 0 ? (
-              <p className="py-10 text-center text-sm opacity-60">
-                Belum ada catatan kas pada periode ini.
-              </p>
-            ) : (
-              filtered.map((e) => (
-                <div
-                  key={e.id}
-                  className="p-4 flex items-center justify-between gap-3"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
-                          e.type === 'in'
-                            ? 'bg-[#15803D]/20 text-[#15803D] dark:text-[#86EFAC]'
-                            : 'bg-[#BA1A1A]/20 text-[#BA1A1A]'
-                        }`}
-                      >
-                        {e.category}
-                      </span>
-                      <span className="text-xs opacity-60">
-                        {formatDateTimeID(e.createdAt)}
-                      </span>
-                    </div>
-                    <p className="font-bold text-sm mt-1">
-                      {e.description || e.category}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`font-extrabold text-sm ${
-                        e.type === 'in'
-                          ? 'text-[#2E7D32] dark:text-[#7EDC9A]'
-                          : 'text-[#BA1A1A]'
+        <div className="lg:col-span-8">
+          <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] shadow-xs overflow-hidden">
+            <div className="p-3.5 sm:p-4 border-b border-[#E7E3D8] dark:border-[#244C41] flex flex-wrap items-center justify-between gap-3">
+              <h3 className="font-extrabold text-sm sm:text-base">Riwayat Kas</h3>
+              <div
+                className="flex flex-wrap gap-2 min-w-0"
+                role="group"
+                aria-label="Filter tipe kas"
+              >
+                {(
+                  [
+                    ['all', `Semua (${filtered.length})`],
+                    ['in', `Uang Masuk (${totals.inCount})`],
+                    ['out', `Uang Keluar (${totals.outCount})`],
+                  ] as const
+                ).map(([k, lbl]) => {
+                  const isActive = typeFilter === k;
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setTypeFilter(k)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
+                        isActive
+                          ? 'bg-[#142E27] text-white border-[#142E27] dark:bg-[#15803D] dark:border-[#15803D]'
+                          : 'bg-[#FAF8F4] dark:bg-[#0F241E] text-[#78716C] dark:text-[#93B5A9] border-[#E7E3D8] dark:border-[#244C41] hover:border-[#15803D]/50 hover:text-[#1C1917] dark:hover:text-white'
                       }`}
                     >
-                      {e.type === 'in' ? '+' : '-'} {formatIDR(e.amount)}
-                    </span>
-                    {e.source !== 'sale' && (
-                      <button
-                        onClick={() => deleteCashEntry(e.id)}
-                        className="p-1.5 rounded-lg text-[#BA1A1A] hover:bg-red-500/10"
+                      {lbl}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="divide-y divide-[#E7E3D8]/70 dark:divide-[#244C41]/70">
+              {visibleEntries.length === 0 ? (
+                <p className="py-10 text-center text-sm opacity-60">
+                  Belum ada catatan kas pada filter ini.
+                </p>
+              ) : (
+                visibleEntries.map((e) => (
+                  <div
+                    key={e.id}
+                    className="p-4 flex items-center justify-between gap-3 hover:bg-[#FAF8F4]/60 dark:hover:bg-[#0F241E]/40 transition"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <span
+                        className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center ${
+                          e.type === 'in'
+                            ? 'bg-[#15803D]/10 text-[#15803D] dark:text-[#86EFAC]'
+                            : 'bg-[#BA1A1A]/10 text-[#BA1A1A]'
+                        }`}
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                        {e.type === 'in' ? (
+                          <ArrowDownLeft className="w-4 h-4" />
+                        ) : (
+                          <ArrowUpRight className="w-4 h-4" />
+                        )}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
+                              e.type === 'in'
+                                ? 'bg-[#15803D]/15 text-[#15803D] dark:text-[#86EFAC]'
+                                : 'bg-[#BA1A1A]/15 text-[#BA1A1A]'
+                            }`}
+                          >
+                            {e.category}
+                          </span>
+                          <span className="text-xs text-[#78716C] dark:text-[#93B5A9]">
+                            {formatDateTimeID(e.createdAt)}
+                          </span>
+                        </div>
+                        <p className="font-bold text-sm mt-1 truncate">
+                          {e.description || e.category}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`font-extrabold text-sm tabular-nums ${
+                          e.type === 'in'
+                            ? 'text-[#15803D] dark:text-[#7EDC9A]'
+                            : 'text-[#BA1A1A]'
+                        }`}
+                      >
+                        {e.type === 'in' ? '+' : '-'} {formatIDR(e.amount)}
+                      </span>
+                      {e.source !== 'sale' && (
+                        <button
+                          type="button"
+                          onClick={() => deleteCashEntry(e.id)}
+                          aria-label="Hapus catatan kas"
+                          className="p-1.5 rounded-lg text-[#BA1A1A] hover:bg-red-500/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -580,14 +751,14 @@ export const PbfScreen: React.FC = () => {
         pbfName,
         invoiceNo,
         date,
-        ppn: parseInt(ppn, 10) || 0,
+        ppn: parseThousandID(ppn),
         paymentType,
         dueDate,
         items: items.map((it) => ({
           medicineName: it.medicineName,
           qty: parseInt(it.qty, 10) || 0,
           unit: it.unit,
-          buyPrice: parseInt(it.buyPrice, 10) || 0,
+          buyPrice: parseThousandID(it.buyPrice),
         })),
       });
       setPbfName('');
@@ -689,10 +860,10 @@ export const PbfScreen: React.FC = () => {
               <div>
                 <label className="block text-xs font-bold mb-1">PPN (Rp)</label>
                 <input
-                  type="number"
-                  min="0"
+                  type="text"
+                  inputMode="numeric"
                   value={ppn}
-                  onChange={(e) => setPpn(e.target.value)}
+                  onChange={(e) => setPpn(formatThousandID(e.target.value))}
                   placeholder="0"
                   className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
                 />
@@ -761,14 +932,16 @@ export const PbfScreen: React.FC = () => {
                   />
                   <input
                     required
-                    type="number"
-                    min="1"
+                    type="text"
+                    inputMode="numeric"
                     placeholder="Harga"
                     value={it.buyPrice}
                     onChange={(e) =>
                       setItems(
                         items.map((x, i) =>
-                          i === idx ? { ...x, buyPrice: e.target.value } : x
+                          i === idx
+                            ? { ...x, buyPrice: formatThousandID(e.target.value) }
+                            : x
                         )
                       )
                     }
