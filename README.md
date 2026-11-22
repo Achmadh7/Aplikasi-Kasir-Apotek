@@ -93,20 +93,10 @@
 2. Download the **`Apotek Lestari-1.3.0-Release`** artifact (signed release build, R8 — the one used day to day) or **`app-debug-apk`** (debug build) from the finished run page.
 3. Install the APK on the phone/tablet.
 
-### Build from source
-
-**With Android Studio:** open the `kotlin-app/` folder, wait for Gradle Sync, then Build APK.
-
-Build notes:
-
-- Builds require internet access (Gradle dependency resolution).
-- Release signing uses a keystore from a separate private repository (`Sigkey-Apotek-Lestari`), supplied through GitHub Actions secrets — secret names only: `KEYSTORE_REPO_TOKEN`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` (the values live in the repo settings, never in this file).
-- Online Mode turns on only when `kotlin-app/app/google-services.json` exists (the config of your own Firebase project — see `docs/ONLINE.md`); builds without it are fully local.
-
 ## Tech stack
 
 | Area | Technology |
-|---|---|
+| --- | --- |
 | Language | Kotlin 2.4.21 |
 | UI | Jetpack Compose — Material 3 Expressive (`material3` 1.5.0-rc01, Compose BOM 2026.09.00), Navigation Compose 2.10.2 |
 | Theme | `MaterialExpressiveTheme` + `MotionScheme.expressive()`; official components (`ShortNavigationBar`, `SegmentedButton`, chips, `ListItem`); color scheme generated with Google's Material Color Utilities algorithm (Fidelity style, seed `#0061A4`, 2025 color spec) |
