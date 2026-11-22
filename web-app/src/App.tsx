@@ -205,9 +205,9 @@ const MainLayout: React.FC = () => {
     return (
       <>
         {authPillEl}
-        <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[#F7F5F0]">
+        <div className="min-h-screen flex flex-col md:grid md:grid-cols-2 bg-[#F7F5F0]">
           {/* Left Forest Showcase Panel */}
-          <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top_right,#1F453B_0%,#142E27_58%,#0E201B_100%)] text-white px-5 py-6 md:px-11 md:py-10 flex flex-col justify-start md:justify-center gap-3.5 md:gap-[26px]">
+          <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top_right,#1F453B_0%,#142E27_58%,#0E201B_100%)] text-white px-5 pt-7 pb-8 rounded-b-3xl md:rounded-none md:px-11 md:py-10 flex flex-col justify-start md:justify-center gap-3.5 md:gap-[26px]">
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0"
@@ -255,7 +255,7 @@ const MainLayout: React.FC = () => {
           </div>
 
           {/* Right Warm Paper Login Panel */}
-          <div className="bg-[#F7F5F0] flex items-center justify-center px-4 py-6 md:p-10">
+          <div className="flex-1 bg-[#F7F5F0] flex items-center justify-center px-4 py-6 md:p-10">
             <div className="w-full max-w-[390px] bg-white border border-[#E6E2D8] rounded-3xl p-6 md:p-8 shadow-[0_16px_40px_rgba(20,46,39,0.06)]">
               <h3 className="text-[22px] font-extrabold tracking-[-0.02em] text-[#111827] mb-1.5">
                 Masuk ke Aplikasi
@@ -369,7 +369,7 @@ const MainLayout: React.FC = () => {
 
         {/* Sidebar Desktop + Slide-over Drawer Mobile */}
         <aside
-          className={`no-print fixed md:static inset-y-0 left-0 z-50 w-72 md:w-64 bg-[#142E27] text-[#E7EFEA] flex flex-col justify-between p-4 shrink-0 border-r border-[#244C41] transform transition-transform duration-200 ease-out overflow-y-auto ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          className={`no-print fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-72 md:w-64 bg-[#142E27] text-[#E7EFEA] flex flex-col justify-between p-4 shrink-0 border-r border-[#244C41] transform transition-transform duration-200 ease-out overflow-y-auto ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
             }`}
         >
           <div>

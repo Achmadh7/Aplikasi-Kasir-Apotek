@@ -300,7 +300,7 @@ export const KeuanganScreen: React.FC = () => {
 // ============================================================================
 export const LabaScreen: React.FC = () => {
   const { medicines, sales, saleItems, cashEntries } = useStore();
-  const [period, setPeriod] = useState<'today' | 'month' | 'last30' | 'all'>('month');
+  const [period, setPeriod] = useState<'today' | 'month' | 'last30' | 'all'>('today');
 
   const report = useMemo(() => {
     const startToday = jakartaDayStartMillis(0);
@@ -434,25 +434,33 @@ export const LabaScreen: React.FC = () => {
         }
       />
 
-      <div className="flex rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] p-1 text-xs font-bold w-fit">
-        {(
-          [
-            ['today', 'Hari Ini'],
-            ['month', 'Bulan Ini'],
-            ['last30', '30 Hari Terakhir'],
-            ['all', 'Semua Waktu'],
-          ] as const
-        ).map(([k, lbl]) => (
-          <button
-            key={k}
-            onClick={() => setPeriod(k)}
-            className={`px-4 py-2 rounded-xl ${
-              period === k ? 'bg-[#15803D] text-white' : 'opacity-70'
-            }`}
-          >
-            {lbl}
-          </button>
-        ))}
+      <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs min-w-0">
+        <div className="flex flex-wrap gap-2 min-w-0" role="group" aria-label="Filter periode laporan laba">
+          {(
+            [
+              ['today', 'Hari Ini'],
+              ['month', 'Bulan Ini'],
+              ['last30', '30 Hari Terakhir'],
+              ['all', 'Semua Waktu'],
+            ] as const
+          ).map(([k, lbl]) => {
+            const isActive = period === k;
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setPeriod(k)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
+                  isActive
+                    ? 'bg-[#142E27] text-white border-[#142E27] dark:bg-[#15803D] dark:border-[#15803D]'
+                    : 'bg-[#FAF8F4] dark:bg-[#0F241E] text-[#78716C] dark:text-[#93B5A9] border-[#E7E3D8] dark:border-[#244C41] hover:border-[#15803D]/50 hover:text-[#1C1917] dark:hover:text-white'
+                }`}
+              >
+                {lbl}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

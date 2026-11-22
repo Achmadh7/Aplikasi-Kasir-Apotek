@@ -263,8 +263,8 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
                     }}
                     className={`w-full max-w-[40px] rounded-t-lg ${
                       d.isToday
-                        ? 'bg-gradient-to-b from-[#22C55E] to-[#15803D]'
-                        : 'bg-gradient-to-b from-[#86EFAC] to-[#4ADE80] dark:from-[#4ADE80]/80 dark:to-[#15803D]/80'
+                        ? 'bg-[#15803D]'
+                        : 'bg-[#86EFAC] dark:bg-[#4ADE80]/80'
                     }`}
                   />
                 </div>
