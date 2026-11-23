@@ -194,25 +194,7 @@ const MainLayout: React.FC = () => {
     </div>
   ) : null;
 
-  if (authLoading) {
-    return (
-      <>
-        {authPillEl}
-        <div className="min-h-screen bg-[#142E27] text-white flex items-center justify-center p-4">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <img
-              src="/logo-512.jpg"
-              alt="Logo Apotek Lestari"
-              className="w-14 h-14 rounded-2xl object-cover bg-white shadow-lg"
-            />
-            <p className="text-sm font-bold text-[#86EFAC]">Memeriksa sesi login...</p>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  if (!user) {
+  if (authLoading || !user) {
     const loginFeatures = [
       { num: '01', text: 'Kasir cepat dengan dukungan Cash, QRIS & Transfer' },
       { num: '02', text: 'Pantau stok menipis & tanggal kedaluwarsa otomatis' },
@@ -237,8 +219,10 @@ const MainLayout: React.FC = () => {
             <div className="relative z-10 flex items-center gap-3.5">
               <div className="w-16 h-16 rounded-2xl bg-white shadow-[0_10px_24px_rgba(0,0,0,0.2)] flex items-center justify-center shrink-0 overflow-hidden">
                 <img
-                  src="/logo-512.jpg"
+                  src="/logo-128.jpg"
                   alt="Logo Apotek Lestari"
+                  width={64}
+                  height={64}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -281,7 +265,7 @@ const MainLayout: React.FC = () => {
                 Gunakan akun Google terdaftar untuk membuka kasir, stok obat, dan laporan.
               </p>
 
-              {(storeAuthError || authError) && (
+              {!authLoading && (storeAuthError || authError) && (
                 <div className="mb-4 rounded-xl bg-[#FEF2F2] border border-[#FECACA] px-3.5 py-3 flex items-start gap-2.5 text-[#991B1B] text-left">
                   <svg
                     className="w-4 h-4 shrink-0 mt-0.5 text-[#DC2626]"
@@ -309,13 +293,13 @@ const MainLayout: React.FC = () => {
 
               <button
                 onClick={handleGoogleLogin}
-                disabled={loggingIn}
+                disabled={authLoading || loggingIn}
                 className="w-full py-3.5 px-4 rounded-[14px] bg-[#142E27] hover:bg-[#1D4036] text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-[0_8px_20px_rgba(20,46,39,0.22)] transition disabled:opacity-60 cursor-pointer"
               >
                 <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z" />
                 </svg>
-                {loggingIn ? 'Membuka Google...' : 'Login dengan Google'}
+                {authLoading ? 'Memeriksa sesi...' : loggingIn ? 'Membuka Google...' : 'Login dengan Google'}
               </button>
 
               <p className="mt-[18px] text-[11.5px] text-[#6B7280] text-center leading-[1.5]">

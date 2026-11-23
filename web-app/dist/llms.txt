@@ -1,0 +1,7 @@
+# Apotek Lestari
+
+> Sistem kasir apotek, manajemen stok obat, pengingat kedaluwarsa, faktur PBF, dan laporan keuangan.
+
+## Halaman Utama
+
+- [Portal Masuk Apotek Lestari](https://apoteklestari.web.id/): Aplikasi web kasir dan manajemen stok Apotek Lestari.
