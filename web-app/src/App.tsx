@@ -204,7 +204,7 @@ const MainLayout: React.FC = () => {
     return (
       <>
         {authPillEl}
-        <div className="min-h-screen flex flex-col md:grid md:grid-cols-2 bg-[#F7F5F0]">
+        <main className="min-h-screen flex flex-col md:grid md:grid-cols-2 bg-[#F7F5F0]">
           {/* Left Forest Showcase Panel */}
           <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top_right,#1F453B_0%,#142E27_58%,#0E201B_100%)] text-white px-5 pt-7 pb-8 rounded-b-3xl md:rounded-none md:px-11 md:py-10 flex flex-col justify-start md:justify-center gap-3.5 md:gap-[26px]">
             <div
@@ -307,7 +307,7 @@ const MainLayout: React.FC = () => {
               </p>
             </div>
           </div>
-        </div>
+        </main>
       </>
     );
   }
