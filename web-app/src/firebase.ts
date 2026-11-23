@@ -1,5 +1,5 @@
 // Firebase configuration from kotlin-app/app/google-services.json
-// Syncs directly with users/{uid}/{collection}/{remoteId} matching OnlineSync.kt & SyncLogic.kt
+// Syncs to users/{uid}/web_{collection}/{remoteId} (isolated from APK collections)
 
 import { initializeApp } from 'firebase/app';
 import {
@@ -367,23 +367,26 @@ export const FirestoreMapper = {
   },
 };
 
+// Prefix with `web_` so web-app data stays isolated from APK even under the same Google uid.
+const webCol = (colName: string) => `web_${colName}`;
+
 export async function pushSingleDoc(
   uid: string,
   colName: string,
   remoteId: string,
   data: Record<string, any>
 ) {
-  const ref = doc(db, 'users', uid, colName, remoteId);
+  const ref = doc(db, 'users', uid, webCol(colName), remoteId);
   await setDoc(ref, data);
 }
 
 export async function fetchCollectionDocs(uid: string, colName: string) {
-  const snap = await getDocs(collection(db, 'users', uid, colName));
+  const snap = await getDocs(collection(db, 'users', uid, webCol(colName)));
   return snap.docs.map((d) => ({ id: d.id, data: d.data() }));
 }
 
 export async function deleteCloudDoc(uid: string, colName: string, remoteId: string) {
-  await deleteDoc(doc(db, 'users', uid, colName, remoteId));
+  await deleteDoc(doc(db, 'users', uid, webCol(colName), remoteId));
 }
 
 export async function resetAllCloudData(uid: string) {
@@ -397,7 +400,7 @@ export async function resetAllCloudData(uid: string) {
     'pemasok',
   ];
   for (const colName of cols) {
-    const snap = await getDocs(collection(db, 'users', uid, colName));
+    const snap = await getDocs(collection(db, 'users', uid, webCol(colName)));
     const docs = snap.docs;
     for (let i = 0; i < docs.length; i += 400) {
       const batch = writeBatch(db);
