@@ -121,14 +121,15 @@ val verifyReleaseSigning by tasks.registering {
 tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(verifyReleaseSigning) }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2026.11.01")
+    // Dipin ke 2026.09.00 / 1.5.0-rc01: 2026.11.01 & 1.6.0-alpha01 butuh compileSdk 37.1/37.2 (CI & lokal pakai 37.0).
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.activity:activity-compose")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3:1.6.0-alpha01")
+    implementation("androidx.compose.material3:material3:1.5.0-rc01")
     implementation("androidx.compose.material3:material3-window-size-class:1.5.0-rc01")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.10.2")
