@@ -67,6 +67,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -113,7 +114,10 @@ import id.apotek.lestari.ui.rememberLogoBitmap
 import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
 import id.apotek.lestari.ui.theme.AppLang
+import id.apotek.lestari.ui.theme.ForestErrorSoft
+import id.apotek.lestari.ui.theme.ForestHeroDarkStart
 import id.apotek.lestari.ui.theme.ForestMint
+import id.apotek.lestari.ui.theme.ForestMintMuted
 import id.apotek.lestari.ui.theme.tr
 import id.apotek.lestari.ui.theme.ExpressiveCard
 import id.apotek.lestari.ui.theme.SpaceL
@@ -1032,134 +1036,153 @@ fun LayarLogin(
     onGoogle: () -> Unit,
     onLewati: () -> Unit
 ) {
-    val cyan = Color(0xFF40C4FF)
-    Surface(Modifier.fillMaxSize(), color = Color(0xFF070A0E)) {
-        // R11 (audit 2026-11-15): Column + verticalScroll mengukur tinggi
-        // tak terbatas, jadi fillMaxSize + Arrangement.Center tidak
-        // memusatkan apa-apa. Box yang bisa digulir + contentAlignment
-        // Center memusatkan konten pendek dan tetap bisa digulir bila
-        // konten lebih tinggi dari layar.
-        Box(
+    val bgBrush = Brush.verticalGradient(
+        colors = listOf(Color(0xFF0D1B16), Color(0xFF070D0B))
+    )
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(bgBrush)
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(ForestMint.copy(alpha = 0.14f), Color.Transparent),
+                    center = Offset(540f, 180f),
+                    radius = 750f
+                )
+            )
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
             Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .widthIn(max = 400.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+            val logoGate = rememberLogoBitmap()
+            Box(
+                Modifier
+                    .size(96.dp)
+                    .border(2.dp, ForestMint.copy(alpha = 0.7f), RoundedCornerShape(24.dp))
+                    .padding(4.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
             ) {
-                val logoGate = rememberLogoBitmap()
-                Box(
-                    Modifier
-                        .size(100.dp)
-                        .border(2.5.dp, cyan, RoundedCornerShape(24.dp))
-                        .padding(4.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color.White),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (logoGate != null) {
-                        Image(logoGate, null, contentScale = ContentScale.Fit, modifier = Modifier.padding(8.dp).fillMaxSize())
-                    } else {
-                        Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF0A2A5C), modifier = Modifier.padding(22.dp).fillMaxSize())
-                    }
-                }
-                Spacer(Modifier.height(20.dp))
-                Text(
-                    "APOTEK",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 2.sp,
-                    color = Color(0xFFE8EEF5)
-                )
-                Text(
-                    "LESTARI",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 2.sp,
-                    color = cyan
-                )
-                Spacer(Modifier.height(12.dp))
-                Box(
-                    Modifier
-                        .width(48.dp)
-                        .height(3.dp)
-                        .background(cyan, RoundedCornerShape(2.dp))
-                )
-                // L8: subjudul "Kasir Apotek" dihapus (permintaan Achmad);
-                // jeda ke kalimat masuk dirapatkan 48dp -> 32dp.
-                Spacer(Modifier.height(32.dp))
-                Text(
-                    tr("Masuk untuk mencadangkan data ke akunmu", "Sign in to back up your data to your account"),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFC7D2DE),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(20.dp))
-                if (googleSiap) {
-                    Button(
-                        onClick = onGoogle,
-                        enabled = !sibuk,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = Color(0xFF1F1F1F)
-                        ),
-                        shape = RoundedCornerShape(50),
-                        modifier = Modifier.fillMaxWidth().height(50.dp)
-                    ) {
-                        if (sibuk) {
-                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFF1F1F1F))
-                        } else {
-                            LogoGoogle(Modifier.size(18.dp))
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Text(tr("Masuk dengan Google", "Sign in with Google"), fontWeight = FontWeight.SemiBold)
-                    }
+                if (logoGate != null) {
+                    Image(logoGate, null, contentScale = ContentScale.Fit, modifier = Modifier.padding(8.dp).fillMaxSize())
                 } else {
-                    Text(
-                        tr("Masuk dengan Google belum tersedia di build ini.", "Google sign-in is not available in this build."),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF93A5B8),
-                        textAlign = TextAlign.Center
-                    )
+                    Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF142E27), modifier = Modifier.padding(20.dp).fillMaxSize())
                 }
-                if (pesan != null) {
+            }
+            Spacer(Modifier.height(18.dp))
+            Text(
+                "APOTEK",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 2.sp,
+                color = Color(0xFFECFDF5)
+            )
+            Text(
+                "LESTARI",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 2.sp,
+                color = ForestMint
+            )
+            Spacer(Modifier.height(12.dp))
+            Box(
+                Modifier
+                    .width(44.dp)
+                    .height(3.dp)
+                    .background(ForestMint, RoundedCornerShape(2.dp))
+            )
+            Spacer(Modifier.height(28.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                color = ForestHeroDarkStart.copy(alpha = 0.6f),
+                border = BorderStroke(1.dp, ForestMint.copy(alpha = 0.18f))
+            ) {
+                Column(
+                    Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (googleSiap) {
+                        Button(
+                            onClick = onGoogle,
+                            enabled = !sibuk,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White,
+                                contentColor = Color(0xFF111827)
+                            ),
+                            shape = RoundedCornerShape(50),
+                            modifier = Modifier.fillMaxWidth().height(50.dp)
+                        ) {
+                            if (sibuk) {
+                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFF111827))
+                            } else {
+                                LogoGoogle(Modifier.size(18.dp))
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text(tr("Masuk dengan Google", "Sign in with Google"), fontWeight = FontWeight.SemiBold)
+                        }
+                    } else {
+                        Text(
+                            tr("Masuk dengan Google belum tersedia di build ini.", "Google sign-in is not available in this build."),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = ForestMintMuted.copy(alpha = 0.75f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    if (pesan != null) {
+                        Spacer(Modifier.height(12.dp))
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            color = Color(0xFF7F1D1D).copy(alpha = 0.35f),
+                            border = BorderStroke(1.dp, ForestErrorSoft.copy(alpha = 0.35f))
+                        ) {
+                            Text(
+                                pesan,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = ForestErrorSoft,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = ForestMint.copy(alpha = 0.18f))
+                        Text(
+                            tr("atau", "or"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ForestMintMuted.copy(alpha = 0.65f),
+                            modifier = Modifier.padding(horizontal = 12.dp)
+                        )
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = ForestMint.copy(alpha = 0.18f))
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    OutlinedButton(
+                        onClick = onLewati,
+                        enabled = !sibuk,
+                        border = BorderStroke(1.5.dp, ForestMint.copy(alpha = 0.75f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ForestMint),
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) {
+                        Text(tr("Lewati \u2014 Pakai Tanpa Akun", "Skip \u2014 Use Without an Account"), fontWeight = FontWeight.SemiBold)
+                    }
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        pesan,
+                        tr("Mode tamu: data hanya tersimpan di HP ini", "Guest mode: data is only stored on this phone"),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFFFFB4AB),
+                        color = ForestMintMuted.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center
                     )
                 }
-                Spacer(Modifier.height(14.dp))
-                // L8 MINIMAL RATA: pemisah "atau" antara tombol Google
-                // dan Lewati.
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFF2A3542))
-                    Text(tr("atau", "or"), style = MaterialTheme.typography.bodySmall, color = Color(0xFF6E7C8C), modifier = Modifier.padding(horizontal = 12.dp))
-                    HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFF2A3542))
-                }
-                Spacer(Modifier.height(14.dp))
-                OutlinedButton(
-                    onClick = onLewati,
-                    enabled = !sibuk,
-                    border = BorderStroke(1.5.dp, cyan),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = cyan),
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(tr("Lewati \u2014 Pakai Tanpa Akun", "Skip \u2014 Use Without an Account"), fontWeight = FontWeight.SemiBold)
-                }
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    tr("Mode tamu: data hanya tersimpan di HP ini", "Guest mode: data is only stored on this phone"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF6E7C8C)
-                )
             }
         }
     }
