@@ -335,13 +335,13 @@ const MainLayout: React.FC = () => {
   return (
     <>
       {authPillEl}
-      <div className="min-h-screen flex flex-col md:flex-row">
+      <div className="min-h-[100dvh] flex flex-col md:flex-row">
         {/* Compact Sticky Mobile Top Bar */}
-        <header className="no-print md:hidden sticky top-0 z-30 bg-[#142E27] text-white px-4 py-3 flex items-center justify-between border-b border-[#244C41]">
+        <header className="no-print md:hidden sticky top-0 z-30 bg-[#142E27] text-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center justify-between border-b border-[#244C41]">
           <div className="flex items-center gap-2.5 min-w-0">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20"
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20"
               aria-label="Buka Menu"
             >
               <Menu className="w-5 h-5" />
@@ -514,7 +514,7 @@ const MainLayout: React.FC = () => {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0 p-4 sm:p-6 pb-20 md:pb-6 max-w-7xl w-full mx-auto">
+        <main className="flex-1 min-w-0 p-3.5 sm:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-6 max-w-7xl w-full mx-auto">
           {syncStatus === 'PROSES' && (
             <div className="no-print mb-4 px-4 py-3 rounded-2xl bg-[#DCFCE7] dark:bg-[#15803D]/20 border border-[#86EFAC] dark:border-[#15803D]/40 text-sm font-bold flex items-center gap-3 text-[#166534] dark:text-[#86EFAC]">
               <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
@@ -543,7 +543,7 @@ const MainLayout: React.FC = () => {
         </main>
 
         {/* Mobile Bottom Navigation Bar with SVG Icons */}
-        <nav className="no-print md:hidden fixed bottom-0 inset-x-0 z-30 bg-white dark:bg-[#142E27] border-t border-[#E7E3D8] dark:border-[#244C41] px-1 py-1.5 flex items-center justify-around">
+        <nav className="no-print md:hidden fixed bottom-0 inset-x-0 z-30 bg-white dark:bg-[#142E27] border-t border-[#E7E3D8] dark:border-[#244C41] px-1 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] flex items-center justify-around">
           {MOBILE_BOTTOM_TABS.map((item) => {
             const Icon = item.icon;
             const active = activeTab === item.id;
@@ -551,7 +551,7 @@ const MainLayout: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => selectTab(item.id)}
-                className={`relative flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl text-[10px] font-semibold transition ${active
+                className={`relative flex flex-col items-center justify-center gap-0.5 min-h-[44px] px-2.5 py-1.5 rounded-xl text-[10px] font-semibold transition ${active
                     ? 'text-[#15803D] dark:text-[#86EFAC]'
                     : 'text-[#78716C] dark:text-[#93B5A9]'
                   }`}

@@ -1,4 +1,4 @@
-﻿import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 
 type ToastType = 'info' | 'success' | 'error';
@@ -66,7 +66,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       {children}
 
       {/* Toast Stack */}
-      <div className="no-print fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-[calc(100vw-2rem)] pointer-events-none">
+      <div className="no-print fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-[calc(100vw-2rem)] pointer-events-none">
         {toasts.map((t) => {
           const styles =
             t.type === 'error'

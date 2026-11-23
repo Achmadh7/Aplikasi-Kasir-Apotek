@@ -723,8 +723,86 @@ export const StokScreen: React.FC = () => {
         </button>
       </div>
 
-      {/* Desktop Table / Card List */}
-      <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] overflow-hidden">
+      {/* Mobile Card List + Desktop Table */}
+      <div className="md:hidden space-y-2.5">
+        {filtered.length === 0 ? (
+          <div className="rounded-2xl bg-[#FFFFFF] dark:bg-[#142E27] py-10 text-center opacity-60 text-sm">
+            Tidak ada data obat yang cocok.
+          </div>
+        ) : (
+          filtered.map((m) => {
+            const expDays = daysUntilExpiry(m.expiryDate);
+            return (
+              <div
+                key={m.id}
+                className="rounded-2xl bg-[#FFFFFF] dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-3.5 space-y-2.5"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm leading-snug break-words">{m.name}</p>
+                    <p className="text-xs opacity-65 mt-0.5">
+                      {m.category} • {m.unit}
+                    </p>
+                  </div>
+                  <StockPill stock={m.stock} />
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-black/5 dark:border-white/5 text-xs">
+                  <div className="space-y-0.5">
+                    <p className="font-extrabold text-sm text-[#15803D] dark:text-[#86EFAC]">
+                      Ecer: {formatIDR(m.sellPrice)}
+                    </p>
+                    <p className="opacity-70">
+                      Beli: {m.buyPrice > 0 ? formatIDR(m.buyPrice) : '-'}
+                      {m.wholesalePrice > 0 ? ` • Grosir: ${formatIDR(m.wholesalePrice)}` : ''}
+                    </p>
+                    {m.expiryDate && (
+                      <p
+                        className={
+                          expDays !== null && expDays <= 0
+                            ? 'text-[#BA1A1A] font-bold'
+                            : expDays !== null && expDays <= 30
+                            ? 'text-amber-500 font-bold'
+                            : 'opacity-70'
+                        }
+                      >
+                        ED: {formatDateID(m.expiryDate)}
+                        {expDays !== null && expDays <= 30 && ` (${expDays}h)`}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => openEdit(m)}
+                      className="p-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] hover:bg-black/10 dark:hover:bg-white/10"
+                      title="Edit Obat"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        askConfirm(
+                          `Hapus obat "${m.name}"?`,
+                          () => {
+                            deleteMedicine(m.id);
+                            notify(`Obat "${m.name}" dihapus`, 'info');
+                          },
+                          { title: 'Hapus Obat', danger: true, confirmLabel: 'Hapus' }
+                        )
+                      }
+                      className="p-2.5 rounded-xl bg-red-500/10 text-[#BA1A1A]"
+                      title="Hapus Obat"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="hidden md:block rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-[#E1E2E8] dark:bg-[#0F241E] text-xs uppercase opacity-75">
@@ -1274,7 +1352,7 @@ export const KasirScreen: React.FC = () => {
             </kbd>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[65vh] overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:max-h-[65vh] lg:overflow-y-auto lg:pr-1">
             {filteredMeds.map((m) => {
               const inCart = cart.find((c) => c.medicineId === m.id)?.qty || 0;
               return (
@@ -1321,8 +1399,8 @@ export const KasirScreen: React.FC = () => {
         </div>
 
         {/* Cart & Payment Panel */}
-        <div className="lg:col-span-5">
-          <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 sticky top-4 space-y-4">
+        <div id="kasir-cart" className="lg:col-span-5 scroll-mt-20">
+          <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-4 sm:p-5 lg:sticky lg:top-4 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-extrabold text-base">
                 Keranjang ({cart.reduce((a, c) => a + c.qty, 0)} item)
@@ -1371,7 +1449,7 @@ export const KasirScreen: React.FC = () => {
                           <div className="flex gap-1 text-xs font-bold">
                             <button
                               onClick={() => c.useWholesale && toggleWholesale(m.id)}
-                              className={`px-2.5 py-1 rounded-lg ${
+                              className={`px-2.5 py-1.5 sm:py-1 rounded-lg ${
                                 !c.useWholesale
                                   ? 'bg-[#15803D] text-white'
                                   : 'bg-black/10 dark:bg-white/10'
@@ -1381,7 +1459,7 @@ export const KasirScreen: React.FC = () => {
                             </button>
                             <button
                               onClick={() => !c.useWholesale && toggleWholesale(m.id)}
-                              className={`px-2.5 py-1 rounded-lg ${
+                              className={`px-2.5 py-1.5 sm:py-1 rounded-lg ${
                                 c.useWholesale
                                   ? 'bg-[#15803D] text-white'
                                   : 'bg-black/10 dark:bg-white/10'
@@ -1396,7 +1474,7 @@ export const KasirScreen: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => updateQty(m.id, c.qty - 1)}
-                            className="w-7 h-7 rounded-lg bg-black/10 dark:bg-white/10 font-bold"
+                            className="w-9 h-9 sm:w-7 sm:h-7 rounded-lg bg-black/10 dark:bg-white/10 font-bold"
                           >
                             -
                           </button>
@@ -1405,7 +1483,7 @@ export const KasirScreen: React.FC = () => {
                           </span>
                           <button
                             onClick={() => updateQty(m.id, c.qty + 1)}
-                            className="w-7 h-7 rounded-lg bg-black/10 dark:bg-white/10 font-bold"
+                            className="w-9 h-9 sm:w-7 sm:h-7 rounded-lg bg-black/10 dark:bg-white/10 font-bold"
                           >
                             +
                           </button>
@@ -1499,6 +1577,25 @@ export const KasirScreen: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {cart.length > 0 && (
+        <div className="no-print lg:hidden fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom))] inset-x-3 z-20">
+          <button
+            type="button"
+            onClick={() =>
+              document.getElementById('kasir-cart')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+            className="w-full px-4 py-3 rounded-2xl bg-[#142E27] text-white shadow-xl border border-[#244C41] flex items-center justify-between gap-3"
+          >
+            <span className="text-xs font-bold">
+              {cart.reduce((a, c) => a + c.qty, 0)} item • {formatIDR(cartTotal)}
+            </span>
+            <span className="px-3 py-1 rounded-xl bg-[#15803D] text-xs font-extrabold">
+              Lihat Keranjang
+            </span>
+          </button>
+        </div>
+      )}
 
       {lastReceipt && (
         <ReceiptModal
