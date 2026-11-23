@@ -6,6 +6,8 @@ import android.content.res.Configuration
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -13,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -104,39 +107,49 @@ fun adaptiveSheetMaxWidth() = when {
 // (Beranda memakai varian logo + tombol awan sinkron, ikut H6) dan
 // Lainnya (identitas L1). -------
 
-/** Warna batang header N2 (tetap di dua mode). */
-val WarnaHeaderN2 = Color(0xFF0B1526)
+/** Warna status bar & lencana sinkron (Forest Emerald gelap). */
+val WarnaHeaderN2 = Color(0xFF142E27)
 
-// HC1 Header Ramping (2026-11-17): ikon 40dp + judul 20sp + padding 12dp — berlaku untuk semua layar.
+// Header Forest Emerald bersih (Mix Opsi 1 + Opsi 3): judul 16sp ExtraBold putih,
+// tanpa subjudul & tanpa tombol kanan; tombol kembali opsional di kiri.
 @Composable
-fun KartuHeaderPremium(judul: String, ikon: ImageVector, subjudul: String? = null) {
-    val gelap = LocalIsDarkTheme.current
-    Card(
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = if (gelap) WarnaHeaderN2 else Color(0xFFD3E3F3)),
-        border = if (gelap) BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)) else null,
-        modifier = Modifier.fillMaxWidth()
+fun KartuHeaderPremium(
+    judul: String,
+    ikon: ImageVector,
+    subjudul: String? = null,
+    onBack: (() -> Unit)? = null
+) {
+    val brush = forestHeroBrush()
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
+            .background(brush, RoundedCornerShape(16.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
-        Row(
-            Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(color = if (gelap) Color(0xFF1B385C) else Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
-                Icon(ikon, null, tint = if (gelap) Color(0xFF9FCAFF) else Color(0xFF2E5A88), modifier = Modifier.padding(9.dp).fillMaxSize())
-            }
-            Spacer(Modifier.width(12.dp))
-            Column {
-                Text(
-                    judul,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = if (gelap) Color.White else WarnaHeaderN2
-                )
-                if (subjudul != null) {
-                    Text(subjudul, style = MaterialTheme.typography.bodySmall, color = if (gelap) Color.White.copy(alpha = 0.7f) else Color(0xFF3D5A75))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (onBack != null) {
+                Surface(
+                    color = Color.White.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
+                    modifier = Modifier.size(32.dp).clickable { onBack() }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.ArrowBackIosNew, tr("Kembali", "Back"), tint = Color.White, modifier = Modifier.size(15.dp))
+                    }
                 }
+                Spacer(Modifier.width(10.dp))
             }
+            Text(
+                judul,
+                style = MaterialTheme.typography.titleMedium,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -362,7 +375,7 @@ fun Modifier.pulseKritis(): Modifier {
 // pucat di mode gelap untuk penanda masuk), dengan teks putih di atasnya.
 // Kas Keluar memakai colorScheme.error (R28, audit 2026-11-15 — unifikasi
 // merah #BA1A1A, 2026-11-14), bukan lagi merah hardcode.
-val KasMasukBlue = Color(0xFF0061A4)
+val KasMasukBlue = Color(0xFF15803D)
 
 
 @Composable
@@ -448,10 +461,9 @@ fun SearchField(
             .height(48.dp),
         decorationBox = { innerTextField ->
             Surface(
-                // Latar surfaceContainerHigh tanpa garis tepi, senada
-                // kotak stat P3 / baris K1 / shortcut R1.
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.fillMaxSize()
             ) {
                 Row(

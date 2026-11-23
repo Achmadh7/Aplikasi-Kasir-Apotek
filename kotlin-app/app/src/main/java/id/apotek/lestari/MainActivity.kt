@@ -113,6 +113,7 @@ import id.apotek.lestari.ui.rememberLogoBitmap
 import id.apotek.lestari.ui.screens.*
 import id.apotek.lestari.ui.theme.ApotikLestariTheme
 import id.apotek.lestari.ui.theme.AppLang
+import id.apotek.lestari.ui.theme.ForestMint
 import id.apotek.lestari.ui.theme.tr
 import id.apotek.lestari.ui.theme.ExpressiveCard
 import id.apotek.lestari.ui.theme.SpaceL
@@ -517,36 +518,41 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
             // tidak aktif outlined. Tab "Lainnya" kini tujuan sungguhan
             // (halaman petak besar A2) dan tampak terpilih di halamannya
             // sendiri maupun di salah satu sub-menunya.
-            ShortNavigationBar(arrangement = ShortNavigationBarArrangement.EqualWeight) {
-                TABS.forEach { tab ->
-                    val selected = when (tab.route) {
-                        "beranda" -> current == "beranda"
-                        "stok" -> current == "stok"
-                        "kasir" -> current == "kasir"
-                        "keuangan" -> current == "keuangan"
-                        else -> current == "lainnya" || current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf", "pemasok", "tutupBuku")
-                    }
-                    ShortNavigationBarItem(
-                        selected = selected,
-                        onClick = { goToTab(tab.route) },
-                        icon = {
-                            Icon(
-                                if (selected) tab.icon else tab.iconOutlined,
-                                contentDescription = tab.label,
-                            )
-                        },
-                        label = {
-                            Text(
-                                when (tab.route) {
-                                    "beranda" -> tr("Beranda", "Home")
-                                    "stok" -> tr("Stok", "Stock")
-                                    "kasir" -> tr("Kasir", "Cashier")
-                                    "keuangan" -> tr("Keuangan", "Finance")
-                                    else -> tr("Lainnya", "More")
-                                }
-                            )
+            if (current != "tentang") {
+                ShortNavigationBar(
+                    arrangement = ShortNavigationBarArrangement.EqualWeight,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                ) {
+                    TABS.forEach { tab ->
+                        val selected = when (tab.route) {
+                            "beranda" -> current == "beranda"
+                            "stok" -> current == "stok"
+                            "kasir" -> current == "kasir"
+                            "keuangan" -> current == "keuangan"
+                            else -> current == "lainnya" || current in listOf("laba", "pengingat", "riwayat", "backup", "terlaris", "tentang", "pbf", "pemasok", "tutupBuku")
                         }
-                    )
+                        ShortNavigationBarItem(
+                            selected = selected,
+                            onClick = { goToTab(tab.route) },
+                            icon = {
+                                Icon(
+                                    if (selected) tab.icon else tab.iconOutlined,
+                                    contentDescription = tab.label,
+                                )
+                            },
+                            label = {
+                                Text(
+                                    when (tab.route) {
+                                        "beranda" -> tr("Beranda", "Home")
+                                        "stok" -> tr("Stok", "Stock")
+                                        "kasir" -> tr("Kasir", "Cashier")
+                                        "keuangan" -> tr("Keuangan", "Finance")
+                                        else -> tr("Lainnya", "More")
+                                    }
+                                )
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -625,7 +631,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 composable("terlaris", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { ObatTerlarisScreen() }
                 composable("pbf", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { PbfScreen() }
                 composable("pemasok", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { PemasokScreen() }
-                composable("tentang", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { TentangScreen() }
+                composable("tentang", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { TentangScreen(onBack = { nav.popBackStack() }) }
                 composable("tutupBuku", enterTransition = subMasuk, exitTransition = subKeluar, popEnterTransition = subPopMasuk, popExitTransition = subPopKeluar) { TutupBukuScreen(onMintaSync = { jalankanSync() }) }
             }
         }
@@ -672,7 +678,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 Icon(
                     Icons.Default.CloudDone,
                     contentDescription = null,
-                    tint = Color(0xFF40C4FF),
+                    tint = ForestMint,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(8.dp))
@@ -850,36 +856,10 @@ fun LainnyaScreen(
     onKeluarTap: () -> Unit,
     onResetTap: () -> Unit
 ) {
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp)) {
-        // Identitas tengah: cakram navy berisi lingkaran putih berlogo.
-        val logo = rememberLogoBitmap()
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Surface(color = Color(0xFF174280), shape = CircleShape, modifier = Modifier.size(104.dp)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Surface(color = Color.White, shape = CircleShape, modifier = Modifier.size(76.dp)) {
-                        if (logo != null) {
-                            Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(7.dp).fillMaxSize())
-                        } else {
-                            Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF0A2A5C), modifier = Modifier.padding(16.dp).fillMaxSize())
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Text("Apotek Lestari", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-            Spacer(Modifier.height(8.dp))
-            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(50)) {
-                Text(
-                    tr("Versi ", "Version ") + BuildConfig.VERSION_NAME,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                )
-            }
-        }
-        Spacer(Modifier.height(SpaceL))
-        // Status Mode Online/Offline (kartu info) — pola yang sama
-        // dengan KasBulanan.
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 14.dp)) {
+        KartuHeaderPremium(tr("Lainnya", "More"), Icons.Default.MoreHoriz)
+        Spacer(Modifier.height(SpaceM))
+        // Status Mode Online/Offline (kartu info)
         val subStatus = when {
             emailOnline != null -> emailOnline + "\n" + (
                 if (syncTerakhir > 0) {
@@ -892,11 +872,7 @@ fun LainnyaScreen(
             onlineSiap -> tr("Mode tamu \u2014 data hanya tersimpan di HP ini", "Guest mode \u2014 data is only stored on this phone")
             else -> tr("Aplikasi berjalan lokal sepenuhnya di HP ini", "The app runs fully locally on this phone")
         }
-        // O1 WARNA STATUS (pilihan Achmad 2026-11-16): kotak ikon
-        // baris status ikut status — Online hijau #2E7D32, Offline
-        // kuning gelap #8D6E00, ikon awan putih.
-        val kotakStatus = if (emailOnline != null) Color(0xFF2E7D32) else Color(0xFF8D6E00)
-        // Kartu grup tujuan: delapan menu sebagai baris (dulu petak A2).
+        val kotakStatus = if (emailOnline != null) Color(0xFF15803D) else Color(0xFFD97706)
         val tiles = listOf(
             LainnyaTile("laba", tr("Laba", "Profit"), tr("Laba & margin", "Profit & margins"), Icons.Default.TrendingUp),
             LainnyaTile("terlaris", tr("Terlaris", "Best Sellers"), tr("Peringkat penjualan", "Sales ranking"), Icons.Default.Leaderboard),
@@ -907,7 +883,6 @@ fun LainnyaScreen(
             LainnyaTile("pemasok", tr("Pemasok", "Suppliers"), tr("Daftar PBF", "PBF list"), Icons.Default.Store),
             LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
         )
-        // N1: kartu grup 20dp surfaceContainerHigh (ketiga kartu grup).
         Text(
             tr("MENU", "MENU"),
             style = MaterialTheme.typography.labelMedium,
@@ -915,8 +890,8 @@ fun LainnyaScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
         )
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Column(Modifier.padding(vertical = 8.dp)) {
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            Column(Modifier.padding(vertical = 6.dp)) {
                 tiles.forEachIndexed { idx, tile ->
                     if (idx > 0) PemisahGrup()
                     BarisGrupLainnya(tile.icon, tile.label, tile.sub, onClick = { onGo(tile.route) })
@@ -924,8 +899,6 @@ fun LainnyaScreen(
             }
         }
         Spacer(Modifier.height(SpaceM))
-        // LM5 GRUP AKUN (am213: pindah ke bawah MENU): status Mode Online/Offline
-        // (dulu kartu O1 tersendiri) + sinkronisasi + keluar akun jadi satu kartu.
         Text(
             tr("AKUN", "ACCOUNT"),
             style = MaterialTheme.typography.labelMedium,
@@ -933,8 +906,8 @@ fun LainnyaScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
         )
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Column(Modifier.padding(vertical = 8.dp)) {
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            Column(Modifier.padding(vertical = 6.dp)) {
                 BarisGrupLainnya(
                     if (emailOnline != null) Icons.Default.CloudDone else Icons.Default.CloudOff,
                     if (emailOnline != null) tr("Mode Online", "Online Mode") else tr("Mode Offline", "Offline Mode"),
@@ -974,8 +947,6 @@ fun LainnyaScreen(
             }
         }
         Spacer(Modifier.height(SpaceM))
-        // Kartu grup pengaturan: tema (saklar) + bahasa saja
-        // (LM5: sinkronisasi + keluar akun pindah ke kartu AKUN).
         Text(
             tr("PENGATURAN", "SETTINGS"),
             style = MaterialTheme.typography.labelMedium,
@@ -983,8 +954,8 @@ fun LainnyaScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
         )
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Column(Modifier.padding(vertical = 8.dp)) {
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            Column(Modifier.padding(vertical = 6.dp)) {
                 BarisGrupLainnya(
                     if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
                     tr("Mode Gelap", "Dark Mode"),
@@ -1001,13 +972,19 @@ fun LainnyaScreen(
             }
         }
         Spacer(Modifier.height(SpaceM))
-        // Kartu Tentang tersendiri, seperti KasBulanan.
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Column(Modifier.padding(vertical = 8.dp)) {
+        Text(
+            tr("TENTANG", "ABOUT"),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+        )
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            Column(Modifier.padding(vertical = 6.dp)) {
                 BarisGrupLainnya(
                     Icons.Default.Info,
-                    tr("Tentang", "About"),
-                    tr("Versi ", "Version ") + BuildConfig.VERSION_NAME,
+                    tr("Tentang Aplikasi", "About App"),
+                    tr("Versi ${BuildConfig.VERSION_NAME} • Info aplikasi", "Version ${BuildConfig.VERSION_NAME} • App info"),
                     onClick = { onGo("tentang") }
                 )
             }
@@ -1018,8 +995,6 @@ fun LainnyaScreen(
             headlineContent = { Text(tr("Reset Semua Data", "Reset All Data"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error) },
             supportingContent = { Text(tr("Hapus data di HP ini dan di awan, mulai dari nol", "Delete data on this phone and in the cloud, start from zero")) },
             leadingContent = {
-                // N1: lingkaran ikon merah senada (errorContainer +
-                // onErrorContainer), seperti kotak ikon Keluar Akun.
                 Surface(color = MaterialTheme.colorScheme.errorContainer, shape = CircleShape) {
                     Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(10.dp).size(22.dp))
                 }

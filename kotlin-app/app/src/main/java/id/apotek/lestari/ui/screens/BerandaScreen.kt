@@ -16,11 +16,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.LocalPharmacy
-import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.*
@@ -125,88 +125,220 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        // Jarak antar kartu diperbesar 12 -> 20dp (permintaan Achmad
-        // 2026-10-30 dari screenshot Beranda — kartu-kartu tampak terlalu rapat).
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        contentPadding = PaddingValues(vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            
-            Column {
-            // Header N2 (pilihan Achmad 2026-11-10, menggantikan K3):
-            // MODE GELAP tetap batang navy nyaris hitam, logo dalam kotak
-            // putih, nama satu baris putih. MODE LIGHT = H6 (pilihan
-            // Achmad 2026-11-12): kartu biru muda #D3E3F3, nama navy,
-            // tombol awan berbingkai biru gelap #0284C7 (merah #B3261E
-            // saat GAGAL) supaya tetap terbaca di atas kartu terang.
-            // Kanan = tombol awan saja (tanpa tulisan status - permintaan
-            // Achmad) yang tetap menjadi tombol sinkron. Tanggal tidak
-            // di header; kartu ini adalah header Beranda.
-            // HC1 (2026-11-17): header ramping — logo 40dp, nama 20sp, awan 36dp, padding 12dp.
-            Card(
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = if (gelap) WarnaHeaderN2 else Color(0xFFD3E3F3)),
-                border = if (gelap) BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)) else null,
-                modifier = Modifier.fillMaxWidth()
+            val brush = forestHeroBrush()
+            val logo = rememberLogoBitmap()
+            val monthMode = summaryPeriod == 1
+            val d = dashboard
+            val diff = (d?.todayIn ?: 0) - (d?.yesterdayIn ?: 0)
+            val panelIn = if (monthMode) (d?.monthIn ?: 0) else (d?.todayIn ?: 0)
+            val panelOut = if (monthMode) (d?.monthOut ?: 0) else (d?.todayOut ?: 0)
+            val panelProfit = if (monthMode) (d?.monthProfit ?: 0) else (d?.todayProfit ?: 0)
+
+            // Unified Forest Emerald Hero Card (Mix Opsi 1 + Opsi 3)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(brush)
+                    .padding(14.dp)
             ) {
-                Row(
-                    Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val logo = rememberLogoBitmap()
-                    Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
-                        if (logo != null) {
-                            Image(bitmap = logo, contentDescription = "Logo Apotek Lestari", contentScale = ContentScale.Fit, modifier = Modifier.padding(6.dp).fillMaxSize())
-                        } else {
-                            Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF16324F), modifier = Modifier.padding(9.dp).fillMaxSize())
+                Column(Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            color = Color.White,
+                            shape = RoundedCornerShape(9.dp),
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            if (logo != null) {
+                                Image(
+                                    bitmap = logo,
+                                    contentDescription = "Logo Apotek Lestari",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Icon(Icons.Default.LocalPharmacy, null, tint = ForestHeroLightStart, modifier = Modifier.padding(7.dp).fillMaxSize())
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "Apotek Lestari",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.weight(1f))
+                        if (statusSync != StatusSync.NONAKTIF) {
+                            val syncBorder = if (statusSync == StatusSync.GAGAL) ForestErrorSoft else ForestMint.copy(alpha = 0.42f)
+                            val syncTint = if (statusSync == StatusSync.GAGAL) ForestErrorSoft else ForestMint
+                            Surface(
+                                color = Color(0xFF10B981).copy(alpha = 0.18f),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, syncBorder),
+                                modifier = Modifier.clickable { onSyncTap() }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    when (statusSync) {
+                                        StatusSync.PROSES -> CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = ForestMint)
+                                        StatusSync.BERHASIL -> Icon(Icons.Default.CloudDone, null, tint = syncTint, modifier = Modifier.size(15.dp))
+                                        else -> Icon(Icons.Default.CloudOff, null, tint = syncTint, modifier = Modifier.size(15.dp))
+                                    }
+                                    Text(
+                                        tr("Sinkron", "Sync"),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = syncTint
+                                    )
+                                }
+                            }
                         }
                     }
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        "Apotek Lestari",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (gelap) Color.White else WarnaHeaderN2
-                    )
-                    Spacer(Modifier.weight(1f))
-                    if (statusSync != StatusSync.NONAKTIF) {
-                        Surface(
-                            color = Color.Transparent,
-                            shape = CircleShape,
-                            border = BorderStroke(
-                                1.5.dp,
-                                if (statusSync == StatusSync.GAGAL) MaterialTheme.colorScheme.error else (if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7))
-                            ),
-                            modifier = Modifier.size(36.dp).clickable { onSyncTap() }
+
+                    if (d != null) {
+                        HorizontalDivider(
+                            color = Color.White.copy(alpha = 0.12f),
+                            modifier = Modifier.padding(vertical = 10.dp)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                when (statusSync) {
-                                    StatusSync.PROSES -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7))
-                                    StatusSync.BERHASIL -> Icon(Icons.Default.CloudDone, tr("Tersinkron", "Synced"), tint = if (gelap) Color(0xFF40C4FF) else Color(0xFF0284C7), modifier = Modifier.size(20.dp))
-                                    StatusSync.GAGAL -> Icon(Icons.Default.CloudOff, tr("Gagal", "Failed"), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                                    else -> Icon(Icons.Default.CloudOff, tr("Mode Tamu", "Guest mode"), tint = if (gelap) Color.White else WarnaHeaderN2, modifier = Modifier.size(20.dp))
+                            Text(
+                                if (monthMode) tr("PEMBELIAN BULAN INI", "THIS MONTH'S SALES") else tr("PEMBELIAN HARI INI", "TODAY'S SALES"),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = ForestMintSoft,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                listOf(tr("Hari", "Day"), tr("Bulan", "Month")).forEachIndexed { idx, label ->
+                                    val selected = summaryPeriod == idx
+                                    Surface(
+                                        color = if (selected) Color(0xFF10B981) else Color.White.copy(alpha = 0.12f),
+                                        shape = RoundedCornerShape(50),
+                                        modifier = Modifier.clickable { summaryPeriod = idx }
+                                    ) {
+                                        Text(
+                                            label,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (selected) Color(0xFF052E16) else ForestMintMuted,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        AnimatedAmount(
+                            value = panelIn,
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (!monthMode) {
+                            Spacer(Modifier.height(5.dp))
+                            val isUp = diff >= 0
+                            val arrowColor = if (isUp) ForestMint else ForestErrorSoft
+                            Surface(
+                                color = if (isUp) Color(0xFF10B981).copy(alpha = 0.22f) else ForestErrorSoft.copy(alpha = 0.18f),
+                                shape = RoundedCornerShape(50),
+                                border = BorderStroke(1.dp, arrowColor.copy(alpha = 0.36f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(if (isUp) "▲" else "▼", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = arrowColor)
+                                    Text(
+                                        if (diff == 0) tr("Sama vs kemarin", "Same vs yesterday")
+                                        else "${if (isUp) "+" else "-"}${formatIDR(kotlin.math.abs(diff))} ${tr("vs kemarin", "vs yesterday")}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFECFDF5),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        // 2 sub-tiles (Keluar & Selisih — tanpa Struk, nominal penuh)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Surface(
+                                color = Color.White.copy(alpha = 0.10f),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text("▼", fontSize = 10.sp, color = ForestErrorSoft, fontWeight = FontWeight.Bold)
+                                        Text(tr("Keluar", "Out"), style = MaterialTheme.typography.labelSmall, color = ForestMintMuted, maxLines = 1)
+                                    }
+                                    Spacer(Modifier.height(3.dp))
+                                    Text(
+                                        formatIDR(panelOut),
+                                        style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = ForestErrorSoft,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            Surface(
+                                color = Color.White.copy(alpha = 0.10f),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                                    val pos = panelProfit >= 0
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(if (pos) "▲" else "▼", fontSize = 10.sp, color = if (pos) ForestMint else ForestErrorSoft, fontWeight = FontWeight.Bold)
+                                        Text(tr("Selisih", "Net"), style = MaterialTheme.typography.labelSmall, color = ForestMintMuted, maxLines = 1)
+                                    }
+                                    Spacer(Modifier.height(3.dp))
+                                    Text(
+                                        (if (pos) "+" else "-") + formatIDR(kotlin.math.abs(panelProfit)),
+                                        style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = if (pos) Color.White else ForestErrorSoft,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
                         }
                     }
                 }
             }
-            Spacer(Modifier.height(SpaceS))
             DemoBanner()
-            }
-            
         }
         dashboard?.let { d ->
-            // R25 (audit 2026-11-15): refresh gagal setelah muat pertama
-            // berhasil — tampilkan galat kecil + tombol coba lagi, jangan
-            // diam-diam memakai data basi.
             if (loadError != null) {
                 item {
                     ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text(tr("Gagal memperbarui Beranda.", "Failed to refresh Home."), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                                Text(tr("Gagal memperbarui Beranda.", "Failed to refresh Home."), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                                 Spacer(Modifier.height(4.dp))
                                 Text(loadError ?: "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -217,307 +349,168 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                 }
             }
             item {
-                
-                // Panel ringkasan BR5 (pilihan Achmad 2026-11-04): hero
-                // Pemasukan dan kartu uang lama digabung menjadi SATU
-                // panel bertab periode Hari Ini / Bulan Ini, supaya angka
-                // harian dan bulanan tidak tampil berulang dalam dua kartu
-                // terpisah. Pemilih periode memakai dua FilterChip
-                // terpisah (T1, pilihan Achmad 2026-11-14), bukan segmen
-                // gabung lagi.
-                val monthMode = summaryPeriod == 1
-                val diff = d.todayIn - d.yesterdayIn
-                val panelIn = if (monthMode) d.monthIn else d.todayIn
-                val panelOut = if (monthMode) d.monthOut else d.todayOut
-                val panelProfit = if (monthMode) d.monthProfit else d.todayProfit
-                val panelSales = if (monthMode) d.totalSalesMonth else d.totalSalesToday
-                Column {
-                    // C3 PIL KECIL (pilihan Achmad 2026-11-16, dari papan
-                    // pil periode): pil 36dp, teks 14sp, sudut 12dp, lebar
-                    // mengikuti isi teks + rata kiri (tanpa weight) —
-                    // menggantikan T1 64dp/19sp selebar layar. Warna tetap:
-                    // terpilih navy #1B385C + teks putih + garis cyan.
-                    Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                        listOf(tr("Hari Ini", "Today"), tr("Bulan Ini", "This Month")).forEachIndexed { index, label ->
-                            val selected = summaryPeriod == index
-                            FilterChip(
-                                selected = selected,
-                                onClick = { summaryPeriod = index },
-                                label = {
-                                    Text(
-                                        label, maxLines = 1,
-                                        fontSize = 14.sp,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = Color(0xFF1B385C),
-                                    selectedLabelColor = Color.White
-                                ),
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (selected) Color(0xFF40C4FF) else MaterialTheme.colorScheme.outlineVariant
-                                ),
-                                modifier = Modifier.height(36.dp)
+                // Compact 1-line Alert Strip (Mix Opsi 3 + Accent Opsi 1)
+                val shortParts = buildList {
+                    if (outOfStockNames.isNotEmpty()) add(tr("${outOfStockNames.size} Habis", "${outOfStockNames.size} Out"))
+                    if (lowStockMeds.isNotEmpty()) add(tr("${lowStockMeds.size} Menipis", "${lowStockMeds.size} Low"))
+                    if (d.expiringCount > 0) add("${d.expiringCount} ED")
+                    if (dueBills.isNotEmpty()) add(tr("${dueBills.size} Tagihan PBF", "${dueBills.size} PBF Bills"))
+                }
+                val stripText = when {
+                    reminderLoadFailed -> tr("Gagal memuat pengingat", "Failed to load reminders")
+                    shortParts.isNotEmpty() -> shortParts.joinToString(" • ")
+                    !remindersLoaded -> tr("Memuat pengingat…", "Loading reminders…")
+                    else -> tr("Semua stok & ED aman", "All stock & expiry safe")
+                }
+                val accent = warningAmber()
+                Surface(
+                    color = amberBg(),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { onGoPengingat() }
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(Modifier.width(4.dp).fillMaxHeight().background(accent))
+                        Row(
+                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 11.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Warning, null, tint = accent, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                stripText,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                tr("Cek ›", "View ›"),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = accent
                             )
                         }
                     }
-                    Spacer(Modifier.height(SpaceM))
-                    ExpressiveCard(
-                        modifier = Modifier.fillMaxWidth()
-                            
-                    ) {
-                        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text(if (monthMode) tr("PEMASUKAN BULAN INI", "THIS MONTH'S INCOME") else tr("PEMASUKAN HARI INI", "TODAY'S INCOME"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                // P3 (pilihan Achmad 2026-11-16): perbandingan
-                                // vs kemarin jadi pill ringkas di kanan atas;
-                                // mode Bulan Ini tanpa pill.
-                                if (!monthMode) {
-                                    val pillTint = when {
-                                        diff > 0 -> profitGreen()
-                                        diff < 0 -> MaterialTheme.colorScheme.error
-                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            }
+            item {
+                // 3 Shortcut Cards with Material 3 tinted icon badges (Laba, Stok, Riwayat)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    ShortcutCard(
+                        label = tr("Laba", "Profit"),
+                        icon = Icons.Default.TrendingUp,
+                        badgeBg = profitBg(),
+                        badgeTint = profitGreen(),
+                        modifier = Modifier.weight(1f),
+                        onClick = onGoLaba
+                    )
+                    ShortcutCard(
+                        label = tr("Stok", "Stock"),
+                        icon = Icons.Default.Medication,
+                        badgeBg = infoBg(),
+                        badgeTint = infoBlue(),
+                        modifier = Modifier.weight(1f),
+                        onClick = onGoStok
+                    )
+                    ShortcutCard(
+                        label = tr("Riwayat", "History"),
+                        icon = Icons.Default.ReceiptLong,
+                        badgeBg = amberBg(),
+                        badgeTint = warningAmber(),
+                        modifier = Modifier.weight(1f),
+                        onClick = onGoRiwayat
+                    )
+                }
+            }
+            item {
+                // Obat Terjual Hari Ini dengan Rank Badge 1 2 3
+                ExpressiveCard(shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                tr("OBAT TERJUAL HARI INI", "ITEMS SOLD TODAY"),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (d.bestSellers.isNotEmpty()) {
+                                Text(
+                                    "Top ${minOf(d.bestSellers.size, 3)}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        if (d.bestSellers.isEmpty()) {
+                            Text(
+                                tr("Belum ada obat terjual hari ini.", "No items sold today yet."),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            Column {
+                                d.bestSellers.forEachIndexed { idx, b ->
+                                    if (idx > 0) {
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                     }
-                                    Surface(
-                                        color = pillTint.copy(alpha = 0.15f),
-                                        shape = RoundedCornerShape(13.dp),
-                                        border = BorderStroke(1.dp, pillTint)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                            if (diff != 0) {
-                                                Icon(if (diff > 0) Icons.Default.TrendingUp else Icons.Default.TrendingDown, null, tint = pillTint, modifier = Modifier.size(14.dp))
-                                                Spacer(Modifier.width(4.dp))
+                                        Surface(
+                                            color = if (idx == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                            shape = RoundedCornerShape(7.dp),
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text(
+                                                    "${idx + 1}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = if (idx == 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
                                             }
+                                        }
+                                        Spacer(Modifier.width(10.dp))
+                                        Column(Modifier.weight(1f)) {
                                             Text(
-                                                // Nominal pill format PENUH (permintaan Achmad
-                                                // 2026-11-16): 'Rp 2.940.000', bukan 'Rp 2,94jt'.
-                                                if (diff == 0) tr("Sama", "Same") else formatIDR(kotlin.math.abs(diff)),
-                                                style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = pillTint, maxLines = 1, overflow = TextOverflow.Ellipsis
+                                                b.name,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                tr("${b.qty} terjual", "${b.qty} sold"),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
-                                    }
-                                }
-                            }
-                            Spacer(Modifier.height(SpaceS))
-                            AnimatedAmount(panelIn, MaterialTheme.typography.headlineLarge, MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.height(SpaceM))
-                            // P3: tiga angka bawah jadi kotak kecil; nilai
-                            // uang memakai format PENUH (Rp 160.000); teks
-                            // 12sp + padding 8dp supaya muat tanpa terpotong
-                            // (N1 2026-11-16).
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf(
-                                    Triple(tr("Pengeluaran", "Expenses"), formatIDR(panelOut), MaterialTheme.colorScheme.error),
-                                    // Nilai kotak format PENUH (bukan ringkas),
-                                    // atas permintaan Achmad 2026-11-16: Roboto Bold
-                                    // 12sp muat sampai ratusan juta di lebar pakai
-                                    // 88,3dp (padding horizontal kotak 8dp; N1).
-                                    Triple(tr("Selisih", "Difference"), (if (panelProfit < 0) "-" else "") + formatIDR(kotlin.math.abs(panelProfit)), if (panelProfit >= 0) profitGreen() else MaterialTheme.colorScheme.error),
-                                    Triple(tr("Transaksi", "Transactions"), "$panelSales", MaterialTheme.colorScheme.onSurface)
-                                ).forEach { (label, nilai, warna) ->
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        shape = RoundedCornerShape(14.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Column(Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
-                                            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            Spacer(Modifier.height(4.dp))
-                                            Text(nilai, style = MaterialTheme.typography.titleSmall.copy(fontSize = 12.sp), fontWeight = FontWeight.Bold, color = warna, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            formatIDR(b.revenue),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1
+                                        )
                                     }
                                 }
                             }
                         }
                     }
                 }
-                
-            }
-            item {
-                
-                // Shortcut ke menu yang tidak lagi ada di bar bawah (Laba, Pengingat, Riwayat).
-                Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
-                    ShortcutCard(label = tr("Laba", "Profit"), icon = Icons.Default.TrendingUp, modifier = Modifier.weight(1f), onClick = onGoLaba)
-                    ShortcutCard(label = tr("Pengingat", "Reminders"), icon = Icons.Default.NotificationsActive, modifier = Modifier.weight(1f), onClick = onGoPengingat)
-                    ShortcutCard(label = tr("Riwayat", "History"), icon = Icons.Default.ReceiptLong, modifier = Modifier.weight(1f), onClick = onGoRiwayat)
-                }
-                
-            }
-            item {
-                
-                // BR1 (pilihan Achmad 2026-11-14, diubah 15 Nov 2026 jadi
-                // "3 obat + '+N lainnya'"): kartu Pengingat tetap spanduk
-                // ringkas — garis aksen kuning di kiri, kotak jumlah
-                // (habis/kadaluarsa) + maks. 3 obat paling mendesak +
-                // "+N lainnya", dan tautan "Lihat Pengingat >" ke layar penuh.
-                // Baris ringkasan atas dihapus 16 Nov 2026 (pilihan Achmad);
-                // hanya tampil saat kartu kosong (semua aman / memuat / gagal).
-                // Isi lengkap tetap ada di layar Pengingat.
-                val reminderParts = buildList {
-                    if (outOfStockNames.isNotEmpty()) add(tr("${outOfStockNames.size} obat habis", "${outOfStockNames.size} medicines out of stock"))
-                    if (lowStockMeds.isNotEmpty()) add(tr("${lowStockMeds.size} obat stok menipis", "${lowStockMeds.size} medicines low on stock"))
-                    if (d.expiringCount > 0) add(tr("${d.expiringCount} obat dekat kadaluarsa", "${d.expiringCount} medicines expiring soon"))
-                    if (dueBills.isNotEmpty()) add(tr("${dueBills.size} tagihan PBF jatuh tempo", "${dueBills.size} PBF bills due"))
-                }
-                val hasReminders = reminderParts.isNotEmpty()
-                val reminderSummary = when {
-                    reminderLoadFailed -> tr("Gagal memuat data pengingat.", "Failed to load reminder data.")
-                    hasReminders -> reminderParts.joinToString(" • ")
-                    // R26: daftar belum tiba — jangan klaim "semua aman".
-                    !remindersLoaded -> tr("Memuat data pengingat...", "Loading reminder data...")
-                    else -> tr("Semua stok dan kadaluarsa aman.", "All stock and expiry dates are safe.")
-                }
-                // R15 (audit 2026-11-15) + pilihan Achmad 15 Nov 2026
-                // ("3 obat + '+N lainnya'"): kartu menampilkan maks. 3 obat
-                // paling mendesak — habis, lalu menipis (stok paling sedikit
-                // dulu), lalu kadaluarsa (paling dekat dulu); sisanya
-                // diringkas "+N lainnya". Tagihan PBF bukan obat: tetap
-                // dihitung di ringkasan, dan satu baris tagihan paling
-                // mendesak tetap tampil di bawah daftar obat.
-                val reminderObat = buildList {
-                    outOfStockNames.forEach { add("$it • ${tr("Habis", "Out of stock")}") }
-                    lowStockMeds.forEach { (nm, st) -> add("$nm • ${tr("Sisa: $st", "Left: $st")}") }
-                    expiringMeds.forEach { (nm, exp) -> add("$nm • ${formatDateID(exp)}") }
-                }
-                val reminderTampil = reminderObat.take(3)
-                val reminderSisa = reminderObat.size - reminderTampil.size
-                val reminderTagihan: String? = if (dueBills.isNotEmpty()) {
-                    val p = dueBills.first()
-                    val daysLeft = dueDaysLeft(p.dueDate) ?: 0L
-                    val dueLabel = when {
-                        daysLeft < 0L -> tr("Lewat ${-daysLeft} hari", "${-daysLeft} days overdue")
-                        daysLeft == 0L -> tr("Jatuh tempo hari ini", "Due today")
-                        daysLeft == 1L -> tr("Besok jatuh tempo", "Due tomorrow")
-                        else -> tr("$daysLeft hari lagi", "Due in $daysLeft days")
-                    }
-                    "${p.pbfName} • $dueLabel"
-                } else null
-                // am211: kartu Pengingat selalu kuning #FFB74D di
-                // kedua tema (permintaan Achmad) — warningAmber()
-                // global tetap dipakai di tempat lain.
-                ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
-                        Box(Modifier.width(6.dp).fillMaxHeight().background(Color(0xFFFFB74D)))
-                        Column(Modifier.weight(1f).padding(16.dp)) {
-                            // R1: jumlah habis / kadaluarsa jadi kotak kecil
-                            // senada kartu P3 (hanya yang jumlahnya > 0).
-                            val kotakPengingat = listOfNotNull(
-                                if (outOfStockNames.isNotEmpty()) Triple(tr("Habis", "Out of stock"), tr("${outOfStockNames.size} obat", "${outOfStockNames.size} medicines"), MaterialTheme.colorScheme.error) else null,
-                                if (d.expiringCount > 0) Triple(tr("Dekat kadaluarsa", "Expiring soon"), tr("${d.expiringCount} obat", "${d.expiringCount} medicines"), Color(0xFFFFB74D)) else null
-                            )
-                            // Baris ringkasan atas DIHAPUS 2026-11-16
-                            // (pilihan Achmad): angkanya sudah ada di kotak
-                            // di bawah. Baris ini hanya tampil saat kartu
-                            // kosong (semua aman / memuat / gagal), supaya
-                            // kartu tidak kosong.
-                            val tampilkanRingkasan = kotakPengingat.isEmpty() && reminderTampil.isEmpty() && reminderTagihan == null
-                            if (tampilkanRingkasan) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Warning, null, tint = Color(0xFFFFB74D), modifier = Modifier.size(20.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(reminderSummary, style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
-                                }
-                            }
-                            // R14 (audit 2026-11-18): bila pemuatan pengingat
-                            // gagal tapi kartu tidak kosong (ada tagihan PBF),
-                            // ringkasan galat di atas tidak tampil — tampilkan
-                            // baris galat kecil di sini.
-                            if (reminderLoadFailed && !tampilkanRingkasan) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Warning, null, tint = Color(0xFFFFB74D), modifier = Modifier.size(20.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(tr("Gagal memuat data pengingat.", "Failed to load reminder data."), style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), fontWeight = FontWeight.Bold)
-                                }
-                            }
-                            if (kotakPengingat.isNotEmpty()) {
-                                Spacer(Modifier.height(SpaceM))
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    kotakPengingat.forEach { (label, nilai, warna) ->
-                                        Surface(
-                                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                            shape = RoundedCornerShape(14.dp),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
-                                                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                                Spacer(Modifier.height(4.dp))
-                                                Text(nilai, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = warna, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if (reminderTampil.isNotEmpty() || reminderTagihan != null) {
-                                Spacer(Modifier.height(SpaceXS))
-                                // Daftar obat sejajar dengan label kotak di atas
-                                // (26dp dari tepi kartu), atas permintaan Achmad.
-                                Column(Modifier.padding(start = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    reminderTampil.forEach { baris ->
-                                        Text(baris, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    // "+N lainnya" tepat di bawah daftar obat
-                                    // (permintaan Achmad 2026-11-16), sebelum
-                                    // baris tagihan PBF (N5).
-                                    if (reminderSisa > 0) {
-                                        Text(tr("+$reminderSisa lainnya", "+$reminderSisa more"), style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.primary)
-                                    }
-                                    if (reminderTagihan != null) {
-                                        Text(reminderTagihan, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                            }
-                            // Footer kini hanya berisi tombol "Lihat Pengingat >"
-                            // rata kanan — "+N lainnya" sudah pindah ke bawah
-                            // daftar obat di atas (permintaan Achmad 2026-11-16).
-                            if (hasReminders) {
-                                Spacer(Modifier.height(SpaceS))
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                                    TextButton(onClick = onGoPengingat, contentPadding = PaddingValues(0.dp)) {
-                                        Text(tr("Lihat Pengingat >", "View Reminders >"), style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
-            }
-            item {
-                
-                // BR1 (pilihan Achmad 2026-11-14): kartu Obat Terjual
-                // tanpa tab — tab Transaksi dihapus dari Beranda (riwayat
-                // lengkap tetap ada lewat pintasan Riwayat).
-                ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        // am212: teks kartu Obat Terjual hitam pekat
-                        // (terang) / putih pekat (gelap) supaya tegas.
-                        Text(tr("Obat Terjual", "Items Sold"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (gelap) Color.White else Color.Black)
-                        Spacer(Modifier.height(SpaceS))
-                        if (d.bestSellers.isEmpty()) {
-                            Text(tr("Belum ada obat terjual hari ini.", "No items sold today yet."), style = MaterialTheme.typography.bodyMedium, color = if (gelap) Color.White else Color.Black)
-                        } else {
-                            // R1: tiap baris jadi kotak kecil senada kartu P3.
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                d.bestSellers.forEach { b ->
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        shape = RoundedCornerShape(20.dp),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                            Text(b.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = if (gelap) Color.White else Color.Black, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(tr("${b.qty} item • ${formatIDR(b.revenue)}", "${b.qty} items • ${formatIDR(b.revenue)}"), style = MaterialTheme.typography.bodyMedium, color = if (gelap) Color.White else Color.Black, maxLines = 1)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
             }
         } ?: item {
             val err = loadError
@@ -540,14 +533,40 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
 
 
 @Composable
-fun ShortcutCard(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    // R1 (pilihan Achmad 2026-11-16): sudut 20dp + latar
-    // surfaceContainerHigh, senada kotak P3.
-    ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = modifier.clickable { onClick() }) {
-        Column(Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.height(SpaceS))
-            Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.Center)
+fun ShortcutCard(
+    label: String,
+    icon: ImageVector,
+    badgeBg: Color = MaterialTheme.colorScheme.primaryContainer,
+    badgeTint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    ExpressiveCard(
+        shape = RoundedCornerShape(16.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = modifier.clickable { onClick() }
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Surface(
+                color = badgeBg,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.size(34.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, null, tint = badgeTint, modifier = Modifier.size(18.dp))
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

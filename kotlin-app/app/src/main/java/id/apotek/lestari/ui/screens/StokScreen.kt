@@ -233,7 +233,7 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
     ) {
         item {
             Column {
-            KartuHeaderPremium(tr("Stok", "Stock"), Icons.Default.Medication, tr("${medicines.size} jenis obat tercatat", "${medicines.size} medicines recorded"))
+            KartuHeaderPremium(tr("Stok Obat", "Medicine Stock"), Icons.Default.Medication)
             Spacer(Modifier.height(SpaceL))
             DemoBanner()
             SearchField(
@@ -304,24 +304,7 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                 }
             }
             Spacer(Modifier.height(SpaceL))
-            // Ringkasan stok ("N jenis obat • N menipis • N habis")
-            // DIHAPUS atas permintaan Achmad 2026-11-16.
-            // E2 (pilihan Achmad 2026-11-16): tombol Tambah Obat di kiri
-            // baris ini (FAB dihapus); tombol Pilih + urut tetap kanan.
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                // Tombol Tambah Obat — SB1 (pilihan Achmad 2026-11-18):
-                // rata dengan Pilih/A-Z: tinggi 36dp, sudut 18dp,
-                // ikon 16dp, padding 8dp.
-                Button(
-                    onClick = { editing = null; showForm = true },
-                    shape = RoundedCornerShape(18.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(tr("Tambah Obat", "Add Medicine"), style = MaterialTheme.typography.bodyMedium)
-                }
                 Spacer(Modifier.weight(1f))
                 // Tombol Pilih/Batal (mode pilih banyak) + tombol urut 3 mode
                 // (A-Z -> Z-A -> Terendah -> kembali ke A-Z).
@@ -495,8 +478,15 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
             
         }
     }
-        // FAB Tambah Obat (TA1) DIHAPUS 2026-11-16 (E2, pilihan Achmad):
-        // tambah obat hanya lewat tombol di baris Pilih/A-Z di atas.
+        ExtendedFloatingActionButton(
+            onClick = { editing = null; showForm = true },
+            icon = { Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)) },
+            text = { Text(tr("Tambah Obat", "Add Medicine"), fontWeight = FontWeight.Bold) },
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+        )
         SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
     }
     if (showForm) MedicineFormDialog(editing = editing, onDismiss = { showForm = false }, onSaved = { showForm = false; reload() })

@@ -45,7 +45,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
@@ -215,53 +217,94 @@ fun KeuanganScreen() {
                 }
             }
             Spacer(Modifier.height(SpaceL))
-            // Kartu Saldo Kas compact C2 — DUA KOLOM (pilihan Achmad
-            // 2026-11-16, dari papan preview saldo-kas-compact): kiri =
-            // label + angka saldo + tombol Catat Kas kecil; kanan =
-            // Masuk/Keluar bertumpuk, dipisah garis vertikal. Kartu
-            // memendek ±140dp; grafik Arus Kas naik. Tombol tetap
-            // membuka/menutup formulir CS4 di bawah kartu.
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp).height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(tr("SALDO KAS", "CASH BALANCE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(SpaceS))
-                        AnimatedAmount(saldo, MaterialTheme.typography.titleLarge, if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        // R18: bila pemuatan entri gagal, angka 0 di atas
-                        // bukan saldo sebenarnya — beri keterangan (hanya saat
-                        // gagal, bukan saat muat pertama: loadError != null).
-                        if (loadError != null) {
-                            Spacer(Modifier.height(4.dp))
-                            Text(tr("Saldo tidak tersedia — gagal memuat.", "Balance unavailable — failed to load."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                        }
-                        Spacer(Modifier.height(SpaceM))
+            // Kartu Saldo Kas — Forest Emerald Hero Card (Mix Opsi 1 + Opsi 3, Opsi A kontras)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(forestHeroBrush())
+                    .padding(14.dp)
+            ) {
+                Column(Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            tr("SALDO KAS", "CASH BALANCE"),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = ForestMintSoft
+                        )
                         Button(
                             onClick = { if (showForm) showForm = false else { formType = "in"; showForm = true } },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
-                            shape = RoundedCornerShape(18.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                            modifier = Modifier.height(36.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981), contentColor = Color(0xFF052E16)),
+                            shape = RoundedCornerShape(50),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                            modifier = Modifier.height(32.dp)
                         ) {
                             if (showForm) {
-                                Icon(Icons.Default.ExpandLess, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(tr("Sembunyikan", "Hide"), style = MaterialTheme.typography.titleSmall)
+                                Icon(Icons.Default.ExpandLess, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(tr("Tutup", "Hide"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                             } else {
-                                Icon(Icons.Default.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(tr("Catat Kas", "Record Cash"), style = MaterialTheme.typography.titleSmall)
+                                Icon(Icons.Default.Add, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(tr("Catat Kas", "Record Cash"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
-                    // Pemisah vertikal antar kolom.
-                    Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
-                    Spacer(Modifier.width(SpaceM))
-                    // N10 (2026-11-16): 108dp supaya saldo titleLarge muat
-                    // penuh di layar 320dp (kolom kiri jadi 135dp).
-                    Column(Modifier.width(108.dp)) {
-                        Text("▲ " + tr("MASUK", "IN"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(6.dp))
+                    AnimatedAmount(
+                        saldo,
+                        MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
+                        if (saldo < 0) ForestErrorSoft else Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (loadError != null) {
                         Spacer(Modifier.height(4.dp))
-                        AnimatedAmount(masukHariIni, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Spacer(Modifier.height(SpaceM))
-                        Text("▼ " + tr("KELUAR", "OUT"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(4.dp))
-                        AnimatedAmount(keluarHariIni, MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(tr("Saldo tidak tersedia — gagal memuat.", "Balance unavailable — failed to load."), style = MaterialTheme.typography.bodySmall, color = ForestErrorSoft)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(
+                            color = Color.White.copy(alpha = 0.10f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("▲", fontSize = 10.sp, color = ForestMint, fontWeight = FontWeight.Bold)
+                                    Text(tr("MASUK", "IN"), style = MaterialTheme.typography.labelSmall, color = ForestMintMuted, maxLines = 1)
+                                }
+                                Spacer(Modifier.height(3.dp))
+                                AnimatedAmount(
+                                    masukHariIni,
+                                    MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp, fontWeight = FontWeight.ExtraBold),
+                                    Color.White,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        Surface(
+                            color = Color.White.copy(alpha = 0.10f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("▼", fontSize = 10.sp, color = ForestErrorSoft, fontWeight = FontWeight.Bold)
+                                    Text(tr("KELUAR", "OUT"), style = MaterialTheme.typography.labelSmall, color = ForestMintMuted, maxLines = 1)
+                                }
+                                Spacer(Modifier.height(3.dp))
+                                AnimatedAmount(
+                                    keluarHariIni,
+                                    MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp, fontWeight = FontWeight.ExtraBold),
+                                    ForestErrorSoft,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                     }
                 }
             }
