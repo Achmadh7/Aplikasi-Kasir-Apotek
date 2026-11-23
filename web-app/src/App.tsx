@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import Lenis from 'lenis';
+import 'lenis/dist/lenis.css';
 import { StoreProvider, useStore } from './store';
 import { loginWithGoogle, logoutFirebase } from './firebase';
 import { daysUntilExpiry } from './types';
@@ -78,11 +80,40 @@ const MainLayout: React.FC = () => {
     kind: 'login' | 'logout' | 'kick';
     text: string;
   } | null>(null);
+  const [syncPill, setSyncPill] = useState<{
+    kind: 'success' | 'error';
+    text: string;
+  } | null>(null);
   const prevSyncStatus = useRef(syncStatus);
   const authReadyRef = useRef(false);
   const prevUserKeyRef = useRef<string | null>(null);
   const authPillTimerRef = useRef<number | null>(null);
+  const syncPillTimerRef = useRef<number | null>(null);
   const swipeTouchRef = useRef<{ x: number; y: number; blocked: boolean } | null>(null);
+  const lenisRef = useRef<Lenis | null>(null);
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const lenis = new Lenis({
+      autoRaf: true,
+      lerp: 0.1,
+      smoothWheel: true,
+      allowNestedScroll: true,
+    });
+    lenisRef.current = lenis;
+    return () => {
+      lenis.destroy();
+      lenisRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      lenisRef.current?.stop();
+    } else {
+      lenisRef.current?.start();
+    }
+  }, [mobileMenuOpen]);
 
   const isSwipeOpenBlocked = (target: EventTarget | null): boolean => {
     let el = target as HTMLElement | null;
@@ -136,17 +167,25 @@ const MainLayout: React.FC = () => {
   };
 
   useEffect(() => {
-    if (prevSyncStatus.current === 'PROSES' && syncStatus === 'BERHASIL') {
-      notify(syncMessage || 'Sinkronisasi Cloud selesai', 'success');
+    if (syncStatus === 'PROSES') {
+      if (syncPillTimerRef.current) window.clearTimeout(syncPillTimerRef.current);
+      setSyncPill(null);
+    } else if (prevSyncStatus.current === 'PROSES' && syncStatus === 'BERHASIL') {
+      if (syncPillTimerRef.current) window.clearTimeout(syncPillTimerRef.current);
+      setSyncPill({ kind: 'success', text: syncMessage || 'Tersinkron' });
+      syncPillTimerRef.current = window.setTimeout(() => setSyncPill(null), 2800);
     } else if (prevSyncStatus.current === 'PROSES' && syncStatus === 'GAGAL') {
-      notify(syncMessage || 'Sinkronisasi Cloud gagal', 'error');
+      if (syncPillTimerRef.current) window.clearTimeout(syncPillTimerRef.current);
+      setSyncPill({ kind: 'error', text: syncMessage || 'Sinkronisasi gagal' });
+      syncPillTimerRef.current = window.setTimeout(() => setSyncPill(null), 4200);
     }
     prevSyncStatus.current = syncStatus;
-  }, [syncStatus, syncMessage, notify]);
+  }, [syncStatus, syncMessage]);
 
   useEffect(() => {
     return () => {
       if (authPillTimerRef.current) window.clearTimeout(authPillTimerRef.current);
+      if (syncPillTimerRef.current) window.clearTimeout(syncPillTimerRef.current);
     };
   }, []);
 
@@ -232,6 +271,11 @@ const MainLayout: React.FC = () => {
   const selectTab = (id: string) => {
     setActiveTab(id);
     setMobileMenuOpen(false);
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(0, { immediate: true });
+    } else {
+      window.scrollTo(0, 0);
+    }
   };
 
   const userInitials = (() => {
@@ -363,6 +407,51 @@ const MainLayout: React.FC = () => {
     </div>
   ) : null;
 
+  const activeSyncPill =
+    syncStatus === 'PROSES'
+      ? { kind: 'loading' as const, text: 'Menyinkronkan Cloud...' }
+      : syncPill;
+
+  const syncPillTone =
+    activeSyncPill?.kind === 'loading'
+      ? {
+        wrap: 'bg-[#0c4a6e] border-sky-400/50 text-sky-50',
+        dot: '',
+      }
+      : activeSyncPill?.kind === 'error'
+        ? {
+          wrap: 'bg-[#7f1d1d] border-red-400/55 text-red-100',
+          dot: 'bg-red-400 shadow-[0_0_8px_#f87171]',
+        }
+        : {
+          wrap: 'bg-[#064e3b] border-emerald-400/50 text-emerald-50',
+          dot: 'bg-emerald-400 shadow-[0_0_8px_#34d399]',
+        };
+
+  const syncPillEl = activeSyncPill ? (
+    <div
+      key={activeSyncPill.kind}
+      className={`no-print fixed left-1/2 -translate-x-1/2 md:left-[18.25rem] md:translate-x-0 lg:left-[calc(50%+8.5rem)] lg:-translate-x-1/2 z-50 pointer-events-none max-w-[calc(100vw-2rem)] ${
+        authPill
+          ? 'top-[calc(6.25rem+env(safe-area-inset-top))] md:top-14'
+          : 'top-[calc(3.85rem+env(safe-area-inset-top))] md:top-3.5'
+      }`}
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        className={`pill-pop inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-semibold shadow-lg whitespace-nowrap max-w-full ${syncPillTone.wrap}`}
+      >
+        {activeSyncPill.kind === 'loading' ? (
+          <RefreshCw className="w-3.5 h-3.5 animate-spin text-sky-300 shrink-0" />
+        ) : (
+          <span className={`w-2 h-2 rounded-full shrink-0 ${syncPillTone.dot}`} />
+        )}
+        <span className="truncate">{activeSyncPill.text}</span>
+      </div>
+    </div>
+  ) : null;
+
   if (authLoading || !user) {
     const loginFeatures = [
       { num: '01', text: 'Kasir cepat dengan dukungan Cash, QRIS & Transfer' },
@@ -484,6 +573,7 @@ const MainLayout: React.FC = () => {
   return (
     <>
       {authPillEl}
+      {syncPillEl}
       <div
         className="min-h-[100dvh] flex flex-col md:flex-row md:p-3 md:gap-3"
         onTouchStart={handleTouchStart}
@@ -601,12 +691,6 @@ const MainLayout: React.FC = () => {
           <div className="no-print hidden md:flex items-center justify-end mb-3">
             {renderAccountPill(false)}
           </div>
-          {syncStatus === 'PROSES' && (
-            <div className="no-print mb-4 px-4 py-3 rounded-2xl bg-[#DCFCE7] dark:bg-[#15803D]/20 border border-[#86EFAC] dark:border-[#15803D]/40 text-sm font-bold flex items-center gap-3 text-[#166534] dark:text-[#86EFAC]">
-              <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
-              <span>Menyinkronkan data dengan Cloud Firebase...</span>
-            </div>
-          )}
           <Suspense
             fallback={
               <div className="bg-[#E8F2EC] dark:bg-[#142E27] rounded-2xl border border-[#B7D6C3] dark:border-[#244C41] p-8 flex items-center justify-center gap-3 text-sm font-semibold text-[#78716C] dark:text-[#93B5A9]">
