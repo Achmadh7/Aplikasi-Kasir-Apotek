@@ -27,6 +27,15 @@
             "value": "public, max-age=2592000"
           }
         ]
+      },
+      {
+        "source": "/.well-known/*.json",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json; charset=utf-8"
+          }
+        ]
       }
     ],
     "rewrites": [

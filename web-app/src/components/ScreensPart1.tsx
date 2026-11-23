@@ -31,7 +31,6 @@ import {
   Download,
   AlertTriangle,
   TrendingUp,
-  ShoppingBag,
   Package,
   CheckCircle2,
   X,
@@ -43,9 +42,9 @@ export const PageHeader: React.FC<{
   subtitle?: string;
   action?: React.ReactNode;
 }> = ({ title, subtitle, action }) => (
-  <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] shadow-xs p-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+  <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] shadow-xs p-4 mb-5 flex flex-wrap items-center justify-between gap-3">
     <div className="min-w-0">
-      <h1 className="text-xl font-extrabold tracking-tight text-[#1C1917] dark:text-white">{title}</h1>
+      <h1 className="hdr-slideup text-xl font-extrabold tracking-tight text-[#1C1917] dark:text-white">{title}</h1>
       {subtitle && (
         <p className="text-xs text-[#78716C] dark:text-[#93B5A9] mt-0.5">{subtitle}</p>
       )}
@@ -66,7 +65,7 @@ export const StockPill: React.FC<{ stock: number }> = ({ stock }) => {
       : 'bg-[#BA1A1A] animate-pulse';
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold text-white ${color}`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold text-[#1C1917] ${color}`}
     >
       Stok {stock} • {label}
     </span>
@@ -174,57 +173,49 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
 
   return (
     <div className="space-y-4">
-      {/* Top Bar: Ringkasan & Aksi Cepat */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-[#1C1917] dark:text-white">
-            Ringkasan Apotek
-          </h1>
-          <p className="text-xs text-[#78716C] dark:text-[#93B5A9]">
-            {dash.totalSalesToday} transaksi hari ini • Kemarin {formatIDR(dash.yesterdayIn)}
-          </p>
-        </div>
-        <button
-          onClick={() => onNavigate('kasir')}
-          className="px-4 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm transition"
-        >
-          <ShoppingBag className="w-4 h-4" /> Buka Kasir
-        </button>
+      {/* Top Bar: Ringkasan */}
+      <div>
+        <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-[#1C1917] dark:text-white">
+          Ringkasan Apotek
+        </h1>
+        <p className="text-xs text-[#78716C] dark:text-[#93B5A9]">
+          {dash.totalSalesToday} transaksi hari ini • Kemarin {formatIDR(dash.yesterdayIn)}
+        </p>
       </div>
 
       {/* 2-Card KPI Strip: Penjualan Hari Ini & Transaksi Hari Ini ONLY */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs min-w-0">
+        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-[#78716C] dark:text-[#93B5A9] truncate">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[#1C1917] dark:text-white truncate">
               Penjualan Hari Ini
             </p>
-            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#DCFCE7] text-[#166534] dark:bg-[#15803D]/30 dark:text-[#86EFAC]">
+            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#DCFCE7] text-[#1C1917] dark:bg-[#15803D]/30 dark:text-white">
               {diffYesterday >= 0 ? 'Naik' : 'Turun'}
             </span>
           </div>
           <p className="text-lg sm:text-2xl font-extrabold mt-1.5 tabular-nums text-[#1C1917] dark:text-white truncate">
             <AnimatedNumber value={dash.todayIn} format={formatIDR} />
           </p>
-          <p className="text-[11px] mt-1 text-[#78716C] dark:text-[#93B5A9] truncate">
+          <p className="text-[11px] mt-1 text-[#1C1917] dark:text-white truncate">
             {diffYesterday >= 0 ? '+' : ''}
             {formatCompactIDR(diffYesterday)} vs kemarin
           </p>
         </div>
 
-        <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs min-w-0">
+        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-[#78716C] dark:text-[#93B5A9] truncate">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[#1C1917] dark:text-white truncate">
               Transaksi Hari Ini
             </p>
-            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E0F2FE] text-[#0369A1] dark:bg-[#0369A1]/30 dark:text-[#7DD3FC]">
+            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E0F2FE] text-[#1C1917] dark:bg-[#0369A1]/30 dark:text-white">
               Struk
             </span>
           </div>
           <p className="text-lg sm:text-2xl font-extrabold mt-1.5 tabular-nums text-[#1C1917] dark:text-white">
             <AnimatedNumber value={dash.totalSalesToday} /> Struk
           </p>
-          <p className="text-[11px] mt-1 text-[#78716C] dark:text-[#93B5A9] truncate">
+          <p className="text-[11px] mt-1 text-[#1C1917] dark:text-white truncate">
             Rata-rata {formatCompactIDR(avgTicket)} / struk
           </p>
         </div>
@@ -232,7 +223,7 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
 
       {/* Main Content: 7-col Sales Chart with Numbers + 5-col Transaksi Terbaru & Pengingat Penting */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 sm:p-5 shadow-xs min-w-0">
+        <div className="lg:col-span-7 rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 sm:p-5 shadow-xs min-w-0">
           <div className="flex items-center justify-between gap-2 mb-3">
             <div>
               <h3 className="font-bold text-sm sm:text-base text-[#1C1917] dark:text-white">
@@ -248,7 +239,7 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
           </div>
 
           <div className="pt-4">
-            <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 items-end h-44 sm:h-52 border-b border-[#E7E3D8] dark:border-[#244C41] pb-2">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 items-end h-44 sm:h-52 border-b border-[#B7D6C3] dark:border-[#244C41] pb-2">
               {dash.last7Days.map((d, i) => (
                 <div key={i} className="flex flex-col items-center justify-end h-full gap-1.5 min-w-0">
                   <span className="text-[9.5px] sm:text-[11px] font-bold text-[#1C1917] dark:text-white tabular-nums whitespace-nowrap">
@@ -286,7 +277,7 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
             </div>
           </div>
 
-          <div className="mt-3.5 pt-3 border-t border-dashed border-[#E7E3D8] dark:border-[#244C41] flex flex-wrap justify-between gap-2 text-xs text-[#78716C] dark:text-[#93B5A9]">
+          <div className="mt-3.5 pt-3 border-t border-dashed border-[#B7D6C3] dark:border-[#244C41] flex flex-wrap justify-between gap-2 text-xs text-[#78716C] dark:text-[#93B5A9]">
             <span>
               Total 7 Hari:{' '}
               <strong className="text-[#1C1917] dark:text-white tabular-nums">
@@ -305,25 +296,25 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
         {/* Right Stack: Transaksi Terbaru ABOVE Pengingat Penting */}
         <div className="lg:col-span-5 space-y-4 min-w-0">
           {/* 1. Transaksi Terbaru */}
-          <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 sm:p-5 shadow-xs">
+          <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 sm:p-5 shadow-xs">
             <div className="flex items-center justify-between mb-3 gap-2">
               <div>
                 <h3 className="font-bold text-sm text-[#1C1917] dark:text-white">
                   Transaksi Terbaru
                 </h3>
-                <p className="text-[11px] text-[#78716C] dark:text-[#93B5A9]">
+                <p className="text-[11px] text-[#1C1917] dark:text-white">
                   {dash.recentSales.length} penjualan terakhir
                 </p>
               </div>
               <button
                 onClick={() => onNavigate('riwayat')}
-                className="text-xs font-bold text-[#15803D] dark:text-[#86EFAC] hover:underline shrink-0"
+                className="text-xs font-bold text-[#1C1917] dark:text-white hover:underline shrink-0"
               >
                 Lihat Semua →
               </button>
             </div>
             {dash.recentSales.length === 0 ? (
-              <p className="text-xs text-[#78716C] dark:text-[#93B5A9] py-4 text-center">
+              <p className="text-xs text-[#1C1917] dark:text-white py-4 text-center">
                 Belum ada transaksi.
               </p>
             ) : (
@@ -332,21 +323,21 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
                   const itemCount = dash.itemsCountBySale.get(s.id) || 0;
                   const payTone =
                     s.paymentMethod === 'QRIS'
-                      ? 'bg-[#E0F2FE] text-[#0369A1]'
+                      ? 'bg-[#E0F2FE] text-[#1C1917]'
                       : s.paymentMethod === 'Transfer'
-                      ? 'bg-[#FEF3C7] text-[#B45309]'
-                      : 'bg-[#DCFCE7] text-[#166534]';
+                      ? 'bg-[#FEF3C7] text-[#1C1917]'
+                      : 'bg-[#DCFCE7] text-[#1C1917]';
                   return (
                     <div
                       key={s.id}
                       onClick={() => onNavigate('riwayat')}
-                      className="cursor-pointer rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41] px-3 py-2.5 flex items-center justify-between gap-2.5 hover:border-[#15803D]/50 transition"
+                      className="cursor-pointer rounded-xl bg-[#DCEBE2] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41] px-3 py-2.5 flex items-center justify-between gap-2.5 hover:border-[#15803D]/50 transition"
                     >
                       <div className="min-w-0">
                         <p className="font-bold text-xs text-[#1C1917] dark:text-white truncate">
                           {s.invoiceNo}
                         </p>
-                        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[#78716C] dark:text-[#93B5A9] flex-wrap">
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[#1C1917] dark:text-white flex-wrap">
                           <span>{formatDateTimeID(s.createdAt)}</span>
                           <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${payTone}`}>
                             {s.paymentMethod === 'Tunai' ? 'Cash' : s.paymentMethod}
@@ -365,7 +356,7 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
           </div>
 
           {/* 2. Pengingat Penting (High-contrast rows on white background) */}
-          <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 sm:p-5 shadow-xs">
+          <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 sm:p-5 shadow-xs">
             <div className="flex items-center justify-between mb-3 gap-2">
               <div>
                 <h3 className="font-bold text-sm text-[#1C1917] dark:text-white">
@@ -687,7 +678,7 @@ export const StokScreen: React.FC = () => {
         <select
           value={catFilter}
           onChange={(e) => setCatFilter(e.target.value)}
-          className="px-3.5 py-2.5 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] text-sm font-medium"
+          className="px-3.5 py-2.5 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] text-sm font-medium"
         >
           <option value="Semua">Semua Kategori</option>
           {CATEGORIES.map((c) => (
@@ -696,7 +687,7 @@ export const StokScreen: React.FC = () => {
             </option>
           ))}
         </select>
-        <div className="flex rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] p-1 text-xs font-bold">
+        <div className="flex rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] p-1 text-xs font-bold">
           {(
             [
               ['ALL', 'Semua'],
@@ -717,7 +708,7 @@ export const StokScreen: React.FC = () => {
         </div>
         <button
           onClick={() => setSortAz(!sortAz)}
-          className="px-3.5 py-2.5 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] text-xs font-bold"
+          className="px-3.5 py-2.5 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] text-xs font-bold"
         >
           Urut: {sortAz ? 'A-Z' : 'Z-A'}
         </button>
@@ -726,7 +717,7 @@ export const StokScreen: React.FC = () => {
       {/* Mobile Card List + Desktop Table */}
       <div className="md:hidden space-y-2.5">
         {filtered.length === 0 ? (
-          <div className="rounded-2xl bg-[#FFFFFF] dark:bg-[#142E27] py-10 text-center opacity-60 text-sm">
+          <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] py-10 text-center opacity-60 text-sm">
             Tidak ada data obat yang cocok.
           </div>
         ) : (
@@ -735,7 +726,7 @@ export const StokScreen: React.FC = () => {
             return (
               <div
                 key={m.id}
-                className="rounded-2xl bg-[#FFFFFF] dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-3.5 space-y-2.5"
+                className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-3.5 space-y-2.5"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -773,7 +764,7 @@ export const StokScreen: React.FC = () => {
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => openEdit(m)}
-                      className="p-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] hover:bg-black/10 dark:hover:bg-white/10"
+                      className="p-2.5 rounded-xl bg-[#DCEBE2] dark:bg-[#0F241E] hover:bg-black/10 dark:hover:bg-white/10"
                       title="Edit Obat"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -802,7 +793,7 @@ export const StokScreen: React.FC = () => {
         )}
       </div>
 
-      <div className="hidden md:block rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] overflow-hidden">
+      <div className="hidden md:block rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-[#E1E2E8] dark:bg-[#0F241E] text-xs uppercase opacity-75">
@@ -1363,7 +1354,7 @@ export const KasirScreen: React.FC = () => {
                   className={`text-left p-4 rounded-2xl transition flex flex-col justify-between border ${
                     inCart > 0
                       ? 'bg-[#15803D]/15 border-[#15803D]'
-                      : 'bg-[#FFFFFF] dark:bg-[#142E27] border-transparent hover:border-[#15803D]/40'
+                      : 'bg-[#E8F2EC] dark:bg-[#142E27] border-transparent hover:border-[#15803D]/40'
                   } ${m.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div>
@@ -1400,7 +1391,7 @@ export const KasirScreen: React.FC = () => {
 
         {/* Cart & Payment Panel */}
         <div id="kasir-cart" className="lg:col-span-5 scroll-mt-20">
-          <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-4 sm:p-5 lg:sticky lg:top-4 space-y-4">
+          <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-4 sm:p-5 lg:sticky lg:top-4 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-extrabold text-base">
                 Keranjang ({cart.reduce((a, c) => a + c.qty, 0)} item)
@@ -1431,7 +1422,7 @@ export const KasirScreen: React.FC = () => {
                   return (
                     <div
                       key={c.medicineId}
-                      className="p-3 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] space-y-2"
+                      className="p-3 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] space-y-2"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -1517,7 +1508,7 @@ export const KasirScreen: React.FC = () => {
                       className={`py-2 rounded-xl text-xs font-bold transition ${
                         paymentMethod === pm
                           ? 'bg-[#15803D] text-white'
-                          : 'bg-[#FAF8F4] dark:bg-[#0F241E]'
+                          : 'bg-[#DCEBE2] dark:bg-[#0F241E]'
                       }`}
                     >
                       {pm}
@@ -1547,7 +1538,7 @@ export const KasirScreen: React.FC = () => {
                           key={nom}
                           type="button"
                           onClick={() => setAmountPaidStr(String(nom))}
-                          className="px-2.5 py-1 rounded-lg bg-[#FAF8F4] dark:bg-[#0F241E] text-xs font-bold hover:bg-[#15803D] hover:text-white transition"
+                          className="px-2.5 py-1 rounded-lg bg-[#DCEBE2] dark:bg-[#0F241E] text-xs font-bold hover:bg-[#15803D] hover:text-white transition"
                         >
                           {nom === cartTotal ? 'Uang Pas' : formatCompactIDR(nom)}
                         </button>

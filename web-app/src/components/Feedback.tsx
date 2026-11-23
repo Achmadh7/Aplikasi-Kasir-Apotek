@@ -99,7 +99,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       {/* Confirm Modal */}
       {confirmState && (
         <div className="no-print fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4">
+          <div className="bg-[#E8F2EC] border border-[#B7D6C3] rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4">
             <div className="flex items-start gap-3">
               <div
                 className={`p-2 rounded-xl shrink-0 ${

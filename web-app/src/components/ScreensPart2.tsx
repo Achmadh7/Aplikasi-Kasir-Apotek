@@ -35,6 +35,10 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 
+const ACTIVE_PILL_CLS = 'bg-[#15803D] text-white border-[#15803D]';
+const INACTIVE_PILL_CLS =
+  'bg-[#DCEBE2] dark:bg-[#0F241E] text-[#78716C] dark:text-[#93B5A9] border-[#B7D6C3] dark:border-[#244C41] hover:border-[#15803D]/50 hover:text-[#1C1917] dark:hover:text-white';
+
 // Helper for previous months list in Tutup Buku
 function getPastMonthsList(count = 12): string[] {
   const list: string[] = [];
@@ -176,9 +180,7 @@ export const KeuanganScreen: React.FC = () => {
               type="button"
               onClick={() => setPeriod(k)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
-                isActive
-                  ? 'bg-[#142E27] text-white border-[#142E27] dark:bg-[#15803D] dark:border-[#15803D]'
-                  : 'bg-[#FAF8F4] dark:bg-[#0F241E] text-[#78716C] dark:text-[#93B5A9] border-[#E7E3D8] dark:border-[#244C41] hover:border-[#15803D]/50 hover:text-[#1C1917] dark:hover:text-white'
+                isActive ? ACTIVE_PILL_CLS : INACTIVE_PILL_CLS
               }`}
             >
               {lbl}
@@ -189,9 +191,9 @@ export const KeuanganScreen: React.FC = () => {
 
       {/* 3-KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 shadow-xs">
+        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 shadow-xs">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-[#78716C] dark:text-[#93B5A9]">
+            <span className="text-xs font-semibold text-[#1C1917] dark:text-white">
               Uang Masuk
             </span>
             <span className="w-7 h-7 rounded-lg bg-[#15803D]/10 text-[#15803D] dark:text-[#86EFAC] flex items-center justify-center">
@@ -201,14 +203,14 @@ export const KeuanganScreen: React.FC = () => {
           <p className="mt-2 text-xl sm:text-2xl font-extrabold tabular-nums text-[#15803D] dark:text-[#7EDC9A]">
             + <AnimatedNumber value={totals.totalIn} format={formatIDR} />
           </p>
-          <p className="mt-1 text-xs text-[#78716C] dark:text-[#93B5A9]">
+          <p className="mt-1 text-xs text-[#1C1917] dark:text-white">
             {totals.inCount} transaksi masuk
           </p>
         </div>
 
-        <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 shadow-xs">
+        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 shadow-xs">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-[#78716C] dark:text-[#93B5A9]">
+            <span className="text-xs font-semibold text-[#1C1917] dark:text-white">
               Uang Keluar
             </span>
             <span className="w-7 h-7 rounded-lg bg-[#BA1A1A]/10 text-[#BA1A1A] flex items-center justify-center">
@@ -218,17 +220,17 @@ export const KeuanganScreen: React.FC = () => {
           <p className="mt-2 text-xl sm:text-2xl font-extrabold tabular-nums text-[#BA1A1A]">
             - <AnimatedNumber value={totals.totalOut} format={formatIDR} />
           </p>
-          <p className="mt-1 text-xs text-[#78716C] dark:text-[#93B5A9]">
+          <p className="mt-1 text-xs text-[#1C1917] dark:text-white">
             {totals.outCount} transaksi keluar
           </p>
         </div>
 
-        <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 shadow-xs">
+        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 shadow-xs">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-[#78716C] dark:text-[#93B5A9]">
+            <span className="text-xs font-semibold text-[#1C1917] dark:text-white">
               Arus Kas Bersih
             </span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FAF8F4] dark:bg-[#0F241E] text-[#78716C] dark:text-[#93B5A9] border border-[#E7E3D8] dark:border-[#244C41]">
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#DCEBE2] dark:bg-[#0F241E] text-[#1C1917] dark:text-white border border-[#B7D6C3] dark:border-[#244C41]">
               {periodLabel}
             </span>
           </div>
@@ -243,7 +245,7 @@ export const KeuanganScreen: React.FC = () => {
               format={formatIDR}
             />
           </p>
-          <p className="mt-1 text-xs text-[#78716C] dark:text-[#93B5A9]">Selisih masuk &amp; keluar</p>
+          <p className="mt-1 text-xs text-[#1C1917] dark:text-white">Selisih masuk &amp; keluar</p>
         </div>
       </div>
 
@@ -252,10 +254,10 @@ export const KeuanganScreen: React.FC = () => {
         <div className="lg:col-span-4">
           <form
             onSubmit={handleAdd}
-            className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-5 space-y-3.5 text-sm shadow-xs"
+            className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-5 space-y-3.5 text-sm shadow-xs"
           >
             <h3 className="font-extrabold text-base">Catat Kas Manual</h3>
-            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41]">
+            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-[#DCEBE2] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41]">
               <button
                 type="button"
                 onClick={() => {
@@ -292,7 +294,7 @@ export const KeuanganScreen: React.FC = () => {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41]"
               >
                 {type === 'out'
                   ? ['Operasional', 'Beli Stok', 'Listrik & Air', 'Gaji', 'Lainnya'].map(
@@ -319,7 +321,7 @@ export const KeuanganScreen: React.FC = () => {
                   value={customCategory}
                   onChange={(e) => setCustomCategory(e.target.value)}
                   placeholder="Tulis nama kategori..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41]"
                 />
               </div>
             )}
@@ -332,7 +334,7 @@ export const KeuanganScreen: React.FC = () => {
                 value={amount}
                 onChange={(e) => setAmount(formatThousandID(e.target.value))}
                 placeholder="50.000"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41]"
               />
             </div>
             <div>
@@ -341,7 +343,7 @@ export const KeuanganScreen: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Contoh: Token listrik apotek"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41]"
               />
             </div>
             <button
@@ -355,8 +357,8 @@ export const KeuanganScreen: React.FC = () => {
 
         {/* Daftar Riwayat Kas */}
         <div className="lg:col-span-8">
-          <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] shadow-xs overflow-hidden">
-            <div className="p-3.5 sm:p-4 border-b border-[#E7E3D8] dark:border-[#244C41] flex flex-wrap items-center justify-between gap-3">
+          <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] shadow-xs overflow-hidden">
+            <div className="p-3.5 sm:p-4 border-b border-[#B7D6C3] dark:border-[#244C41] flex flex-wrap items-center justify-between gap-3">
               <h3 className="font-extrabold text-sm sm:text-base">Riwayat Kas</h3>
               <div
                 className="flex flex-wrap gap-2 min-w-0"
@@ -377,9 +379,7 @@ export const KeuanganScreen: React.FC = () => {
                       type="button"
                       onClick={() => setTypeFilter(k)}
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
-                        isActive
-                          ? 'bg-[#142E27] text-white border-[#142E27] dark:bg-[#15803D] dark:border-[#15803D]'
-                          : 'bg-[#FAF8F4] dark:bg-[#0F241E] text-[#78716C] dark:text-[#93B5A9] border-[#E7E3D8] dark:border-[#244C41] hover:border-[#15803D]/50 hover:text-[#1C1917] dark:hover:text-white'
+                        isActive ? ACTIVE_PILL_CLS : INACTIVE_PILL_CLS
                       }`}
                     >
                       {lbl}
@@ -398,7 +398,7 @@ export const KeuanganScreen: React.FC = () => {
                 visibleEntries.map((e) => (
                   <div
                     key={e.id}
-                    className="p-4 flex items-center justify-between gap-3 hover:bg-[#FAF8F4]/60 dark:hover:bg-[#0F241E]/40 transition"
+                    className="p-4 flex items-center justify-between gap-3 hover:bg-[#DCEBE2]/70 dark:hover:bg-[#0F241E]/40 transition"
                   >
                     <div className="flex items-start gap-3 min-w-0">
                       <span
@@ -605,7 +605,7 @@ export const LabaScreen: React.FC = () => {
         }
       />
 
-      <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs min-w-0">
+      <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs min-w-0">
         <div className="flex flex-wrap gap-2 min-w-0" role="group" aria-label="Filter periode laporan laba">
           {(
             [
@@ -622,9 +622,7 @@ export const LabaScreen: React.FC = () => {
                 type="button"
                 onClick={() => setPeriod(k)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
-                  isActive
-                    ? 'bg-[#142E27] text-white border-[#142E27] dark:bg-[#15803D] dark:border-[#15803D]'
-                    : 'bg-[#FAF8F4] dark:bg-[#0F241E] text-[#78716C] dark:text-[#93B5A9] border-[#E7E3D8] dark:border-[#244C41] hover:border-[#15803D]/50 hover:text-[#1C1917] dark:hover:text-white'
+                  isActive ? ACTIVE_PILL_CLS : INACTIVE_PILL_CLS
                 }`}
               >
                 {lbl}
@@ -635,47 +633,47 @@ export const LabaScreen: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5">
-          <span className="text-xs opacity-70">Total Penjualan (Omzet)</span>
+        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5">
+          <span className="text-xs text-[#1C1917] dark:text-white">Total Penjualan (Omzet)</span>
           <p className="text-2xl font-extrabold mt-1">
             <AnimatedNumber value={report.revenue} format={formatIDR} />
           </p>
-          <span className="text-xs opacity-60">
+          <span className="text-xs text-[#1C1917] dark:text-white">
             {report.transactionCount} transaksi • {report.itemsSold} unit
           </span>
         </div>
-        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5">
-          <span className="text-xs opacity-70">HPP (Modal Obat Terjual)</span>
+        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5">
+          <span className="text-xs text-[#1C1917] dark:text-white">HPP (Modal Obat Terjual)</span>
           <p className="text-2xl font-extrabold mt-1 text-amber-500">
             <AnimatedNumber value={report.hpp} format={formatIDR} />
           </p>
-          <span className="text-xs opacity-60">
+          <span className="text-xs text-[#1C1917] dark:text-white">
             Laba Kotor: {formatIDR(report.grossProfit)} (
             {report.grossMarginPct.toFixed(1)}%)
           </span>
         </div>
-        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5">
-          <span className="text-xs opacity-70">Biaya Operasional</span>
+        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5">
+          <span className="text-xs text-[#1C1917] dark:text-white">Biaya Operasional</span>
           <p className="text-2xl font-extrabold mt-1 text-[#BA1A1A]">
             <AnimatedNumber value={report.operationalExpense} format={formatIDR} />
           </p>
-          <span className="text-xs opacity-60">
+          <span className="text-xs text-[#1C1917] dark:text-white">
             Kas keluar selain Beli Stok ({formatIDR(report.stockPurchaseExpense)})
           </span>
         </div>
-        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5">
-          <span className="text-xs opacity-70">Laba Bersih</span>
+        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5">
+          <span className="text-xs text-[#1C1917] dark:text-white">Laba Bersih</span>
           <p className="text-2xl font-extrabold mt-1 text-emerald-600 dark:text-[#7EDC9A]">
             <AnimatedNumber value={report.netProfit} format={formatIDR} />
           </p>
-          <span className="text-xs opacity-60">
+          <span className="text-xs text-[#1C1917] dark:text-white">
             Margin Bersih: {report.marginPct.toFixed(1)}%
           </span>
         </div>
       </div>
 
       {/* Breakdown per Medicine */}
-      <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] overflow-hidden">
+      <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] overflow-hidden">
         <div className="p-4 font-extrabold text-sm border-b border-black/5 dark:border-white/5">
           Rincian Penjualan & Laba per Obat ({report.byMedicine.length} jenis)
         </div>
@@ -802,7 +800,7 @@ export const PbfScreen: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           <form
             onSubmit={handleSavePurchase}
-            className="lg:col-span-5 rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3 text-sm h-fit"
+            className="lg:col-span-5 rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3 text-sm h-fit"
           >
             <h3 className="font-extrabold text-base">Catat Faktur PBF Baru</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -970,7 +968,7 @@ export const PbfScreen: React.FC = () => {
 
           <div className="lg:col-span-7 space-y-3">
             {purchases.length === 0 ? (
-              <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-10 text-center text-sm opacity-60">
+              <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-10 text-center text-sm opacity-60">
                 Belum ada catatan faktur pembelian PBF.
               </div>
             ) : (
@@ -980,7 +978,7 @@ export const PbfScreen: React.FC = () => {
                 return (
                   <div
                     key={p.id}
-                    className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3"
+                    className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -1020,7 +1018,7 @@ export const PbfScreen: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="text-xs space-y-1 bg-[#FAF8F4] dark:bg-[#0F241E] p-3 rounded-2xl">
+                    <div className="text-xs space-y-1 bg-[#DCEBE2] dark:bg-[#0F241E] p-3 rounded-2xl">
                       {pItems.map((it) => (
                         <div key={it.id} className="flex justify-between">
                           <span>
@@ -1079,7 +1077,7 @@ export const PbfScreen: React.FC = () => {
                 notify(err.message, 'error');
               }
             }}
-            className="lg:col-span-4 rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3 text-sm h-fit"
+            className="lg:col-span-4 rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3 text-sm h-fit"
           >
             <h3 className="font-extrabold text-base">Tambah Pemasok PBF</h3>
             <div>
@@ -1111,7 +1109,7 @@ export const PbfScreen: React.FC = () => {
             </button>
           </form>
 
-          <div className="lg:col-span-8 rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] divide-y divide-black/5 dark:divide-white/5">
+          <div className="lg:col-span-8 rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] divide-y divide-black/5 dark:divide-white/5">
             {suppliers.length === 0 ? (
               <p className="p-10 text-center text-sm opacity-60">
                 Belum ada pemasok terdaftar.
@@ -1190,7 +1188,7 @@ export const PengingatScreen: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Stok Menipis */}
-        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3">
+        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3">
           <h3 className="font-extrabold text-base flex items-center justify-between">
             <span>Stok Rendah / Habis</span>
             <span className="px-2.5 py-0.5 rounded-full bg-[#BA1A1A] text-white text-xs">
@@ -1206,7 +1204,7 @@ export const PengingatScreen: React.FC = () => {
               {lowStock.map((m) => (
                 <div
                   key={m.id}
-                  className="p-3 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] flex items-center justify-between"
+                  className="p-3 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] flex items-center justify-between"
                 >
                   <div>
                     <p className="font-bold text-sm">{m.name}</p>
@@ -1220,7 +1218,7 @@ export const PengingatScreen: React.FC = () => {
         </div>
 
         {/* Kadaluarsa */}
-        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3">
+        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3">
           <h3 className="font-extrabold text-base flex items-center justify-between">
             <span>Kadaluarsa ≤ 30 Hari</span>
             <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-xs">
@@ -1238,7 +1236,7 @@ export const PengingatScreen: React.FC = () => {
                 return (
                   <div
                     key={m.id}
-                    className="p-3 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] flex items-center justify-between"
+                    className="p-3 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] flex items-center justify-between"
                   >
                     <div>
                       <p className="font-bold text-sm">{m.name}</p>
@@ -1261,7 +1259,7 @@ export const PengingatScreen: React.FC = () => {
         </div>
 
         {/* Tagihan Kredit PBF */}
-        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3">
+        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3">
           <h3 className="font-extrabold text-base flex items-center justify-between">
             <span>Faktur Kredit PBF</span>
             <span className="px-2.5 py-0.5 rounded-full bg-[#15803D] text-white text-xs">
@@ -1279,7 +1277,7 @@ export const PengingatScreen: React.FC = () => {
                 return (
                   <div
                     key={p.id}
-                    className="p-3 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] space-y-2"
+                    className="p-3 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] space-y-2"
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -1390,27 +1388,11 @@ export const RiwayatScreen: React.FC = () => {
     [filtered]
   );
 
-  const PILLS: { id: PaymentFilter; label: string; activeCls: string }[] = [
-    {
-      id: 'ALL',
-      label: 'Semua',
-      activeCls: 'bg-[#142E27] text-white border-[#142E27] dark:bg-[#15803D] dark:border-[#15803D]',
-    },
-    {
-      id: 'Tunai',
-      label: 'Cash',
-      activeCls: 'bg-[#DCFCE7] text-[#166534] border-[#86EFAC] dark:bg-[#15803D]/30 dark:text-[#86EFAC] dark:border-[#15803D]',
-    },
-    {
-      id: 'QRIS',
-      label: 'QRIS',
-      activeCls: 'bg-[#E0F2FE] text-[#0369A1] border-[#7DD3FC] dark:bg-[#0369A1]/30 dark:text-[#7DD3FC] dark:border-[#0369A1]',
-    },
-    {
-      id: 'Transfer',
-      label: 'Transfer',
-      activeCls: 'bg-[#FEF3C7] text-[#B45309] border-[#FCD34D] dark:bg-[#B45309]/30 dark:text-[#FDE68A] dark:border-[#B45309]',
-    },
+  const PILLS: { id: PaymentFilter; label: string }[] = [
+    { id: 'ALL', label: 'Semua' },
+    { id: 'Tunai', label: 'Cash' },
+    { id: 'QRIS', label: 'QRIS' },
+    { id: 'Transfer', label: 'Transfer' },
   ];
 
   const activePillLabel = PILLS.find((p) => p.id === paymentFilter)?.label || 'Semua';
@@ -1427,7 +1409,7 @@ export const RiwayatScreen: React.FC = () => {
         {(['Tunai', 'QRIS', 'Transfer'] as const).map((m) => (
           <div
             key={m}
-            className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 shadow-xs min-w-0"
+            className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 shadow-xs min-w-0"
           >
             <span className="text-xs text-[#78716C] dark:text-[#93B5A9]">
               Bulan Ini • {m === 'Tunai' ? 'Cash' : m}
@@ -1440,7 +1422,7 @@ export const RiwayatScreen: React.FC = () => {
       </div>
 
       {/* Filter Card: Payment Pill Group + Search + Dynamic Summary Bar */}
-      <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs space-y-3 min-w-0">
+      <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs space-y-3 min-w-0">
         <div className="flex flex-wrap gap-2 min-w-0" role="group" aria-label="Filter metode pembayaran">
           {PILLS.map((p) => {
             const isActive = paymentFilter === p.id;
@@ -1450,19 +1432,15 @@ export const RiwayatScreen: React.FC = () => {
                 type="button"
                 onClick={() => setPaymentFilter(p.id)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
-                  isActive
-                    ? p.activeCls
-                    : 'bg-[#FAF8F4] dark:bg-[#0F241E] text-[#78716C] dark:text-[#93B5A9] border-[#E7E3D8] dark:border-[#244C41] hover:border-[#15803D]/50 hover:text-[#1C1917] dark:hover:text-white'
+                  isActive ? ACTIVE_PILL_CLS : INACTIVE_PILL_CLS
                 }`}
               >
                 <span>{p.label}</span>
                 <span
                   className={`px-1.5 py-0.2 rounded-full text-[11px] font-bold tabular-nums ${
                     isActive
-                      ? p.id === 'ALL'
-                        ? 'bg-white/20 text-white'
-                        : 'bg-black/10 dark:bg-white/15'
-                      : 'bg-[#E7E3D8]/70 dark:bg-white/10 text-[#1C1917] dark:text-white'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-[#DCEBE2] dark:bg-white/10 text-[#1C1917] dark:text-white'
                   }`}
                 >
                   {methodCounts[p.id]}
@@ -1477,10 +1455,10 @@ export const RiwayatScreen: React.FC = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Cari nomor invoice, nama obat, atau cara bayar..."
-          className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#E7E3D8] dark:border-[#244C41] text-sm text-[#1C1917] dark:text-white placeholder:text-[#78716C] focus:outline-none focus:border-[#15803D]"
+          className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41] text-sm text-[#1C1917] dark:text-white placeholder:text-[#78716C] focus:outline-none focus:border-[#15803D]"
         />
 
-        <div className="pt-2.5 border-t border-dashed border-[#E7E3D8] dark:border-[#244C41] flex flex-wrap items-center justify-between gap-2 text-xs text-[#78716C] dark:text-[#93B5A9]">
+        <div className="pt-2.5 border-t border-dashed border-[#B7D6C3] dark:border-[#244C41] flex flex-wrap items-center justify-between gap-2 text-xs text-[#78716C] dark:text-[#93B5A9]">
           <span>
             Menampilkan <strong className="text-[#1C1917] dark:text-white">{filtered.length}</strong> transaksi ({activePillLabel})
           </span>
@@ -1492,7 +1470,7 @@ export const RiwayatScreen: React.FC = () => {
 
       <div className="space-y-3 min-w-0">
         {filtered.length === 0 ? (
-          <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-10 text-center text-sm text-[#78716C] dark:text-[#93B5A9]">
+          <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-10 text-center text-sm text-[#78716C] dark:text-[#93B5A9]">
             Belum ada riwayat transaksi penjualan.
           </div>
         ) : (
@@ -1507,7 +1485,7 @@ export const RiwayatScreen: React.FC = () => {
             return (
               <div
                 key={s.id}
-                className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 min-w-0"
+                className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 min-w-0"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -1622,7 +1600,7 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Backup & Restore JSON */}
-        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-4">
+        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-4">
           <h3 className="font-extrabold text-base">
             Backup & Restore (.json Android / Web)
           </h3>
@@ -1636,7 +1614,7 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
             >
               <Download className="w-4 h-4" /> Unduh Backup (.json)
             </button>
-            <label className="cursor-pointer px-4 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] text-xs font-bold flex items-center gap-2">
+            <label className="cursor-pointer px-4 py-2.5 rounded-xl bg-[#DCEBE2] dark:bg-[#0F241E] text-xs font-bold flex items-center gap-2">
               <Upload className="w-4 h-4" /> Restore dari File (.json)
               <input
                 type="file"
@@ -1668,7 +1646,7 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
         </div>
 
         {/* Tutup Buku Bulanan */}
-        <div className="rounded-3xl bg-[#FFFFFF] dark:bg-[#142E27] p-5 space-y-3">
+        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3">
           <h3 className="font-extrabold text-base">
             Tutup Buku Bulanan (Kunci Periode)
           </h3>
@@ -1681,7 +1659,7 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
               return (
                 <div
                   key={b}
-                  className="p-3 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] flex items-center justify-between"
+                  className="p-3 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 opacity-60" />

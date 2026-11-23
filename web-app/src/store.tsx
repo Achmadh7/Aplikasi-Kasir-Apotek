@@ -107,6 +107,8 @@ interface StoreContextType {
   syncStatus: SyncStatus;
   lastSyncAt: number;
   syncMessage: string | null;
+  autoSync: boolean;
+  setAutoSync: (enabled: boolean) => void;
   syncNow: (silent?: boolean) => Promise<void>;
   // Medicine actions
   saveMedicine: (
@@ -178,9 +180,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [authorityEmails, setAuthorityEmails] = useState<string[]>(DEFAULT_AUTHORITY_EMAILS);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('BELUM_MASUK');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [autoSync, setAutoSyncState] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('apotek_lestari_auto_sync');
+      return saved === null ? true : saved === 'true';
+    } catch {
+      return true;
+    }
+  });
   const dbRef = useRef(dbState);
   dbRef.current = dbState;
   const syncingRef = useRef(false);
+  const autoSyncRef = useRef(autoSync);
+  autoSyncRef.current = autoSync;
+
+  const setAutoSync = (enabled: boolean) => {
+    setAutoSyncState(enabled);
+    autoSyncRef.current = enabled;
+    try {
+      localStorage.setItem('apotek_lestari_auto_sync', String(enabled));
+    } catch {
+      // ignore storage quota/privacy mode errors
+    }
+    if (enabled && auth.currentUser) {
+      void syncNow(true);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -603,7 +628,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Auto-push helper right after local mutation
   const queueAutoSync = () => {
-    if (auth.currentUser) {
+    if (auth.currentUser && autoSyncRef.current) {
       setTimeout(() => syncNow(true), 1200);
     }
   };
@@ -1294,6 +1319,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         syncStatus,
         lastSyncAt: dbState.lastSyncAt,
         syncMessage,
+        autoSync,
+        setAutoSync,
         syncNow,
         saveMedicine,
         deleteMedicine,

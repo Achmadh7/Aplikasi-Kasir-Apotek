@@ -41,7 +41,7 @@ export const AuthorityScreen: React.FC = () => {
 
   return (
     <div className="space-y-5 max-w-2xl">
-      <div className="rounded-2xl bg-white dark:bg-[#142E27] border border-[#E7E3D8] dark:border-[#244C41] p-5 shadow-sm">
+      <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-5 shadow-sm">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2.5 rounded-xl bg-[#DCFCE7] dark:bg-[#15803D]/25 text-[#15803D] dark:text-[#86EFAC]">
             <ShieldCheck className="w-5 h-5" />
@@ -76,12 +76,12 @@ export const AuthorityScreen: React.FC = () => {
         </form>
       </div>
 
-      <div className="rounded-2xl bg-white dark:bg-[#101F38] border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm">
+      <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#101F38] border border-[#B7D6C3] dark:border-white/10 overflow-hidden shadow-sm">
         <div className="px-5 py-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-          <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#86EFAC]">
+          <span className="text-xs font-extrabold uppercase tracking-wider text-[#1C1917] dark:text-[#86EFAC]">
             Kolom Authority (Email Diizinkan)
           </span>
-          <span className="text-xs font-bold text-slate-500 dark:text-white/60">
+          <span className="text-xs font-bold text-[#1C1917] dark:text-white">
             {authorityEmails.length} akun
           </span>
         </div>
@@ -95,11 +95,11 @@ export const AuthorityScreen: React.FC = () => {
                 className="px-5 py-3.5 flex items-center justify-between gap-3"
               >
                 <div className="min-w-0 flex items-center gap-2">
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                  <span className="text-sm font-semibold text-[#1C1917] dark:text-white truncate">
                     {email}
                   </span>
                   {isCurrent && (
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 text-[10px] font-bold shrink-0">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-[#1C1917] dark:text-emerald-300 text-[10px] font-bold shrink-0">
                       Sedang Login
                     </span>
                   )}

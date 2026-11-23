@@ -1,9 +1,8 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "specVersion": "0.91",
+  "specVersion": "1.0",
   "host": {
     "displayName": "Apotek Lestari",
-    "id": "did:web:apoteklestari.web.id"
+    "identifier": "apoteklestari.web.id"
   },
   "entries": []
 }
