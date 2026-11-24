@@ -1,24 +1,50 @@
 rules_version = '2';
 
 // Apotek Lestari - Mode Online:
-// 1) Setiap pengguna hanya boleh membaca & menulis datanya sendiri di users/{uid}.
-// 2) Koleksi authority menyimpan daftar email yang diizinkan login di web.
-// Tempel isi file ini di Firebase Console > Firestore Database > Rules, lalu Publish.
+// 1) Koleksi web_* di users/{uid} hanya bisa diakses akun terverifikasi yang terdaftar di Authority.
+// 2) Koleksi non-web_ (APK Android) tetap terisolasi per users/{uid}.
+// 3) Dokumen authority/config hanya bisa dibaca & ditulis akun terverifikasi yang terdaftar di Authority.
+// Deploy: npx firebase-tools deploy --only firestore:rules (atau tempel di Firebase Console > Firestore > Rules > Publish).
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{uid}/{document=**} {
+    function isVerifiedAuth() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function isOwner() {
+      return isVerifiedAuth()
+        && request.auth.token.email.lower() in ['achmadhida66@gmail.com', 'hanyrahayu19@gmail.com'];
+    }
+
+    function isAuthorized() {
+      return isOwner()
+        || (
+          isVerifiedAuth()
+          && exists(/databases/$(database)/documents/authority/config)
+          && request.auth.token.email.lower() in get(/databases/$(database)/documents/authority/config).data.emails
+        );
+    }
+
+    match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    match /authority/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (
-        request.auth.token.email in ['achmadhida66@gmail.com', 'hanyrahayu19@gmail.com']
-        || (
-          exists(/databases/$(database)/documents/authority/config)
-          && request.auth.token.email in get(/databases/$(database)/documents/authority/config).data.emails
-        )
-      );
+    match /users/{uid}/{col}/{docId} {
+      allow read, write: if col.matches('web_.*')
+        ? (isAuthorized() && request.auth.uid == uid)
+        : (request.auth != null && request.auth.uid == uid);
+    }
+
+    match /users/{uid}/{col}/{docId}/{rest=**} {
+      allow read, write: if !col.matches('web_.*')
+        && request.auth != null
+        && request.auth.uid == uid;
+    }
+
+    match /authority/config {
+      allow read, write: if isAuthorized();
     }
   }
 }

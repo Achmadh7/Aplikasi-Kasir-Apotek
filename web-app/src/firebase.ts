@@ -75,10 +75,14 @@ export async function fetchAuthorityEmails(seedIfEmpty = false): Promise<string[
       if (parsed.length > 0) return parsed;
     }
     if (seedIfEmpty) {
-      await setDoc(ref, {
-        emails: DEFAULT_AUTHORITY_EMAILS,
-        updatedAt: Date.now(),
-      }).catch(() => {});
+      await setDoc(
+        ref,
+        {
+          emails: DEFAULT_AUTHORITY_EMAILS,
+          updatedAt: Date.now(),
+        },
+        { merge: true }
+      ).catch(() => {});
     }
   } catch {
     // Fallback to default owner emails if Firestore rules/network block read
@@ -91,10 +95,14 @@ export async function saveAuthorityEmails(emails: string[]): Promise<string[]> {
   if (clean.length === 0) {
     throw new Error('Minimal harus ada 1 email di kolom Authority.');
   }
-  await setDoc(doc(db, 'authority', 'config'), {
-    emails: clean,
-    updatedAt: Date.now(),
-  });
+  await setDoc(
+    doc(db, 'authority', 'config'),
+    {
+      emails: clean,
+      updatedAt: Date.now(),
+    },
+    { merge: true }
+  );
   return clean;
 }
 
@@ -124,6 +132,60 @@ export function subscribeAuthorityEmails(onUpdate: (emails: string[]) => void): 
 export async function loginWithGoogle(): Promise<User> {
   const res = await signInWithPopup(auth, googleProvider);
   return res.user;
+}
+
+export interface AuthorityPinConfig {
+  pinHash: string;
+  pinSalt: string;
+}
+
+async function hashPin(pin: string, salt: string): Promise<string> {
+  if (!globalThis.crypto?.subtle) {
+    throw new Error('Browser tidak mendukung enkripsi PIN (butuh HTTPS).');
+  }
+  const bytes = new TextEncoder().encode(`${salt}:${pin}`);
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function generatePinSalt(): string {
+  const buf = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(buf);
+  return Array.from(buf, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function fetchAuthorityPin(): Promise<AuthorityPinConfig | null> {
+  const snap = await getDoc(doc(db, 'authority', 'config'));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  if (typeof data?.pinHash === 'string' && data.pinHash && typeof data?.pinSalt === 'string' && data.pinSalt) {
+    return { pinHash: data.pinHash, pinSalt: data.pinSalt };
+  }
+  return null;
+}
+
+export async function saveAuthorityPin(pin: string): Promise<AuthorityPinConfig> {
+  if (!/^\d{4,6}$/.test(pin)) {
+    throw new Error('PIN harus berupa 4 sampai 6 digit angka.');
+  }
+  const pinSalt = generatePinSalt();
+  const pinHash = await hashPin(pin, pinSalt);
+  await setDoc(
+    doc(db, 'authority', 'config'),
+    {
+      pinHash,
+      pinSalt,
+      pinUpdatedAt: Date.now(),
+    },
+    { merge: true }
+  );
+  return { pinHash, pinSalt };
+}
+
+export async function verifyAuthorityPin(pin: string, config: AuthorityPinConfig): Promise<boolean> {
+  if (!/^\d{4,6}$/.test(pin)) return false;
+  const candidate = await hashPin(pin, config.pinSalt);
+  return candidate === config.pinHash;
 }
 
 export async function logoutFirebase(): Promise<void> {
