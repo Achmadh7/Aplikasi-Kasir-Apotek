@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { useFeedback } from './Feedback';
 import {
   AuthorityPinConfig,
+  AuthorityRole,
   fetchAuthorityPin,
   normalizeEmail,
   saveAuthorityPin,
@@ -16,9 +17,18 @@ const COOLDOWN_MS = 30 * 1000;
 const cleanDigits = (value: string) => value.replace(/\D/g, '').slice(0, 6);
 
 export const AuthorityScreen: React.FC = () => {
-  const { user, authorityEmails, addAuthorityEmail, removeAuthorityEmail } = useStore();
+  const {
+    user,
+    authorityEmails,
+    ownerEmails,
+    currentRole,
+    addAuthorityEmail,
+    setAuthorityRole,
+    removeAuthorityEmail,
+  } = useStore();
   const { notify } = useFeedback();
   const [newEmail, setNewEmail] = useState('');
+  const [newRole, setNewRole] = useState<AuthorityRole>('kasir');
   const [saving, setSaving] = useState(false);
 
   const [pinConfig, setPinConfig] = useState<AuthorityPinConfig | null>(null);
@@ -26,6 +36,7 @@ export const AuthorityScreen: React.FC = () => {
   const [pinError, setPinError] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [showResetPin, setShowResetPin] = useState(false);
 
   const [pinInput, setPinInput] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -38,6 +49,7 @@ export const AuthorityScreen: React.FC = () => {
   const [confirmNewPin, setConfirmNewPin] = useState('');
 
   const currentEmail = normalizeEmail(user?.email);
+  const isOwner = currentRole === 'owner';
 
   useEffect(() => {
     let active = true;
@@ -89,6 +101,7 @@ export const AuthorityScreen: React.FC = () => {
 
   const handleSetupPin = async (e: React.FormEvent) => {
     e.preventDefault();
+    const isResetting = Boolean(pinConfig && showResetPin && isOwner);
     if (pinInput.length < 4) {
       notify('PIN minimal 4 digit angka', 'error');
       return;
@@ -103,8 +116,12 @@ export const AuthorityScreen: React.FC = () => {
       setPinConfig(saved);
       setPinInput('');
       setConfirmPin('');
+      setFailedAttempts(0);
+      setLockedUntil(0);
+      setCooldownSec(0);
+      setShowResetPin(false);
       setUnlocked(true);
-      notify('PIN Authority berhasil dibuat', 'success');
+      notify(isResetting ? 'PIN Authority berhasil direset' : 'PIN Authority berhasil dibuat', 'success');
     } catch (err: any) {
       notify(err?.message || 'Gagal menyimpan PIN', 'error');
     } finally {
@@ -212,10 +229,13 @@ export const AuthorityScreen: React.FC = () => {
 
   if (!unlocked) {
     const isSetup = !pinConfig;
+    const isResetting = !isSetup && showResetPin && isOwner;
+    const isSettingPin = isSetup || isResetting;
+    const blocked = !isSettingPin && cooldownSec > 0;
     return (
       <div className="max-w-sm mx-auto mt-6">
         <form
-          onSubmit={isSetup ? handleSetupPin : handleUnlock}
+          onSubmit={isSettingPin ? handleSetupPin : handleUnlock}
           className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-6 shadow-sm text-center space-y-4"
         >
           <div className="w-12 h-12 mx-auto rounded-2xl bg-[#DCFCE7] dark:bg-[#15803D]/25 text-[#15803D] dark:text-[#86EFAC] flex items-center justify-center">
@@ -223,12 +243,18 @@ export const AuthorityScreen: React.FC = () => {
           </div>
           <div className="space-y-1">
             <h2 className="text-lg font-extrabold text-[#1C1917] dark:text-white">
-              {isSetup ? 'Buat PIN Authority' : 'Authority Terkunci'}
+              {isSetup
+                ? 'Buat PIN Authority'
+                : isResetting
+                  ? 'Reset PIN (Owner)'
+                  : 'Authority Terkunci'}
             </h2>
             <p className="text-xs text-[#78716C] dark:text-[#93B5A9]">
               {isSetup
                 ? 'Atur PIN 4–6 digit untuk mengunci akses menu Authority.'
-                : 'Masukkan PIN Authority untuk melihat dan mengubah daftar email.'}
+                : isResetting
+                  ? 'Masukkan PIN baru 4–6 digit untuk mengganti PIN lama.'
+                  : 'Masukkan PIN Authority untuk melihat dan mengubah daftar email.'}
             </p>
           </div>
 
@@ -241,11 +267,11 @@ export const AuthorityScreen: React.FC = () => {
               maxLength={6}
               value={pinInput}
               onChange={(e) => setPinInput(cleanDigits(e.target.value))}
-              placeholder={isSetup ? 'PIN baru (4–6 digit)' : 'Masukkan PIN'}
-              disabled={verifying || cooldownSec > 0}
+              placeholder={isSettingPin ? 'PIN baru (4–6 digit)' : 'Masukkan PIN'}
+              disabled={verifying || blocked}
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#0F241E] text-center text-lg font-bold tracking-[0.35em] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D] disabled:opacity-60"
             />
-            {isSetup && (
+            {isSettingPin && (
               <input
                 type="password"
                 inputMode="numeric"
@@ -262,18 +288,34 @@ export const AuthorityScreen: React.FC = () => {
 
           <button
             type="submit"
-            disabled={verifying || cooldownSec > 0}
+            disabled={verifying || blocked}
             className="w-full px-4 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60 transition"
           >
             <KeyRound className="w-4 h-4" />
-            {cooldownSec > 0
+            {blocked
               ? `Tunggu ${cooldownSec} detik...`
               : verifying
                 ? 'Memproses...'
-                : isSetup
-                  ? 'Simpan & Buka'
-                  : 'Buka Kunci'}
+                : isResetting
+                  ? 'Reset & Buka'
+                  : isSetup
+                    ? 'Simpan & Buka'
+                    : 'Buka Kunci'}
           </button>
+
+          {!isSetup && isOwner && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowResetPin((v) => !v);
+                setPinInput('');
+                setConfirmPin('');
+              }}
+              className="text-xs font-semibold text-[#15803D] dark:text-[#86EFAC] hover:underline"
+            >
+              {isResetting ? 'Batal' : 'Lupa PIN? Reset sebagai Owner'}
+            </button>
+          )}
         </form>
       </div>
     );
@@ -284,11 +326,24 @@ export const AuthorityScreen: React.FC = () => {
     if (!newEmail.trim()) return;
     setSaving(true);
     try {
-      await addAuthorityEmail(newEmail);
+      await addAuthorityEmail(newEmail, isOwner ? newRole : 'kasir');
       setNewEmail('');
+      setNewRole('kasir');
       notify('Email berhasil ditambahkan ke Authority', 'success');
     } catch (err: any) {
       notify(err?.message || 'Gagal menambah email Authority', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRoleChange = async (email: string, role: AuthorityRole) => {
+    setSaving(true);
+    try {
+      await setAuthorityRole(email, role);
+      notify(`Role ${email} diubah ke ${role === 'owner' ? 'Owner' : 'Kasir'}`, 'success');
+    } catch (err: any) {
+      notify(err?.message || 'Gagal mengubah role', 'error');
     } finally {
       setSaving(false);
     }
@@ -324,18 +379,20 @@ export const AuthorityScreen: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                setShowChangePin((v) => !v);
-                setNewPin('');
-                setConfirmNewPin('');
-              }}
-              className="px-3 py-1.5 rounded-xl border border-[#B7D6C3] dark:border-[#244C41] text-xs font-bold text-[#1C1917] dark:text-[#86EFAC] hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-1.5 transition"
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              Ubah PIN
-            </button>
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowChangePin((v) => !v);
+                  setNewPin('');
+                  setConfirmNewPin('');
+                }}
+                className="px-3 py-1.5 rounded-xl border border-[#B7D6C3] dark:border-[#244C41] text-xs font-bold text-[#1C1917] dark:text-[#86EFAC] hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-1.5 transition"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                Ubah PIN
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -350,7 +407,7 @@ export const AuthorityScreen: React.FC = () => {
           </div>
         </div>
 
-        {showChangePin && (
+        {isOwner && showChangePin && (
           <form
             onSubmit={handleChangePin}
             className="mt-3 p-3 rounded-xl bg-white/70 dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41] flex flex-col sm:flex-row gap-2"
@@ -394,6 +451,17 @@ export const AuthorityScreen: React.FC = () => {
             placeholder="Tambah email Google (contoh: kasir@gmail.com)"
             className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D]"
           />
+          {isOwner && (
+            <select
+              value={newRole}
+              onChange={(e) => setNewRole(e.target.value as AuthorityRole)}
+              disabled={saving}
+              className="px-3 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+            >
+              <option value="kasir">Kasir</option>
+              <option value="owner">Owner</option>
+            </select>
+          )}
           <button
             type="submit"
             disabled={saving}
@@ -418,14 +486,27 @@ export const AuthorityScreen: React.FC = () => {
         <div className="divide-y divide-slate-200 dark:divide-white/10">
           {authorityEmails.map((email) => {
             const isCurrent = email === currentEmail;
+            const isEmailOwner = ownerEmails.includes(email);
+            const isLastOwner = isEmailOwner && ownerEmails.length <= 1;
+            const disableDelete =
+              saving || authorityEmails.length <= 1 || isLastOwner || (!isOwner && isEmailOwner);
             return (
               <div
                 key={email}
                 className="px-5 py-3.5 flex items-center justify-between gap-3"
               >
-                <div className="min-w-0 flex items-center gap-2">
+                <div className="min-w-0 flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-semibold text-[#1C1917] dark:text-white truncate">
                     {email}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                      isEmailOwner
+                        ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300'
+                        : 'bg-slate-500/15 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    {isEmailOwner ? 'Owner' : 'Kasir'}
                   </span>
                   {isCurrent && (
                     <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-[#1C1917] dark:text-emerald-300 text-[10px] font-bold shrink-0">
@@ -433,18 +514,36 @@ export const AuthorityScreen: React.FC = () => {
                     </span>
                   )}
                 </div>
-                <button
-                  onClick={() => handleRemove(email)}
-                  disabled={saving || authorityEmails.length <= 1}
-                  title={
-                    authorityEmails.length <= 1
-                      ? 'Minimal harus tersisa 1 email'
-                      : 'Hapus dari Authority'
-                  }
-                  className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 disabled:opacity-35 transition shrink-0"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {isOwner && (
+                    <select
+                      value={isEmailOwner ? 'owner' : 'kasir'}
+                      onChange={(e) => handleRoleChange(email, e.target.value as AuthorityRole)}
+                      disabled={saving || isLastOwner}
+                      title={isLastOwner ? 'Minimal harus tersisa 1 Owner' : 'Ubah role akun'}
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-xs font-bold text-slate-900 dark:text-white disabled:opacity-45"
+                    >
+                      <option value="owner">Owner</option>
+                      <option value="kasir">Kasir</option>
+                    </select>
+                  )}
+                  <button
+                    onClick={() => handleRemove(email)}
+                    disabled={disableDelete}
+                    title={
+                      authorityEmails.length <= 1
+                        ? 'Minimal harus tersisa 1 email'
+                        : isLastOwner
+                          ? 'Minimal harus tersisa 1 Owner'
+                          : !isOwner && isEmailOwner
+                            ? 'Hanya Owner yang dapat menghapus Owner'
+                            : 'Hapus dari Authority'
+                    }
+                    className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 disabled:opacity-35 transition shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             );
           })}

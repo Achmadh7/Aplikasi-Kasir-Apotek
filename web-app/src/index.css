@@ -185,10 +185,38 @@
   }
 }
 
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #d3e5da 0%, #e4f0e8 45%, #d3e5da 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.35s ease-in-out infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(90deg, #1b3b32 0%, #254f43 45%, #1b3b32 100%);
+  background-size: 200% 100%;
+}
+
+.skeleton-shimmer-dark {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.16) 45%, rgba(255, 255, 255, 0.08) 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.35s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .anim-opsi7,
   .hdr-slideup,
-  .pill-pop {
+  .pill-pop,
+  .skeleton-shimmer,
+  .skeleton-shimmer-dark {
     animation: none !important;
   }
 }

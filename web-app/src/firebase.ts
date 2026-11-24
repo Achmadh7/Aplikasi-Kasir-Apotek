@@ -51,6 +51,13 @@ export const DEFAULT_AUTHORITY_EMAILS = [
   'hanyrahayu19@gmail.com',
 ];
 
+export type AuthorityRole = 'owner' | 'kasir';
+
+export interface AuthorityConfig {
+  emails: string[];
+  ownerEmails: string[];
+}
+
 export function normalizeEmail(email?: string | null): string {
   return (email || '').trim().toLowerCase();
 }
@@ -66,19 +73,34 @@ function normalizeEmailList(list: unknown): string[] {
   return Array.from(seen);
 }
 
-export async function fetchAuthorityEmails(seedIfEmpty = false): Promise<string[]> {
+function resolveOwnerEmails(emails: string[], rawOwners: unknown): string[] {
+  const parsed = normalizeEmailList(rawOwners).filter((e) => emails.includes(e));
+  if (parsed.length > 0) return parsed;
+  const defaults = DEFAULT_AUTHORITY_EMAILS.filter((e) => emails.includes(e));
+  if (defaults.length > 0) return defaults;
+  return emails.length > 0 ? [emails[0]] : [...DEFAULT_AUTHORITY_EMAILS];
+}
+
+export async function fetchAuthorityConfig(seedIfEmpty = false): Promise<AuthorityConfig> {
   const ref = doc(db, 'authority', 'config');
   try {
     const snap = await getDoc(ref);
     if (snap.exists()) {
-      const parsed = normalizeEmailList(snap.data()?.emails);
-      if (parsed.length > 0) return parsed;
+      const data = snap.data();
+      const parsed = normalizeEmailList(data?.emails);
+      if (parsed.length > 0) {
+        return {
+          emails: parsed,
+          ownerEmails: resolveOwnerEmails(parsed, data?.ownerEmails),
+        };
+      }
     }
     if (seedIfEmpty) {
       await setDoc(
         ref,
         {
           emails: DEFAULT_AUTHORITY_EMAILS,
+          ownerEmails: DEFAULT_AUTHORITY_EMAILS,
           updatedAt: Date.now(),
         },
         { merge: true }
@@ -87,23 +109,34 @@ export async function fetchAuthorityEmails(seedIfEmpty = false): Promise<string[
   } catch {
     // Fallback to default owner emails if Firestore rules/network block read
   }
-  return [...DEFAULT_AUTHORITY_EMAILS];
+  return {
+    emails: [...DEFAULT_AUTHORITY_EMAILS],
+    ownerEmails: [...DEFAULT_AUTHORITY_EMAILS],
+  };
 }
 
-export async function saveAuthorityEmails(emails: string[]): Promise<string[]> {
-  const clean = normalizeEmailList(emails);
-  if (clean.length === 0) {
+export async function saveAuthorityConfig(
+  emails: string[],
+  ownerEmails: string[]
+): Promise<AuthorityConfig> {
+  const cleanEmails = normalizeEmailList(emails);
+  if (cleanEmails.length === 0) {
     throw new Error('Minimal harus ada 1 email di kolom Authority.');
+  }
+  const cleanOwners = normalizeEmailList(ownerEmails).filter((e) => cleanEmails.includes(e));
+  if (cleanOwners.length === 0) {
+    throw new Error('Minimal harus ada 1 akun dengan role Owner.');
   }
   await setDoc(
     doc(db, 'authority', 'config'),
     {
-      emails: clean,
+      emails: cleanEmails,
+      ownerEmails: cleanOwners,
       updatedAt: Date.now(),
     },
     { merge: true }
   );
-  return clean;
+  return { emails: cleanEmails, ownerEmails: cleanOwners };
 }
 
 export function isEmailAuthorized(email: string | null | undefined, allowed: string[]): boolean {
@@ -111,17 +144,25 @@ export function isEmailAuthorized(email: string | null | undefined, allowed: str
   return Boolean(norm) && allowed.includes(norm);
 }
 
-export function subscribeAuthorityEmails(onUpdate: (emails: string[]) => void): () => void {
+export function subscribeAuthorityConfig(onUpdate: (cfg: AuthorityConfig) => void): () => void {
   const ref = doc(db, 'authority', 'config');
   return onSnapshot(
     ref,
     (snap) => {
       if (!snap.exists()) {
-        onUpdate([...DEFAULT_AUTHORITY_EMAILS]);
+        onUpdate({
+          emails: [...DEFAULT_AUTHORITY_EMAILS],
+          ownerEmails: [...DEFAULT_AUTHORITY_EMAILS],
+        });
         return;
       }
-      const parsed = normalizeEmailList(snap.data()?.emails);
-      onUpdate(parsed.length > 0 ? parsed : [...DEFAULT_AUTHORITY_EMAILS]);
+      const data = snap.data();
+      const parsed = normalizeEmailList(data?.emails);
+      const emails = parsed.length > 0 ? parsed : [...DEFAULT_AUTHORITY_EMAILS];
+      onUpdate({
+        emails,
+        ownerEmails: resolveOwnerEmails(emails, data?.ownerEmails),
+      });
     },
     () => {
       // Ignore transient listener errors during sign-out or offline state

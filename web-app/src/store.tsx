@@ -25,9 +25,10 @@ import {
   pushSingleDoc,
   resetAllCloudData,
   DEFAULT_AUTHORITY_EMAILS,
-  fetchAuthorityEmails,
-  saveAuthorityEmails,
-  subscribeAuthorityEmails,
+  AuthorityRole,
+  fetchAuthorityConfig,
+  saveAuthorityConfig,
+  subscribeAuthorityConfig,
   isEmailAuthorized,
   normalizeEmail,
 } from './firebase';
@@ -102,7 +103,10 @@ interface StoreContextType {
   authError: string | null;
   clearAuthError: () => void;
   authorityEmails: string[];
-  addAuthorityEmail: (email: string) => Promise<void>;
+  ownerEmails: string[];
+  currentRole: AuthorityRole;
+  addAuthorityEmail: (email: string, role?: AuthorityRole) => Promise<void>;
+  setAuthorityRole: (email: string, role: AuthorityRole) => Promise<void>;
   removeAuthorityEmail: (email: string) => Promise<void>;
   syncStatus: SyncStatus;
   lastSyncAt: number;
@@ -178,6 +182,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authorityEmails, setAuthorityEmails] = useState<string[]>(DEFAULT_AUTHORITY_EMAILS);
+  const [ownerEmails, setOwnerEmails] = useState<string[]>(DEFAULT_AUTHORITY_EMAILS);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('BELUM_MASUK');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [autoSync, setAutoSyncState] = useState<boolean>(() => {
@@ -250,9 +255,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
       setAuthLoading(true);
-      const allowed = await fetchAuthorityEmails(true);
+      const cfg = await fetchAuthorityConfig(true);
       if (!active) return;
-      if (!isEmailAuthorized(u.email, allowed)) {
+      if (!isEmailAuthorized(u.email, cfg.emails)) {
         await logoutFirebase().catch(() => {});
         if (!active) return;
         setUser(null);
@@ -264,7 +269,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
       setAuthError(null);
-      setAuthorityEmails(allowed);
+      setAuthorityEmails(cfg.emails);
+      setOwnerEmails(cfg.ownerEmails);
       setUser(u);
       setAuthLoading(false);
       // Trigger initial sync upon sign-in
@@ -280,10 +286,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!user) return;
     let active = true;
-    const unsub = subscribeAuthorityEmails((allowed) => {
+    const unsub = subscribeAuthorityConfig((cfg) => {
       if (!active) return;
-      setAuthorityEmails(allowed);
-      if (!isEmailAuthorized(user.email, allowed)) {
+      setAuthorityEmails(cfg.emails);
+      setOwnerEmails(cfg.ownerEmails);
+      if (!isEmailAuthorized(user.email, cfg.emails)) {
         setAuthError(
           `Akses dicabut: email ${user.email || '(tanpa email)'} telah dihapus dari kolom Authority.`
         );
@@ -296,7 +303,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [user]);
 
-  const addAuthorityEmail = async (email: string) => {
+  const currentRole: AuthorityRole =
+    user && ownerEmails.includes(normalizeEmail(user.email)) ? 'owner' : 'kasir';
+
+  const addAuthorityEmail = async (email: string, role: AuthorityRole = 'kasir') => {
     const clean = normalizeEmail(email);
     if (!clean || !clean.includes('@')) {
       throw new Error('Format email tidak valid.');
@@ -304,18 +314,42 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (authorityEmails.includes(clean)) {
       throw new Error('Email sudah terdaftar di kolom Authority.');
     }
-    const updated = await saveAuthorityEmails([...authorityEmails, clean]);
-    setAuthorityEmails(updated);
+    const nextOwners = role === 'owner' ? [...ownerEmails, clean] : ownerEmails;
+    const saved = await saveAuthorityConfig([...authorityEmails, clean], nextOwners);
+    setAuthorityEmails(saved.emails);
+    setOwnerEmails(saved.ownerEmails);
+  };
+
+  const setAuthorityRole = async (email: string, role: AuthorityRole) => {
+    const clean = normalizeEmail(email);
+    if (!authorityEmails.includes(clean)) {
+      throw new Error('Email tidak ditemukan di kolom Authority.');
+    }
+    const nextOwners =
+      role === 'owner'
+        ? [...ownerEmails, clean]
+        : ownerEmails.filter((e) => e !== clean);
+    if (nextOwners.length === 0) {
+      throw new Error('Minimal harus tersisa 1 akun dengan role Owner.');
+    }
+    const saved = await saveAuthorityConfig(authorityEmails, nextOwners);
+    setAuthorityEmails(saved.emails);
+    setOwnerEmails(saved.ownerEmails);
   };
 
   const removeAuthorityEmail = async (email: string) => {
     const clean = normalizeEmail(email);
-    const next = authorityEmails.filter((e) => e !== clean);
-    if (next.length === 0) {
+    const nextEmails = authorityEmails.filter((e) => e !== clean);
+    if (nextEmails.length === 0) {
       throw new Error('Minimal harus tersisa 1 email di kolom Authority.');
     }
-    const updated = await saveAuthorityEmails(next);
-    setAuthorityEmails(updated);
+    const nextOwners = ownerEmails.filter((e) => e !== clean);
+    if (nextOwners.length === 0) {
+      throw new Error('Minimal harus tersisa 1 akun dengan role Owner.');
+    }
+    const saved = await saveAuthorityConfig(nextEmails, nextOwners);
+    setAuthorityEmails(saved.emails);
+    setOwnerEmails(saved.ownerEmails);
     if (user && normalizeEmail(user.email) === clean) {
       await logoutFirebase();
     }
@@ -1314,7 +1348,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         authError,
         clearAuthError: () => setAuthError(null),
         authorityEmails,
+        ownerEmails,
+        currentRole,
         addAuthorityEmail,
+        setAuthorityRole,
         removeAuthorityEmail,
         syncStatus,
         lastSyncAt: dbState.lastSyncAt,

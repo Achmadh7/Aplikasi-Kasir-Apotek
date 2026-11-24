@@ -5,6 +5,7 @@ import { StoreProvider, useStore } from './store';
 import { loginWithGoogle, logoutFirebase } from './firebase';
 import { daysUntilExpiry } from './types';
 import { FeedbackProvider, useFeedback } from './components/Feedback';
+import { AppBootSkeleton, PageSkeleton } from './components/Skeleton';
 
 const BerandaScreen = lazy(() =>
   import('./components/ScreensPart1').then((m) => ({ default: m.BerandaScreen }))
@@ -452,7 +453,16 @@ const MainLayout: React.FC = () => {
     </div>
   ) : null;
 
-  if (authLoading || !user) {
+  if (authLoading) {
+    return (
+      <>
+        {authPillEl}
+        <AppBootSkeleton />
+      </>
+    );
+  }
+
+  if (!user) {
     const loginFeatures = [
       { num: '01', text: 'Kasir cepat dengan dukungan Cash, QRIS & Transfer' },
       { num: '02', text: 'Pantau stok menipis & tanggal kedaluwarsa otomatis' },
@@ -523,7 +533,7 @@ const MainLayout: React.FC = () => {
                 Gunakan akun Google terdaftar untuk membuka kasir, stok obat, dan laporan.
               </p>
 
-              {!authLoading && (storeAuthError || authError) && (
+              {(storeAuthError || authError) && (
                 <div className="mb-4 rounded-xl bg-[#FEF2F2] border border-[#FECACA] px-3.5 py-3 flex items-start gap-2.5 text-[#991B1B] text-left">
                   <svg
                     className="w-4 h-4 shrink-0 mt-0.5 text-[#DC2626]"
@@ -551,13 +561,13 @@ const MainLayout: React.FC = () => {
 
               <button
                 onClick={handleGoogleLogin}
-                disabled={authLoading || loggingIn}
+                disabled={loggingIn}
                 className="w-full py-3.5 px-4 rounded-[14px] bg-[#142E27] hover:bg-[#1D4036] text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-[0_8px_20px_rgba(20,46,39,0.22)] transition disabled:opacity-60 cursor-pointer"
               >
                 <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z" />
                 </svg>
-                {authLoading ? 'Memeriksa sesi...' : loggingIn ? 'Membuka Google...' : 'Login dengan Google'}
+                {loggingIn ? 'Membuka Google...' : 'Login dengan Google'}
               </button>
 
               <p className="mt-[18px] text-[11.5px] text-[#6B7280] text-center leading-[1.5]">
@@ -691,14 +701,7 @@ const MainLayout: React.FC = () => {
           <div className="no-print hidden md:flex items-center justify-end mb-3">
             {renderAccountPill(false)}
           </div>
-          <Suspense
-            fallback={
-              <div className="bg-[#E8F2EC] dark:bg-[#142E27] rounded-2xl border border-[#B7D6C3] dark:border-[#244C41] p-8 flex items-center justify-center gap-3 text-sm font-semibold text-[#78716C] dark:text-[#93B5A9]">
-                <RefreshCw className="w-4 h-4 animate-spin text-[#15803D]" />
-                <span>Memuat halaman...</span>
-              </div>
-            }
-          >
+          <Suspense fallback={<PageSkeleton tab={activeTab} />}>
             <div key={activeTab} className="anim-opsi7">
               {activeTab === 'beranda' && <BerandaScreen onNavigate={selectTab} />}
               {activeTab === 'kasir' && <KasirScreen />}
