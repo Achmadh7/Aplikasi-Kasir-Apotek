@@ -239,7 +239,7 @@ fun PbfScreen() {
                                 Text(tr("+${outstandingSorted.size - 3} pembelian kredit lainnya", "+${outstandingSorted.size - 3} more credit purchases"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.75f))
                             }
                             Spacer(Modifier.height(SpaceS))
-                            Text(tr("Ketuk baris untuk membuka kartunya — Tandai Lunas dan Atur Jatuh Tempo ada di detail kartu.", "Tap a row to open its card — Mark as Paid and Set Due Date are in the card details."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.75f))
+                            Text(tr("Ketuk baris untuk membuka kartunya. Tandai Lunas dan Atur Jatuh Tempo ada di detail kartu.", "Tap a row to open its card. Mark as Paid and Set Due Date are in the card details."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.75f))
                         }
                     }
                 }
@@ -257,7 +257,7 @@ fun PbfScreen() {
                             Spacer(Modifier.height(SpaceM))
                             Text(tr("Belum ada catatan pembelian", "No purchase records yet"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceXS))
-                            Text(tr("Catat belanja dari PBF lewat tombol + di kanan bawah — ini murni catatan, tidak mengubah stok dan kas.", "Record PBF purchases with the + button at the bottom right — these are records only and do not change stock or cash."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                            Text(tr("Catat belanja dari PBF lewat tombol + di kanan bawah. Ini murni catatan, tidak mengubah stok dan kas.", "Record PBF purchases with the + button at the bottom right. These are records only and do not change stock or cash."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                         }
                     }
                 }
@@ -455,7 +455,7 @@ fun PbfScreen() {
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
             title = { Text(tr("Hapus Catatan Pembelian?", "Delete Purchase Record?")) },
-            text = { Text(tr("Catatan belanja dari ${target.pbfName} (${formatDateID(target.date)}) sebesar ${formatIDR(target.total)} akan dihapus. Ini hanya menghapus catatan — stok dan kas tidak berubah.", "The purchase record from ${target.pbfName} (${formatDateID(target.date)}) of ${formatIDR(target.total)} will be deleted. This only deletes the record — stock and cash are unchanged.")) },
+            text = { Text(tr("Catatan belanja dari ${target.pbfName} (${formatDateID(target.date)}) sebesar ${formatIDR(target.total)} akan dihapus. Ini hanya menghapus catatan, stok dan kas tidak berubah.", "The purchase record from ${target.pbfName} (${formatDateID(target.date)}) of ${formatIDR(target.total)} will be deleted. This only deletes the record, stock and cash are unchanged.")) },
             confirmButton = {
                 TextButton(onClick = {
                     deleteTarget = null
@@ -636,9 +636,9 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                     Text(tr("FAKTUR", "INVOICE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 OutlinedTextField(
                     value = pbfName, onValueChange = {}, label = { Text(tr("Nama PBF", "PBF Name")) },
-                    placeholder = { Text(tr("Pilih pemasok", "Choose a supplier")) },
+                    placeholder = { Text(tr("Pilih supplier", "Choose a supplier")) },
                     readOnly = true, singleLine = true,
-                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = tr("Pilih pemasok", "Choose a supplier")) },
+                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = tr("Pilih supplier", "Choose a supplier")) },
                     interactionSource = supplierInteraction,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -858,12 +858,12 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     if (showSupplierPicker) {
         AlertDialog(
             onDismissRequest = { showSupplierPicker = false },
-            title = { Text(tr("Pilih Pemasok", "Choose Supplier")) },
+            title = { Text(tr("Pilih Supplier", "Choose Supplier")) },
             text = {
                 Column {
                     if (suppliers.isEmpty()) {
                         Text(
-                            tr("Belum ada pemasok — tambah dulu di bawah, atau impor dari riwayat di layar Pemasok.", "No suppliers yet — add one below, or import from history on the Suppliers screen."),
+                            tr("Belum ada supplier. Tambah dulu di bawah, atau impor dari riwayat di layar Supplier.", "No suppliers yet. Add one below, or import from history on the Suppliers screen."),
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
@@ -901,7 +901,7 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 }) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(tr("Tambah pemasok baru", "Add a new supplier"))
+                    Text(tr("Tambah supplier baru", "Add a new supplier"))
                 }
             },
             dismissButton = { TextButton(onClick = { showSupplierPicker = false }) { Text(tr("Batal", "Cancel")) } }
@@ -912,7 +912,7 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     if (showAddSupplier) {
         AlertDialog(
             onDismissRequest = { showAddSupplier = false },
-            title = { Text(tr("Tambah Pemasok", "Add Supplier")) },
+            title = { Text(tr("Tambah Supplier", "Add Supplier")) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                     OutlinedTextField(

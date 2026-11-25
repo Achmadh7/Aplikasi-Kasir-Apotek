@@ -23,6 +23,7 @@ import {
   FirestoreMapper,
   fetchCollectionDocs,
   pushSingleDoc,
+  migrateLegacyUserWebData,
   resetAllCloudData,
   DEFAULT_AUTHORITY_EMAILS,
   AuthorityRole,
@@ -374,7 +375,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       let pushed = 0;
       let pulled = 0;
 
-      // Fetch remote collections once (like cacheAwan in OnlineSync.kt)
+      // Fetch remote collections once from shared apotek/main/web_*
       const [
         remObat,
         remJual,
@@ -384,14 +385,40 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         remItemJual,
         remItemPbf,
       ] = await Promise.all([
-        fetchCollectionDocs(uid, 'obat'),
-        fetchCollectionDocs(uid, 'penjualan'),
-        fetchCollectionDocs(uid, 'pbf'),
-        fetchCollectionDocs(uid, 'kas'),
-        fetchCollectionDocs(uid, 'pemasok'),
-        fetchCollectionDocs(uid, 'penjualan_item'),
-        fetchCollectionDocs(uid, 'pbf_item'),
+        fetchCollectionDocs('obat'),
+        fetchCollectionDocs('penjualan'),
+        fetchCollectionDocs('pbf'),
+        fetchCollectionDocs('kas'),
+        fetchCollectionDocs('pemasok'),
+        fetchCollectionDocs('penjualan_item'),
+        fetchCollectionDocs('pbf_item'),
       ]);
+
+      // One-time migration of legacy per-account users/{uid}/web_* data into shared apotek/main/web_*
+      const legacyFlagKey = `apotek_lestari_migrated_shared_${uid}`;
+      let alreadyMigrated = false;
+      try {
+        alreadyMigrated = localStorage.getItem(legacyFlagKey) === '1';
+      } catch {
+        alreadyMigrated = false;
+      }
+      if (!alreadyMigrated) {
+        const migratedCount = await migrateLegacyUserWebData(uid, {
+          obat: remObat,
+          penjualan: remJual,
+          pbf: remPbf,
+          kas: remKas,
+          pemasok: remPemasok,
+          penjualan_item: remItemJual,
+          pbf_item: remItemPbf,
+        });
+        pushed += migratedCount;
+        try {
+          localStorage.setItem(legacyFlagKey, '1');
+        } catch {
+          // ignore storage errors
+        }
+      }
 
       const remoteUpdatedMap = (docs: Array<{ id: string; data: Record<string, any> }>) => {
         const m = new Map<string, number>();
@@ -411,7 +438,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       for (const e of cur.medicines.filter((x) => x.kotor)) {
         if (!e.remoteId) continue;
         if ((mapObat.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc(uid, 'obat', e.remoteId, FirestoreMapper.obatToMap(e));
+          await pushSingleDoc('obat', e.remoteId, FirestoreMapper.obatToMap(e));
           pushed++;
         }
         e.kotor = false;
@@ -422,7 +449,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const b = bulanKeyDariIso(e.createdAt);
         if (b && cur.closedMonths.includes(b)) continue;
         if ((mapJual.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc(uid, 'penjualan', e.remoteId, FirestoreMapper.penjualanToMap(e));
+          await pushSingleDoc('penjualan', e.remoteId, FirestoreMapper.penjualanToMap(e));
           pushed++;
         }
         e.kotor = false;
@@ -433,7 +460,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const b = bulanKeyDariIso(e.date);
         if (b && cur.closedMonths.includes(b)) continue;
         if ((mapPbf.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc(uid, 'pbf', e.remoteId, FirestoreMapper.pbfToMap(e));
+          await pushSingleDoc('pbf', e.remoteId, FirestoreMapper.pbfToMap(e));
           pushed++;
         }
         e.kotor = false;
@@ -444,7 +471,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const b = bulanKeyDariIso(e.createdAt);
         if (b && cur.closedMonths.includes(b)) continue;
         if ((mapKas.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc(uid, 'kas', e.remoteId, FirestoreMapper.kasToMap(e));
+          await pushSingleDoc('kas', e.remoteId, FirestoreMapper.kasToMap(e));
           pushed++;
         }
         e.kotor = false;
@@ -453,7 +480,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       for (const e of cur.suppliers.filter((x) => x.kotor)) {
         if (!e.remoteId) continue;
         if ((mapPemasok.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc(uid, 'pemasok', e.remoteId, FirestoreMapper.pemasokToMap(e));
+          await pushSingleDoc('pemasok', e.remoteId, FirestoreMapper.pemasokToMap(e));
           pushed++;
         }
         e.kotor = false;
@@ -462,7 +489,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       for (const e of cur.saleItems.filter((x) => x.kotor)) {
         if (!e.remoteId || !e.saleRemoteId) continue;
         if ((mapItemJual.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc(uid, 'penjualan_item', e.remoteId, FirestoreMapper.itemJualToMap(e));
+          await pushSingleDoc('penjualan_item', e.remoteId, FirestoreMapper.itemJualToMap(e));
           pushed++;
         }
         e.kotor = false;
@@ -471,7 +498,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       for (const e of cur.purchaseItems.filter((x) => x.kotor)) {
         if (!e.remoteId || !e.purchaseRemoteId) continue;
         if ((mapItemPbf.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc(uid, 'pbf_item', e.remoteId, FirestoreMapper.itemPbfToMap(e));
+          await pushSingleDoc('pbf_item', e.remoteId, FirestoreMapper.itemPbfToMap(e));
           pushed++;
         }
         e.kotor = false;
@@ -1079,11 +1106,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const saveSupplier = (name: string, contact: string, editId?: number) => {
     const clean = name.trim();
-    if (!clean) throw new Error('Nama pemasok tidak boleh kosong');
+    if (!clean) throw new Error('Nama supplier tidak boleh kosong');
     const dup = dbRef.current.suppliers.find(
       (s) => !s.terhapus && s.id !== editId && s.name.toLowerCase() === clean.toLowerCase()
     );
-    if (dup) throw new Error(`Pemasok "${clean}" sudah ada di daftar`);
+    if (dup) throw new Error(`Supplier "${clean}" sudah ada di daftar`);
     const now = Date.now();
 
     setDbState((prev) => {
@@ -1317,7 +1344,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const resetAllData = async () => {
     if (user) {
-      await resetAllCloudData(user.uid);
+      if (currentRole !== 'owner') {
+        throw new Error('Hanya akun Owner yang dapat mereset seluruh data cloud.');
+      }
+      await resetAllCloudData();
     }
     setDbState({
       medicines: [],

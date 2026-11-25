@@ -68,7 +68,7 @@ fun shareReceiptBitmap(context: Context, bitmap: Bitmap, invoiceNo: String) {
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "image/png"
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_TEXT, "Struk $invoiceNo — Apotek Lestari")
+            putExtra(Intent.EXTRA_TEXT, "Struk $invoiceNo - Apotek Lestari")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             // Chooser bisa dipanggil dari konteks non-Activity.
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

@@ -1,10 +1,11 @@
 rules_version = '2';
 
 // Apotek Lestari - Mode Online:
-// 1) Koleksi web_* di users/{uid} hanya bisa diakses akun terverifikasi yang terdaftar di Authority.
-// 2) Koleksi non-web_ (APK Android) tetap terisolasi per users/{uid}.
-// 3) Dokumen authority/config hanya bisa dibaca & ditulis akun terverifikasi yang terdaftar di Authority.
-// Deploy: npx firebase-tools deploy --only firestore:rules (atau tempel di Firebase Console > Firestore > Rules > Publish).
+// 1) Koleksi bersama web_* di apotek/main diakses akun terverifikasi yang terdaftar di Authority (delete khusus Owner).
+// 2) Koleksi web_* lama di users/{uid} tetap diizinkan untuk migrasi otomatis ke apotek/main.
+// 3) Koleksi non-web_ (APK Android) tetap terisolasi per users/{uid}.
+// 4) Dokumen authority/config hanya bisa dibaca akun Authority & ditulis akun ber-role Owner.
+// Deploy: npx --yes firebase-tools deploy --only firestore:rules
 service cloud.firestore {
   match /databases/{database}/documents {
     function isVerifiedAuth() {
@@ -13,18 +14,46 @@ service cloud.firestore {
         && request.auth.token.email_verified == true;
     }
 
-    function isOwner() {
+    function isDefaultOwner() {
       return isVerifiedAuth()
         && request.auth.token.email.lower() in ['achmadhida66@gmail.com', 'hanyrahayu19@gmail.com'];
+    }
+
+    function hasAuthorityDoc() {
+      return exists(/databases/$(database)/documents/authority/config);
+    }
+
+    function authorityCfg() {
+      return get(/databases/$(database)/documents/authority/config).data;
+    }
+
+    function isOwner() {
+      return isVerifiedAuth() && (
+        (
+          hasAuthorityDoc()
+          && 'ownerEmails' in authorityCfg()
+          && authorityCfg().ownerEmails is list
+          && authorityCfg().ownerEmails.size() > 0
+        )
+          ? request.auth.token.email.lower() in authorityCfg().ownerEmails
+          : isDefaultOwner()
+      );
     }
 
     function isAuthorized() {
       return isOwner()
         || (
           isVerifiedAuth()
-          && exists(/databases/$(database)/documents/authority/config)
-          && request.auth.token.email.lower() in get(/databases/$(database)/documents/authority/config).data.emails
+          && hasAuthorityDoc()
+          && 'emails' in authorityCfg()
+          && authorityCfg().emails is list
+          && request.auth.token.email.lower() in authorityCfg().emails
         );
+    }
+
+    match /apotek/main/{col}/{docId} {
+      allow read, create, update: if col.matches('web_.*') && isAuthorized();
+      allow delete: if col.matches('web_.*') && isOwner();
     }
 
     match /users/{uid} {
@@ -44,7 +73,8 @@ service cloud.firestore {
     }
 
     match /authority/config {
-      allow read, write: if isAuthorized();
+      allow read: if isAuthorized();
+      allow write: if isOwner();
     }
   }
 }

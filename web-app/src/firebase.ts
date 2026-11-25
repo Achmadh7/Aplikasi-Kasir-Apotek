@@ -470,40 +470,83 @@ export const FirestoreMapper = {
   },
 };
 
-// Prefix with `web_` so web-app data stays isolated from APK even under the same Google uid.
+// Prefix with `web_` so web-app data stays isolated from APK, stored under shared `apotek/main` for Owner & Kasir.
 const webCol = (colName: string) => `web_${colName}`;
+const SHARED_ROOT = ['apotek', 'main'] as const;
+const WEB_SYNC_COLS = [
+  'obat',
+  'penjualan',
+  'penjualan_item',
+  'kas',
+  'pbf',
+  'pbf_item',
+  'pemasok',
+] as const;
 
 export async function pushSingleDoc(
-  uid: string,
   colName: string,
   remoteId: string,
   data: Record<string, any>
 ) {
-  const ref = doc(db, 'users', uid, webCol(colName), remoteId);
+  const ref = doc(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol(colName), remoteId);
   await setDoc(ref, data);
 }
 
-export async function fetchCollectionDocs(uid: string, colName: string) {
-  const snap = await getDocs(collection(db, 'users', uid, webCol(colName)));
+export async function fetchCollectionDocs(colName: string) {
+  const snap = await getDocs(collection(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol(colName)));
   return snap.docs.map((d) => ({ id: d.id, data: d.data() }));
 }
 
-export async function deleteCloudDoc(uid: string, colName: string, remoteId: string) {
-  await deleteDoc(doc(db, 'users', uid, webCol(colName), remoteId));
+export async function deleteCloudDoc(colName: string, remoteId: string) {
+  await deleteDoc(doc(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol(colName), remoteId));
 }
 
-export async function resetAllCloudData(uid: string) {
-  const cols = [
-    'obat',
-    'penjualan',
-    'penjualan_item',
-    'kas',
-    'pbf',
-    'pbf_item',
-    'pemasok',
-  ];
-  for (const colName of cols) {
-    const snap = await getDocs(collection(db, 'users', uid, webCol(colName)));
+// One-time migration from legacy per-account `users/{uid}/web_*` into shared `apotek/main/web_*`.
+export async function migrateLegacyUserWebData(
+  uid: string,
+  existingByCol: Record<string, Array<{ id: string; data: Record<string, any> }>>
+): Promise<number> {
+  let migrated = 0;
+  for (const colName of WEB_SYNC_COLS) {
+    const legacySnap = await getDocs(collection(db, 'users', uid, webCol(colName)));
+    if (legacySnap.empty) continue;
+
+    const existingList = existingByCol[colName] || [];
+    const existingMap = new Map(existingList.map((d) => [d.id, d]));
+    const toWrite: Array<{ id: string; data: Record<string, any> }> = [];
+
+    for (const d of legacySnap.docs) {
+      const legacyData = d.data();
+      const cur = existingMap.get(d.id);
+      const legacyUpdated = Number(legacyData.updatedAt) || 0;
+      const curUpdated = cur ? Number(cur.data.updatedAt) || 0 : -1;
+      if (!cur || legacyUpdated > curUpdated) {
+        toWrite.push({ id: d.id, data: legacyData });
+        if (cur) {
+          cur.data = legacyData;
+        } else {
+          const entry = { id: d.id, data: legacyData };
+          existingList.push(entry);
+          existingMap.set(d.id, entry);
+        }
+      }
+    }
+
+    for (let i = 0; i < toWrite.length; i += 400) {
+      const batch = writeBatch(db);
+      for (const item of toWrite.slice(i, i + 400)) {
+        batch.set(doc(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol(colName), item.id), item.data);
+      }
+      await batch.commit();
+      migrated += Math.min(400, toWrite.length - i);
+    }
+  }
+  return migrated;
+}
+
+export async function resetAllCloudData() {
+  for (const colName of WEB_SYNC_COLS) {
+    const snap = await getDocs(collection(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol(colName)));
     const docs = snap.docs;
     for (let i = 0; i < docs.length; i += 400) {
       const batch = writeBatch(db);

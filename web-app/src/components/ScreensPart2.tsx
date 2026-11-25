@@ -772,8 +772,8 @@ export const PbfScreen: React.FC = () => {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Faktur PBF & Daftar Pemasok"
-        subtitle="Catatan belanja PBF (Tunai/Kredit), pengingat jatuh tempo, dan kontak pemasok"
+        title="Faktur PBF & Daftar Supplier"
+        subtitle="Catatan belanja PBF (Tunai/Kredit), pengingat jatuh tempo, dan kontak supplier"
         action={
           <div className="flex rounded-xl bg-white/15 p-1 text-xs font-bold">
             <button
@@ -790,7 +790,7 @@ export const PbfScreen: React.FC = () => {
                 tab === 'PEMASOK' ? 'bg-[#15803D] text-white' : ''
               }`}
             >
-              Pemasok ({suppliers.length})
+              Supplier ({suppliers.length})
             </button>
           </div>
         }
@@ -1072,16 +1072,16 @@ export const PbfScreen: React.FC = () => {
                 saveSupplier(supName, supContact);
                 setSupName('');
                 setSupContact('');
-                notify('Pemasok ditambahkan', 'success');
+                notify('Supplier ditambahkan', 'success');
               } catch (err: any) {
                 notify(err.message, 'error');
               }
             }}
             className="lg:col-span-4 rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3 text-sm h-fit"
           >
-            <h3 className="font-extrabold text-base">Tambah Pemasok PBF</h3>
+            <h3 className="font-extrabold text-base">Tambah Supplier PBF</h3>
             <div>
-              <label className="block text-xs font-bold mb-1">Nama Pemasok *</label>
+              <label className="block text-xs font-bold mb-1">Nama Supplier *</label>
               <input
                 required
                 value={supName}
@@ -1105,14 +1105,14 @@ export const PbfScreen: React.FC = () => {
               type="submit"
               className="w-full py-2.5 rounded-xl bg-[#15803D] text-white font-bold"
             >
-              Simpan Pemasok
+              Simpan Supplier
             </button>
           </form>
 
           <div className="lg:col-span-8 rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] divide-y divide-black/5 dark:divide-white/5">
             {suppliers.length === 0 ? (
               <p className="p-10 text-center text-sm opacity-60">
-                Belum ada pemasok terdaftar.
+                Belum ada supplier terdaftar.
               </p>
             ) : (
               suppliers.map((s) => (

@@ -87,25 +87,25 @@ import java.util.TimeZone
 val InvoicePaper = Color.White
 
 
-val InvoiceInk = Color(0xFF111111)
+val InvoiceInk = InvoiceInkToken
 
 
-val InvoiceMuted = Color(0xFF6B7280)
+val InvoiceMuted = InvoiceMutedToken
 
 
-val InvoiceBoxBg = Color(0xFFF4F4F5)
+val InvoiceBoxBg = InvoiceBoxBgToken
 
 
-val InvoiceBlue = Color(0xFF0061A4)
+val InvoiceBlue = InvoiceBlueToken
 
 
-val InvoicePaidBg = Color(0xFFE6F4EA)
+val InvoicePaidBg = InvoicePaidBgToken
 
 
-val InvoicePaidFg = Color(0xFF137333)
+val InvoicePaidFg = InvoicePaidFgToken
 
 
-val InvoiceDash = Color(0xFFD1D5DB)
+val InvoiceDash = InvoiceDashToken
 
 
 @Composable
@@ -243,7 +243,7 @@ fun ReceiptPreviewCard(
             )
             Spacer(Modifier.height(SpaceM))
             Text(
-                tr("Pratinjau — struk resmi dibuat setelah pembayaran berhasil.", "Preview — the official receipt is created after a successful payment."),
+                tr("Pratinjau: struk resmi dibuat setelah pembayaran berhasil.", "Preview: the official receipt is created after a successful payment."),
                 color = InvoiceMuted, style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
             )
@@ -416,7 +416,7 @@ fun ReceiptActionsRow(graphicsLayer: GraphicsLayer, invoiceNo: String, sale: Sal
                 }
             }
         } else {
-            Toast.makeText(context, tr("Izin Bluetooth ditolak — aktifkan di Pengaturan HP", "Bluetooth permission denied — enable it in the phone's Settings"), Toast.LENGTH_LONG).show()
+            Toast.makeText(context, tr("Izin Bluetooth ditolak, aktifkan di Pengaturan HP", "Bluetooth permission denied, enable it in the phone's Settings"), Toast.LENGTH_LONG).show()
         }
     }
 

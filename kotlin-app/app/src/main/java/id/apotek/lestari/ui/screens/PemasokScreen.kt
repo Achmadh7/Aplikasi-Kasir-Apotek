@@ -93,7 +93,7 @@ fun PemasokScreen() {
         ) {
             item {
                 KartuHeaderPremium(
-                    tr("Pemasok", "Suppliers"),
+                    tr("Supplier", "Suppliers"),
                     Icons.Default.Store,
                     tr("Daftar PBF untuk Faktur Pembelian", "PBF list for purchase invoices")
                 )
@@ -102,9 +102,9 @@ fun PemasokScreen() {
             // S11: kartu galat muat + tombol coba lagi (pola Beranda S10).
             if (loadError != null) {
                 item {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                    ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(tr("Gagal memuat daftar pemasok.", "Failed to load the supplier list."), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                            Text(tr("Gagal memuat daftar supplier.", "Failed to load the supplier list."), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                             Spacer(Modifier.height(SpaceS))
                             Text(loadError ?: "", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceS))
@@ -115,22 +115,21 @@ fun PemasokScreen() {
             }
             if (suppliers.isEmpty()) {
                 item {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                    ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
                                 Icon(Icons.Default.Store, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(14.dp).size(28.dp))
                             }
                             Spacer(Modifier.height(SpaceM))
-                            Text(tr("Belum ada pemasok", "No suppliers yet"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(tr("Belum ada supplier", "No suppliers yet"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceXS))
-                            Text(tr("Tambah pemasok lewat tombol + di kanan bawah.", "Add a supplier with the + button at the bottom right."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                            Text(tr("Tambah supplier lewat tombol + di kanan bawah.", "Add a supplier with the + button at the bottom right."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                         }
                     }
                 }
             }
             items(suppliers, key = { it.id }) { s ->
                 ExpressiveCard(
-                    shape = MaterialTheme.shapes.extraLarge,
                     modifier = Modifier.fillMaxWidth().clickable { bukaFormUbah(s) }
                 ) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -153,7 +152,7 @@ fun PemasokScreen() {
             onClick = { bukaFormTambah() },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)
         ) {
-            Icon(Icons.Default.Add, tr("Tambah Pemasok", "Add Supplier"))
+            Icon(Icons.Default.Add, tr("Tambah Supplier", "Add Supplier"))
         }
     }
 
@@ -171,11 +170,11 @@ fun PemasokScreen() {
         ) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (target == null) tr("Tambah Pemasok", "Add Supplier") else tr("Ubah Pemasok", "Edit Supplier"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                    Text(if (target == null) tr("Tambah Supplier", "Add Supplier") else tr("Ubah Supplier", "Edit Supplier"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
                     IconButton(onClick = { showForm = false }) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+                ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                         Text(tr("PBF", "PBF"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         OutlinedTextField(
@@ -207,8 +206,8 @@ fun PemasokScreen() {
                                 showForm = false
                                 resumeKey++
                                 snackbarHostState.showSnackbar(
-                                    if (target == null) tr("Pemasok ditambahkan.", "Supplier added.")
-                                    else tr("Pemasok diubah.", "Supplier updated.")
+                                    if (target == null) tr("Supplier ditambahkan.", "Supplier added.")
+                                    else tr("Supplier diubah.", "Supplier updated.")
                                 )
                             } else {
                                 formError = (res as? ApiResult.Error)?.message ?: tr("Gagal menyimpan", "Failed to save")
@@ -227,8 +226,8 @@ fun PemasokScreen() {
     deleteTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text(tr("Hapus Pemasok?", "Delete Supplier?")) },
-            text = { Text(tr("Pemasok ${target.name} akan dihapus dari daftar. Catatan pembelian yang sudah memakai nama ini tidak berubah.", "Supplier ${target.name} will be removed from the list. Purchase records that already use this name are unchanged.")) },
+            title = { Text(tr("Hapus Supplier?", "Delete Supplier?")) },
+            text = { Text(tr("Supplier ${target.name} akan dihapus dari daftar. Catatan pembelian yang sudah memakai nama ini tidak berubah.", "Supplier ${target.name} will be removed from the list. Purchase records that already use this name are unchanged.")) },
             confirmButton = {
                 TextButton(onClick = {
                     deleteTarget = null
@@ -236,7 +235,7 @@ fun PemasokScreen() {
                         val res = repo.deleteSupplier(target.id)
                         if (res is ApiResult.Success) {
                             resumeKey++
-                            snackbarHostState.showSnackbar(tr("Pemasok dihapus.", "Supplier deleted."))
+                            snackbarHostState.showSnackbar(tr("Supplier dihapus.", "Supplier deleted."))
                         } else {
                             snackbarHostState.showSnackbar((res as? ApiResult.Error)?.message ?: tr("Gagal menghapus", "Failed to delete"))
                         }

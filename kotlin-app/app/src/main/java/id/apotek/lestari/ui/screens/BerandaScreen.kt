@@ -142,7 +142,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(RadiusHero))
                     .background(brush)
                     .padding(14.dp)
             ) {
@@ -182,13 +182,13 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             val syncBorder = if (statusSync == StatusSync.GAGAL) ForestErrorSoft else ForestMint.copy(alpha = 0.42f)
                             val syncTint = if (statusSync == StatusSync.GAGAL) ForestErrorSoft else ForestMint
                             Surface(
-                                color = Color(0xFF10B981).copy(alpha = 0.18f),
-                                shape = RoundedCornerShape(10.dp),
+                                color = ForestEmeraldAccent.copy(alpha = 0.18f),
+                                shape = RoundedCornerShape(RadiusSmall),
                                 border = BorderStroke(1.dp, syncBorder),
-                                modifier = Modifier.clickable { onSyncTap() }
+                                modifier = Modifier.defaultMinSize(minHeight = 44.dp).clickable { onSyncTap() }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                                 ) {
@@ -226,21 +226,22 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 listOf(tr("Hari", "Day"), tr("Bulan", "Month")).forEachIndexed { idx, label ->
                                     val selected = summaryPeriod == idx
                                     Surface(
-                                        color = if (selected) Color(0xFF10B981) else Color.White.copy(alpha = 0.12f),
+                                        color = if (selected) ForestEmeraldAccent else Color.White.copy(alpha = 0.12f),
                                         shape = RoundedCornerShape(50),
-                                        modifier = Modifier.clickable { summaryPeriod = idx }
+                                        modifier = Modifier.defaultMinSize(minWidth = 52.dp, minHeight = 44.dp).clickable { summaryPeriod = idx }
                                     ) {
-                                        Text(
-                                            label,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (selected) Color(0xFF052E16) else ForestMintMuted,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                        )
+                                        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                                            Text(
+                                                label,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (selected) ForestOnAccent else ForestMintMuted
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -258,7 +259,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             val isUp = diff >= 0
                             val arrowColor = if (isUp) ForestMint else ForestErrorSoft
                             Surface(
-                                color = if (isUp) Color(0xFF10B981).copy(alpha = 0.22f) else ForestErrorSoft.copy(alpha = 0.18f),
+                                color = if (isUp) ForestEmeraldAccent.copy(alpha = 0.22f) else ForestErrorSoft.copy(alpha = 0.18f),
                                 shape = RoundedCornerShape(50),
                                 border = BorderStroke(1.dp, arrowColor.copy(alpha = 0.36f))
                             ) {
@@ -273,7 +274,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                         else "${if (isUp) "+" else "-"}${formatIDR(kotlin.math.abs(diff))} ${tr("vs kemarin", "vs yesterday")}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFECFDF5),
+                                        color = ForestMintLight,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -362,40 +363,35 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     !remindersLoaded -> tr("Memuat pengingat…", "Loading reminders…")
                     else -> tr("Semua stok & ED aman", "All stock & expiry safe")
                 }
-                val accent = warningAmber()
+                val accent = warningAmberText()
                 Surface(
                     color = amberBg(),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth().clickable { onGoPengingat() }
+                    shape = RoundedCornerShape(RadiusCard),
+                    border = BorderStroke(1.dp, warningAmber().copy(alpha = 0.35f)),
+                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp).clickable { onGoPengingat() }
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(Modifier.width(4.dp).fillMaxHeight().background(accent))
-                        Row(
-                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 11.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Warning, null, tint = accent, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                stripText,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                tr("Cek ›", "View ›"),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = accent
-                            )
-                        }
+                        Icon(Icons.Default.Warning, null, tint = accent, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stripText,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            tr("Cek ›", "View ›"),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = accent
+                        )
                     }
                 }
             }

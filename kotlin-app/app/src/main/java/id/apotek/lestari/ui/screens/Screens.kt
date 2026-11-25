@@ -108,7 +108,7 @@ fun adaptiveSheetMaxWidth() = when {
 // Lainnya (identitas L1). -------
 
 /** Warna status bar & lencana sinkron (Forest Emerald gelap). */
-val WarnaHeaderN2 = Color(0xFF142E27)
+val WarnaHeaderN2 = ForestHeroLightStart
 
 // Header Forest Emerald bersih (Mix Opsi 1 + Opsi 3): judul 16sp ExtraBold putih,
 // tanpa subjudul & tanpa tombol kanan; tombol kembali opsional di kiri.
@@ -124,19 +124,19 @@ fun KartuHeaderPremium(
         modifier = Modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 48.dp)
-            .background(brush, RoundedCornerShape(16.dp))
+            .background(brush, RoundedCornerShape(RadiusHeader))
             .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (onBack != null) {
                 Surface(
                     color = Color.White.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(RadiusSmall),
                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
-                    modifier = Modifier.size(32.dp).clickable { onBack() }
+                    modifier = Modifier.size(44.dp).clickable { onBack() }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.ArrowBackIosNew, tr("Kembali", "Back"), tint = Color.White, modifier = Modifier.size(15.dp))
+                        Icon(Icons.Default.ArrowBackIosNew, tr("Kembali", "Back"), tint = Color.White, modifier = Modifier.size(16.dp))
                     }
                 }
                 Spacer(Modifier.width(10.dp))
@@ -208,37 +208,27 @@ fun PurchasePaymentChip(paymentType: String) {
     val kredit = paymentType == "KREDIT"
     val fg = if (kredit) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
     val icon = if (kredit) Icons.Default.Schedule else Icons.Default.Money
-    AssistChip(
-        onClick = {},
-        enabled = false,
-        label = {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(RadiusSmall)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Icon(icon, null, tint = fg, modifier = Modifier.size(15.dp))
             Text(
                 if (kredit) tr("Kredit", "Credit") else tr("Tunai", "Cash"),
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = fg
             )
-        },
-        leadingIcon = {
-            Icon(icon, null, modifier = Modifier.size(16.dp))
-        },
-        colors = AssistChipDefaults.assistChipColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            labelColor = fg,
-            leadingIconContentColor = fg,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            disabledLabelColor = fg,
-            disabledLeadingIconContentColor = fg
-        ),
-        border = null
-    )
+        }
+    }
 }
 
 
-/** Chip penanda cara bayar di kartu Riwayat Penjualan (QRIS/Transfer;
- *  Tunai tidak memakai chip). Gaya lembut (soft tonal) — pilihan Achmad
- *  2026-11-01 dari gambar pratinjau chip: wadah netral
- *  surfaceContainerHigh, teks + ikon biru primer; ikon mengikuti metode
- *  (QR untuk QRIS, bank untuk Transfer). */
 @Composable
 fun SalePaymentChip(paymentMethod: String) {
     val icon = when (paymentMethod) {
@@ -246,29 +236,25 @@ fun SalePaymentChip(paymentMethod: String) {
         "Transfer" -> Icons.Default.AccountBalance
         else -> Icons.Default.Money
     }
-    AssistChip(
-        onClick = {},
-        enabled = false,
-        label = {
+    val fg = MaterialTheme.colorScheme.primary
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(RadiusSmall)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Icon(icon, null, tint = fg, modifier = Modifier.size(15.dp))
             Text(
                 paymentMethod,
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = fg
             )
-        },
-        leadingIcon = {
-            Icon(icon, null, modifier = Modifier.size(16.dp))
-        },
-        colors = AssistChipDefaults.assistChipColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            labelColor = MaterialTheme.colorScheme.primary,
-            leadingIconContentColor = MaterialTheme.colorScheme.primary,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            disabledLabelColor = MaterialTheme.colorScheme.primary,
-            disabledLeadingIconContentColor = MaterialTheme.colorScheme.primary
-        ),
-        border = null
-    )
+        }
+    }
 }
 
 
@@ -375,7 +361,7 @@ fun Modifier.pulseKritis(): Modifier {
 // pucat di mode gelap untuk penanda masuk), dengan teks putih di atasnya.
 // Kas Keluar memakai colorScheme.error (R28, audit 2026-11-15 — unifikasi
 // merah #BA1A1A, 2026-11-14), bukan lagi merah hardcode.
-val KasMasukBlue = Color(0xFF15803D)
+val KasMasukBlue = ForestStatusOnline
 
 
 @Composable
@@ -402,9 +388,9 @@ fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = false) {
     // colorScheme.error (R28, audit 2026-11-15), bukan merah hardcode.
     // Animasi pulseKritis saat stok habis tetap dipertahankan.
     val bg = when (label) {
-        "Aman" -> Color(0xFF43A047)
-        "Sedang" -> Color(0xFF0284C7)
-        "Rendah" -> Color(0xFFE3B341)
+        "Aman" -> StockSafeBg
+        "Sedang" -> StockMediumBg
+        "Rendah" -> StockLowBg
         else -> MaterialTheme.colorScheme.error
     }
     val statusIcon = when (label) {
@@ -507,9 +493,9 @@ fun SearchField(
 fun SortToggle(sortAz: Boolean, onToggle: () -> Unit) {
     OutlinedButton(
         onClick = onToggle,
-        shape = RoundedCornerShape(20.dp),
-        contentPadding = PaddingValues(horizontal = 10.dp),
-        modifier = Modifier.height(36.dp)
+        shape = RoundedCornerShape(RadiusHero),
+        contentPadding = PaddingValues(horizontal = 12.dp),
+        modifier = Modifier.heightIn(min = 44.dp)
     ) {
         Icon(Icons.Default.Sort, null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(4.dp))

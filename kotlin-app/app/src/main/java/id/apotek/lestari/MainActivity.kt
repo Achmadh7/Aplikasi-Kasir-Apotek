@@ -112,17 +112,7 @@ import kotlinx.coroutines.Job
 import androidx.room.InvalidationTracker
 import id.apotek.lestari.ui.rememberLogoBitmap
 import id.apotek.lestari.ui.screens.*
-import id.apotek.lestari.ui.theme.ApotikLestariTheme
-import id.apotek.lestari.ui.theme.AppLang
-import id.apotek.lestari.ui.theme.ForestErrorSoft
-import id.apotek.lestari.ui.theme.ForestHeroDarkStart
-import id.apotek.lestari.ui.theme.ForestMint
-import id.apotek.lestari.ui.theme.ForestMintMuted
-import id.apotek.lestari.ui.theme.tr
-import id.apotek.lestari.ui.theme.ExpressiveCard
-import id.apotek.lestari.ui.theme.SpaceL
-import id.apotek.lestari.ui.theme.SpaceM
-import id.apotek.lestari.ui.theme.SpaceS
+import id.apotek.lestari.ui.theme.*
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 class MainActivity : ComponentActivity() {
@@ -747,11 +737,11 @@ if (tampilKonfirmasiReset) {
             text = {
                 Text(
                     if (emailOnline != null) tr(
-                        "Semua data obat, penjualan, kas, dan Faktur PBF di HP ini DAN salinan awannya untuk akun " + emailOnline + " akan dihapus permanen. Aplikasi mulai dari kosong. Ini tidak bisa dibatalkan — buat Backup dulu bila masih ada yang dibutuhkan.",
-                        "All medicine, sales, cash, and PBF invoice data on this phone AND its cloud copy for account " + emailOnline + " will be permanently deleted. The app starts empty. This cannot be undone — make a Backup first if anything is still needed."
+                        "Semua data obat, penjualan, kas, dan Faktur PBF di HP ini DAN salinan awannya untuk akun " + emailOnline + " akan dihapus permanen. Aplikasi mulai dari kosong. Ini tidak bisa dibatalkan, buat Backup dulu bila masih ada yang dibutuhkan.",
+                        "All medicine, sales, cash, and PBF invoice data on this phone AND its cloud copy for account " + emailOnline + " will be permanently deleted. The app starts empty. This cannot be undone, make a Backup first if anything is still needed."
                     ) else tr(
-                        "Semua data obat, penjualan, kas, dan Faktur PBF di HP ini akan dihapus permanen dan aplikasi mulai dari kosong. Ini tidak bisa dibatalkan — buat Backup dulu bila masih ada yang dibutuhkan. (Mode tamu: bila nanti masuk ke akun yang sudah punya data, data akun itu akan turun lagi.)",
-                        "All medicine, sales, cash, and PBF invoice data on this phone will be permanently deleted and the app starts empty. This cannot be undone — make a Backup first if anything is still needed. (Guest mode: signing in later to an account that already has data will bring that data back down.)"
+                        "Semua data obat, penjualan, kas, dan Faktur PBF di HP ini akan dihapus permanen dan aplikasi mulai dari kosong. Ini tidak bisa dibatalkan, buat Backup dulu bila masih ada yang dibutuhkan. (Mode tamu: bila nanti masuk ke akun yang sudah punya data, data akun itu akan turun lagi.)",
+                        "All medicine, sales, cash, and PBF invoice data on this phone will be permanently deleted and the app starts empty. This cannot be undone, make a Backup first if anything is still needed. (Guest mode: signing in later to an account that already has data will bring that data back down.)"
                     )
                 )
             },
@@ -873,10 +863,10 @@ fun LainnyaScreen(
                     tr("Belum pernah sinkron", "Never synced")
                 }
                 )
-            onlineSiap -> tr("Mode tamu \u2014 data hanya tersimpan di HP ini", "Guest mode \u2014 data is only stored on this phone")
+            onlineSiap -> tr("Mode tamu: data hanya tersimpan di HP ini", "Guest mode: data is only stored on this phone")
             else -> tr("Aplikasi berjalan lokal sepenuhnya di HP ini", "The app runs fully locally on this phone")
         }
-        val kotakStatus = if (emailOnline != null) Color(0xFF15803D) else Color(0xFFD97706)
+        val kotakStatus = if (emailOnline != null) ForestStatusOnline else ForestStatusOffline
         val tiles = listOf(
             LainnyaTile("laba", tr("Laba", "Profit"), tr("Laba & margin", "Profit & margins"), Icons.Default.TrendingUp),
             LainnyaTile("terlaris", tr("Terlaris", "Best Sellers"), tr("Peringkat penjualan", "Sales ranking"), Icons.Default.Leaderboard),
@@ -884,7 +874,7 @@ fun LainnyaScreen(
             LainnyaTile("riwayat", tr("Riwayat", "History"), tr("Semua penjualan", "All sales"), Icons.Default.ReceiptLong),
             LainnyaTile("tutupBuku", tr("Tutup Buku", "Close Books"), tr("Kunci bulan lalu", "Lock past months"), Icons.Default.Lock),
             LainnyaTile("pbf", tr("Faktur PBF", "PBF Invoices"), tr("Pembelian distributor", "Distributor purchases"), Icons.Default.LocalShipping),
-            LainnyaTile("pemasok", tr("Pemasok", "Suppliers"), tr("Daftar PBF", "PBF list"), Icons.Default.Store),
+            LainnyaTile("pemasok", tr("Supplier", "Suppliers"), tr("Daftar PBF", "PBF list"), Icons.Default.Store),
             LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
         )
         Text(
@@ -1037,19 +1027,12 @@ fun LayarLogin(
     onLewati: () -> Unit
 ) {
     val bgBrush = Brush.verticalGradient(
-        colors = listOf(Color(0xFF0D1B16), Color(0xFF070D0B))
+        colors = listOf(ForestLoginBgTop, ForestLoginBgBottom)
     )
     Box(
         Modifier
             .fillMaxSize()
             .background(bgBrush)
-            .background(
-                Brush.radialGradient(
-                    colors = listOf(ForestMint.copy(alpha = 0.14f), Color.Transparent),
-                    center = Offset(540f, 180f),
-                    radius = 750f
-                )
-            )
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 32.dp),
         contentAlignment = Alignment.Center
@@ -1064,16 +1047,16 @@ fun LayarLogin(
             Box(
                 Modifier
                     .size(96.dp)
-                    .border(2.dp, ForestMint.copy(alpha = 0.7f), RoundedCornerShape(24.dp))
+                    .border(2.dp, ForestMint.copy(alpha = 0.7f), RoundedCornerShape(RadiusHero))
                     .padding(4.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(RadiusHeader))
                     .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
                 if (logoGate != null) {
-                    Image(logoGate, null, contentScale = ContentScale.Fit, modifier = Modifier.padding(8.dp).fillMaxSize())
+                    Image(logoGate, tr("Logo Apotek Lestari", "Apotek Lestari Logo"), contentScale = ContentScale.Fit, modifier = Modifier.padding(8.dp).fillMaxSize())
                 } else {
-                    Icon(Icons.Default.LocalPharmacy, null, tint = Color(0xFF142E27), modifier = Modifier.padding(20.dp).fillMaxSize())
+                    Icon(Icons.Default.LocalPharmacy, null, tint = ForestHeroLightStart, modifier = Modifier.padding(20.dp).fillMaxSize())
                 }
             }
             Spacer(Modifier.height(18.dp))
@@ -1082,7 +1065,7 @@ fun LayarLogin(
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 2.sp,
-                color = Color(0xFFECFDF5)
+                color = ForestMintLight
             )
             Text(
                 "LESTARI",
@@ -1101,7 +1084,7 @@ fun LayarLogin(
             Spacer(Modifier.height(28.dp))
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(RadiusHero),
                 color = ForestHeroDarkStart.copy(alpha = 0.6f),
                 border = BorderStroke(1.dp, ForestMint.copy(alpha = 0.18f))
             ) {
@@ -1115,13 +1098,13 @@ fun LayarLogin(
                             enabled = !sibuk,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.White,
-                                contentColor = Color(0xFF111827)
+                                contentColor = ForestInkDark
                             ),
                             shape = RoundedCornerShape(50),
                             modifier = Modifier.fillMaxWidth().height(50.dp)
                         ) {
                             if (sibuk) {
-                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFF111827))
+                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = ForestInkDark)
                             } else {
                                 LogoGoogle(Modifier.size(18.dp))
                             }
@@ -1132,7 +1115,7 @@ fun LayarLogin(
                         Text(
                             tr("Masuk dengan Google belum tersedia di build ini.", "Google sign-in is not available in this build."),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = ForestMintMuted.copy(alpha = 0.75f),
+                            color = ForestMintMuted.copy(alpha = 0.88f),
                             textAlign = TextAlign.Center
                         )
                     }
@@ -1140,8 +1123,8 @@ fun LayarLogin(
                         Spacer(Modifier.height(12.dp))
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp),
-                            color = Color(0xFF7F1D1D).copy(alpha = 0.35f),
+                            shape = RoundedCornerShape(RadiusSmall),
+                            color = ForestErrorDarkBg.copy(alpha = 0.35f),
                             border = BorderStroke(1.dp, ForestErrorSoft.copy(alpha = 0.35f))
                         ) {
                             Text(
@@ -1155,31 +1138,31 @@ fun LayarLogin(
                     }
                     Spacer(Modifier.height(14.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        HorizontalDivider(modifier = Modifier.weight(1f), color = ForestMint.copy(alpha = 0.18f))
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = ForestMint.copy(alpha = 0.25f))
                         Text(
                             tr("atau", "or"),
                             style = MaterialTheme.typography.bodySmall,
-                            color = ForestMintMuted.copy(alpha = 0.65f),
+                            color = ForestMintMuted.copy(alpha = 0.88f),
                             modifier = Modifier.padding(horizontal = 12.dp)
                         )
-                        HorizontalDivider(modifier = Modifier.weight(1f), color = ForestMint.copy(alpha = 0.18f))
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = ForestMint.copy(alpha = 0.25f))
                     }
                     Spacer(Modifier.height(14.dp))
                     OutlinedButton(
                         onClick = onLewati,
                         enabled = !sibuk,
-                        border = BorderStroke(1.5.dp, ForestMint.copy(alpha = 0.75f)),
+                        border = BorderStroke(1.5.dp, ForestMint.copy(alpha = 0.85f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ForestMint),
                         shape = RoundedCornerShape(50),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Text(tr("Lewati \u2014 Pakai Tanpa Akun", "Skip \u2014 Use Without an Account"), fontWeight = FontWeight.SemiBold)
+                        Text(tr("Lewati, Pakai Tanpa Akun", "Skip, Use Without an Account"), fontWeight = FontWeight.SemiBold)
                     }
                     Spacer(Modifier.height(12.dp))
                     Text(
                         tr("Mode tamu: data hanya tersimpan di HP ini", "Guest mode: data is only stored on this phone"),
                         style = MaterialTheme.typography.bodySmall,
-                        color = ForestMintMuted.copy(alpha = 0.6f),
+                        color = ForestMintMuted.copy(alpha = 0.85f),
                         textAlign = TextAlign.Center
                     )
                 }

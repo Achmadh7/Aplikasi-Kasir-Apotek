@@ -103,7 +103,7 @@ fun BackupScreen() {
         lastBackupName = prefs.getString("last_backup_name", "") ?: ""
         msg = when (info.state) {
             WorkInfo.State.SUCCEEDED -> if (autoNamaTerakhir.isNotBlank()) tr("Backup otomatis berhasil: $autoNamaTerakhir.", "Automatic backup succeeded: $autoNamaTerakhir.") else tr("Backup otomatis berhasil.", "Automatic backup succeeded.")
-            WorkInfo.State.FAILED -> tr("Backup otomatis gagal — periksa izin folder.", "Automatic backup failed — check the folder permission.")
+            WorkInfo.State.FAILED -> tr("Backup otomatis gagal, periksa izin folder.", "Automatic backup failed, check the folder permission.")
             else -> tr("Backup otomatis tidak selesai.", "Automatic backup did not finish.")
         }
         autoWorkId = null
@@ -125,7 +125,7 @@ fun BackupScreen() {
         val izinOk = runCatching { context.contentResolver.takePersistableUriPermission(uri, flags) }.isSuccess
         if (!izinOk) {
             mintaAktifkan = false
-            msg = tr("Gagal menyimpan izin folder — backup otomatis tidak diaktifkan.", "Failed to save the folder permission — automatic backup was not enabled.")
+            msg = tr("Gagal menyimpan izin folder, backup otomatis tidak diaktifkan.", "Failed to save the folder permission, automatic backup was not enabled.")
             return@rememberLauncherForActivityResult
         }
         val nama = runCatching {
@@ -282,7 +282,7 @@ fun BackupScreen() {
                     Column(Modifier.weight(1f)) {
                         Text(tr("Folder tujuan", "Destination folder"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                         Text(
-                            if (autoFolderNama.isNotBlank()) autoFolderNama else tr("Belum dipilih — ketuk untuk memilih", "Not chosen yet — tap to choose"),
+                            if (autoFolderNama.isNotBlank()) autoFolderNama else tr("Belum dipilih, ketuk untuk memilih", "Not chosen yet, tap to choose"),
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -334,9 +334,9 @@ fun BackupScreen() {
                         // mengklaim backup "dimulai" padahal sedang berjalan.
                         if (autoWorkId == null) {
                             autoWorkId = jalankanBackupOtomatisSekali(context)
-                            msg = tr("Backup otomatis dimulai — periksa folder sebentar lagi.", "Automatic backup started — check the folder shortly.")
+                            msg = tr("Backup otomatis dimulai, periksa folder sebentar lagi.", "Automatic backup started, check the folder shortly.")
                         } else {
-                            msg = tr("Backup otomatis sedang berjalan — periksa folder sebentar lagi.", "Automatic backup is running — check the folder shortly.")
+                            msg = tr("Backup otomatis sedang berjalan, periksa folder sebentar lagi.", "Automatic backup is running, check the folder shortly.")
                         }
                     },
                     enabled = !autoFolderUri.isNullOrBlank(),
@@ -345,7 +345,7 @@ fun BackupScreen() {
                 ) { Text(tr("Cadangkan Sekarang", "Back Up Now")) }
                 Spacer(Modifier.height(SpaceS))
                 Text(
-                    tr("File diberi nama tanggal dan menumpuk di folder pilihan — hapus file lama langsung dari folder bila perlu.", "Files are named by date and accumulate in the chosen folder — delete old files from the folder when needed."),
+                    tr("File diberi nama tanggal dan menumpuk di folder pilihan. Hapus file lama langsung dari folder bila perlu.", "Files are named by date and accumulate in the chosen folder. Delete old files from the folder when needed."),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

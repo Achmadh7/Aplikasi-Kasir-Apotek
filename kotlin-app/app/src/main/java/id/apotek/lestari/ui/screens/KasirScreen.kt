@@ -359,7 +359,7 @@ fun KasirScreen() {
                         .clickable(enabled = !out) {
                         val ex = cart.firstOrNull { it.medicine.id == m.id }
                         if (ex != null && ex.qty >= m.stock) {
-                            cartMsg = tr("Stok ${m.name} hanya ${m.stock} — tidak bisa ditambah lagi", "Only ${m.stock} of ${m.name} in stock — can't add more")
+                            cartMsg = tr("Stok ${m.name} hanya ${m.stock}, tidak bisa ditambah lagi", "Only ${m.stock} of ${m.name} in stock, can't add more")
                         } else {
                             lastSale = null
                             lastSaleId = 0
@@ -709,7 +709,7 @@ fun KasirScreen() {
                                 Surface(
                                     color = MaterialTheme.colorScheme.surfaceContainerHighest,
                                     shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.height(36.dp).clickable { qtyEditTarget = ci }
+                                    modifier = Modifier.height(44.dp).clickable { qtyEditTarget = ci }
                                 ) {
                                     Text(
                                         "${ci.qty}",
@@ -722,12 +722,12 @@ fun KasirScreen() {
                                     if (ci.qty < ci.medicine.stock) ci.qty++
                                     // R16: beri tahu saat sudah di batas stok
                                     // (sebelumnya ketukan diam tanpa pesan).
-                                    else cartMsg = tr("Stok ${ci.medicine.name} hanya ${ci.medicine.stock} — tidak bisa ditambah lagi", "Only ${ci.medicine.stock} of ${ci.medicine.name} in stock — can't add more")
+                                    else cartMsg = tr("Stok ${ci.medicine.name} hanya ${ci.medicine.stock}, tidak bisa ditambah lagi", "Only ${ci.medicine.stock} of ${ci.medicine.name} in stock, can't add more")
                                 }
                                 Spacer(Modifier.width(8.dp))
                                 // Hapus: keluarkan obat dari keranjang (di kanan
                                 // tombol + jumlah).
-                                IconButton(onClick = { cart.remove(ci) }, modifier = Modifier.size(40.dp)) {
+                                IconButton(onClick = { cart.remove(ci) }, modifier = Modifier.size(44.dp)) {
                                     Icon(Icons.Default.Delete, tr("Hapus", "Delete"), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                                 }
                                 Spacer(Modifier.weight(1f))

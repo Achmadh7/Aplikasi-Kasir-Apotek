@@ -1,24 +1,80 @@
 rules_version = '2';
 
 // Apotek Lestari - Mode Online:
-// 1) Setiap pengguna hanya boleh membaca & menulis datanya sendiri di users/{uid}.
-// 2) Koleksi authority menyimpan daftar email yang diizinkan login di web.
-// Tempel isi file ini di Firebase Console > Firestore Database > Rules, lalu Publish.
+// 1) Koleksi bersama web_* di apotek/main diakses akun terverifikasi yang terdaftar di Authority (delete khusus Owner).
+// 2) Koleksi web_* lama di users/{uid} tetap diizinkan untuk migrasi otomatis ke apotek/main.
+// 3) Koleksi non-web_ (APK Android) tetap terisolasi per users/{uid}.
+// 4) Dokumen authority/config hanya bisa dibaca akun Authority & ditulis akun ber-role Owner.
+// Deploy: npx --yes firebase-tools deploy --only firestore:rules
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{uid}/{document=**} {
+    function isVerifiedAuth() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function isDefaultOwner() {
+      return isVerifiedAuth()
+        && request.auth.token.email.lower() in ['achmadhida66@gmail.com', 'hanyrahayu19@gmail.com'];
+    }
+
+    function hasAuthorityDoc() {
+      return exists(/databases/$(database)/documents/authority/config);
+    }
+
+    function authorityCfg() {
+      return get(/databases/$(database)/documents/authority/config).data;
+    }
+
+    function isOwner() {
+      return isVerifiedAuth() && (
+        (
+          hasAuthorityDoc()
+          && 'ownerEmails' in authorityCfg()
+          && authorityCfg().ownerEmails is list
+          && authorityCfg().ownerEmails.size() > 0
+        )
+          ? request.auth.token.email.lower() in authorityCfg().ownerEmails
+          : isDefaultOwner()
+      );
+    }
+
+    function isAuthorized() {
+      return isOwner()
+        || (
+          isVerifiedAuth()
+          && hasAuthorityDoc()
+          && 'emails' in authorityCfg()
+          && authorityCfg().emails is list
+          && request.auth.token.email.lower() in authorityCfg().emails
+        );
+    }
+
+    match /apotek/main/{col}/{docId} {
+      allow read, create, update: if col.matches('web_.*') && isAuthorized();
+      allow delete: if col.matches('web_.*') && isOwner();
+    }
+
+    match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    match /authority/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (
-        request.auth.token.email in ['achmadhida66@gmail.com', 'hanyrahayu19@gmail.com']
-        || (
-          exists(/databases/$(database)/documents/authority/config)
-          && request.auth.token.email in get(/databases/$(database)/documents/authority/config).data.emails
-        )
-      );
+    match /users/{uid}/{col}/{docId} {
+      allow read, write: if col.matches('web_.*')
+        ? (isAuthorized() && request.auth.uid == uid)
+        : (request.auth != null && request.auth.uid == uid);
+    }
+
+    match /users/{uid}/{col}/{docId}/{rest=**} {
+      allow read, write: if !col.matches('web_.*')
+        && request.auth != null
+        && request.auth.uid == uid;
+    }
+
+    match /authority/config {
+      allow read: if isAuthorized();
+      allow write: if isOwner();
     }
   }
 }

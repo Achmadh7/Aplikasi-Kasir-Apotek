@@ -12,8 +12,10 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,9 +25,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import id.apotek.lestari.R
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -47,11 +53,35 @@ val ExpressiveGreen = Color(0xFF6EE7B7)
 val ForestMint = Color(0xFF6EE7B7)
 val ForestMintSoft = Color(0xFFA7F3D0)
 val ForestMintMuted = Color(0xFFD1FAE5)
+val ForestMintLight = Color(0xFFECFDF5)
+val ForestEmeraldAccent = Color(0xFF10B981)
+val ForestOnAccent = Color(0xFF052E16)
 val ForestErrorSoft = Color(0xFFFCA5A5)
+val ForestErrorDarkBg = Color(0xFF7F1D1D)
+val ForestInkDark = Color(0xFF111827)
 val ForestHeroLightStart = Color(0xFF142E27)
 val ForestHeroLightEnd = Color(0xFF1B4338)
 val ForestHeroDarkStart = Color(0xFF16332B)
 val ForestHeroDarkEnd = Color(0xFF1F4D40)
+val ForestLoginBgTop = Color(0xFF0D1B16)
+val ForestLoginBgBottom = Color(0xFF070D0B)
+val ForestStatusOnline = Color(0xFF15803D)
+val ForestStatusOffline = Color(0xFFD97706)
+
+// Status stok solid & chart accent
+val StockSafeBg = Color(0xFF43A047)
+val StockMediumBg = Color(0xFF0284C7)
+val StockLowBg = Color(0xFFB45309)
+val DonutPrimaryAccent = Color(0xFF40C4FF)
+
+// Warna cetak/pratinjau struk (selalu kertas terang agar mudah dibaca & dibagi)
+val InvoiceInkToken = Color(0xFF111111)
+val InvoiceMutedToken = Color(0xFF6B7280)
+val InvoiceBoxBgToken = Color(0xFFF4F4F5)
+val InvoiceBlueToken = Color(0xFF0061A4)
+val InvoicePaidBgToken = Color(0xFFE6F4EA)
+val InvoicePaidFgToken = Color(0xFF137333)
+val InvoiceDashToken = Color(0xFFD1D5DB)
 
 // Apakah aplikasi sedang dalam mode gelap (pilihan user di pengaturan tema,
 // bukan pengaturan sistem HP). Dipakai warna yang harus beda per tema.
@@ -75,6 +105,15 @@ fun profitGreen(): Color = if (LocalIsDarkTheme.current) ExpressiveGreen else Co
 fun profitBg(): Color = if (LocalIsDarkTheme.current) Color(0xFF143528) else Color(0xFFDCFCE7)
 
 @Composable
+fun netProfitBg(): Color = if (LocalIsDarkTheme.current) Color(0xFF163428) else Color(0xFFDFF2E4)
+
+@Composable
+fun netProfitOn(): Color = if (LocalIsDarkTheme.current) Color(0xFFF0FAF3) else Color(0xFF1B4332)
+
+@Composable
+fun netProfitLabel(): Color = if (LocalIsDarkTheme.current) Color(0xFFA0DCC0) else Color(0xFF2E7D32)
+
+@Composable
 fun infoBlue(): Color = if (LocalIsDarkTheme.current) Color(0xFF7DD3FC) else Color(0xFF0369A1)
 
 @Composable
@@ -84,8 +123,46 @@ fun infoBg(): Color = if (LocalIsDarkTheme.current) Color(0xFF123247) else Color
 @Composable
 fun warningAmber(): Color = if (LocalIsDarkTheme.current) Color(0xFFFBBF24) else Color(0xFFD97706)
 
+/** Teks amber kontras tinggi (WCAG AA/AAA) di atas amberBg(). */
+@Composable
+fun warningAmberText(): Color = if (LocalIsDarkTheme.current) Color(0xFFFBBF24) else Color(0xFF92400E)
+
 @Composable
 fun amberBg(): Color = if (LocalIsDarkTheme.current) Color(0xFF36260A) else Color(0xFFFEF3C7)
+
+// Skala radius seragam lintas layar (R-11)
+val RadiusSmall = 12.dp
+val RadiusHeader = 16.dp
+val RadiusCard = 18.dp
+val RadiusHero = 20.dp
+
+// Tipografi Plus Jakarta Sans senada web-app + tabular numerals (tnum) untuk angka Rupiah
+val PlusJakartaSansFontFamily = FontFamily(
+    Font(R.font.plus_jakarta_sans_regular, FontWeight.Normal),
+    Font(R.font.plus_jakarta_sans_medium, FontWeight.Medium),
+    Font(R.font.plus_jakarta_sans_semibold, FontWeight.SemiBold),
+    Font(R.font.plus_jakarta_sans_bold, FontWeight.Bold),
+    Font(R.font.plus_jakarta_sans_extrabold, FontWeight.ExtraBold),
+)
+
+private val BaseTypography = Typography()
+val ApotikTypography = Typography(
+    displayLarge = BaseTypography.displayLarge.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    displayMedium = BaseTypography.displayMedium.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    displaySmall = BaseTypography.displaySmall.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    headlineLarge = BaseTypography.headlineLarge.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    headlineMedium = BaseTypography.headlineMedium.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    headlineSmall = BaseTypography.headlineSmall.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    titleLarge = BaseTypography.titleLarge.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    titleMedium = BaseTypography.titleMedium.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    titleSmall = BaseTypography.titleSmall.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    bodyLarge = BaseTypography.bodyLarge.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    bodyMedium = BaseTypography.bodyMedium.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    bodySmall = BaseTypography.bodySmall.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    labelLarge = BaseTypography.labelLarge.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    labelMedium = BaseTypography.labelMedium.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+    labelSmall = BaseTypography.labelSmall.copy(fontFamily = PlusJakartaSansFontFamily, fontFeatureSettings = "tnum"),
+)
 
 /** Pegas ekspresif: lentur (dampingRatio ~0.7) untuk animateContentSize & transisi. */
 fun <T> expressiveSpring() = spring<T>(
@@ -116,7 +193,7 @@ val SpaceXL = 24.dp
 @Composable
 fun ExpressiveCard(
     modifier: Modifier = Modifier,
-    shape: Shape = MaterialTheme.shapes.extraLarge,
+    shape: Shape = RoundedCornerShape(RadiusCard),
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     elevation: Dp = 0.dp,
     content: @Composable ColumnScope.() -> Unit
@@ -244,6 +321,7 @@ fun ApotikLestariTheme(darkTheme: Boolean = true, content: @Composable () -> Uni
         // MaterialExpressiveTheme.
         MaterialExpressiveTheme(
             colorScheme = if (darkTheme) SeedDarkColors else SeedLightColors,
+            typography = ApotikTypography,
             motionScheme = MotionScheme.expressive(),
             content = content
         )

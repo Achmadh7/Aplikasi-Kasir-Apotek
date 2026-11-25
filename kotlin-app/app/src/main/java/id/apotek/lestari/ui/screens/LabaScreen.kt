@@ -185,22 +185,21 @@ fun LabaScreen() {
                 // maxLines = 1 + Ellipsis sebagai guard — N2 2026-11-16).
                 // Bentuk 12dp senada P3/R1/K1 (B1, pilihan Achmad 2026-11-16).
                 val netMarginPct = if (r.revenue > 0) r.netProfit * 100.0 / r.revenue else 0.0
-                val bersihDark = LocalIsDarkTheme.current
-                val bersihBg = if (bersihDark) Color(0xFF163428) else Color(0xFFDFF2E4)
-                val bersihOn = if (bersihDark) Color(0xFFF0FAF3) else Color(0xFF1B4332)
-                val bersihLabel = if (bersihDark) Color(0xFFA0DCC0) else Color(0xFF2E7D32)
+                val bersihBg = netProfitBg()
+                val bersihOn = netProfitOn()
+                val bersihLabel = netProfitLabel()
                 val bersihAmount = if (r.netProfit < 0) MaterialTheme.colorScheme.error else bersihOn
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
-                    ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = RoundedCornerShape(RadiusHero), containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.weight(1f)) {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                            Text(tr("PENJUALAN", "REVENUE"), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text(tr("PENJUALAN", "REVENUE"), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceS))
-                            AnimatedAmount(r.revenue, MaterialTheme.typography.titleLarge, Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            AnimatedAmount(r.revenue, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onPrimaryContainer, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Spacer(Modifier.height(SpaceXS))
-                            Text(tr("${r.itemsSold} item terjual", "${r.itemsSold} items sold"), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+                            Text(tr("${r.itemsSold} item terjual", "${r.itemsSold} items sold"), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                    ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = bersihBg, modifier = Modifier.weight(1f)) {
+                    ExpressiveCard(shape = RoundedCornerShape(RadiusHero), containerColor = bersihBg, modifier = Modifier.weight(1f)) {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             Text(tr("LABA BERSIH", "NET PROFIT"), color = bersihLabel, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(SpaceS))
@@ -511,7 +510,7 @@ fun ObatTerlarisScreen() {
                         }
                         val irisanPangsa = pangsaDonat(irisanQty)
                         val warnaDonat = listOf(
-                            Color(0xFF40C4FF),
+                            DonutPrimaryAccent,
                             MaterialTheme.colorScheme.primary,
                             warningAmber(),
                             MaterialTheme.colorScheme.surfaceContainerHighest

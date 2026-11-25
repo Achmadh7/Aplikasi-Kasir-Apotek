@@ -313,9 +313,9 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                         if (selectMode) { selectMode = false; selectedMeds = emptyMap() }
                         else selectMode = true
                     },
-                    shape = RoundedCornerShape(18.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp),
-                    modifier = Modifier.height(36.dp)
+                    shape = RoundedCornerShape(RadiusCard),
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    modifier = Modifier.heightIn(min = 44.dp)
                 ) {
                     Icon(if (selectMode) Icons.Default.Close else Icons.Default.Checklist, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
@@ -330,9 +330,9 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                             else -> "az"
                         }
                     },
-                    shape = RoundedCornerShape(18.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp),
-                    modifier = Modifier.height(36.dp)
+                    shape = RoundedCornerShape(RadiusCard),
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    modifier = Modifier.heightIn(min = 44.dp)
                 ) {
                     Icon(Icons.Default.Sort, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
@@ -390,9 +390,9 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                         onClick = { showBulkDeleteConfirm = true },
                         enabled = selectedMeds.isNotEmpty(),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = Color.White),
-                        shape = RoundedCornerShape(20.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp),
-                        modifier = Modifier.height(36.dp)
+                        shape = RoundedCornerShape(RadiusHero),
+                        contentPadding = PaddingValues(horizontal = 14.dp),
+                        modifier = Modifier.heightIn(min = 44.dp)
                     ) {
                         Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
@@ -744,7 +744,7 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                             // jadi null di toIntOrNull() — jangan diam-diam
                             // jadi 0 ("Habis"), tolak dengan pesan jelas.
                             if (stock.isNotBlank() && stock.toIntOrNull() == null) {
-                                formError = tr("Jumlah stok terlalu besar — periksa lagi angkanya.", "Stock amount is too large — please check the number.")
+                                formError = tr("Jumlah stok terlalu besar, periksa lagi angkanya.", "Stock amount is too large, please check the number.")
                                 return@launch
                             }
                             val st = stock.toIntOrNull() ?: 0

@@ -304,7 +304,7 @@ suspend fun printReceiptToPrinter(context: Context, address: String, bytes: Byte
                             future.get(CONNECT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         } catch (_: TimeoutException) {
                             runCatching { socket.close() }
-                            return@withContext Result.failure(IOException("Printer tidak merespons (timeout ${CONNECT_TIMEOUT_MS / 1000} dtk) — pastikan printer menyala dan dalam jangkauan"))
+                            return@withContext Result.failure(IOException("Printer tidak merespons (timeout ${CONNECT_TIMEOUT_MS / 1000} dtk), pastikan printer menyala dan dalam jangkauan"))
                         } catch (e: java.util.concurrent.ExecutionException) {
                             throw e.cause ?: e
                         }
@@ -325,7 +325,7 @@ suspend fun printReceiptToPrinter(context: Context, address: String, bytes: Byte
                             writeFuture.get(WRITE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         } catch (_: TimeoutException) {
                             runCatching { socket.close() }
-                            return@withContext Result.failure(IOException("Printer tidak merespons saat mencetak (timeout ${WRITE_TIMEOUT_MS / 1000} dtk) — pastikan printer menyala dan dalam jangkauan"))
+                            return@withContext Result.failure(IOException("Printer tidak merespons saat mencetak (timeout ${WRITE_TIMEOUT_MS / 1000} dtk), pastikan printer menyala dan dalam jangkauan"))
                         } catch (e: java.util.concurrent.ExecutionException) {
                             throw e.cause ?: e
                         }

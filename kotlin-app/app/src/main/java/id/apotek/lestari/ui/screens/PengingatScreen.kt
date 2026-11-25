@@ -294,15 +294,15 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
             // rantai if/else berhenti di kondisi pertama yang cocok).
             val stockNote = when {
                 // am208: tanpa jumlah "disarankan ..." lagi.
-                isCritical -> tr("Stok habis — restock segera.", "Out of stock — restock soon.")
-                m.stock in 1..9 -> tr("Stok rendah — restock segera.", "Low stock — restock soon.")
+                isCritical -> tr("Stok habis, restock segera.", "Out of stock, restock soon.")
+                m.stock in 1..9 -> tr("Stok rendah, restock segera.", "Low stock, restock soon.")
                 else -> null
             }
             // PG2 (2026-11-17): "prioritaskan penjualan" hanya bila
             // kadaluarsa <= 30 hari; exp jauh tidak lagi dibilang mendesak.
             val expiryNote = when {
-                d != null && d < 0 -> tr("Sudah kadaluarsa — jangan dijual, segera pisahkan dari stok.", "Expired — do not sell it, separate it from stock right away.")
-                d != null && d <= 30 -> tr("Kedaluwarsa dalam $d hari — prioritaskan penjualan.", "Expires in $d days — prioritize selling it.")
+                d != null && d < 0 -> tr("Sudah kadaluarsa, jangan dijual dan segera pisahkan dari stok.", "Expired, do not sell it and separate it from stock right away.")
+                d != null && d <= 30 -> tr("Kedaluwarsa dalam $d hari, prioritaskan penjualan.", "Expires in $d days, prioritize selling it.")
                 else -> null
             }
             val advice = listOfNotNull(stockNote, expiryNote).joinToString(" ")
@@ -401,7 +401,7 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
         // R13 (audit 2026-11-18): teks "semua aman" jangan tampil saat
         // pemuatan gagal — kartu galat di atas sudah menjelaskannya.
         if (shown.isEmpty() && loadError == null) {
-            item { Text(tr("Tidak ada pengingat — semua stok dan kadaluarsa aman.", "No reminders — all stock and expiry dates are safe."), style = MaterialTheme.typography.bodyMedium) }
+            item { Text(tr("Tidak ada pengingat, semua stok dan kadaluarsa aman.", "No reminders, all stock and expiry dates are safe."), style = MaterialTheme.typography.bodyMedium) }
         }
         item {
             Text(

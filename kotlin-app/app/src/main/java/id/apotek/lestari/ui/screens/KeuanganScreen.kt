@@ -221,7 +221,7 @@ fun KeuanganScreen() {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(RadiusHero))
                     .background(forestHeroBrush())
                     .padding(14.dp)
             ) {
@@ -239,10 +239,10 @@ fun KeuanganScreen() {
                         )
                         Button(
                             onClick = { if (showForm) showForm = false else { formType = "in"; showForm = true } },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981), contentColor = Color(0xFF052E16)),
+                            colors = ButtonDefaults.buttonColors(containerColor = ForestEmeraldAccent, contentColor = ForestOnAccent),
                             shape = RoundedCornerShape(50),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                            modifier = Modifier.height(32.dp)
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                            modifier = Modifier.heightIn(min = 44.dp)
                         ) {
                             if (showForm) {
                                 Icon(Icons.Default.ExpandLess, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(tr("Tutup", "Hide"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
@@ -261,7 +261,7 @@ fun KeuanganScreen() {
                     )
                     if (loadError != null) {
                         Spacer(Modifier.height(4.dp))
-                        Text(tr("Saldo tidak tersedia — gagal memuat.", "Balance unavailable — failed to load."), style = MaterialTheme.typography.bodySmall, color = ForestErrorSoft)
+                        Text(tr("Saldo tidak tersedia, gagal memuat.", "Balance unavailable, failed to load."), style = MaterialTheme.typography.bodySmall, color = ForestErrorSoft)
                     }
                     Spacer(Modifier.height(12.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
