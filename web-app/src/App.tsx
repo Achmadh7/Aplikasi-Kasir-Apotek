@@ -70,7 +70,7 @@ const NAV_ITEMS = [
 ];
 
 const MainLayout: React.FC = () => {
-  const { user, authLoading, authError: storeAuthError, clearAuthError, syncStatus, syncMessage, autoSync, setAutoSync, medicines, purchases } = useStore();
+  const { user, authLoading, authError: storeAuthError, clearAuthError, currentRole, syncStatus, syncMessage, autoSync, setAutoSync, medicines, purchases } = useStore();
   const { notify } = useFeedback();
   const [activeTab, setActiveTab] = useState('beranda');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -234,7 +234,17 @@ const MainLayout: React.FC = () => {
     }).length +
     purchases.filter((p) => p.paymentType === 'KREDIT').length;
 
-  const activeNav = NAV_ITEMS.find((n) => n.id === activeTab) || NAV_ITEMS[0];
+  const visibleNavItems =
+    currentRole === 'owner'
+      ? NAV_ITEMS
+      : NAV_ITEMS.filter((item) => item.id !== 'authority');
+  const activeNav = visibleNavItems.find((n) => n.id === activeTab) || visibleNavItems[0];
+
+  useEffect(() => {
+    if (currentRole !== 'owner' && activeTab === 'authority') {
+      setActiveTab('beranda');
+    }
+  }, [currentRole, activeTab]);
 
   const handleGoogleLogin = async () => {
     setAuthError(null);
@@ -684,7 +694,7 @@ const MainLayout: React.FC = () => {
 
             {/* Navigation Menu */}
             <nav className="flex flex-col gap-1">
-              {NAV_ITEMS.map((item) => {
+              {visibleNavItems.map((item) => {
                 const Icon = item.icon;
                 const active = activeTab === item.id;
                 return (

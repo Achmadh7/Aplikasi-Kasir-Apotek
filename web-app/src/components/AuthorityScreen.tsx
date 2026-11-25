@@ -194,7 +194,25 @@ export const AuthorityScreen: React.FC = () => {
     }
   };
 
-  if (isOwner && loadingPin) {
+  if (!isOwner) {
+    return (
+      <div className="max-w-sm mx-auto mt-6">
+        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-6 shadow-sm text-center space-y-3">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/15 text-amber-700 dark:text-amber-300 flex items-center justify-center">
+            <Lock className="w-6 h-6" />
+          </div>
+          <h2 className="text-lg font-extrabold text-[#1C1917] dark:text-white">
+            Khusus Owner
+          </h2>
+          <p className="text-xs text-[#78716C] dark:text-[#93B5A9]">
+            Menu Authority dan daftar email akses terkunci khusus untuk akun Owner.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingPin) {
     return (
       <div className="max-w-sm mx-auto mt-6">
         <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-6 text-center text-xs font-semibold text-[#78716C] dark:text-[#93B5A9]">
@@ -204,7 +222,7 @@ export const AuthorityScreen: React.FC = () => {
     );
   }
 
-  if (isOwner && pinError) {
+  if (pinError) {
     return (
       <div className="max-w-sm mx-auto mt-6">
         <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-6 text-center space-y-3">
@@ -233,7 +251,7 @@ export const AuthorityScreen: React.FC = () => {
     );
   }
 
-  if (isOwner && !unlocked) {
+  if (!unlocked) {
     const isSetup = !pinConfig;
     const isResetting = !isSetup && showResetPin && isOwner;
     const isSettingPin = isSetup || isResetting;
@@ -384,36 +402,34 @@ export const AuthorityScreen: React.FC = () => {
               </p>
             </div>
           </div>
-          {isOwner && (
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowChangePin((v) => !v);
-                  setNewPin('');
-                  setConfirmNewPin('');
-                }}
-                className="px-3 py-1.5 rounded-xl border border-[#B7D6C3] dark:border-[#244C41] text-xs font-bold text-[#1C1917] dark:text-[#86EFAC] hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-1.5 transition"
-              >
-                <KeyRound className="w-3.5 h-3.5" />
-                Ubah PIN
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUnlocked(false);
-                  setShowChangePin(false);
-                }}
-                className="px-3 py-1.5 rounded-xl border border-[#B7D6C3] dark:border-[#244C41] text-xs font-bold text-[#1C1917] dark:text-[#86EFAC] hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-1.5 transition"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                Kunci
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setShowChangePin((v) => !v);
+                setNewPin('');
+                setConfirmNewPin('');
+              }}
+              className="px-3 py-1.5 rounded-xl border border-[#B7D6C3] dark:border-[#244C41] text-xs font-bold text-[#1C1917] dark:text-[#86EFAC] hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-1.5 transition"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              Ubah PIN
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUnlocked(false);
+                setShowChangePin(false);
+              }}
+              className="px-3 py-1.5 rounded-xl border border-[#B7D6C3] dark:border-[#244C41] text-xs font-bold text-[#1C1917] dark:text-[#86EFAC] hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-1.5 transition"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              Kunci
+            </button>
+          </div>
         </div>
 
-        {isOwner && showChangePin && (
+        {showChangePin && (
           <form
             onSubmit={handleChangePin}
             className="mt-3 p-3 rounded-xl bg-white/70 dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41] flex flex-col sm:flex-row gap-2"
@@ -448,39 +464,33 @@ export const AuthorityScreen: React.FC = () => {
           </form>
         )}
 
-        {isOwner ? (
-          <form onSubmit={handleAdd} className="mt-4 flex flex-col sm:flex-row gap-2">
-            <input
-              type="email"
-              required
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="Tambah email Google (contoh: kasir@gmail.com)"
-              className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D]"
-            />
-            <select
-              value={newRole}
-              onChange={(e) => setNewRole(e.target.value as AuthorityRole)}
-              disabled={saving}
-              className="px-3 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D]"
-            >
-              <option value="kasir">Kasir</option>
-              <option value="owner">Owner</option>
-            </select>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-sm font-bold flex items-center justify-center gap-1.5 disabled:opacity-60 transition"
-            >
-              <Plus className="w-4 h-4" />
-              Tambah
-            </button>
-          </form>
-        ) : (
-          <div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/25 px-3.5 py-2.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
-            Mode Baca (Kasir): hanya akun Owner yang dapat mengubah PIN atau daftar email Authority.
-          </div>
-        )}
+        <form onSubmit={handleAdd} className="mt-4 flex flex-col sm:flex-row gap-2">
+          <input
+            type="email"
+            required
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            placeholder="Tambah email Google (contoh: kasir@gmail.com)"
+            className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+          />
+          <select
+            value={newRole}
+            onChange={(e) => setNewRole(e.target.value as AuthorityRole)}
+            disabled={saving}
+            className="px-3 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+          >
+            <option value="kasir">Kasir</option>
+            <option value="owner">Owner</option>
+          </select>
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-sm font-bold flex items-center justify-center gap-1.5 disabled:opacity-60 transition"
+          >
+            <Plus className="w-4 h-4" />
+            Tambah
+          </button>
+        </form>
       </div>
 
       <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#101F38] border border-[#B7D6C3] dark:border-white/10 overflow-hidden shadow-sm">
@@ -524,34 +534,32 @@ export const AuthorityScreen: React.FC = () => {
                     </span>
                   )}
                 </div>
-                {isOwner && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <select
-                      value={isEmailOwner ? 'owner' : 'kasir'}
-                      onChange={(e) => handleRoleChange(email, e.target.value as AuthorityRole)}
-                      disabled={saving || isLastOwner}
-                      title={isLastOwner ? 'Minimal harus tersisa 1 Owner' : 'Ubah role akun'}
-                      className="px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-xs font-bold text-slate-900 dark:text-white disabled:opacity-45"
-                    >
-                      <option value="owner">Owner</option>
-                      <option value="kasir">Kasir</option>
-                    </select>
-                    <button
-                      onClick={() => handleRemove(email)}
-                      disabled={disableDelete}
-                      title={
-                        authorityEmails.length <= 1
-                          ? 'Minimal harus tersisa 1 email'
-                          : isLastOwner
-                            ? 'Minimal harus tersisa 1 Owner'
-                            : 'Hapus dari Authority'
-                      }
-                      className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 disabled:opacity-35 transition shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  <select
+                    value={isEmailOwner ? 'owner' : 'kasir'}
+                    onChange={(e) => handleRoleChange(email, e.target.value as AuthorityRole)}
+                    disabled={saving || isLastOwner}
+                    title={isLastOwner ? 'Minimal harus tersisa 1 Owner' : 'Ubah role akun'}
+                    className="px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-xs font-bold text-slate-900 dark:text-white disabled:opacity-45"
+                  >
+                    <option value="owner">Owner</option>
+                    <option value="kasir">Kasir</option>
+                  </select>
+                  <button
+                    onClick={() => handleRemove(email)}
+                    disabled={disableDelete}
+                    title={
+                      authorityEmails.length <= 1
+                        ? 'Minimal harus tersisa 1 email'
+                        : isLastOwner
+                          ? 'Minimal harus tersisa 1 Owner'
+                          : 'Hapus dari Authority'
+                    }
+                    className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 disabled:opacity-35 transition shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             );
           })}

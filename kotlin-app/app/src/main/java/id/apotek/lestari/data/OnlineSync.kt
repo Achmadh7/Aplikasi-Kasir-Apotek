@@ -196,10 +196,10 @@ class SyncManager(private val repository: Repository) {
                 remoteIdOf: (T) -> String,
                 updatedAtOf: (T) -> Long,
                 bolehDorong: suspend (T) -> Boolean = { true },
-                petaOf: suspend (T) -> Map<String, Any>?,
+                petaOf: suspend (T) -> Map<String, Any?>?,
                 tandaiBersih: suspend (String, Long) -> Unit
             ) {
-                val toPush = mutableListOf<Triple<String, Long, Map<String, Any>>>()
+                val toPush = mutableListOf<Triple<String, Long, Map<String, Any?>>>()
                 for (e in rows) {
                     val rid = remoteIdOf(e)
                     if (rid.isBlank() || !bolehDorong(e)) continue
