@@ -14,7 +14,13 @@ import {
   bulanValid,
   bulanSelesai,
 } from './types';
-import { LocalDB, PushedWatermarks, applyCloudResetEpoch, mergeSyncIntoState } from './syncMerge';
+import {
+  LocalDB,
+  PushedWatermarks,
+  applyCloudResetEpoch,
+  computeDeltaSinceMs,
+  mergeSyncIntoState,
+} from './syncMerge';
 import { parseAndValidateBackupJson } from './backup';
 import {
   auth,
@@ -105,6 +111,7 @@ interface StoreContextType {
   setAuthorityRole: (email: string, role: AuthorityRole) => Promise<void>;
   removeAuthorityEmail: (email: string) => Promise<void>;
   syncStatus: SyncStatus;
+  syncSilent: boolean;
   lastSyncAt: number;
   syncMessage: string | null;
   autoSync: boolean;
@@ -180,6 +187,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [authorityEmails, setAuthorityEmails] = useState<string[]>(DEFAULT_AUTHORITY_EMAILS);
   const [ownerEmails, setOwnerEmails] = useState<string[]>(DEFAULT_AUTHORITY_EMAILS);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('BELUM_MASUK');
+  const [syncSilent, setSyncSilent] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [autoSync, setAutoSyncState] = useState<boolean>(() => {
     try {
@@ -197,8 +205,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const resyncTimerRef = useRef<number | null>(null);
   const idbSaveTimerRef = useRef<number | null>(null);
   const dirtyIdbRef = useRef(false);
+  const lastPullAttemptRef = useRef(0);
   const autoSyncRef = useRef(autoSync);
   autoSyncRef.current = autoSync;
+  const syncNowRef = useRef<(silent?: boolean, overrideUser?: User | null) => Promise<void>>(
+    async () => {}
+  );
 
   const setAutoSync = (enabled: boolean) => {
     setAutoSyncState(enabled);
@@ -209,7 +221,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // ignore storage quota/privacy mode errors
     }
     if (enabled && auth.currentUser) {
-      void syncNow(true);
+      void syncNowRef.current(true, auth.currentUser);
     }
   };
 
@@ -390,14 +402,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Two-way Last-Write-Wins Sync matching OnlineSync.kt
   const syncNow = async (silent = false, overrideUser?: User | null) => {
-    const activeUser = overrideUser !== undefined ? overrideUser : user;
+    const activeUser = overrideUser !== undefined ? overrideUser : (user ?? auth.currentUser);
     if (!activeUser) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setSyncSilent(silent);
+      setSyncMessage('Offline, menunggu koneksi internet');
+      if (!silent) {
+        setSyncStatus('GAGAL');
+      }
+      return;
+    }
     if (syncingRef.current) {
       pendingSyncRef.current = true;
       return;
     }
     syncingRef.current = true;
     pendingSyncRef.current = false;
+    lastPullAttemptRef.current = Date.now();
+    setSyncSilent(silent);
     setSyncStatus('PROSES');
     if (!silent) setSyncMessage(null);
 
@@ -406,7 +428,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const rawSnap = dbRef.current;
       let pushed = 0;
 
-      // Fetch remote collections + sync reset meta from shared apotek/main
+      // Read sync reset meta first so incremental delta pull safely falls back to full scan if needed
+      const cloudMeta = await fetchCloudSyncMeta();
+      const remoteResetAt = cloudMeta.resetAt || 0;
+      const snap = applyCloudResetEpoch(rawSnap, remoteResetAt);
+
+      const legacyFlagKey = `apotek_lestari_migrated_shared_${uid}`;
+      let alreadyMigrated = false;
+      try {
+        alreadyMigrated = localStorage.getItem(legacyFlagKey) === '1';
+      } catch {
+        alreadyMigrated = false;
+      }
+
+      const sinceMs = computeDeltaSinceMs({
+        lastSyncAt: snap.lastSyncAt,
+        alreadyMigrated,
+        pendingCloudReplaceAt: snap.pendingCloudReplaceAt || 0,
+        remoteResetAt,
+        lastResetSeenAt: rawSnap.lastResetSeenAt || 0,
+        forceFull: !silent,
+      });
+
       const [
         remObat,
         remJual,
@@ -415,29 +458,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         remPemasok,
         remItemJual,
         remItemPbf,
-        cloudMeta,
       ] = await Promise.all([
-        fetchCollectionDocs('obat'),
-        fetchCollectionDocs('penjualan'),
-        fetchCollectionDocs('pbf'),
-        fetchCollectionDocs('kas'),
-        fetchCollectionDocs('pemasok'),
-        fetchCollectionDocs('penjualan_item'),
-        fetchCollectionDocs('pbf_item'),
-        fetchCloudSyncMeta(),
+        fetchCollectionDocs('obat', sinceMs),
+        fetchCollectionDocs('penjualan', sinceMs),
+        fetchCollectionDocs('pbf', sinceMs),
+        fetchCollectionDocs('kas', sinceMs),
+        fetchCollectionDocs('pemasok', sinceMs),
+        fetchCollectionDocs('penjualan_item', sinceMs),
+        fetchCollectionDocs('pbf_item', sinceMs),
       ]);
 
-      const remoteResetAt = cloudMeta.resetAt || 0;
-      const snap = applyCloudResetEpoch(rawSnap, remoteResetAt);
-
       // One-time migration of legacy per-account users/{uid}/web_* data into shared apotek/main/web_*
-      const legacyFlagKey = `apotek_lestari_migrated_shared_${uid}`;
-      let alreadyMigrated = false;
-      try {
-        alreadyMigrated = localStorage.getItem(legacyFlagKey) === '1';
-      } catch {
-        alreadyMigrated = false;
-      }
       if (!alreadyMigrated) {
         const migratedCount = await migrateLegacyUserWebData(uid, {
           obat: remObat,
@@ -596,11 +627,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (resyncTimerRef.current) window.clearTimeout(resyncTimerRef.current);
         resyncTimerRef.current = window.setTimeout(() => {
           resyncTimerRef.current = null;
-          void syncNow(true);
+          void syncNowRef.current(true, auth.currentUser);
         }, 250);
       }
     }
   };
+  syncNowRef.current = syncNow;
+
+  useEffect(() => {
+    const VISIBILITY_COOLDOWN_MS = 45_000;
+    const onOnline = () => {
+      if (!autoSyncRef.current || !auth.currentUser) return;
+      void syncNowRef.current(true, auth.currentUser);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!autoSyncRef.current || !auth.currentUser || !navigator.onLine) return;
+      if (Date.now() - lastPullAttemptRef.current < VISIBILITY_COOLDOWN_MS) return;
+      void syncNowRef.current(true, auth.currentUser);
+    };
+    window.addEventListener('online', onOnline);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
 
   // Auto-push helper right after local mutation
   const queueAutoSync = () => {
@@ -612,7 +664,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (autoSyncTimerRef.current) window.clearTimeout(autoSyncTimerRef.current);
     autoSyncTimerRef.current = window.setTimeout(() => {
       autoSyncTimerRef.current = null;
-      void syncNow(true);
+      void syncNowRef.current(true, auth.currentUser);
     }, 1200);
   };
 
@@ -1194,6 +1246,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setAuthorityRole,
         removeAuthorityEmail,
         syncStatus,
+        syncSilent,
         lastSyncAt: dbState.lastSyncAt,
         syncMessage,
         autoSync,

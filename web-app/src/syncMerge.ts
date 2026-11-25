@@ -24,6 +24,33 @@ export interface LocalDB {
   lastResetSeenAt?: number;
 }
 
+export const DELTA_OVERLAP_MS = 120_000;
+
+/**
+ * Computes the Firestore `updatedAt > sinceMs` cutoff for incremental pulls.
+ * Falls back to 0 (full collection fetch) on first sync, pending legacy migration,
+ * pending backup replacement, unseen cloud reset, or explicit manual sync.
+ */
+export function computeDeltaSinceMs(params: {
+  lastSyncAt: number;
+  alreadyMigrated: boolean;
+  pendingCloudReplaceAt: number;
+  remoteResetAt: number;
+  lastResetSeenAt: number;
+  forceFull: boolean;
+}): number {
+  if (
+    params.forceFull ||
+    !params.alreadyMigrated ||
+    params.lastSyncAt <= 0 ||
+    params.pendingCloudReplaceAt > 0 ||
+    params.remoteResetAt > params.lastResetSeenAt
+  ) {
+    return 0;
+  }
+  return Math.max(0, params.lastSyncAt - DELTA_OVERLAP_MS);
+}
+
 export function applyCloudResetEpoch(prev: LocalDB, resetAt: number): LocalDB {
   if (!resetAt || resetAt <= (prev.lastResetSeenAt || 0)) return prev;
   const keepAfterReset = <T extends BaseEntity>(rows: T[]) =>

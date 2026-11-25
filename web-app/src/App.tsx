@@ -49,7 +49,6 @@ import {
   Database,
   ShieldCheck,
   ChevronDown,
-  RefreshCw,
   LogIn,
   LogOut,
   Menu,
@@ -72,26 +71,16 @@ const NAV_ITEMS = [
 const NAV_GROUPS = ['Harian', 'Stok & Keuangan', 'Pengaturan'] as const;
 
 const MainLayout: React.FC = () => {
-  const { user, authLoading, authError: storeAuthError, clearAuthError, currentRole, syncStatus, syncMessage, autoSync, setAutoSync, medicines, purchases } = useStore();
-  const { notify } = useFeedback();
+  const { user, authLoading, authError: storeAuthError, clearAuthError, currentRole, syncStatus, syncSilent, syncMessage, autoSync, setAutoSync, medicines, purchases } = useStore();
+  const { notify, dismissByKey } = useFeedback();
   const [activeTab, setActiveTab] = useState('beranda');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
-  const [authPill, setAuthPill] = useState<{
-    kind: 'login' | 'logout' | 'kick';
-    text: string;
-  } | null>(null);
-  const [syncPill, setSyncPill] = useState<{
-    kind: 'success' | 'error';
-    text: string;
-  } | null>(null);
   const prevSyncStatus = useRef(syncStatus);
   const authReadyRef = useRef(false);
   const prevUserKeyRef = useRef<string | null>(null);
-  const authPillTimerRef = useRef<number | null>(null);
-  const syncPillTimerRef = useRef<number | null>(null);
   const swipeTouchRef = useRef<{ x: number; y: number; blocked: boolean } | null>(null);
   const lenisRef = useRef<Lenis | null>(null);
 
@@ -171,26 +160,32 @@ const MainLayout: React.FC = () => {
 
   useEffect(() => {
     if (syncStatus === 'PROSES') {
-      if (syncPillTimerRef.current) window.clearTimeout(syncPillTimerRef.current);
-      setSyncPill(null);
+      if (!syncSilent) {
+        notify('Menyinkronkan Cloud...', 'loading', {
+          key: 'cloud-sync',
+          detail: 'Menyelaraskan perubahan data terbaru',
+          duration: null,
+        });
+      }
     } else if (prevSyncStatus.current === 'PROSES' && syncStatus === 'BERHASIL') {
-      if (syncPillTimerRef.current) window.clearTimeout(syncPillTimerRef.current);
-      setSyncPill({ kind: 'success', text: syncMessage || 'Tersinkron' });
-      syncPillTimerRef.current = window.setTimeout(() => setSyncPill(null), 2800);
-    } else if (prevSyncStatus.current === 'PROSES' && syncStatus === 'GAGAL') {
-      if (syncPillTimerRef.current) window.clearTimeout(syncPillTimerRef.current);
-      setSyncPill({ kind: 'error', text: syncMessage || 'Sinkronisasi gagal' });
-      syncPillTimerRef.current = window.setTimeout(() => setSyncPill(null), 4200);
+      if (!syncSilent) {
+        notify(syncMessage || 'Tersinkron ke Cloud', 'success', {
+          key: 'cloud-sync',
+          duration: 2800,
+        });
+      } else {
+        dismissByKey('cloud-sync');
+      }
+    } else if (syncStatus === 'GAGAL' && prevSyncStatus.current !== 'GAGAL') {
+      notify(syncMessage || 'Sinkronisasi gagal', 'error', {
+        key: 'cloud-sync',
+        duration: 4200,
+      });
+    } else if (prevSyncStatus.current === 'PROSES') {
+      dismissByKey('cloud-sync');
     }
     prevSyncStatus.current = syncStatus;
-  }, [syncStatus, syncMessage]);
-
-  useEffect(() => {
-    return () => {
-      if (authPillTimerRef.current) window.clearTimeout(authPillTimerRef.current);
-      if (syncPillTimerRef.current) window.clearTimeout(syncPillTimerRef.current);
-    };
-  }, []);
+  }, [syncStatus, syncMessage, syncSilent, notify, dismissByKey]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -203,30 +198,30 @@ const MainLayout: React.FC = () => {
 
     const prevKey = prevUserKeyRef.current;
     if (!prevKey && currentKey) {
-      if (authPillTimerRef.current) window.clearTimeout(authPillTimerRef.current);
-      setAuthPill({
-        kind: 'login',
-        text: `Masuk: ${user?.email || 'Akun Google'}`,
+      notify(`Masuk: ${user?.email || 'Akun Google'}`, 'success', {
+        key: 'auth-status',
+        detail: 'Sesi Cloud aktif',
+        duration: 3200,
       });
-      authPillTimerRef.current = window.setTimeout(() => setAuthPill(null), 3200);
     } else if (prevKey && !currentKey) {
-      if (authPillTimerRef.current) window.clearTimeout(authPillTimerRef.current);
       const isKicked = Boolean(
         storeAuthError &&
         (storeAuthError.includes('Akses dicabut') || storeAuthError.includes('Akses ditolak'))
       );
-      setAuthPill(
-        isKicked
-          ? { kind: 'kick', text: 'Logout otomatis: akses dicabut' }
-          : { kind: 'logout', text: 'Anda telah logout' }
-      );
-      authPillTimerRef.current = window.setTimeout(
-        () => setAuthPill(null),
-        isKicked ? 4200 : 3200
-      );
+      if (isKicked) {
+        notify('Logout otomatis: akses dicabut', 'error', {
+          key: 'auth-status',
+          duration: 4200,
+        });
+      } else {
+        notify('Anda telah logout', 'warning', {
+          key: 'auth-status',
+          duration: 3200,
+        });
+      }
     }
     prevUserKeyRef.current = currentKey;
-  }, [authLoading, user, storeAuthError]);
+  }, [authLoading, user, storeAuthError, notify]);
 
   const alertCount =
     medicines.filter((m) => m.stock < 10).length +
@@ -399,89 +394,8 @@ const MainLayout: React.FC = () => {
     </div>
   );
 
-  const authPillTone =
-    authPill?.kind === 'login'
-      ? {
-        wrap: 'bg-[#064e3b] border-emerald-400/50 text-emerald-50',
-        dot: 'bg-emerald-400',
-      }
-      : authPill?.kind === 'kick'
-        ? {
-          wrap: 'bg-[#7f1d1d] border-red-400/55 text-red-100',
-          dot: 'bg-red-400',
-        }
-        : {
-          wrap: 'bg-slate-800 border-amber-400/45 text-amber-100',
-          dot: 'bg-amber-400',
-        };
-
-  const authPillEl = authPill ? (
-    <div
-      className="no-print fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none max-w-[calc(100vw-2rem)]"
-      role="status"
-      aria-live="polite"
-    >
-      <div
-        className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-semibold shadow-lg whitespace-nowrap max-w-full ${authPillTone.wrap}`}
-      >
-        <span className={`w-2 h-2 rounded-full shrink-0 ${authPillTone.dot}`} />
-        <span className="truncate">{authPill.text}</span>
-      </div>
-    </div>
-  ) : null;
-
-  const activeSyncPill =
-    syncStatus === 'PROSES'
-      ? { kind: 'loading' as const, text: 'Menyinkronkan Cloud...' }
-      : syncPill;
-
-  const syncPillTone =
-    activeSyncPill?.kind === 'loading'
-      ? {
-        wrap: 'bg-[#0c4a6e] border-sky-400/50 text-sky-50',
-        dot: '',
-      }
-      : activeSyncPill?.kind === 'error'
-        ? {
-          wrap: 'bg-[#7f1d1d] border-red-400/55 text-red-100',
-          dot: 'bg-red-400',
-        }
-        : {
-          wrap: 'bg-[#064e3b] border-emerald-400/50 text-emerald-50',
-          dot: 'bg-emerald-400',
-        };
-
-  const syncPillEl = activeSyncPill ? (
-    <div
-      key={activeSyncPill.kind}
-      className={`no-print fixed left-1/2 -translate-x-1/2 md:left-[18.25rem] md:translate-x-0 lg:left-[calc(50%+8.5rem)] lg:-translate-x-1/2 z-50 pointer-events-none max-w-[calc(100vw-2rem)] ${
-        authPill
-          ? 'top-[calc(6.25rem+env(safe-area-inset-top))] md:top-14'
-          : 'top-[calc(3.85rem+env(safe-area-inset-top))] md:top-3.5'
-      }`}
-      role="status"
-      aria-live="polite"
-    >
-      <div
-        className={`pill-pop inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-semibold shadow-lg whitespace-nowrap max-w-full ${syncPillTone.wrap}`}
-      >
-        {activeSyncPill.kind === 'loading' ? (
-          <RefreshCw className="w-3.5 h-3.5 animate-spin text-sky-300 shrink-0" />
-        ) : (
-          <span className={`w-2 h-2 rounded-full shrink-0 ${syncPillTone.dot}`} />
-        )}
-        <span className="truncate">{activeSyncPill.text}</span>
-      </div>
-    </div>
-  ) : null;
-
   if (authLoading) {
-    return (
-      <>
-        {authPillEl}
-        <AppBootSkeleton />
-      </>
-    );
+    return <AppBootSkeleton />;
   }
 
   if (!user) {
@@ -492,9 +406,7 @@ const MainLayout: React.FC = () => {
     ];
 
     return (
-      <>
-        {authPillEl}
-        <main className="min-h-screen flex flex-col md:grid md:grid-cols-2 bg-[#F6F4EF]">
+      <main className="min-h-screen flex flex-col md:grid md:grid-cols-2 bg-[#F6F4EF]">
           {/* Left Forest Showcase Panel */}
           <div className="relative overflow-hidden bg-[#142E27] text-white px-5 pt-7 pb-8 rounded-b-3xl md:rounded-none md:px-11 md:py-10 flex flex-col justify-start md:justify-center gap-3.5 md:gap-[26px]">
             <div className="relative z-10 flex items-center gap-3.5">
@@ -591,14 +503,10 @@ const MainLayout: React.FC = () => {
             </div>
           </div>
         </main>
-      </>
     );
   }
 
   return (
-    <>
-      {authPillEl}
-      {syncPillEl}
       <div
         className="min-h-[100dvh] flex flex-col md:flex-row md:p-3 md:gap-3"
         onTouchStart={handleTouchStart}
@@ -756,7 +664,6 @@ const MainLayout: React.FC = () => {
           </Suspense>
         </main>
       </div>
-    </>
   );
 };
 

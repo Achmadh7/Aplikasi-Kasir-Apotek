@@ -20,6 +20,8 @@ import {
   setDoc,
   deleteDoc,
   deleteField,
+  query,
+  where,
   writeBatch,
 } from 'firebase/firestore';
 import {
@@ -597,8 +599,10 @@ export async function pushBatchDocs(
   }
 }
 
-export async function fetchCollectionDocs(colName: string) {
-  const snap = await getDocs(collection(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol(colName)));
+export async function fetchCollectionDocs(colName: string, sinceMs: number = 0) {
+  const colRef = collection(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol(colName));
+  const q = sinceMs > 0 ? query(colRef, where('updatedAt', '>', sinceMs)) : colRef;
+  const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, data: d.data() }));
 }
 

@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { parseAndValidateBackupJson } from '../src/backup.ts';
 import {
+  DELTA_OVERLAP_MS,
   applyCloudResetEpoch,
+  computeDeltaSinceMs,
   mergeSyncIntoState,
 } from '../src/syncMerge.ts';
 
@@ -215,4 +217,22 @@ test('mergeSyncIntoState clears matching replaceHandledAt and keeps newer restor
   const newerRestore = { ...base, pendingCloudReplaceAt: 7000 };
   const kept = mergeSyncIntoState(newerRestore, emptyRemote, emptyPush, nopMappers, 8000, { replaceHandledAt: 5000 });
   assert.equal(kept.nextDb.pendingCloudReplaceAt, 7000);
+});
+
+test('computeDeltaSinceMs uses overlap window for auto-sync and falls back to full pull when needed', () => {
+  const okBase = {
+    lastSyncAt: 1_000_000,
+    alreadyMigrated: true,
+    pendingCloudReplaceAt: 0,
+    remoteResetAt: 500,
+    lastResetSeenAt: 500,
+    forceFull: false,
+  };
+  assert.equal(computeDeltaSinceMs(okBase), 1_000_000 - DELTA_OVERLAP_MS);
+  assert.equal(computeDeltaSinceMs({ ...okBase, lastSyncAt: 5000 }), 0);
+  assert.equal(computeDeltaSinceMs({ ...okBase, lastSyncAt: 0 }), 0);
+  assert.equal(computeDeltaSinceMs({ ...okBase, alreadyMigrated: false }), 0);
+  assert.equal(computeDeltaSinceMs({ ...okBase, pendingCloudReplaceAt: 999 }), 0);
+  assert.equal(computeDeltaSinceMs({ ...okBase, remoteResetAt: 600 }), 0);
+  assert.equal(computeDeltaSinceMs({ ...okBase, forceFull: true }), 0);
 });
