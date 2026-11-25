@@ -192,7 +192,7 @@ fun LabaScreen() {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                     ExpressiveCard(shape = RoundedCornerShape(RadiusHero), containerColor = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.weight(1f)) {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                            Text(tr("PENJUALAN", "REVENUE"), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text(tr("Penjualan", "Revenue"), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                             Spacer(Modifier.height(SpaceS))
                             AnimatedAmount(r.revenue, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onPrimaryContainer, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Spacer(Modifier.height(SpaceXS))
@@ -201,7 +201,7 @@ fun LabaScreen() {
                     }
                     ExpressiveCard(shape = RoundedCornerShape(RadiusHero), containerColor = bersihBg, modifier = Modifier.weight(1f)) {
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                            Text(tr("LABA BERSIH", "NET PROFIT"), color = bersihLabel, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            Text(tr("Laba bersih", "Net profit"), color = bersihLabel, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                             Spacer(Modifier.height(SpaceS))
                             AnimatedAmount(r.netProfit, MaterialTheme.typography.titleLarge, bersihAmount, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Spacer(Modifier.height(SpaceXS))
@@ -332,8 +332,8 @@ fun LabaScreen() {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                 Spacer(Modifier.height(SpaceS))
                                 Text(
-                                    if (scrollable) tr("Geser untuk melihat hari lain • Batang biru pekat = laba tertinggi • Label hari ini ditebalkan", "Scroll to see other days • Dark blue bar = highest profit • Today's label is bold")
-                                    else tr("Batang biru pekat = laba tertinggi • Label hari ini ditebalkan", "Dark blue bar = highest profit • Today's label is bold"),
+                                    if (scrollable) tr("Geser untuk melihat hari lain • Batang hijau pekat = laba tertinggi • Label hari ini ditebalkan", "Scroll to see other days • Dark green bar = highest profit • Today's label is bold")
+                                    else tr("Batang hijau pekat = laba tertinggi • Label hari ini ditebalkan", "Dark green bar = highest profit • Today's label is bold"),
                                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }

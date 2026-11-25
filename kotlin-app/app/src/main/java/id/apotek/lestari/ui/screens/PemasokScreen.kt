@@ -170,13 +170,13 @@ fun PemasokScreen() {
         ) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (target == null) tr("Tambah Supplier", "Add Supplier") else tr("Ubah Supplier", "Edit Supplier"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                    Text(if (target == null) tr("Tambah Supplier", "Add Supplier") else tr("Ubah Supplier", "Edit Supplier"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                     IconButton(onClick = { showForm = false }) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
-                        Text(tr("PBF", "PBF"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(tr("Data PBF", "PBF Info"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                         OutlinedTextField(
                             value = formNama,
                             onValueChange = { formNama = it },
@@ -215,8 +215,8 @@ fun PemasokScreen() {
                         }
                     },
                     enabled = formNama.isNotBlank(),
-                    shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                    shape = RoundedCornerShape(RadiusCard),
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
                 ) { Text(tr("Simpan", "Save")) }
                 TextButton(onClick = { showForm = false }, modifier = Modifier.fillMaxWidth()) { Text(tr("Batal", "Cancel")) }
             }

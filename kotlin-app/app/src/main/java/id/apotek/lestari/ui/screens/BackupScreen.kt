@@ -447,15 +447,15 @@ fun TentangScreen(onBack: () -> Unit = {}) {
             KartuHeaderPremium(tr("Tentang Aplikasi", "About App"), Icons.Default.Info, onBack = onBack)
         }
         item {
-            ExpressiveCard(shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 18.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     val logo = rememberLogoBitmap()
                     Surface(
                         color = Color.White,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(RadiusCard),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.size(64.dp)
                     ) {
@@ -467,12 +467,12 @@ fun TentangScreen(onBack: () -> Unit = {}) {
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            Icon(Icons.Default.LocalPharmacy, null, tint = ForestHeroLightStart, modifier = Modifier.padding(14.dp).fillMaxSize())
+                            Icon(Icons.Default.LocalPharmacy, null, tint = ForestHeroLightStart, modifier = Modifier.padding(16.dp).fillMaxSize())
                         }
                     }
-                    Spacer(Modifier.height(10.dp))
-                    Text("Apotek Lestari", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(12.dp))
+                    Text("Apotek Lestari", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         tr("Kasir, Stok & Keuangan Apotek", "Pharmacy Cashier, Stock & Finance"),
                         style = MaterialTheme.typography.bodySmall,
@@ -481,12 +481,12 @@ fun TentangScreen(onBack: () -> Unit = {}) {
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(50)
+                        shape = RoundedCornerShape(RadiusSmall)
                     ) {
                         Text(
                             tr("Versi $version (Build $buildCode)", "Version $version (Build $buildCode)"),
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                         )
@@ -496,13 +496,13 @@ fun TentangScreen(onBack: () -> Unit = {}) {
         }
         item {
             Text(
-                tr("INFORMASI APLIKASI", "APP INFORMATION"),
+                tr("Informasi aplikasi", "App information"),
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+                modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
             )
-            ExpressiveCard(shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.fillMaxWidth()) {
                     BarisInfoTentang(tr("Apotek", "Pharmacy"), "Apotek Lestari")
                     PemisahGrupTentang()
@@ -514,13 +514,13 @@ fun TentangScreen(onBack: () -> Unit = {}) {
         }
         item {
             Text(
-                tr("FITUR UTAMA", "KEY FEATURES"),
+                tr("Fitur utama", "Key features"),
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+                modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
             )
-            ExpressiveCard(shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                     BarisFiturTentang(
                         Icons.Default.PointOfSale,

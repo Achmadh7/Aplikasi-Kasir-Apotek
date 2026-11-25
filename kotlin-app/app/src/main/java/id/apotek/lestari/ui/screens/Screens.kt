@@ -125,7 +125,7 @@ fun KartuHeaderPremium(
             .fillMaxWidth()
             .defaultMinSize(minHeight = 48.dp)
             .background(brush, RoundedCornerShape(RadiusHeader))
-            .padding(horizontal = 14.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (onBack != null) {
@@ -139,13 +139,13 @@ fun KartuHeaderPremium(
                         Icon(Icons.Default.ArrowBackIosNew, tr("Kembali", "Back"), tint = Color.White, modifier = Modifier.size(16.dp))
                     }
                 }
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
             }
             Text(
                 judul,
                 style = MaterialTheme.typography.titleMedium,
                 fontSize = 16.sp,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.SemiBold,
                 color = Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -176,7 +176,7 @@ fun AnimatedAmount(value: Int, style: TextStyle, color: Color, maxLines: Int = I
         label = "amount"
     )
     LaunchedEffect(value) { shown = value }
-    Text(format(animated), color = color, style = style, fontWeight = FontWeight.Bold, maxLines = maxLines, overflow = overflow)
+    Text(format(animated), color = color, style = style, fontWeight = FontWeight.SemiBold, maxLines = maxLines, overflow = overflow)
 }
 
 
@@ -341,18 +341,9 @@ fun AnimatedCheckmark(size: Dp = 56.dp) {
 }
 
 
-/** Denyut halus untuk lencana KRITIS (stok 0). */
+/** Modifikator penanda kritis statis (tanpa loop berkedip terus-menerus). */
 @Composable
-fun Modifier.pulseKritis(): Modifier {
-    val alpha = remember { Animatable(1f) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            alpha.animateTo(0.65f, tween(durationMillis = 700, easing = FastOutSlowInEasing))
-            alpha.animateTo(1f, tween(durationMillis = 700, easing = FastOutSlowInEasing))
-        }
-    }
-    return this.graphicsLayer(alpha = alpha.value)
-}
+fun Modifier.pulseKritis(): Modifier = this
 
 
 // Warna aksen layar memakai peran colorScheme resmi tema (lihat Theme.kt).
@@ -401,8 +392,7 @@ fun StockBadge(stock: Int, showCount: Boolean = true, large: Boolean = false) {
     }
     Surface(
         color = bg,
-        shape = RoundedCornerShape(50),
-        modifier = if (stock <= 0) Modifier.pulseKritis() else Modifier
+        shape = RoundedCornerShape(RadiusSmall)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),

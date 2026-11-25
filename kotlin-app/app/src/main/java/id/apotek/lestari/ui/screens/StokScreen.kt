@@ -652,17 +652,13 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (editing == null) tr("Tambah Obat", "Add Medicine") else tr("Edit Obat", "Edit Medicine"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                Text(if (editing == null) tr("Tambah Obat", "Add Medicine") else tr("Edit Obat", "Edit Medicine"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            // Formulir kartu berbagian (TO1), warna kartu sama seperti
-            // TO1 — pilihan Achmad 2026-11-04. Berlaku untuk Tambah
-            // maupun Edit Obat. (Strip margin langsung TO2 dihapus
-            // 2026-11-10 atas permintaan Achmad.)
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
-                    Text(tr("IDENTITAS", "IDENTITY"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(tr("Identitas", "Identity"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                     OutlinedTextField(name, { name = it; formError = "" }, label = { Text(tr("Nama Obat", "Medicine Name")) }, textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), colors = OutlinedTextFieldDefaults.colors(cursorColor = MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.fillMaxWidth())
                     Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                         OutlinedTextField(
@@ -682,17 +678,17 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                     }
                 }
             }
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
-                    Text(tr("HARGA", "PRICE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(tr("Harga", "Price"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                     OutlinedTextField(sell, { sell = formatDecimalFieldValue(it); formError = "" }, label = { Text(tr("Harga Jual", "Sell Price")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), colors = OutlinedTextFieldDefaults.colors(cursorColor = MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(grosir, { grosir = formatDecimalFieldValue(it); formError = "" }, label = { Text(tr("Harga Jual Grosir (boleh kosong)", "Wholesale Sell Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), colors = OutlinedTextFieldDefaults.colors(cursorColor = MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(beli, { beli = formatDecimalFieldValue(it); formError = "" }, label = { Text(tr("Harga Beli (boleh kosong)", "Buy Price (optional)")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), colors = OutlinedTextFieldDefaults.colors(cursorColor = MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
             }
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
-                    Text(tr("STOK & KADALUWARSA", "STOCK & EXPIRY"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(tr("Stok & kedaluwarsa", "Stock & expiry"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                     Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                         OutlinedTextField(stock, { stock = it.filter { c -> c.isDigit() }; formError = "" }, label = { Text(tr("Stok", "Stock")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 20.sp), colors = OutlinedTextFieldDefaults.colors(cursorColor = MaterialTheme.colorScheme.onSurface), singleLine = true, modifier = Modifier.weight(1f))
                         OutlinedTextField(

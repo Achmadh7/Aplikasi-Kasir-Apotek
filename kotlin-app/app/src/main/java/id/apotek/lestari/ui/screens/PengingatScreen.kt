@@ -148,16 +148,13 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
                     }
                 }
             }
-            Text(tr("MASA KADALUARSA", "EXPIRY WINDOW"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("Masa kadaluarsa", "Expiry window"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(SpaceS))
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS)) {
                 listOf(30, 60, 90).forEach { w ->
                     FilterChip(
                         selected = window == w, onClick = { window = w },
                         label = { Text(tr("$w Hari", "$w Days")) },
-                        // Pil terpilih memakai warna primary (biru muda di
-                        // mode gelap), sama seperti pemilih periode Beranda
-                        // (T1, pilihan Achmad 2026-11-14) dan papan PG8.
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -167,39 +164,28 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
             }
         }
         item {
-            // PG8 (pilihan Achmad 2026-11-14): ringkasan 2x2 dengan latar
-            // warna penuh per kategori — merah untuk Expired, kuning untuk
-            // ≤ N hari, biru untuk Rendah, netral untuk Habis (merah bila
-            // ada yang habis). Angka dan ikon memakai warna kategorinya,
-            // supaya tingkat urgensi terbaca sekilas.
-            // 2026-11-14: tanpa elevasi + warna opak (compositeOver) —
-            // warna 18% transparan di atas Card berelevasi menimbulkan
-            // persegi bayangan di belakang angka (lihat screenshot).
             Column(verticalArrangement = Arrangement.spacedBy(SpaceM)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM)) {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface), elevation = 0.dp, modifier = Modifier.weight(1f)) {
-                        ReminderCount(Icons.Default.EventBusy, "EXPIRED", "${expired.size}", MaterialTheme.colorScheme.error, Modifier.fillMaxWidth().padding(16.dp))
+                    ExpressiveCard(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface), elevation = 0.dp, modifier = Modifier.weight(1f)) {
+                        ReminderCount(Icons.Default.EventBusy, tr("Kedaluwarsa", "Expired"), "${expired.size}", MaterialTheme.colorScheme.error, Modifier.fillMaxWidth().padding(16.dp))
                     }
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = warningAmber().copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface), elevation = 0.dp, modifier = Modifier.weight(1f)) {
-                        ReminderCount(Icons.Default.Schedule, "≤ $window HARI", "${withinWindow.size}", warningAmber(), Modifier.fillMaxWidth().padding(16.dp))
+                    ExpressiveCard(containerColor = warningAmber().copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface), elevation = 0.dp, modifier = Modifier.weight(1f)) {
+                        ReminderCount(Icons.Default.Schedule, tr("≤ $window Hari", "≤ $window Days"), "${withinWindow.size}", warningAmberText(), Modifier.fillMaxWidth().padding(16.dp))
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM)) {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface), elevation = 0.dp, modifier = Modifier.weight(1f)) {
-                        ReminderCount(Icons.Default.Inventory, tr("RENDAH", "LOW"), "${low.size}", MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().padding(16.dp))
+                    ExpressiveCard(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface), elevation = 0.dp, modifier = Modifier.weight(1f)) {
+                        ReminderCount(Icons.Default.Inventory, tr("Rendah", "Low"), "${low.size}", MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth().padding(16.dp))
                     }
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = if (critical.isNotEmpty()) MaterialTheme.colorScheme.error.copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface) else MaterialTheme.colorScheme.surfaceContainerHigh, elevation = 0.dp, modifier = Modifier.weight(1f)) {
-                        ReminderCount(Icons.Default.PriorityHigh, tr("HABIS", "OUT"), "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
+                    ExpressiveCard(containerColor = if (critical.isNotEmpty()) MaterialTheme.colorScheme.error.copy(alpha = 0.18f).compositeOver(MaterialTheme.colorScheme.surface) else MaterialTheme.colorScheme.surfaceContainerHigh, elevation = 0.dp, modifier = Modifier.weight(1f)) {
+                        ReminderCount(Icons.Default.PriorityHigh, tr("Habis", "Out"), "${critical.size}", if (critical.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth().padding(16.dp))
                     }
                 }
             }
         }
         if (dueBills.isNotEmpty()) {
             item {
-                // Seksi tagihan PBF: nama PBF ditulis lengkap + nominal +
-                // sisa hari (permintaan Achmad 2026-10-30 supaya informasinya
-                // lengkap). Kartu bisa diketuk untuk membuka Faktur PBF.
-                Text(tr("TAGIHAN PBF JATUH TEMPO", "PBF BILLS DUE"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Tagihan PBF jatuh tempo", "PBF bills due"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(SpaceS))
                 Column(verticalArrangement = Arrangement.spacedBy(SpaceM)) {
                     dueBills.forEach { p ->
@@ -207,23 +193,23 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
                         val (dueLabel, dueColor) = when {
                             daysLeft < 0L -> tr("Lewat ${-daysLeft} hari", "${-daysLeft} days overdue") to MaterialTheme.colorScheme.error
                             daysLeft == 0L -> tr("Jatuh tempo hari ini", "Due today") to MaterialTheme.colorScheme.error
-                            daysLeft == 1L -> tr("Besok jatuh tempo", "Due tomorrow") to warningAmber()
-                            else -> tr("$daysLeft hari lagi", "Due in $daysLeft days") to warningAmber()
+                            daysLeft == 1L -> tr("Besok jatuh tempo", "Due tomorrow") to warningAmberText()
+                            else -> tr("$daysLeft hari lagi", "Due in $daysLeft days") to warningAmberText()
                         }
-                        ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth().clickable { onGoPbf() }) {
+                        ExpressiveCard(modifier = Modifier.fillMaxWidth().clickable { onGoPbf() }) {
                             Column(Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
                                         Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
                                     }
-                                    Spacer(Modifier.width(10.dp))
-                                    Text(p.pbfName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(p.pbfName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                                 }
                                 Spacer(Modifier.height(SpaceS))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Schedule, null, tint = dueColor, modifier = Modifier.size(14.dp))
-                                    Spacer(Modifier.width(6.dp))
+                                    Icon(Icons.Default.Schedule, null, tint = dueColor, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(8.dp))
                                     Text(tr("Jatuh tempo ${formatDateID(p.dueDate)} • $dueLabel", "Due ${formatDateID(p.dueDate)} • $dueLabel"), style = MaterialTheme.typography.bodySmall, color = dueColor)
                                 }
                             }
@@ -234,27 +220,24 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
         }
         if (noDateBills.isNotEmpty()) {
             item {
-                // Seksi tagihan Kredit tanpa jatuh tempo: kartu diketuk
-                // membuka Faktur PBF, tempat tanggalnya bisa diatur lewat
-                // tombol Atur Jatuh Tempo di detail pembelian.
-                Text(tr("KREDIT TANPA JATUH TEMPO", "CREDIT WITHOUT A DUE DATE"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Kredit tanpa jatuh tempo", "Credit without a due date"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(SpaceS))
                 Column(verticalArrangement = Arrangement.spacedBy(SpaceM)) {
                     noDateBills.forEach { p ->
-                        ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth().clickable { onGoPbf() }) {
+                        ExpressiveCard(modifier = Modifier.fillMaxWidth().clickable { onGoPbf() }) {
                             Column(Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
                                         Icon(Icons.Default.LocalShipping, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
                                     }
-                                    Spacer(Modifier.width(10.dp))
-                                    Text(p.pbfName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(p.pbfName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(formatIDR(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                                 }
                                 Spacer(Modifier.height(SpaceS))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
-                                    Spacer(Modifier.width(6.dp))
+                                    Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(8.dp))
                                     Text(tr("Beli ${formatDateID(p.date)} • belum ada jatuh tempo", "Bought ${formatDateID(p.date)} • no due date yet"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
@@ -326,37 +309,31 @@ fun PengingatScreen(onGoStok: (String) -> Unit, onGoPbf: () -> Unit) {
                                 Icon(
                                     if (isCritical) Icons.Default.ShoppingCart else Icons.Default.Inventory, null,
                                     tint = if (isCritical || isExpired) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(10.dp).size(20.dp)
+                                    modifier = Modifier.padding(8.dp).size(20.dp)
                                 )
                             }
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                    Text(m.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                     Spacer(Modifier.width(8.dp))
-                                    // Pill status (15 Nov 2026): HABIS bila stok 0,
-                                    // KADALUARSA bila sudah lewat tanggal — keduanya
-                                    // bisa tampil berdampingan; PANTAU bila tidak ada.
-                                    // Merah + tulisan putih seperti HABIS; pulse
-                                    // hanya di HABIS supaya tidak dua-duanya berkedip.
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         val pills = buildList {
-                                            if (isCritical) add(Triple(tr("HABIS", "OUT"), true, true))
-                                            if (isExpired) add(Triple(tr("KADALUARSA", "EXPIRED"), true, false))
-                                            if (isEmpty()) add(Triple(tr("PANTAU", "WATCH"), false, false))
+                                            if (isCritical) add(tr("Habis", "Out") to true)
+                                            if (isExpired) add(tr("Kadaluarsa", "Expired") to true)
+                                            if (isEmpty()) add(tr("Pantau", "Watch") to false)
                                         }
-                                        pills.forEachIndexed { idx, (label, merah, pulse) ->
-                                            if (idx > 0) Spacer(Modifier.width(6.dp))
+                                        pills.forEachIndexed { idx, (label, merah) ->
+                                            if (idx > 0) Spacer(Modifier.width(8.dp))
                                             Surface(
                                                 color = if (merah) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh,
-                                                shape = RoundedCornerShape(16.dp),
-                                                modifier = if (pulse) Modifier.pulseKritis() else Modifier
+                                                shape = RoundedCornerShape(RadiusSmall)
                                             ) {
                                                 Text(
                                                     label,
                                                     color = if (merah) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.primary,
-                                                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                                 )
                                             }
                                         }

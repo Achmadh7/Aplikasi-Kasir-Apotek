@@ -580,7 +580,7 @@ export const LabaScreen: React.FC = () => {
       'Rekap Laba',
       rows,
       {
-        title: `APOTEK LESTARI — REKAP LABA & HPP (${periodLabel.toUpperCase()})`,
+        title: `APOTEK LESTARI - REKAP LABA & HPP (${periodLabel.toUpperCase()})`,
         subtitle: `Dicetak: ${new Date().toLocaleString('id-ID')} | Produk Terjual: ${rows.length}`,
         currencyColumns: ['Omzet (Rp)', 'HPP (Rp)', 'Laba Kotor (Rp)'],
         percentColumns: ['Margin (%)'],
@@ -1455,7 +1455,7 @@ export const RiwayatScreen: React.FC = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Cari nomor invoice, nama obat, atau cara bayar..."
-          className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41] text-sm text-[#1C1917] dark:text-white placeholder:text-[#78716C] focus:outline-none focus:border-[#15803D]"
+          className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41] text-sm text-[#1C1917] dark:text-white placeholder:text-[#78716C] focus:outline-none focus:ring-2 focus:ring-[#15803D]"
         />
 
         <div className="pt-2.5 border-t border-dashed border-[#B7D6C3] dark:border-[#244C41] flex flex-wrap items-center justify-between gap-2 text-xs text-[#78716C] dark:text-[#93B5A9]">

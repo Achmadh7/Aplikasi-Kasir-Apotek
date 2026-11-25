@@ -217,13 +217,13 @@ fun KeuanganScreen() {
                 }
             }
             Spacer(Modifier.height(SpaceL))
-            // Kartu Saldo Kas — Forest Emerald Hero Card (Mix Opsi 1 + Opsi 3, Opsi A kontras)
+            // Kartu Saldo Kas — Forest Emerald Hero Card
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(RadiusHero))
                     .background(forestHeroBrush())
-                    .padding(14.dp)
+                    .padding(16.dp)
             ) {
                 Column(Modifier.fillMaxWidth()) {
                     Row(
@@ -232,29 +232,29 @@ fun KeuanganScreen() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            tr("SALDO KAS", "CASH BALANCE"),
+                            tr("Saldo kas", "Cash balance"),
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Medium,
                             color = ForestMintSoft
                         )
                         Button(
                             onClick = { if (showForm) showForm = false else { formType = "in"; showForm = true } },
                             colors = ButtonDefaults.buttonColors(containerColor = ForestEmeraldAccent, contentColor = ForestOnAccent),
-                            shape = RoundedCornerShape(50),
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                            shape = RoundedCornerShape(RadiusSmall),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                             modifier = Modifier.heightIn(min = 44.dp)
                         ) {
                             if (showForm) {
-                                Icon(Icons.Default.ExpandLess, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(tr("Tutup", "Hide"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.ExpandLess, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(tr("Tutup", "Hide"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                             } else {
-                                Icon(Icons.Default.Add, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(tr("Catat Kas", "Record Cash"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.Add, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(tr("Catat Kas", "Record Cash"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     AnimatedAmount(
                         saldo,
-                        MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
+                        MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
                         if (saldo < 0) ForestErrorSoft else Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -270,15 +270,15 @@ fun KeuanganScreen() {
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text("▲", fontSize = 10.sp, color = ForestMint, fontWeight = FontWeight.Bold)
-                                    Text(tr("MASUK", "IN"), style = MaterialTheme.typography.labelSmall, color = ForestMintMuted, maxLines = 1)
+                                    Icon(Icons.Default.NorthEast, null, tint = ForestMint, modifier = Modifier.size(12.dp))
+                                    Text(tr("Masuk", "In"), style = MaterialTheme.typography.labelSmall, color = ForestMintMuted, maxLines = 1)
                                 }
-                                Spacer(Modifier.height(3.dp))
+                                Spacer(Modifier.height(4.dp))
                                 AnimatedAmount(
                                     masukHariIni,
-                                    MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp, fontWeight = FontWeight.ExtraBold),
+                                    MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
                                     Color.White,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -290,15 +290,15 @@ fun KeuanganScreen() {
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text("▼", fontSize = 10.sp, color = ForestErrorSoft, fontWeight = FontWeight.Bold)
-                                    Text(tr("KELUAR", "OUT"), style = MaterialTheme.typography.labelSmall, color = ForestMintMuted, maxLines = 1)
+                                    Icon(Icons.Default.SouthWest, null, tint = ForestErrorSoft, modifier = Modifier.size(12.dp))
+                                    Text(tr("Keluar", "Out"), style = MaterialTheme.typography.labelSmall, color = ForestMintMuted, maxLines = 1)
                                 }
-                                Spacer(Modifier.height(3.dp))
+                                Spacer(Modifier.height(4.dp))
                                 AnimatedAmount(
                                     keluarHariIni,
-                                    MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp, fontWeight = FontWeight.ExtraBold),
+                                    MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
                                     ForestErrorSoft,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis

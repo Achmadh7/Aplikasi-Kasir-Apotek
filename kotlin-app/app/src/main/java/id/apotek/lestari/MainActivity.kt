@@ -783,27 +783,23 @@ private fun BarisGrupLainnya(
     trailing: @Composable () -> Unit = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
 ) {
     Row(
-        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable { onClick() } else Modifier).padding(horizontal = 16.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable { onClick() } else Modifier).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // LM5: warnaKotak menimpa kotak ikon (mis. hijau/kuning
-        // status akun) dengan ikon putih; warnaIkon = errorContainer.
         val kotakIkon = warnaKotak ?: if (warnaIkon != null) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
         val tintIkon = if (warnaKotak != null) Color.White else if (warnaIkon != null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
         Surface(color = kotakIkon, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(40.dp)) {
-            // A4 (animasi Lainnya, 2026-11-15): ikon crossfade saat berganti
-            // (tema bulan<->matahari) — fade 250ms, tanpa geser/skala.
             AnimatedContent(
                 targetState = ikon,
                 transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(250)) },
                 label = "ikonBarisLainnya"
             ) { ikonAnim ->
-                Icon(ikonAnim, null, tint = tintIkon, modifier = Modifier.padding(9.dp).fillMaxSize())
+                Icon(ikonAnim, null, tint = tintIkon, modifier = Modifier.padding(8.dp).fillMaxSize())
             }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(judul, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(judul, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
             // A4: subjudul crossfade saat berganti (tema Aktif<->Nonaktif,
             // bahasa English<->Bahasa Indonesia, status sinkronisasi).
             AnimatedContent(
@@ -850,7 +846,7 @@ fun LainnyaScreen(
     onKeluarTap: () -> Unit,
     onResetTap: () -> Unit
 ) {
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 14.dp)) {
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp)) {
         KartuHeaderPremium(tr("Lainnya", "More"), Icons.Default.MoreHoriz)
         Spacer(Modifier.height(SpaceM))
         // Status Mode Online/Offline (kartu info)
@@ -878,14 +874,14 @@ fun LainnyaScreen(
             LainnyaTile("backup", tr("Backup", "Backup"), tr("Cadangkan data", "Back up data"), Icons.Default.Backup)
         )
         Text(
-            tr("MENU", "MENU"),
+            tr("Menu", "Menu"),
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
         )
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-            Column(Modifier.padding(vertical = 6.dp)) {
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            Column(Modifier.padding(vertical = 4.dp)) {
                 tiles.forEachIndexed { idx, tile ->
                     if (idx > 0) PemisahGrup()
                     BarisGrupLainnya(tile.icon, tile.label, tile.sub, onClick = { onGo(tile.route) })
@@ -894,14 +890,14 @@ fun LainnyaScreen(
         }
         Spacer(Modifier.height(SpaceM))
         Text(
-            tr("AKUN", "ACCOUNT"),
+            tr("Akun", "Account"),
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
         )
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-            Column(Modifier.padding(vertical = 6.dp)) {
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            Column(Modifier.padding(vertical = 4.dp)) {
                 BarisGrupLainnya(
                     if (emailOnline != null) Icons.Default.CloudDone else Icons.Default.CloudOff,
                     if (emailOnline != null) tr("Mode Online", "Online Mode") else tr("Mode Offline", "Offline Mode"),
@@ -922,7 +918,7 @@ fun LainnyaScreen(
                     onClick = { onSinkronTap() },
                     trailing = {
                         if (statusSync == StatusSync.PROSES) {
-                            CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                         } else {
                             Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -942,14 +938,14 @@ fun LainnyaScreen(
         }
         Spacer(Modifier.height(SpaceM))
         Text(
-            tr("PENGATURAN", "SETTINGS"),
+            tr("Pengaturan", "Settings"),
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
         )
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-            Column(Modifier.padding(vertical = 6.dp)) {
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            Column(Modifier.padding(vertical = 4.dp)) {
                 BarisGrupLainnya(
                     if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode,
                     tr("Mode Gelap", "Dark Mode"),
@@ -967,14 +963,14 @@ fun LainnyaScreen(
         }
         Spacer(Modifier.height(SpaceM))
         Text(
-            tr("TENTANG", "ABOUT"),
+            tr("Tentang", "About"),
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
         )
-        ExpressiveCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-            Column(Modifier.padding(vertical = 6.dp)) {
+        ExpressiveCard(modifier = Modifier.fillMaxWidth(), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            Column(Modifier.padding(vertical = 4.dp)) {
                 BarisGrupLainnya(
                     Icons.Default.Info,
                     tr("Tentang Aplikasi", "About App"),
@@ -1047,7 +1043,7 @@ fun LayarLogin(
             Box(
                 Modifier
                     .size(96.dp)
-                    .border(2.dp, ForestMint.copy(alpha = 0.7f), RoundedCornerShape(RadiusHero))
+                    .border(1.dp, ForestMint.copy(alpha = 0.25f), RoundedCornerShape(RadiusHero))
                     .padding(4.dp)
                     .clip(RoundedCornerShape(RadiusHeader))
                     .background(Color.White),
@@ -1059,34 +1055,26 @@ fun LayarLogin(
                     Icon(Icons.Default.LocalPharmacy, null, tint = ForestHeroLightStart, modifier = Modifier.padding(20.dp).fillMaxSize())
                 }
             }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(16.dp))
             Text(
-                "APOTEK",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 2.sp,
+                "Apotek Lestari",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
                 color = ForestMintLight
             )
+            Spacer(Modifier.height(4.dp))
             Text(
-                "LESTARI",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 2.sp,
-                color = ForestMint
+                tr("Kasir & manajemen stok apotek", "Pharmacy cashier & stock control"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = ForestMintMuted.copy(alpha = 0.85f),
+                textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(12.dp))
-            Box(
-                Modifier
-                    .width(44.dp)
-                    .height(3.dp)
-                    .background(ForestMint, RoundedCornerShape(2.dp))
-            )
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(24.dp))
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(RadiusHero),
                 color = ForestHeroDarkStart.copy(alpha = 0.6f),
-                border = BorderStroke(1.dp, ForestMint.copy(alpha = 0.18f))
+                border = BorderStroke(1.dp, ForestMint.copy(alpha = 0.16f))
             ) {
                 Column(
                     Modifier.padding(20.dp),
@@ -1100,15 +1088,15 @@ fun LayarLogin(
                                 containerColor = Color.White,
                                 contentColor = ForestInkDark
                             ),
-                            shape = RoundedCornerShape(50),
-                            modifier = Modifier.fillMaxWidth().height(50.dp)
+                            shape = RoundedCornerShape(RadiusCard),
+                            modifier = Modifier.fillMaxWidth().height(48.dp)
                         ) {
                             if (sibuk) {
                                 CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = ForestInkDark)
                             } else {
-                                LogoGoogle(Modifier.size(18.dp))
+                                LogoGoogle(Modifier.size(20.dp))
                             }
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(12.dp))
                             Text(tr("Masuk dengan Google", "Sign in with Google"), fontWeight = FontWeight.SemiBold)
                         }
                     } else {
@@ -1136,7 +1124,7 @@ fun LayarLogin(
                             )
                         }
                     }
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         HorizontalDivider(modifier = Modifier.weight(1f), color = ForestMint.copy(alpha = 0.25f))
                         Text(
@@ -1147,16 +1135,16 @@ fun LayarLogin(
                         )
                         HorizontalDivider(modifier = Modifier.weight(1f), color = ForestMint.copy(alpha = 0.25f))
                     }
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(12.dp))
                     OutlinedButton(
                         onClick = onLewati,
                         enabled = !sibuk,
-                        border = BorderStroke(1.5.dp, ForestMint.copy(alpha = 0.85f)),
+                        border = BorderStroke(1.dp, ForestMint.copy(alpha = 0.75f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ForestMint),
-                        shape = RoundedCornerShape(50),
+                        shape = RoundedCornerShape(RadiusCard),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Text(tr("Lewati, Pakai Tanpa Akun", "Skip, Use Without an Account"), fontWeight = FontWeight.SemiBold)
+                        Text(tr("Lewati, pakai tanpa akun", "Skip, use without an account"), fontWeight = FontWeight.SemiBold)
                     }
                     Spacer(Modifier.height(12.dp))
                     Text(

@@ -157,17 +157,17 @@ fun PbfScreen() {
                 // Hari Ini dengan jumlah pembelian, Bulan Ini dengan nama
                 // bulan berjalan. Tetap hanya menghitung pembelian CASH.
                 Row(horizontalArrangement = Arrangement.spacedBy(SpaceM), modifier = Modifier.fillMaxWidth()) {
-                    ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(tr("BELANJA HARI INI", "TODAY'S PURCHASES"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    ExpressiveCard(shape = RoundedCornerShape(RadiusCard), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(tr("Belanja hari ini", "Today's purchases"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceXS))
                             AnimatedAmount(todayTotal, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(tr("${todayPurchases.size} pembelian", "${todayPurchases.size} purchases"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    ExpressiveCard(shape = RoundedCornerShape(20.dp), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(tr("BELANJA BULAN INI", "THIS MONTH'S PURCHASES"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    ExpressiveCard(shape = RoundedCornerShape(RadiusCard), containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(tr("Belanja bulan ini", "This month's purchases"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceXS))
                             AnimatedAmount(monthTotal, MaterialTheme.typography.titleLarge, MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(monthLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -175,16 +175,12 @@ fun PbfScreen() {
                     }
                 }
             }
-            // Kartu Kredit Belum Lunas (desain P1C, pilihan Achmad
-            // 2026-11-04): total pembelian Kredit yang belum dilunasi
-            // (paymentType masih KREDIT) + rincian terdekat jatuh temponya.
-            // Hanya tampil bila memang ada kredit yang belum lunas.
             if (outstanding.isNotEmpty()) {
                 item {
-                    ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, containerColor = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth()) {
+                    ExpressiveCard(containerColor = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(tr("KREDIT BELUM LUNAS", "OUTSTANDING CREDIT"), color = warningAmber(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                Text(tr("Kredit belum lunas", "Outstanding credit"), color = warningAmberText(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                                 Text(formatIDR(outstandingTotal), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onTertiaryContainer)
                             }
                             Spacer(Modifier.height(SpaceS))
@@ -625,15 +621,13 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Catat Pembelian PBF", "Record PBF Purchase"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                Text(tr("Catat Pembelian PBF", "Record PBF Purchase"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            // Formulir berbagian kartu (desain F1, pilihan Achmad
-            // 2026-11-04): FAKTUR, ITEM BELANJA, RINGKASAN.
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
-                    Text(tr("FAKTUR", "INVOICE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(tr("Faktur", "Invoice"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                 OutlinedTextField(
                     value = pbfName, onValueChange = {}, label = { Text(tr("Nama PBF", "PBF Name")) },
                     placeholder = { Text(tr("Pilih supplier", "Choose a supplier")) },
@@ -671,9 +665,9 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 }
                 }
             }
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
-                    Text(tr("ITEM BELANJA", "PURCHASED ITEMS"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(tr("Item belanja", "Purchased items"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                 rows.forEachIndexed { index, row ->
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -681,9 +675,9 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                             if (rows.size > 1) {
                                 IconButton(
                                     onClick = { rows = rows - row; if (activeRow == row) activeRow = null },
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(44.dp)
                                 ) {
-                                    Icon(Icons.Default.Delete, tr("Hapus obat ini", "Delete this item"), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.Delete, tr("Hapus obat ini", "Delete this item"), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
@@ -754,18 +748,18 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 }
                 OutlinedButton(
                     onClick = { rows = rows + PurchaseItemRow(); activeRow = null },
-                    shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(RadiusCard),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp)
                 ) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(tr("Tambah Obat", "Add Item"))
                 }
                 }
             }
-            ExpressiveCard(shape = MaterialTheme.shapes.extraLarge, modifier = Modifier.fillMaxWidth()) {
+            ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
-                    Text(tr("RINGKASAN", "SUMMARY"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(tr("Ringkasan", "Summary"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                 OutlinedTextField(ppn, { ppn = formatDecimalFieldValue(it) }, label = { Text(tr("Jumlah PPN (Rp)", "PPN/VAT Amount (Rp)")) }, placeholder = { Text("0") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("Total Belanja", "Total Purchases"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))

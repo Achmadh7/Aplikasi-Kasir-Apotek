@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 
 type ToastType = 'info' | 'success' | 'error';
@@ -61,6 +61,15 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     []
   );
 
+  useEffect(() => {
+    if (!confirmState) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setConfirmState(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [confirmState]);
+
   return (
     <FeedbackContext.Provider value={{ notify, askConfirm }}>
       {children}
@@ -98,26 +107,38 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       {/* Confirm Modal */}
       {confirmState && (
-        <div className="no-print fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#E8F2EC] border border-[#B7D6C3] rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setConfirmState(null);
+          }}
+          className="no-print fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div className="bg-[#F6F4EF] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4">
             <div className="flex items-start gap-3">
               <div
                 className={`p-2 rounded-xl shrink-0 ${
-                  confirmState.danger ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-[#15803D]'
+                  confirmState.danger
+                    ? 'bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400'
+                    : 'bg-emerald-100 text-[#15803D] dark:bg-[#1E3A30] dark:text-[#6EE7B7]'
                 }`}
               >
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 text-base">{confirmState.title}</h3>
-                <p className="text-sm text-slate-600 mt-1">{confirmState.message}</p>
+                <h3 id="confirm-modal-title" className="font-bold text-[#1C1917] dark:text-white text-base">
+                  {confirmState.title}
+                </h3>
+                <p className="text-sm text-[#57534E] dark:text-[#A7C4B8] mt-1">{confirmState.message}</p>
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setConfirmState(null)}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100"
+                className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-medium text-[#57534E] dark:text-[#A7C4B8] hover:bg-black/5 dark:hover:bg-white/10"
               >
                 Batal
               </button>
@@ -128,10 +149,10 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   setConfirmState(null);
                   fn();
                 }}
-                className={`px-4 py-2 rounded-xl text-sm font-medium text-white ${
+                className={`min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold text-white ${
                   confirmState.danger
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-[#15803D] hover:bg-[#004f87]'
+                    ? 'bg-[#DC2626] hover:bg-[#B91C1C]'
+                    : 'bg-[#15803D] hover:bg-[#166534]'
                 }`}
               >
                 {confirmState.confirmLabel}

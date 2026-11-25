@@ -19,6 +19,43 @@
     touch-action: manipulation;
   }
 
+  a[href],
+  button:not(:disabled),
+  summary,
+  select:not(:disabled),
+  input[type='checkbox']:not(:disabled),
+  input[type='radio']:not(:disabled),
+  label[for],
+  [role='button']:not([aria-disabled='true']),
+  [role='tab'],
+  [role='switch'] {
+    cursor: pointer;
+  }
+
+  :disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [role='button']:focus-visible {
+    outline: 2px solid #15803D;
+    outline-offset: 2px;
+  }
+
+  .dark a:focus-visible,
+  .dark button:focus-visible,
+  .dark input:focus-visible,
+  .dark select:focus-visible,
+  .dark textarea:focus-visible,
+  .dark [role='button']:focus-visible {
+    outline-color: #6EE7B7;
+  }
+
   /* Prevent iOS Safari auto-zoom on inputs smaller than 16px */
   @media (max-width: 767px) {
     input,

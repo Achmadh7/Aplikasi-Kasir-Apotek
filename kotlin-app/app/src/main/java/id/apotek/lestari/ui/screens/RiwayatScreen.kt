@@ -167,18 +167,18 @@ fun ReceiptPreviewCard(
             )
             Spacer(Modifier.height(SpaceM))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                Surface(color = InvoiceBoxBg, shape = RoundedCornerShape(16.dp)) {
+                Surface(color = InvoiceBoxBg, shape = RoundedCornerShape(RadiusCard)) {
                     Text(
-                        tr("PRATINJAU", "PREVIEW"), color = InvoiceMuted,
-                        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        tr("Pratinjau", "Preview"), color = InvoiceMuted,
+                        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                     )
                 }
             }
             Spacer(Modifier.height(SpaceM))
             DashedDivider()
             Spacer(Modifier.height(SpaceM))
-            Text(tr("RINCIAN OBAT", "MEDICINE DETAILS"), color = InvoiceMuted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text(tr("Rincian obat", "Medicine details"), color = InvoiceMuted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(SpaceS))
             items.forEachIndexed { index, ci ->
                 if (index > 0) DashedDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -289,11 +289,11 @@ fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphicsLayer: 
             )
             Spacer(Modifier.height(SpaceM))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                Surface(color = InvoicePaidBg, shape = RoundedCornerShape(16.dp)) {
-                    Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Surface(color = InvoicePaidBg, shape = RoundedCornerShape(RadiusCard)) {
+                    Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.CheckCircle, null, tint = InvoicePaidFg, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(tr("LUNAS", "PAID"), color = InvoicePaidFg, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(8.dp))
+                        Text(tr("Lunas", "Paid"), color = InvoicePaidFg, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -302,16 +302,16 @@ fun InvoiceDetailCard(sale: Sale, modifier: Modifier = Modifier, graphicsLayer: 
             Spacer(Modifier.height(SpaceM))
             // SR1: kotak info jadi grid 2x2.
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.fillMaxWidth()) {
-                InvoiceInfoBox(tr("NO. INVOICE", "INVOICE NO."), sale.invoiceNo, Modifier.weight(1f))
-                InvoiceInfoBox(tr("TANGGAL", "DATE"), formatFullDateID(sale.createdAt), Modifier.weight(1f))
+                InvoiceInfoBox(tr("No. invoice", "Invoice no."), sale.invoiceNo, Modifier.weight(1f))
+                InvoiceInfoBox(tr("Tanggal", "Date"), formatFullDateID(sale.createdAt), Modifier.weight(1f))
             }
             Spacer(Modifier.height(SpaceS))
             Row(horizontalArrangement = Arrangement.spacedBy(SpaceS), modifier = Modifier.fillMaxWidth()) {
-                InvoiceInfoBox(tr("METODE BAYAR", "PAYMENT METHOD"), if (sale.paymentMethod == "Tunai") tr("Tunai", "Cash") else sale.paymentMethod, Modifier.weight(1f))
-                InvoiceInfoBox(tr("ISI INVOICE", "ITEMS"), tr("${sale.items.size} item", "${sale.items.size} items"), Modifier.weight(1f))
+                InvoiceInfoBox(tr("Metode bayar", "Payment method"), if (sale.paymentMethod == "Tunai") tr("Tunai", "Cash") else sale.paymentMethod, Modifier.weight(1f))
+                InvoiceInfoBox(tr("Isi invoice", "Items"), tr("${sale.items.size} item", "${sale.items.size} items"), Modifier.weight(1f))
             }
             Spacer(Modifier.height(SpaceL))
-            Text(tr("RINCIAN OBAT", "MEDICINE DETAILS"), color = InvoiceMuted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text(tr("Rincian obat", "Medicine details"), color = InvoiceMuted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(SpaceS))
             sale.items.forEachIndexed { index, it ->
                 if (index > 0) DashedDivider(modifier = Modifier.padding(vertical = 8.dp))

@@ -130,10 +130,10 @@ fun warningAmberText(): Color = if (LocalIsDarkTheme.current) Color(0xFFFBBF24) 
 @Composable
 fun amberBg(): Color = if (LocalIsDarkTheme.current) Color(0xFF36260A) else Color(0xFFFEF3C7)
 
-// Skala radius seragam lintas layar (R-11)
-val RadiusSmall = 12.dp
+// Skala radius seragam lintas layar (grid 4dp & nested radius)
+val RadiusSmall = 8.dp
 val RadiusHeader = 16.dp
-val RadiusCard = 18.dp
+val RadiusCard = 16.dp
 val RadiusHero = 20.dp
 
 // Tipografi Plus Jakarta Sans senada web-app + tabular numerals (tnum) untuk angka Rupiah

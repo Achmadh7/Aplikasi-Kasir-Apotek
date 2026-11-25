@@ -13,6 +13,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.LocalPharmacy
@@ -125,7 +128,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 14.dp),
+        contentPadding = PaddingValues(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
@@ -138,13 +141,13 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             val panelOut = if (monthMode) (d?.monthOut ?: 0) else (d?.todayOut ?: 0)
             val panelProfit = if (monthMode) (d?.monthProfit ?: 0) else (d?.todayProfit ?: 0)
 
-            // Unified Forest Emerald Hero Card (Mix Opsi 1 + Opsi 3)
+            // Unified Forest Emerald Hero Card
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(RadiusHero))
                     .background(brush)
-                    .padding(14.dp)
+                    .padding(16.dp)
             ) {
                 Column(Modifier.fillMaxWidth()) {
                     Row(
@@ -153,8 +156,8 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     ) {
                         Surface(
                             color = Color.White,
-                            shape = RoundedCornerShape(9.dp),
-                            modifier = Modifier.size(34.dp)
+                            shape = RoundedCornerShape(RadiusSmall),
+                            modifier = Modifier.size(36.dp)
                         ) {
                             if (logo != null) {
                                 Image(
@@ -164,15 +167,15 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                     modifier = Modifier.fillMaxSize()
                                 )
                             } else {
-                                Icon(Icons.Default.LocalPharmacy, null, tint = ForestHeroLightStart, modifier = Modifier.padding(7.dp).fillMaxSize())
+                                Icon(Icons.Default.LocalPharmacy, null, tint = ForestHeroLightStart, modifier = Modifier.padding(8.dp).fillMaxSize())
                             }
                         }
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(
                             "Apotek Lestari",
                             style = MaterialTheme.typography.titleMedium,
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.SemiBold,
                             color = Color.White,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -190,17 +193,17 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     when (statusSync) {
-                                        StatusSync.PROSES -> CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = ForestMint)
-                                        StatusSync.BERHASIL -> Icon(Icons.Default.CloudDone, null, tint = syncTint, modifier = Modifier.size(15.dp))
-                                        else -> Icon(Icons.Default.CloudOff, null, tint = syncTint, modifier = Modifier.size(15.dp))
+                                        StatusSync.PROSES -> CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = ForestMint)
+                                        StatusSync.BERHASIL -> Icon(Icons.Default.CloudDone, null, tint = syncTint, modifier = Modifier.size(16.dp))
+                                        else -> Icon(Icons.Default.CloudOff, null, tint = syncTint, modifier = Modifier.size(16.dp))
                                     }
                                     Text(
                                         tr("Sinkron", "Sync"),
                                         style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.Medium,
                                         color = syncTint
                                     )
                                 }
@@ -211,7 +214,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     if (d != null) {
                         HorizontalDivider(
                             color = Color.White.copy(alpha = 0.12f),
-                            modifier = Modifier.padding(vertical = 10.dp)
+                            modifier = Modifier.padding(vertical = 12.dp)
                         )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -219,26 +222,26 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                if (monthMode) tr("PEMBELIAN BULAN INI", "THIS MONTH'S SALES") else tr("PEMBELIAN HARI INI", "TODAY'S SALES"),
+                                if (monthMode) tr("Penjualan bulan ini", "This month's sales") else tr("Penjualan hari ini", "Today's sales"),
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Medium,
                                 color = ForestMintSoft,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 listOf(tr("Hari", "Day"), tr("Bulan", "Month")).forEachIndexed { idx, label ->
                                     val selected = summaryPeriod == idx
                                     Surface(
                                         color = if (selected) ForestEmeraldAccent else Color.White.copy(alpha = 0.12f),
-                                        shape = RoundedCornerShape(50),
+                                        shape = RoundedCornerShape(RadiusSmall),
                                         modifier = Modifier.defaultMinSize(minWidth = 52.dp, minHeight = 44.dp).clickable { summaryPeriod = idx }
                                     ) {
-                                        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                                        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                                             Text(
                                                 label,
                                                 style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.Bold,
+                                                fontWeight = FontWeight.SemiBold,
                                                 color = if (selected) ForestOnAccent else ForestMintMuted
                                             )
                                         }
@@ -246,34 +249,39 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 }
                             }
                         }
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         AnimatedAmount(
                             value = panelIn,
-                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black),
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
                             color = Color.White,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         if (!monthMode) {
-                            Spacer(Modifier.height(5.dp))
+                            Spacer(Modifier.height(8.dp))
                             val isUp = diff >= 0
                             val arrowColor = if (isUp) ForestMint else ForestErrorSoft
                             Surface(
                                 color = if (isUp) ForestEmeraldAccent.copy(alpha = 0.22f) else ForestErrorSoft.copy(alpha = 0.18f),
-                                shape = RoundedCornerShape(50),
+                                shape = RoundedCornerShape(RadiusSmall),
                                 border = BorderStroke(1.dp, arrowColor.copy(alpha = 0.36f))
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Text(if (isUp) "▲" else "▼", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = arrowColor)
+                                    Icon(
+                                        if (isUp) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                                        contentDescription = null,
+                                        tint = arrowColor,
+                                        modifier = Modifier.size(12.dp)
+                                    )
                                     Text(
                                         if (diff == 0) tr("Sama vs kemarin", "Same vs yesterday")
                                         else "${if (isUp) "+" else "-"}${formatIDR(kotlin.math.abs(diff))} ${tr("vs kemarin", "vs yesterday")}",
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.Medium,
                                         color = ForestMintLight,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -282,23 +290,23 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                             }
                         }
                         Spacer(Modifier.height(12.dp))
-                        // 2 sub-tiles (Keluar & Selisih — tanpa Struk, nominal penuh)
+                        // 2 sub-tiles (Keluar & Selisih)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Surface(
                                 color = Color.White.copy(alpha = 0.10f),
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                                Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text("▼", fontSize = 10.sp, color = ForestErrorSoft, fontWeight = FontWeight.Bold)
+                                        Icon(Icons.Default.ArrowDownward, contentDescription = null, tint = ForestErrorSoft, modifier = Modifier.size(12.dp))
                                         Text(tr("Keluar", "Out"), style = MaterialTheme.typography.labelSmall, color = ForestMintMuted, maxLines = 1)
                                     }
-                                    Spacer(Modifier.height(3.dp))
+                                    Spacer(Modifier.height(4.dp))
                                     Text(
                                         formatIDR(panelOut),
                                         style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
-                                        fontWeight = FontWeight.ExtraBold,
+                                        fontWeight = FontWeight.SemiBold,
                                         color = ForestErrorSoft,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -310,17 +318,22 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                                Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                                     val pos = panelProfit >= 0
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(if (pos) "▲" else "▼", fontSize = 10.sp, color = if (pos) ForestMint else ForestErrorSoft, fontWeight = FontWeight.Bold)
+                                        Icon(
+                                            if (pos) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                                            contentDescription = null,
+                                            tint = if (pos) ForestMint else ForestErrorSoft,
+                                            modifier = Modifier.size(12.dp)
+                                        )
                                         Text(tr("Selisih", "Net"), style = MaterialTheme.typography.labelSmall, color = ForestMintMuted, maxLines = 1)
                                     }
-                                    Spacer(Modifier.height(3.dp))
+                                    Spacer(Modifier.height(4.dp))
                                     Text(
                                         (if (pos) "+" else "-") + formatIDR(kotlin.math.abs(panelProfit)),
                                         style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
-                                        fontWeight = FontWeight.ExtraBold,
+                                        fontWeight = FontWeight.SemiBold,
                                         color = if (pos) Color.White else ForestErrorSoft,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -371,54 +384,51 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                     modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp).clickable { onGoPengingat() }
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Warning, null, tint = accent, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Warning, null, tint = accent, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
                             stripText,
                             style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text(
-                            tr("Cek ›", "View ›"),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = accent
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                tr("Cek", "View"),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = accent
+                            )
+                            Icon(Icons.Default.ChevronRight, null, tint = accent, modifier = Modifier.size(16.dp))
+                        }
                     }
                 }
             }
             item {
-                // 3 Shortcut Cards with Material 3 tinted icon badges (Laba, Stok, Riwayat)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                // 3 Shortcut Cards with quiet neutral icon badges
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     ShortcutCard(
                         label = tr("Laba", "Profit"),
                         icon = Icons.Default.TrendingUp,
-                        badgeBg = profitBg(),
-                        badgeTint = profitGreen(),
                         modifier = Modifier.weight(1f),
                         onClick = onGoLaba
                     )
                     ShortcutCard(
                         label = tr("Stok", "Stock"),
                         icon = Icons.Default.Medication,
-                        badgeBg = infoBg(),
-                        badgeTint = infoBlue(),
                         modifier = Modifier.weight(1f),
                         onClick = onGoStok
                     )
                     ShortcutCard(
                         label = tr("Riwayat", "History"),
                         icon = Icons.Default.ReceiptLong,
-                        badgeBg = amberBg(),
-                        badgeTint = warningAmber(),
                         modifier = Modifier.weight(1f),
                         onClick = onGoRiwayat
                     )
@@ -426,24 +436,24 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
             }
             item {
                 // Obat Terjual Hari Ini dengan Rank Badge 1 2 3
-                ExpressiveCard(shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(14.dp)) {
+                ExpressiveCard(shape = RoundedCornerShape(RadiusCard), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                tr("OBAT TERJUAL HARI INI", "ITEMS SOLD TODAY"),
+                                tr("Obat terjual hari ini", "Items sold today"),
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             if (d.bestSellers.isNotEmpty()) {
                                 Text(
                                     "Top ${minOf(d.bestSellers.size, 3)}",
                                     style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -462,29 +472,29 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                     }
                                     Row(
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Surface(
                                             color = if (idx == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                                            shape = RoundedCornerShape(7.dp),
+                                            shape = RoundedCornerShape(RadiusSmall),
                                             modifier = Modifier.size(24.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Text(
                                                     "${idx + 1}",
                                                     style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontWeight = FontWeight.SemiBold,
                                                     color = if (idx == 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
                                         }
-                                        Spacer(Modifier.width(10.dp))
+                                        Spacer(Modifier.width(12.dp))
                                         Column(Modifier.weight(1f)) {
                                             Text(
                                                 b.name,
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Bold,
+                                                fontWeight = FontWeight.SemiBold,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
@@ -498,7 +508,7 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
                                         Text(
                                             formatIDR(b.revenue),
                                             style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold,
+                                            fontWeight = FontWeight.SemiBold,
                                             maxLines = 1
                                         )
                                     }
@@ -532,13 +542,13 @@ fun BerandaScreen(onGoStok: () -> Unit, onGoPengingat: () -> Unit, onGoLaba: () 
 fun ShortcutCard(
     label: String,
     icon: ImageVector,
-    badgeBg: Color = MaterialTheme.colorScheme.primaryContainer,
-    badgeTint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    badgeBg: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    badgeTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     ExpressiveCard(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(RadiusCard),
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         modifier = modifier.clickable { onClick() }
     ) {
@@ -548,18 +558,18 @@ fun ShortcutCard(
         ) {
             Surface(
                 color = badgeBg,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.size(34.dp)
+                shape = RoundedCornerShape(RadiusSmall),
+                modifier = Modifier.size(36.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, null, tint = badgeTint, modifier = Modifier.size(18.dp))
+                    Icon(icon, null, tint = badgeTint, modifier = Modifier.size(20.dp))
                 }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 label,
                 style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 textAlign = TextAlign.Center
             )

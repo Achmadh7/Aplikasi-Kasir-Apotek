@@ -535,50 +535,37 @@ fun KasirScreen() {
                     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape) {
                         Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp).size(20.dp))
                     }
-                    Spacer(Modifier.width(10.dp))
-                    Text(if (cart.isNotEmpty()) tr("Keranjang (${cart.sumOf { it.qty }})", "Cart (${cart.sumOf { it.qty }})") else tr("Keranjang", "Cart"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                    Spacer(Modifier.width(12.dp))
+                    Text(if (cart.isNotEmpty()) tr("Keranjang (${cart.sumOf { it.qty }})", "Cart (${cart.sumOf { it.qty }})") else tr("Keranjang", "Cart"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                     IconButton(onClick = closeSheet) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 8.dp))
                 if (successPhase) {
-                    // Tampilan sukses penuh (varian 1): centang besar
-                    // beranimasi di tengah sheet + rincian pembayaran.
-                    // Struk di bawah menunggu fase ini selesai supaya
-                    // animasinya tidak tertutup perubahan isi sheet.
                     Column(
                         Modifier.fillMaxWidth().padding(vertical = 40.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         key(payCount) { AnimatedCheckmark(size = 120.dp) }
                         Spacer(Modifier.height(SpaceL))
-                        Text(tr("Pembayaran Berhasil", "Payment Successful"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                        Text(tr("Pembayaran Berhasil", "Payment Successful"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(SpaceS))
                         Text(tr("Dibayar via $successMethod \u2022 Total ${formatIDR(successTotal)}", "Paid via $successMethod \u2022 Total ${formatIDR(successTotal)}"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (successChange > 0) {
                             Spacer(Modifier.height(SpaceXS))
-                            Text(tr("Kembalian ${formatIDR(successChange)}", "Change ${formatIDR(successChange)}"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(tr("Kembalian ${formatIDR(successChange)}", "Change ${formatIDR(successChange)}"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 } else if (cart.isNotEmpty()) {
-                    // Panel hero: total besar + jumlah item/jenis +
-                    // pilihan metode bayar menyatu di SATU panel di atas
-                    // daftar item (tata letak KR4, pilihan Achmad
-                    // 2026-11-04). Gaya visualnya HP3 (pilihan Achmad
-                    // 2026-11-05): panel NETRAL (surfaceContainer) dengan
-                    // garis aksen primer tipis di tepi kiri, teks warna
-                    // permukaan biasa, dan segmen metode memakai warna
-                    // bawaan komponen — bukan lagi panel biru pekat
-                    // dengan segmen putih terbalik ala KR4.
-                    Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                    Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(RadiusHero), modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.height(IntrinsicSize.Min)) {
-                            Spacer(Modifier.width(6.dp).fillMaxHeight().background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)))
-                            Column(Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 14.dp)) {
+                            Spacer(Modifier.width(4.dp).fillMaxHeight().background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = RadiusHero, bottomStart = RadiusHero)))
+                            Column(Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(tr("TOTAL BAYAR", "TOTAL TO PAY"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                                Text(tr("Total bayar", "Total to pay"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                                 Text(tr("${cart.sumOf { it.qty }} item \u2022 ${cart.size} jenis", "${cart.sumOf { it.qty }} items \u2022 ${cart.size} kinds"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Spacer(Modifier.height(SpaceXS))
-                            Text(formatIDR(total), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                            Text(formatIDR(total), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                             Spacer(Modifier.height(SpaceM))
                             val methods = listOf(
                                 "Tunai" to Icons.Default.Money,
@@ -608,13 +595,8 @@ fun KasirScreen() {
                     if (targetMethod == "Tunai") {
                         Column {
                             Spacer(Modifier.height(SpaceL))
-                            Text(tr("UANG DITERIMA", "CASH RECEIVED"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Uang diterima", "Cash received"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(SpaceS))
-                            // Kartu nominal UD4 (pilihan Achmad 2026-11-04): empat
-                            // kartu besar — Uang Pas + tiga pembulatan 50 rb ke atas
-                            // dari total — masing-masing menampilkan kembaliannya;
-                            // mengetuk kartu mengisi kolom uang diterima. Kartu yang
-                            // nilainya sama dengan isi kolom tampil terpilih (biru).
                             val firstRoundUp = (total / 50000 + 1) * 50000
                             val nominalOptions = listOf(total, firstRoundUp, firstRoundUp + 50000, firstRoundUp + 100000)
                             nominalOptions.chunked(2).forEach { rowOptions ->
@@ -629,10 +611,10 @@ fun KasirScreen() {
                                                 uangDiterima = TextFieldValue(formatted, TextRange(formatted.length))
                                             },
                                             color = if (selectedCard) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                                            shape = RoundedCornerShape(16.dp),
+                                            shape = RoundedCornerShape(RadiusCard),
                                             modifier = Modifier.weight(1f)
                                         ) {
-                                            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                                            Column(Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
                                                 Text(
                                                     if (amount == total) tr("Uang Pas", "Exact Amount") else formatIDR(amount),
                                                     style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1,
@@ -747,7 +729,7 @@ fun KasirScreen() {
                     // dibuka hanya saat kasir mau memeriksa isi struk.
                     // Tanpa AnimatedVisibility (aturan anti-jitter sheet).
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(tr("PRATINJAU STRUK", "RECEIPT PREVIEW"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        Text(tr("Pratinjau struk", "Receipt preview"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                         TextButton(onClick = { showReceiptPreview = !showReceiptPreview }) {
                             Text(if (showReceiptPreview) tr("Sembunyikan", "Hide") else tr("Lihat", "View"))
                             Icon(if (showReceiptPreview) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(18.dp))

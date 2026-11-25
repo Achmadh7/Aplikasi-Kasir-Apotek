@@ -452,6 +452,15 @@ export const StokScreen: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!showModal) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowModal(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showModal]);
+
   // Form state
   const [name, setName] = useState('');
   const [category, setCategory] = useState('Umum');
@@ -544,7 +553,7 @@ export const StokScreen: React.FC = () => {
     }));
     exportMedicineSheet(
       `stok-apotek-lestari-${dayKeyID()}.xlsx`,
-      'APOTEK LESTARI — LAPORAN STOK OBAT',
+      'APOTEK LESTARI - LAPORAN STOK OBAT',
       `Dicetak: ${new Date().toLocaleString('id-ID')} | Total SKU: ${rows.length}`,
       rows
     );
@@ -761,15 +770,18 @@ export const StokScreen: React.FC = () => {
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
+                      type="button"
                       onClick={() => openEdit(m)}
-                      className="p-2.5 rounded-xl bg-[#DCEBE2] dark:bg-[#0F241E] hover:bg-black/10 dark:hover:bg-white/10"
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-[#DCEBE2] dark:bg-[#0F241E] hover:bg-black/10 dark:hover:bg-white/10"
                       title="Edit Obat"
+                      aria-label={`Edit ${m.name}`}
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() =>
                         askConfirm(
                           `Hapus obat "${m.name}"?`,
@@ -780,8 +792,9 @@ export const StokScreen: React.FC = () => {
                           { title: 'Hapus Obat', danger: true, confirmLabel: 'Hapus' }
                         )
                       }
-                      className="p-2.5 rounded-xl bg-red-500/10 text-[#BA1A1A]"
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-red-500/10 text-[#BA1A1A] dark:text-[#FCA5A5]"
                       title="Hapus Obat"
+                      aria-label={`Hapus ${m.name}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -865,15 +878,18 @@ export const StokScreen: React.FC = () => {
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <div className="inline-flex items-center gap-1">
+                        <div className="inline-flex items-center gap-1.5">
                           <button
+                            type="button"
                             onClick={() => openEdit(m)}
-                            className="p-2 rounded-xl hover:bg-black/10 dark:hover:bg-white/10"
+                            className="p-2.5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10"
                             title="Edit Obat"
+                            aria-label={`Edit ${m.name}`}
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
+                            type="button"
                             onClick={() =>
                               askConfirm(
                                 `Hapus obat "${m.name}"?`,
@@ -884,8 +900,9 @@ export const StokScreen: React.FC = () => {
                                 { title: 'Hapus Obat', danger: true, confirmLabel: 'Hapus' }
                               )
                             }
-                            className="p-2 rounded-xl text-[#BA1A1A] hover:bg-red-500/10"
+                            className="p-2.5 rounded-xl text-[#BA1A1A] dark:text-[#FCA5A5] hover:bg-red-500/10"
                             title="Hapus Obat"
+                            aria-label={`Hapus ${m.name}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -902,13 +919,26 @@ export const StokScreen: React.FC = () => {
 
       {/* Add/Edit Medicine Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-[#F8F9FF] dark:bg-[#142E27] rounded-3xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="med-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowModal(false);
+          }}
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+        >
+          <div className="bg-[#F6F4EF] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] rounded-3xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-extrabold">
+              <h3 id="med-modal-title" className="text-lg font-extrabold">
                 {editing ? 'Ubah Data Obat' : 'Tambah Obat Baru'}
               </h3>
-              <button onClick={() => setShowModal(false)} className="p-1">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                aria-label="Tutup modal obat"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-black/5 dark:hover:bg-white/10"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1060,9 +1090,23 @@ export const ReceiptModal: React.FC<{
     localStorage.setItem('apotek_receipt_paper', w);
   };
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
   return createPortal(
     <div
       id="receipt-print-portal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Struk Pembayaran"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
       className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
     >
       <style>{`@media print { @page { size: ${paperWidth}mm auto; margin: 0; } }`}</style>
@@ -1078,6 +1122,8 @@ export const ReceiptModal: React.FC<{
             <img
               src="/logo-512.jpg"
               alt="Logo Apotek Lestari"
+              width={paperWidth === '58' ? 40 : 48}
+              height={paperWidth === '58' ? 40 : 48}
               className={`mx-auto mb-1 object-contain grayscale contrast-125 ${
                 paperWidth === '58' ? 'w-10 h-10' : 'w-12 h-12'
               }`}

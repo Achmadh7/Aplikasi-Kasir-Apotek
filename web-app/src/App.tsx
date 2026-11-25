@@ -252,6 +252,15 @@ const MainLayout: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
     if (!accountMenuOpen) return;
     const handlePointerDown = (e: MouseEvent) => {
       if (!(e.target as HTMLElement).closest('[data-account-menu]')) {
@@ -604,6 +613,8 @@ const MainLayout: React.FC = () => {
             <img
               src="/logo-512.jpg"
               alt="Logo Apotek Lestari"
+              width={32}
+              height={32}
               className="w-8 h-8 rounded-full object-cover shrink-0 bg-white"
             />
             <div className="truncate">
@@ -625,15 +636,17 @@ const MainLayout: React.FC = () => {
 
         {/* Mobile Bun Drawer Backdrop (mounted for smooth fade) */}
         <div
+          aria-hidden="true"
           onClick={() => setMobileMenuOpen(false)}
-          className={`no-print md:hidden fixed inset-0 z-40 bg-black/45 backdrop-blur-xs transition-opacity duration-300 ${
+          className={`no-print md:hidden fixed inset-0 z-40 bg-black/45 backdrop-blur-sm transition-opacity duration-300 ${
             mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
         />
 
         {/* Opsi 2: Floating Rounded Bun Sidebar (Desktop) + Animated Left Bun Drawer (Mobile) */}
         <aside
-          className={`no-print fixed top-3 bottom-3 left-3 z-50 w-72 rounded-[26px] md:sticky md:top-3 md:h-[calc(100dvh-1.5rem)] md:w-64 bg-[#142E27] text-[#E7EFEA] flex flex-col justify-between p-4 shrink-0 border border-[#244C41] shadow-2xl md:shadow-[0_14px_30px_rgba(20,46,39,0.22)] transform transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-y-auto ${
+          aria-label="Navigasi Utama"
+          className={`no-print fixed top-3 bottom-3 left-3 z-50 w-72 rounded-[26px] md:sticky md:top-3 md:h-[calc(100dvh-1.5rem)] md:w-64 bg-[#142E27] text-[#E7EFEA] flex flex-col justify-between p-4 shrink-0 border border-[#244C41] shadow-2xl md:shadow-[0_14px_30px_rgba(20,46,39,0.22)] transform transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-y-auto ${
             mobileMenuOpen
               ? 'translate-x-0 opacity-100 scale-100 pointer-events-auto'
               : '-translate-x-[115%] opacity-0 scale-95 pointer-events-none md:translate-x-0 md:opacity-100 md:scale-100 md:pointer-events-auto'
@@ -646,19 +659,22 @@ const MainLayout: React.FC = () => {
                 <img
                   src="/logo-512.jpg"
                   alt="Logo Apotek Lestari"
+                  width={40}
+                  height={40}
                   className="w-10 h-10 rounded-full object-cover shrink-0 bg-white"
                 />
                 <div>
                   <h1 className="font-extrabold text-base leading-tight text-white">
                     Apotek Lestari
                   </h1>
-                  <p className="text-[11px] text-[#93B5A9]">Web & Cloud Pos</p>
+                  <p className="text-[11px] text-[#93B5A9]">Web &amp; Cloud POS</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="md:hidden p-2 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition"
+                  className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition"
                   aria-label="Tutup Menu"
                 >
                   <X className="w-4 h-4" />
@@ -673,9 +689,11 @@ const MainLayout: React.FC = () => {
                 const active = activeTab === item.id;
                 return (
                   <button
+                    type="button"
                     key={item.id}
                     onClick={() => selectTab(item.id)}
-                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-full text-[13px] whitespace-nowrap transition-all ${active
+                    aria-current={active ? 'page' : undefined}
+                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-full text-[13px] whitespace-nowrap transition-colors ${active
                         ? 'bg-[#15803D] text-white font-semibold shadow-sm'
                         : 'text-[#93B5A9] font-medium hover:bg-white/10 hover:text-white'
                       }`}
