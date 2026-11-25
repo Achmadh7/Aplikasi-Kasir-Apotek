@@ -139,7 +139,7 @@ export const AuthorityScreen: React.FC = () => {
     e.preventDefault();
     if (!pinConfig || cooldownSec > 0) return;
     if (pinInput.length < 4) {
-      notify('Masukkan PIN 4–6 digit', 'error');
+      notify('Masukkan PIN 4 sampai 6 digit', 'error');
       return;
     }
     setVerifying(true);
@@ -197,14 +197,14 @@ export const AuthorityScreen: React.FC = () => {
   if (!isOwner) {
     return (
       <div className="max-w-sm mx-auto mt-6">
-        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-6 shadow-sm text-center space-y-3">
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/15 text-amber-700 dark:text-amber-300 flex items-center justify-center">
-            <Lock className="w-6 h-6" />
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-6 shadow-xs text-center space-y-3">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-[#FEF3C7] text-[#92400E] flex items-center justify-center">
+            <Lock className="w-6 h-6" aria-hidden="true" />
           </div>
-          <h2 className="text-lg font-extrabold text-[#1C1917] dark:text-white">
+          <h2 className="text-lg font-extrabold text-[#1C1917]">
             Khusus Owner
           </h2>
-          <p className="text-xs text-[#78716C] dark:text-[#93B5A9]">
+          <p className="text-xs text-[#57534E]">
             Menu Authority dan daftar email akses terkunci khusus untuk akun Owner.
           </p>
         </div>
@@ -215,7 +215,7 @@ export const AuthorityScreen: React.FC = () => {
   if (loadingPin) {
     return (
       <div className="max-w-sm mx-auto mt-6">
-        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-6 text-center text-xs font-semibold text-[#78716C] dark:text-[#93B5A9]">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-6 text-center text-xs font-semibold text-[#57534E]">
           Memuat kunci Authority...
         </div>
       </div>
@@ -225,11 +225,11 @@ export const AuthorityScreen: React.FC = () => {
   if (pinError) {
     return (
       <div className="max-w-sm mx-auto mt-6">
-        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-6 text-center space-y-3">
-          <p className="text-sm font-bold text-[#1C1917] dark:text-white">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-6 text-center space-y-3">
+          <p className="text-sm font-bold text-[#1C1917]">
             Tidak dapat memuat kunci Authority
           </p>
-          <p className="text-xs text-[#78716C] dark:text-[#93B5A9]">
+          <p className="text-xs text-[#57534E]">
             Periksa koneksi internet lalu coba lagi.
           </p>
           <button
@@ -242,7 +242,7 @@ export const AuthorityScreen: React.FC = () => {
                 .catch(() => setPinError(true))
                 .finally(() => setLoadingPin(false));
             }}
-            className="px-4 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold transition"
+            className="min-h-[44px] px-4 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold transition"
           >
             Coba Lagi
           </button>
@@ -260,30 +260,34 @@ export const AuthorityScreen: React.FC = () => {
       <div className="max-w-sm mx-auto mt-6">
         <form
           onSubmit={isSettingPin ? handleSetupPin : handleUnlock}
-          className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-6 shadow-sm text-center space-y-4"
+          className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-6 shadow-xs text-center space-y-4"
         >
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-[#DCFCE7] dark:bg-[#15803D]/25 text-[#15803D] dark:text-[#86EFAC] flex items-center justify-center">
-            <Lock className="w-6 h-6" />
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-[#DCFCE7] text-[#166534] flex items-center justify-center">
+            <Lock className="w-6 h-6" aria-hidden="true" />
           </div>
           <div className="space-y-1">
-            <h2 className="text-lg font-extrabold text-[#1C1917] dark:text-white">
+            <h2 className="text-lg font-extrabold text-[#1C1917]">
               {isSetup
                 ? 'Buat PIN Authority'
                 : isResetting
                   ? 'Reset PIN (Owner)'
                   : 'Authority Terkunci'}
             </h2>
-            <p className="text-xs text-[#78716C] dark:text-[#93B5A9]">
+            <p className="text-xs text-[#57534E]">
               {isSetup
-                ? 'Atur PIN 4–6 digit untuk mengunci akses menu Authority.'
+                ? 'Atur PIN 4 sampai 6 digit untuk mengunci akses menu Authority.'
                 : isResetting
-                  ? 'Masukkan PIN baru 4–6 digit untuk mengganti PIN lama.'
+                  ? 'Masukkan PIN baru 4 sampai 6 digit untuk mengganti PIN lama.'
                   : 'Masukkan PIN Authority untuk melihat dan mengubah daftar email.'}
             </p>
           </div>
 
           <div className="space-y-2.5 text-left">
+            <label htmlFor="auth-pin-input" className="sr-only">
+              {isSettingPin ? 'PIN baru 4 sampai 6 digit' : 'PIN Authority'}
+            </label>
             <input
+              id="auth-pin-input"
               type="password"
               inputMode="numeric"
               autoComplete="off"
@@ -291,31 +295,37 @@ export const AuthorityScreen: React.FC = () => {
               maxLength={6}
               value={pinInput}
               onChange={(e) => setPinInput(cleanDigits(e.target.value))}
-              placeholder={isSettingPin ? 'PIN baru (4–6 digit)' : 'Masukkan PIN'}
+              placeholder={isSettingPin ? 'PIN baru (4-6 digit)' : 'Masukkan PIN'}
               disabled={verifying || blocked}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#0F241E] text-center text-lg font-bold tracking-[0.35em] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D] disabled:opacity-60"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#B7D6C3] bg-[#FAF8F4] text-center text-lg font-bold tracking-[0.35em] text-[#1C1917] placeholder:text-[#57534E] placeholder:tracking-normal focus:ring-2 focus:ring-[#15803D] disabled:opacity-60"
             />
             {isSettingPin && (
-              <input
-                type="password"
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={6}
-                value={confirmPin}
-                onChange={(e) => setConfirmPin(cleanDigits(e.target.value))}
-                placeholder="Ulangi PIN"
-                disabled={verifying}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#0F241E] text-center text-lg font-bold tracking-[0.35em] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D] disabled:opacity-60"
-              />
+              <>
+                <label htmlFor="auth-pin-confirm" className="sr-only">
+                  Ulangi PIN baru
+                </label>
+                <input
+                  id="auth-pin-confirm"
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={6}
+                  value={confirmPin}
+                  onChange={(e) => setConfirmPin(cleanDigits(e.target.value))}
+                  placeholder="Ulangi PIN"
+                  disabled={verifying}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#B7D6C3] bg-[#FAF8F4] text-center text-lg font-bold tracking-[0.35em] text-[#1C1917] placeholder:text-[#57534E] placeholder:tracking-normal focus:ring-2 focus:ring-[#15803D] disabled:opacity-60"
+                />
+              </>
             )}
           </div>
 
           <button
             type="submit"
             disabled={verifying || blocked}
-            className="w-full px-4 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60 transition"
+            className="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60 transition"
           >
-            <KeyRound className="w-4 h-4" />
+            <KeyRound className="w-4 h-4" aria-hidden="true" />
             {blocked
               ? `Tunggu ${cooldownSec} detik...`
               : verifying
@@ -335,7 +345,7 @@ export const AuthorityScreen: React.FC = () => {
                 setPinInput('');
                 setConfirmPin('');
               }}
-              className="text-xs font-semibold text-[#15803D] dark:text-[#86EFAC] hover:underline"
+              className="min-h-[44px] px-3 text-xs font-semibold text-[#166534] hover:underline"
             >
               {isResetting ? 'Batal' : 'Lupa PIN? Reset sebagai Owner'}
             </button>
@@ -387,17 +397,17 @@ export const AuthorityScreen: React.FC = () => {
 
   return (
     <div className="space-y-5 max-w-2xl">
-      <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#DCFCE7] dark:bg-[#15803D]/25 text-[#15803D] dark:text-[#86EFAC]">
-              <ShieldCheck className="w-5 h-5" />
+      <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 shadow-xs">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2.5 rounded-xl bg-[#DCFCE7] text-[#166534] shrink-0">
+              <ShieldCheck className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
-              <h2 className="text-lg font-extrabold text-[#1C1917] dark:text-white">
+              <h2 className="text-lg font-extrabold text-[#1C1917]">
                 Authority Login
               </h2>
-              <p className="text-xs text-[#78716C] dark:text-[#93B5A9]">
+              <p className="text-xs text-[#57534E]">
                 Hanya email Google di kolom Authority di bawah ini yang bisa masuk. Akun lain otomatis terpental keluar.
               </p>
             </div>
@@ -410,9 +420,9 @@ export const AuthorityScreen: React.FC = () => {
                 setNewPin('');
                 setConfirmNewPin('');
               }}
-              className="px-3 py-1.5 rounded-xl border border-[#B7D6C3] dark:border-[#244C41] text-xs font-bold text-[#1C1917] dark:text-[#86EFAC] hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-1.5 transition"
+              className="min-h-[44px] px-3 py-1.5 rounded-xl bg-[#DCEBE2] hover:bg-[#D0E3D8] border border-[#B7D6C3] text-xs font-bold text-[#1C1917] flex items-center gap-1.5 transition"
             >
-              <KeyRound className="w-3.5 h-3.5" />
+              <KeyRound className="w-3.5 h-3.5" aria-hidden="true" />
               Ubah PIN
             </button>
             <button
@@ -421,9 +431,9 @@ export const AuthorityScreen: React.FC = () => {
                 setUnlocked(false);
                 setShowChangePin(false);
               }}
-              className="px-3 py-1.5 rounded-xl border border-[#B7D6C3] dark:border-[#244C41] text-xs font-bold text-[#1C1917] dark:text-[#86EFAC] hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-1.5 transition"
+              className="min-h-[44px] px-3 py-1.5 rounded-xl bg-[#DCEBE2] hover:bg-[#D0E3D8] border border-[#B7D6C3] text-xs font-bold text-[#1C1917] flex items-center gap-1.5 transition"
             >
-              <Lock className="w-3.5 h-3.5" />
+              <Lock className="w-3.5 h-3.5" aria-hidden="true" />
               Kunci
             </button>
           </div>
@@ -432,19 +442,27 @@ export const AuthorityScreen: React.FC = () => {
         {showChangePin && (
           <form
             onSubmit={handleChangePin}
-            className="mt-3 p-3 rounded-xl bg-white/70 dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41] flex flex-col sm:flex-row gap-2"
+            className="mt-3 p-3 rounded-xl bg-[#DCEBE2] border border-[#B7D6C3] flex flex-col sm:flex-row gap-2"
           >
+            <label htmlFor="auth-new-pin" className="sr-only">
+              PIN baru (4 sampai 6 digit)
+            </label>
             <input
+              id="auth-new-pin"
               type="password"
               inputMode="numeric"
               autoComplete="off"
               maxLength={6}
               value={newPin}
               onChange={(e) => setNewPin(cleanDigits(e.target.value))}
-              placeholder="PIN baru (4–6 digit)"
-              className="flex-1 px-3 py-2 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+              placeholder="PIN baru (4-6 digit)"
+              className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-[#B7D6C3] bg-[#FAF8F4] text-sm text-[#1C1917] placeholder:text-[#57534E] focus:ring-2 focus:ring-[#15803D]"
             />
+            <label htmlFor="auth-confirm-new-pin" className="sr-only">
+              Ulangi PIN baru
+            </label>
             <input
+              id="auth-confirm-new-pin"
               type="password"
               inputMode="numeric"
               autoComplete="off"
@@ -452,12 +470,12 @@ export const AuthorityScreen: React.FC = () => {
               value={confirmNewPin}
               onChange={(e) => setConfirmNewPin(cleanDigits(e.target.value))}
               placeholder="Ulangi PIN baru"
-              className="flex-1 px-3 py-2 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+              className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-[#B7D6C3] bg-[#FAF8F4] text-sm text-[#1C1917] placeholder:text-[#57534E] focus:ring-2 focus:ring-[#15803D]"
             />
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold disabled:opacity-60 transition shrink-0"
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold disabled:opacity-60 transition shrink-0"
             >
               Simpan PIN
             </button>
@@ -465,19 +483,27 @@ export const AuthorityScreen: React.FC = () => {
         )}
 
         <form onSubmit={handleAdd} className="mt-4 flex flex-col sm:flex-row gap-2">
+          <label htmlFor="auth-new-email" className="sr-only">
+            Email Google baru
+          </label>
           <input
+            id="auth-new-email"
             type="email"
             required
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
             placeholder="Tambah email Google (contoh: kasir@gmail.com)"
-            className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+            className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl border border-[#B7D6C3] bg-[#FAF8F4] text-sm text-[#1C1917] placeholder:text-[#57534E] focus:ring-2 focus:ring-[#15803D]"
           />
+          <label htmlFor="auth-new-role" className="sr-only">
+            Role akun baru
+          </label>
           <select
+            id="auth-new-role"
             value={newRole}
             onChange={(e) => setNewRole(e.target.value as AuthorityRole)}
             disabled={saving}
-            className="px-3 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+            className="min-h-[44px] px-3 py-2.5 rounded-xl border border-[#B7D6C3] bg-[#FAF8F4] text-sm font-semibold text-[#1C1917] focus:ring-2 focus:ring-[#15803D]"
           >
             <option value="kasir">Kasir</option>
             <option value="owner">Owner</option>
@@ -485,25 +511,25 @@ export const AuthorityScreen: React.FC = () => {
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-sm font-bold flex items-center justify-center gap-1.5 disabled:opacity-60 transition"
+            className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-sm font-bold flex items-center justify-center gap-1.5 disabled:opacity-60 transition"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4" aria-hidden="true" />
             Tambah
           </button>
         </form>
       </div>
 
-      <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#101F38] border border-[#B7D6C3] dark:border-white/10 overflow-hidden shadow-sm">
-        <div className="px-5 py-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-          <span className="text-xs font-extrabold uppercase tracking-wider text-[#1C1917] dark:text-[#86EFAC]">
+      <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] overflow-hidden shadow-xs">
+        <div className="px-5 py-3 border-b border-[#B7D6C3] bg-[#DCEBE2] flex items-center justify-between">
+          <span className="text-xs font-extrabold uppercase tracking-wider text-[#1C1917]">
             Kolom Authority (Email Diizinkan)
           </span>
-          <span className="text-xs font-bold text-[#1C1917] dark:text-white">
+          <span className="text-xs font-bold text-[#1C1917]">
             {authorityEmails.length} akun
           </span>
         </div>
 
-        <div className="divide-y divide-slate-200 dark:divide-white/10">
+        <div className="divide-y divide-[#B7D6C3]">
           {authorityEmails.map((email) => {
             const isCurrent = email === currentEmail;
             const isEmailOwner = ownerEmails.includes(email);
@@ -513,41 +539,44 @@ export const AuthorityScreen: React.FC = () => {
             return (
               <div
                 key={email}
-                className="px-5 py-3.5 flex items-center justify-between gap-3"
+                className="px-5 py-3.5 flex flex-wrap items-center justify-between gap-3"
               >
                 <div className="min-w-0 flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-[#1C1917] dark:text-white truncate">
+                  <span className="text-sm font-semibold text-[#1C1917] truncate">
                     {email}
                   </span>
                   <span
                     className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
                       isEmailOwner
-                        ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300'
-                        : 'bg-slate-500/15 text-slate-700 dark:text-slate-300'
+                        ? 'bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]'
+                        : 'bg-[#DCEBE2] text-[#1C1917] border border-[#B7D6C3]'
                     }`}
                   >
                     {isEmailOwner ? 'Owner' : 'Kasir'}
                   </span>
                   {isCurrent && (
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-[#1C1917] dark:text-emerald-300 text-[10px] font-bold shrink-0">
+                    <span className="px-2 py-0.5 rounded-full bg-[#DCFCE7] text-[#166534] text-[10px] font-bold shrink-0">
                       Sedang Login
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <select
+                    aria-label={`Ubah role untuk ${email}`}
                     value={isEmailOwner ? 'owner' : 'kasir'}
                     onChange={(e) => handleRoleChange(email, e.target.value as AuthorityRole)}
                     disabled={saving || isLastOwner}
                     title={isLastOwner ? 'Minimal harus tersisa 1 Owner' : 'Ubah role akun'}
-                    className="px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-xs font-bold text-slate-900 dark:text-white disabled:opacity-45"
+                    className="min-h-[44px] px-2.5 py-1.5 rounded-xl border border-[#B7D6C3] bg-[#FAF8F4] text-xs font-bold text-[#1C1917] disabled:opacity-45"
                   >
                     <option value="owner">Owner</option>
                     <option value="kasir">Kasir</option>
                   </select>
                   <button
+                    type="button"
                     onClick={() => handleRemove(email)}
                     disabled={disableDelete}
+                    aria-label={`Hapus ${email}`}
                     title={
                       authorityEmails.length <= 1
                         ? 'Minimal harus tersisa 1 email'
@@ -555,9 +584,9 @@ export const AuthorityScreen: React.FC = () => {
                           ? 'Minimal harus tersisa 1 Owner'
                           : 'Hapus dari Authority'
                     }
-                    className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 disabled:opacity-35 transition shrink-0"
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#BA1A1A] hover:bg-red-500/10 disabled:opacity-35 transition shrink-0"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </div>
               </div>

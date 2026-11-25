@@ -75,28 +75,28 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       {children}
 
       {/* Toast Stack */}
-      <div className="no-print fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-[calc(100vw-2rem)] pointer-events-none">
+      <div className="no-print fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-50 flex flex-col gap-2 max-w-sm w-[calc(100vw-2rem)] pointer-events-none">
         {toasts.map((t) => {
           const styles =
             t.type === 'error'
-              ? 'bg-red-600 text-white'
+              ? 'bg-[#BA1A1A] text-white'
               : t.type === 'success'
-              ? 'bg-emerald-600 text-white'
-              : 'bg-slate-900 text-white';
+              ? 'bg-[#15803D] text-white'
+              : 'bg-[#142E27] text-white';
           const Icon =
             t.type === 'error' ? XCircle : t.type === 'success' ? CheckCircle2 : Info;
           return (
             <div
               key={t.id}
-              className={`${styles} pointer-events-auto rounded-xl shadow-lg px-4 py-3 flex items-start gap-2.5 text-sm animate-in fade-in slide-in-from-bottom-2`}
+              className={`${styles} pointer-events-auto rounded-xl shadow-lg px-4 py-2.5 flex items-center gap-2.5 text-sm`}
             >
-              <Icon className="w-4 h-4 shrink-0 mt-0.5" />
+              <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span className="flex-1 leading-snug">{t.message}</span>
               <button
                 type="button"
                 onClick={() => dismissToast(t.id)}
-                className="opacity-70 hover:opacity-100"
-                aria-label="Tutup"
+                className="min-w-[44px] min-h-[44px] -my-2 -mr-2 flex items-center justify-center rounded-lg opacity-85 hover:opacity-100"
+                aria-label="Tutup notifikasi"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -116,29 +116,29 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }}
           className="no-print fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
         >
-          <div className="bg-[#F6F4EF] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4">
+          <div className="bg-[#F6F4EF] border border-[#B7D6C3] rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4">
             <div className="flex items-start gap-3">
               <div
                 className={`p-2 rounded-xl shrink-0 ${
                   confirmState.danger
-                    ? 'bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400'
-                    : 'bg-emerald-100 text-[#15803D] dark:bg-[#1E3A30] dark:text-[#6EE7B7]'
+                    ? 'bg-red-100 text-[#BA1A1A]'
+                    : 'bg-[#DCFCE7] text-[#166534]'
                 }`}
               >
-                <AlertTriangle className="w-5 h-5" />
+                <AlertTriangle className="w-5 h-5" aria-hidden="true" />
               </div>
               <div>
-                <h3 id="confirm-modal-title" className="font-bold text-[#1C1917] dark:text-white text-base">
+                <h3 id="confirm-modal-title" className="font-bold text-[#1C1917] text-base">
                   {confirmState.title}
                 </h3>
-                <p className="text-sm text-[#57534E] dark:text-[#A7C4B8] mt-1">{confirmState.message}</p>
+                <p className="text-sm text-[#57534E] mt-1">{confirmState.message}</p>
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setConfirmState(null)}
-                className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-medium text-[#57534E] dark:text-[#A7C4B8] hover:bg-black/5 dark:hover:bg-white/10"
+                className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-medium text-[#57534E] hover:bg-black/5"
               >
                 Batal
               </button>
@@ -151,7 +151,7 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 }}
                 className={`min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold text-white ${
                   confirmState.danger
-                    ? 'bg-[#DC2626] hover:bg-[#B91C1C]'
+                    ? 'bg-[#BA1A1A] hover:bg-[#991B1B]'
                     : 'bg-[#15803D] hover:bg-[#166534]'
                 }`}
               >

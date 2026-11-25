@@ -57,17 +57,19 @@ import {
 } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { id: 'beranda', label: 'Beranda', icon: Home },
-  { id: 'kasir', label: 'Kasir', icon: ShoppingCart },
-  { id: 'stok', label: 'Stok Obat', icon: Pill },
-  { id: 'keuangan', label: 'Keuangan', icon: Wallet },
-  { id: 'laba', label: 'Laporan Laba', icon: TrendingUp },
-  { id: 'pbf', label: 'Faktur PBF', icon: Truck },
-  { id: 'pengingat', label: 'Pengingat', icon: Bell },
-  { id: 'riwayat', label: 'Riwayat', icon: History },
-  { id: 'backup', label: 'Backup & Tutup Buku', icon: Database },
-  { id: 'authority', label: 'Authority', icon: ShieldCheck },
+  { id: 'beranda', label: 'Beranda', icon: Home, group: 'Harian' },
+  { id: 'kasir', label: 'Kasir', icon: ShoppingCart, group: 'Harian' },
+  { id: 'stok', label: 'Stok Obat', icon: Pill, group: 'Stok & Keuangan' },
+  { id: 'keuangan', label: 'Keuangan', icon: Wallet, group: 'Stok & Keuangan' },
+  { id: 'laba', label: 'Laporan Laba', icon: TrendingUp, group: 'Stok & Keuangan' },
+  { id: 'pbf', label: 'Faktur PBF', icon: Truck, group: 'Stok & Keuangan' },
+  { id: 'pengingat', label: 'Pengingat', icon: Bell, group: 'Stok & Keuangan' },
+  { id: 'riwayat', label: 'Riwayat', icon: History, group: 'Stok & Keuangan' },
+  { id: 'backup', label: 'Backup & Tutup Buku', icon: Database, group: 'Pengaturan' },
+  { id: 'authority', label: 'Authority', icon: ShieldCheck, group: 'Pengaturan' },
 ];
+
+const NAV_GROUPS = ['Harian', 'Stok & Keuangan', 'Pengaturan'] as const;
 
 const MainLayout: React.FC = () => {
   const { user, authLoading, authError: storeAuthError, clearAuthError, currentRole, syncStatus, syncMessage, autoSync, setAutoSync, medicines, purchases } = useStore();
@@ -326,15 +328,15 @@ const MainLayout: React.FC = () => {
         onClick={() => setAccountMenuOpen((prev) => !prev)}
         aria-expanded={accountMenuOpen}
         aria-haspopup="menu"
-        className={`flex items-center gap-2 rounded-full border transition cursor-pointer ${
+        className={`min-h-[44px] flex items-center gap-2 rounded-full border transition cursor-pointer ${
           isMobile
             ? 'bg-white/10 hover:bg-white/20 border-white/15 text-white pl-2.5 pr-2 py-1'
-            : 'bg-[#E8F2EC] dark:bg-[#142E27] hover:bg-[#DCEBE2] dark:hover:bg-[#1B3B32] border-[#B7D6C3] dark:border-[#244C41] text-[#1C1917] dark:text-white pl-3 pr-2 py-1.5 shadow-xs'
+            : 'bg-[#E8F2EC] hover:bg-[#DCEBE2] border-[#B7D6C3] text-[#1C1917] pl-3 pr-2 py-1.5 shadow-xs'
         }`}
       >
         <span className={`w-2 h-2 rounded-full shrink-0 ${statusDotClass}`} />
         <span className="text-xs font-semibold whitespace-nowrap">{statusLabel}</span>
-        <span className="w-6 h-6 rounded-full bg-[#142E27] dark:bg-[#15803D] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+        <span className="w-6 h-6 rounded-full bg-[#142E27] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
           {userInitials}
         </span>
         <ChevronDown
@@ -345,21 +347,21 @@ const MainLayout: React.FC = () => {
       {accountMenuOpen && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] shadow-xl p-3 z-50 text-left text-[#1C1917] dark:text-white"
+          className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] shadow-xl p-3 z-50 text-left text-[#1C1917]"
         >
-          <div className="px-2 py-1.5 border-b border-[#B7D6C3] dark:border-[#244C41]">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#78716C] dark:text-[#93B5A9]">
-              Akun Terhubung
+          <div className="px-2 py-1.5 border-b border-[#B7D6C3]">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#57534E]">
+              Akun Terhubung ({currentRole === 'owner' ? 'Owner' : 'Kasir'})
             </p>
             <p className="text-xs font-semibold truncate mt-0.5" title={user?.email || ''}>
               {user?.email || 'Akun Google'}
             </p>
           </div>
 
-          <div className="py-2.5 px-2 flex items-center justify-between gap-3 border-b border-[#B7D6C3] dark:border-[#244C41]">
+          <div className="py-2.5 px-2 flex items-center justify-between gap-3 border-b border-[#B7D6C3]">
             <div className="min-w-0">
               <p className="text-xs font-semibold">Auto-Sync</p>
-              <p className="text-[11px] text-[#78716C] dark:text-[#93B5A9] truncate">
+              <p className="text-[11px] text-[#57534E] truncate">
                 {autoSync ? 'Sinkron otomatis aktif' : 'Sinkronisasi manual'}
               </p>
             </div>
@@ -367,14 +369,15 @@ const MainLayout: React.FC = () => {
               type="button"
               role="switch"
               aria-checked={autoSync}
+              aria-label="Toggle Auto-Sync"
               onClick={() => setAutoSync(!autoSync)}
-              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                autoSync ? 'bg-[#15803D]' : 'bg-[#D6D3CD] dark:bg-white/20'
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+                autoSync ? 'bg-[#15803D]' : 'bg-[#D6D3CD]'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                  autoSync ? 'translate-x-4' : 'translate-x-0.5'
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  autoSync ? 'translate-x-5' : 'translate-x-0.5'
                 }`}
               />
             </button>
@@ -386,7 +389,7 @@ const MainLayout: React.FC = () => {
               setAccountMenuOpen(false);
               void logoutFirebase();
             }}
-            className="mt-2 w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-semibold text-[#DC2626] hover:bg-red-50 dark:hover:bg-red-500/15 transition cursor-pointer"
+            className="mt-2 w-full min-h-[44px] flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-semibold text-[#DC2626] hover:bg-red-50 transition cursor-pointer"
           >
             <LogOut className="w-4 h-4 shrink-0" />
             <span>Logout</span>
@@ -400,16 +403,16 @@ const MainLayout: React.FC = () => {
     authPill?.kind === 'login'
       ? {
         wrap: 'bg-[#064e3b] border-emerald-400/50 text-emerald-50',
-        dot: 'bg-emerald-400 shadow-[0_0_8px_#34d399]',
+        dot: 'bg-emerald-400',
       }
       : authPill?.kind === 'kick'
         ? {
           wrap: 'bg-[#7f1d1d] border-red-400/55 text-red-100',
-          dot: 'bg-red-400 shadow-[0_0_8px_#f87171]',
+          dot: 'bg-red-400',
         }
         : {
           wrap: 'bg-slate-800 border-amber-400/45 text-amber-100',
-          dot: 'bg-amber-400 shadow-[0_0_8px_#fbbf24]',
+          dot: 'bg-amber-400',
         };
 
   const authPillEl = authPill ? (
@@ -441,11 +444,11 @@ const MainLayout: React.FC = () => {
       : activeSyncPill?.kind === 'error'
         ? {
           wrap: 'bg-[#7f1d1d] border-red-400/55 text-red-100',
-          dot: 'bg-red-400 shadow-[0_0_8px_#f87171]',
+          dot: 'bg-red-400',
         }
         : {
           wrap: 'bg-[#064e3b] border-emerald-400/50 text-emerald-50',
-          dot: 'bg-emerald-400 shadow-[0_0_8px_#34d399]',
+          dot: 'bg-emerald-400',
         };
 
   const syncPillEl = activeSyncPill ? (
@@ -491,18 +494,9 @@ const MainLayout: React.FC = () => {
     return (
       <>
         {authPillEl}
-        <main className="min-h-screen flex flex-col md:grid md:grid-cols-2 bg-[#F7F5F0]">
+        <main className="min-h-screen flex flex-col md:grid md:grid-cols-2 bg-[#F6F4EF]">
           {/* Left Forest Showcase Panel */}
           <div className="relative overflow-hidden bg-[#142E27] text-white px-5 pt-7 pb-8 rounded-b-3xl md:rounded-none md:px-11 md:py-10 flex flex-col justify-start md:justify-center gap-3.5 md:gap-[26px]">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0"
-              style={{
-                backgroundImage: 'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)',
-                backgroundSize: '18px 18px',
-              }}
-            />
-
             <div className="relative z-10 flex items-center gap-3.5">
               <div className="w-16 h-16 rounded-2xl bg-white shadow-[0_10px_24px_rgba(0,0,0,0.2)] flex items-center justify-center shrink-0 overflow-hidden">
                 <img
@@ -543,12 +537,12 @@ const MainLayout: React.FC = () => {
           </div>
 
           {/* Right Warm Paper Login Panel */}
-          <div className="flex-1 bg-[#F7F5F0] flex items-center justify-center px-4 py-6 md:p-10">
+          <div className="flex-1 bg-[#F6F4EF] flex items-center justify-center px-4 py-6 md:p-10">
             <div className="w-full max-w-[390px] bg-[#E8F2EC] border border-[#B7D6C3] rounded-3xl p-6 md:p-8 shadow-[0_16px_40px_rgba(20,46,39,0.06)]">
-              <h3 className="text-[22px] font-extrabold tracking-[-0.02em] text-[#111827] mb-1.5">
+              <h3 className="text-[22px] font-extrabold tracking-[-0.02em] text-[#1C1917] mb-1.5">
                 Masuk ke Aplikasi
               </h3>
-              <p className="text-[13px] leading-[1.55] text-[#6B7280] mb-5">
+              <p className="text-[13px] leading-[1.55] text-[#57534E] mb-5">
                 Gunakan akun Google terdaftar untuk membuka kasir, stok obat, dan laporan.
               </p>
 
@@ -556,6 +550,7 @@ const MainLayout: React.FC = () => {
                 <div className="mb-4 rounded-xl bg-[#FEF2F2] border border-[#FECACA] px-3.5 py-3 flex items-start gap-2.5 text-[#991B1B] text-left">
                   <svg
                     className="w-4 h-4 shrink-0 mt-0.5 text-[#DC2626]"
+                    aria-hidden="true"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -571,7 +566,7 @@ const MainLayout: React.FC = () => {
                     <span className="text-[12.5px] font-bold leading-tight text-[#991B1B]">
                       Login gagal
                     </span>
-                    <span className="text-xs leading-[1.45] text-[#B91C1C] break-words">
+                    <span className="text-xs leading-[1.45] text-[#991B1B] break-words">
                       {storeAuthError || authError}
                     </span>
                   </div>
@@ -579,17 +574,18 @@ const MainLayout: React.FC = () => {
               )}
 
               <button
+                type="button"
                 onClick={handleGoogleLogin}
                 disabled={loggingIn}
-                className="w-full py-3.5 px-4 rounded-[14px] bg-[#142E27] hover:bg-[#1D4036] text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-[0_8px_20px_rgba(20,46,39,0.22)] transition disabled:opacity-60 cursor-pointer"
+                className="w-full min-h-[44px] py-3.5 px-4 rounded-[14px] bg-[#142E27] hover:bg-[#1D4036] text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-[0_8px_20px_rgba(20,46,39,0.22)] transition disabled:opacity-60 cursor-pointer"
               >
-                <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <svg className="w-[18px] h-[18px] shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z" />
                 </svg>
                 {loggingIn ? 'Membuka Google...' : 'Login dengan Google'}
               </button>
 
-              <p className="mt-[18px] text-[11.5px] text-[#6B7280] text-center leading-[1.5]">
+              <p className="mt-[18px] text-[11.5px] text-[#57534E] text-center leading-[1.5]">
                 Akses dibatasi untuk staf &amp; pemilik Apotek Lestari.
               </p>
             </div>
@@ -613,8 +609,9 @@ const MainLayout: React.FC = () => {
         <header className="no-print md:hidden sticky top-0 z-30 bg-[#142E27] text-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center justify-between border-b border-[#244C41]">
           <div className="flex items-center gap-2.5 min-w-0">
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition text-xs font-bold shrink-0"
+              className="min-h-[44px] flex items-center gap-1.5 px-3 py-2 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition text-xs font-bold shrink-0"
               aria-label="Buka Menu"
             >
               <Menu className="w-4 h-4" />
@@ -677,7 +674,9 @@ const MainLayout: React.FC = () => {
                   <h1 className="font-extrabold text-base leading-tight text-white">
                     Apotek Lestari
                   </h1>
-                  <p className="text-[11px] text-[#93B5A9]">Web &amp; Cloud POS</p>
+                  <p className="text-[11px] text-[#93B5A9]">
+                    Web POS &bull; {currentRole === 'owner' ? 'Owner' : 'Kasir'}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -692,32 +691,44 @@ const MainLayout: React.FC = () => {
               </div>
             </div>
 
-            {/* Navigation Menu */}
-            <nav className="flex flex-col gap-1">
-              {visibleNavItems.map((item) => {
-                const Icon = item.icon;
-                const active = activeTab === item.id;
+            {/* Navigation Menu (Grouped) */}
+            <nav className="flex flex-col gap-3">
+              {NAV_GROUPS.map((group) => {
+                const items = visibleNavItems.filter((item) => item.group === group);
+                if (items.length === 0) return null;
                 return (
-                  <button
-                    type="button"
-                    key={item.id}
-                    onClick={() => selectTab(item.id)}
-                    aria-current={active ? 'page' : undefined}
-                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-full text-[13px] whitespace-nowrap transition-colors ${active
-                        ? 'bg-[#15803D] text-white font-semibold shadow-sm'
-                        : 'text-[#93B5A9] font-medium hover:bg-white/10 hover:text-white'
-                      }`}
-                  >
-                    <span className="flex items-center gap-2.5 min-w-0">
-                      <Icon className="w-4 h-4 shrink-0" />
-                      <span className="truncate">{item.label}</span>
-                    </span>
-                    {item.id === 'pengingat' && alertCount > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-[#DC2626] text-white text-[10px] font-bold">
-                        {alertCount}
-                      </span>
-                    )}
-                  </button>
+                  <div key={group} className="flex flex-col gap-1">
+                    <p className="px-3.5 text-[10px] font-bold uppercase tracking-wider text-[#93B5A9]">
+                      {group}
+                    </p>
+                    {items.map((item) => {
+                      const Icon = item.icon;
+                      const active = activeTab === item.id;
+                      return (
+                        <button
+                          type="button"
+                          key={item.id}
+                          onClick={() => selectTab(item.id)}
+                          aria-current={active ? 'page' : undefined}
+                          className={`min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-full text-[13px] whitespace-nowrap transition-colors ${
+                            active
+                              ? 'bg-[#15803D] text-white font-semibold shadow-sm'
+                              : 'text-[#93B5A9] font-medium hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2.5 min-w-0">
+                            <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                            <span className="truncate">{item.label}</span>
+                          </span>
+                          {item.id === 'pengingat' && alertCount > 0 && (
+                            <span className="px-2 py-0.5 rounded-full bg-[#BA1A1A] text-white text-[10px] font-bold">
+                              {alertCount}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 );
               })}
             </nav>

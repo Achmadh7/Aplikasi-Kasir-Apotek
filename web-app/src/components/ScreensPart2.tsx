@@ -37,7 +37,7 @@ import {
 
 const ACTIVE_PILL_CLS = 'bg-[#15803D] text-white border-[#15803D]';
 const INACTIVE_PILL_CLS =
-  'bg-[#DCEBE2] dark:bg-[#0F241E] text-[#78716C] dark:text-[#93B5A9] border-[#B7D6C3] dark:border-[#244C41] hover:border-[#15803D]/50 hover:text-[#1C1917] dark:hover:text-white';
+  'bg-[#DCEBE2] text-[#1C1917] border-[#B7D6C3] hover:border-[#15803D] hover:bg-[#D0E3D8]';
 
 // Helper for previous months list in Tutup Buku
 function getPastMonthsList(count = 12): string[] {
@@ -179,7 +179,7 @@ export const KeuanganScreen: React.FC = () => {
               key={k}
               type="button"
               onClick={() => setPeriod(k)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
+              className={`min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
                 isActive ? ACTIVE_PILL_CLS : INACTIVE_PILL_CLS
               }`}
             >
@@ -191,52 +191,52 @@ export const KeuanganScreen: React.FC = () => {
 
       {/* 3-KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 shadow-xs">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-4 shadow-xs">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-[#1C1917] dark:text-white">
+            <span className="text-xs font-semibold text-[#1C1917]">
               Uang Masuk
             </span>
-            <span className="w-7 h-7 rounded-lg bg-[#15803D]/10 text-[#15803D] dark:text-[#86EFAC] flex items-center justify-center">
-              <ArrowDownLeft className="w-4 h-4" />
+            <span className="w-7 h-7 rounded-lg bg-[#DCFCE7] text-[#166534] flex items-center justify-center">
+              <ArrowDownLeft className="w-4 h-4" aria-hidden="true" />
             </span>
           </div>
-          <p className="mt-2 text-xl sm:text-2xl font-extrabold tabular-nums text-[#15803D] dark:text-[#7EDC9A]">
+          <p className="mt-2 text-xl sm:text-2xl font-extrabold tabular-nums text-[#166534]">
             + <AnimatedNumber value={totals.totalIn} format={formatIDR} />
           </p>
-          <p className="mt-1 text-xs text-[#1C1917] dark:text-white">
+          <p className="mt-1 text-xs text-[#57534E]">
             {totals.inCount} transaksi masuk
           </p>
         </div>
 
-        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 shadow-xs">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-4 shadow-xs">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-[#1C1917] dark:text-white">
+            <span className="text-xs font-semibold text-[#1C1917]">
               Uang Keluar
             </span>
-            <span className="w-7 h-7 rounded-lg bg-[#BA1A1A]/10 text-[#BA1A1A] flex items-center justify-center">
-              <ArrowUpRight className="w-4 h-4" />
+            <span className="w-7 h-7 rounded-lg bg-[#FEE2E2] text-[#BA1A1A] flex items-center justify-center">
+              <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
             </span>
           </div>
           <p className="mt-2 text-xl sm:text-2xl font-extrabold tabular-nums text-[#BA1A1A]">
             - <AnimatedNumber value={totals.totalOut} format={formatIDR} />
           </p>
-          <p className="mt-1 text-xs text-[#1C1917] dark:text-white">
+          <p className="mt-1 text-xs text-[#57534E]">
             {totals.outCount} transaksi keluar
           </p>
         </div>
 
-        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 shadow-xs">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-4 shadow-xs">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-[#1C1917] dark:text-white">
+            <span className="text-xs font-semibold text-[#1C1917]">
               Arus Kas Bersih
             </span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#DCEBE2] dark:bg-[#0F241E] text-[#1C1917] dark:text-white border border-[#B7D6C3] dark:border-[#244C41]">
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#DCEBE2] text-[#1C1917] border border-[#B7D6C3]">
               {periodLabel}
             </span>
           </div>
           <p
             className={`mt-2 text-xl sm:text-2xl font-extrabold tabular-nums ${
-              totals.netFlow >= 0 ? 'text-[#15803D] dark:text-[#7EDC9A]' : 'text-[#BA1A1A]'
+              totals.netFlow >= 0 ? 'text-[#166534]' : 'text-[#BA1A1A]'
             }`}
           >
             {totals.netFlow >= 0 ? '+' : '-'}{' '}
@@ -245,7 +245,7 @@ export const KeuanganScreen: React.FC = () => {
               format={formatIDR}
             />
           </p>
-          <p className="mt-1 text-xs text-[#1C1917] dark:text-white">Selisih masuk &amp; keluar</p>
+          <p className="mt-1 text-xs text-[#57534E]">Selisih masuk &amp; keluar</p>
         </div>
       </div>
 
@@ -254,10 +254,10 @@ export const KeuanganScreen: React.FC = () => {
         <div className="lg:col-span-4">
           <form
             onSubmit={handleAdd}
-            className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-5 space-y-3.5 text-sm shadow-xs"
+            className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-3.5 text-sm shadow-xs"
           >
-            <h3 className="font-extrabold text-base">Catat Kas Manual</h3>
-            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-[#DCEBE2] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41]">
+            <h3 className="font-extrabold text-base text-[#1C1917]">Catat Kas Manual</h3>
+            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-[#DCEBE2] border border-[#B7D6C3]">
               <button
                 type="button"
                 onClick={() => {
@@ -265,10 +265,10 @@ export const KeuanganScreen: React.FC = () => {
                   setCategory('Tambah Modal');
                   setCustomCategory('');
                 }}
-                className={`py-2 rounded-lg font-bold text-xs transition ${
+                className={`min-h-[44px] py-2 rounded-lg font-bold text-xs transition ${
                   type === 'in'
                     ? 'bg-[#15803D] text-white shadow-xs'
-                    : 'text-[#78716C] dark:text-[#93B5A9] hover:text-[#1C1917] dark:hover:text-white'
+                    : 'text-[#57534E] hover:text-[#1C1917]'
                 }`}
               >
                 + Uang Masuk
@@ -280,21 +280,24 @@ export const KeuanganScreen: React.FC = () => {
                   setCategory('Operasional');
                   setCustomCategory('');
                 }}
-                className={`py-2 rounded-lg font-bold text-xs transition ${
+                className={`min-h-[44px] py-2 rounded-lg font-bold text-xs transition ${
                   type === 'out'
                     ? 'bg-[#BA1A1A] text-white shadow-xs'
-                    : 'text-[#78716C] dark:text-[#93B5A9] hover:text-[#1C1917] dark:hover:text-white'
+                    : 'text-[#57534E] hover:text-[#1C1917]'
                 }`}
               >
                 - Uang Keluar
               </button>
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">Kategori</label>
+              <label htmlFor="kas-category" className="block text-xs font-bold text-[#1C1917] mb-1">
+                Kategori
+              </label>
               <select
+                id="kas-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41]"
+                className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
               >
                 {type === 'out'
                   ? ['Operasional', 'Beli Stok', 'Listrik & Air', 'Gaji', 'Lainnya'].map(
@@ -313,42 +316,49 @@ export const KeuanganScreen: React.FC = () => {
             </div>
             {category === 'Lainnya' && (
               <div>
-                <label className="block text-xs font-bold mb-1">
+                <label htmlFor="kas-custom-cat" className="block text-xs font-bold text-[#1C1917] mb-1">
                   Kategori Lainnya *
                 </label>
                 <input
+                  id="kas-custom-cat"
                   required
                   value={customCategory}
                   onChange={(e) => setCustomCategory(e.target.value)}
                   placeholder="Tulis nama kategori..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41]"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                 />
               </div>
             )}
             <div>
-              <label className="block text-xs font-bold mb-1">Nominal (Rp) *</label>
+              <label htmlFor="kas-amount" className="block text-xs font-bold text-[#1C1917] mb-1">
+                Nominal (Rp) *
+              </label>
               <input
+                id="kas-amount"
                 required
                 type="text"
                 inputMode="numeric"
                 value={amount}
                 onChange={(e) => setAmount(formatThousandID(e.target.value))}
                 placeholder="50.000"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41]"
+                className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">Keterangan</label>
+              <label htmlFor="kas-desc" className="block text-xs font-bold text-[#1C1917] mb-1">
+                Keterangan
+              </label>
               <input
+                id="kas-desc"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Contoh: Token listrik apotek"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41]"
+                className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
               />
             </div>
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-[#142E27] hover:bg-[#1C3D34] dark:bg-[#15803D] dark:hover:bg-[#166534] text-white font-bold transition"
+              className="w-full min-h-[44px] py-3 rounded-xl bg-[#142E27] hover:bg-[#1C3D34] text-white font-bold transition"
             >
               Simpan Catatan Kas
             </button>
@@ -357,9 +367,9 @@ export const KeuanganScreen: React.FC = () => {
 
         {/* Daftar Riwayat Kas */}
         <div className="lg:col-span-8">
-          <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] shadow-xs overflow-hidden">
-            <div className="p-3.5 sm:p-4 border-b border-[#B7D6C3] dark:border-[#244C41] flex flex-wrap items-center justify-between gap-3">
-              <h3 className="font-extrabold text-sm sm:text-base">Riwayat Kas</h3>
+          <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] shadow-xs overflow-hidden">
+            <div className="p-3.5 sm:p-4 border-b border-[#B7D6C3] flex flex-wrap items-center justify-between gap-3">
+              <h3 className="font-extrabold text-sm sm:text-base text-[#1C1917]">Riwayat Kas</h3>
               <div
                 className="flex flex-wrap gap-2 min-w-0"
                 role="group"
@@ -378,7 +388,7 @@ export const KeuanganScreen: React.FC = () => {
                       key={k}
                       type="button"
                       onClick={() => setTypeFilter(k)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
+                      className={`min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
                         isActive ? ACTIVE_PILL_CLS : INACTIVE_PILL_CLS
                       }`}
                     >
@@ -389,29 +399,29 @@ export const KeuanganScreen: React.FC = () => {
               </div>
             </div>
 
-            <div className="divide-y divide-[#E7E3D8]/70 dark:divide-[#244C41]/70">
+            <div className="divide-y divide-[#B7D6C3]">
               {visibleEntries.length === 0 ? (
-                <p className="py-10 text-center text-sm opacity-60">
+                <p className="py-10 text-center text-sm text-[#57534E]">
                   Belum ada catatan kas pada filter ini.
                 </p>
               ) : (
                 visibleEntries.map((e) => (
                   <div
                     key={e.id}
-                    className="p-4 flex items-center justify-between gap-3 hover:bg-[#DCEBE2]/70 dark:hover:bg-[#0F241E]/40 transition"
+                    className="p-4 flex items-center justify-between gap-3 hover:bg-[#DCEBE2]/70 transition"
                   >
                     <div className="flex items-start gap-3 min-w-0">
                       <span
                         className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center ${
                           e.type === 'in'
-                            ? 'bg-[#15803D]/10 text-[#15803D] dark:text-[#86EFAC]'
-                            : 'bg-[#BA1A1A]/10 text-[#BA1A1A]'
+                            ? 'bg-[#DCFCE7] text-[#166534]'
+                            : 'bg-[#FEE2E2] text-[#BA1A1A]'
                         }`}
                       >
                         {e.type === 'in' ? (
-                          <ArrowDownLeft className="w-4 h-4" />
+                          <ArrowDownLeft className="w-4 h-4" aria-hidden="true" />
                         ) : (
-                          <ArrowUpRight className="w-4 h-4" />
+                          <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
                         )}
                       </span>
                       <div className="min-w-0">
@@ -419,17 +429,17 @@ export const KeuanganScreen: React.FC = () => {
                           <span
                             className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
                               e.type === 'in'
-                                ? 'bg-[#15803D]/15 text-[#15803D] dark:text-[#86EFAC]'
-                                : 'bg-[#BA1A1A]/15 text-[#BA1A1A]'
+                                ? 'bg-[#DCFCE7] text-[#166534]'
+                                : 'bg-[#FEE2E2] text-[#BA1A1A]'
                             }`}
                           >
                             {e.category}
                           </span>
-                          <span className="text-xs text-[#78716C] dark:text-[#93B5A9]">
+                          <span className="text-xs text-[#57534E]">
                             {formatDateTimeID(e.createdAt)}
                           </span>
                         </div>
-                        <p className="font-bold text-sm mt-1 truncate">
+                        <p className="font-bold text-sm text-[#1C1917] mt-1 truncate">
                           {e.description || e.category}
                         </p>
                       </div>
@@ -438,7 +448,7 @@ export const KeuanganScreen: React.FC = () => {
                       <span
                         className={`font-extrabold text-sm tabular-nums ${
                           e.type === 'in'
-                            ? 'text-[#15803D] dark:text-[#7EDC9A]'
+                            ? 'text-[#166534]'
                             : 'text-[#BA1A1A]'
                         }`}
                       >
@@ -456,9 +466,9 @@ export const KeuanganScreen: React.FC = () => {
                             }
                           }}
                           aria-label="Hapus catatan kas"
-                          className="p-1.5 rounded-lg text-[#BA1A1A] hover:bg-red-500/10"
+                          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#BA1A1A] hover:bg-red-500/10"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" aria-hidden="true" />
                         </button>
                       )}
                     </div>
@@ -601,18 +611,19 @@ export const LabaScreen: React.FC = () => {
     <div className="space-y-5">
       <PageHeader
         title="Laporan Laba & HPP"
-        subtitle="Perhitungan Laba Kotor (Omzet − HPP snapshot) & Laba Bersih"
+        subtitle="Perhitungan Laba Kotor (Omzet - HPP snapshot) & Laba Bersih"
         action={
           <button
+            type="button"
             onClick={exportRekapExcel}
-            className="px-3.5 py-2 rounded-xl bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5"
+            className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5 transition"
           >
-            <Download className="w-4 h-4" /> Ekspor Rekap Excel
+            <Download className="w-4 h-4" aria-hidden="true" /> Ekspor Rekap Excel
           </button>
         }
       />
 
-      <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs min-w-0">
+      <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-3.5 sm:p-4 shadow-xs min-w-0">
         <div className="flex flex-wrap gap-2 min-w-0" role="group" aria-label="Filter periode laporan laba">
           {(
             [
@@ -628,7 +639,7 @@ export const LabaScreen: React.FC = () => {
                 key={k}
                 type="button"
                 onClick={() => setPeriod(k)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
+                className={`min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
                   isActive ? ACTIVE_PILL_CLS : INACTIVE_PILL_CLS
                 }`}
               >
@@ -640,53 +651,53 @@ export const LabaScreen: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5">
-          <span className="text-xs text-[#1C1917] dark:text-white">Total Penjualan (Omzet)</span>
-          <p className="text-2xl font-extrabold mt-1">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 shadow-xs">
+          <span className="text-xs font-semibold text-[#1C1917]">Total Penjualan (Omzet)</span>
+          <p className="text-2xl font-extrabold mt-1 text-[#1C1917]">
             <AnimatedNumber value={report.revenue} format={formatIDR} />
           </p>
-          <span className="text-xs text-[#1C1917] dark:text-white">
+          <span className="text-xs text-[#57534E]">
             {report.transactionCount} transaksi • {report.itemsSold} unit
           </span>
         </div>
-        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5">
-          <span className="text-xs text-[#1C1917] dark:text-white">HPP (Modal Obat Terjual)</span>
-          <p className="text-2xl font-extrabold mt-1 text-amber-500">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 shadow-xs">
+          <span className="text-xs font-semibold text-[#1C1917]">HPP (Modal Obat Terjual)</span>
+          <p className="text-2xl font-extrabold mt-1 text-[#92400E]">
             <AnimatedNumber value={report.hpp} format={formatIDR} />
           </p>
-          <span className="text-xs text-[#1C1917] dark:text-white">
+          <span className="text-xs text-[#57534E]">
             Laba Kotor: {formatIDR(report.grossProfit)} (
             {report.grossMarginPct.toFixed(1)}%)
           </span>
         </div>
-        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5">
-          <span className="text-xs text-[#1C1917] dark:text-white">Biaya Operasional</span>
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 shadow-xs">
+          <span className="text-xs font-semibold text-[#1C1917]">Biaya Operasional</span>
           <p className="text-2xl font-extrabold mt-1 text-[#BA1A1A]">
             <AnimatedNumber value={report.operationalExpense} format={formatIDR} />
           </p>
-          <span className="text-xs text-[#1C1917] dark:text-white">
+          <span className="text-xs text-[#57534E]">
             Kas keluar selain Beli Stok ({formatIDR(report.stockPurchaseExpense)})
           </span>
         </div>
-        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5">
-          <span className="text-xs text-[#1C1917] dark:text-white">Laba Bersih</span>
-          <p className="text-2xl font-extrabold mt-1 text-emerald-600 dark:text-[#7EDC9A]">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 shadow-xs">
+          <span className="text-xs font-semibold text-[#1C1917]">Laba Bersih</span>
+          <p className="text-2xl font-extrabold mt-1 text-[#166534]">
             <AnimatedNumber value={report.netProfit} format={formatIDR} />
           </p>
-          <span className="text-xs text-[#1C1917] dark:text-white">
+          <span className="text-xs text-[#57534E]">
             Margin Bersih: {report.marginPct.toFixed(1)}%
           </span>
         </div>
       </div>
 
       {/* Breakdown per Medicine */}
-      <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] overflow-hidden">
-        <div className="p-4 font-extrabold text-sm border-b border-black/5 dark:border-white/5">
-          Rincian Penjualan & Laba per Obat ({report.byMedicine.length} jenis)
+      <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] shadow-xs overflow-hidden">
+        <div className="p-4 font-extrabold text-sm text-[#1C1917] border-b border-[#B7D6C3]">
+          Rincian Penjualan &amp; Laba per Obat ({report.byMedicine.length} jenis)
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#E1E2E8] dark:bg-[#0F241E] text-xs uppercase opacity-75">
+            <thead className="bg-[#DCEBE2] border-b border-[#B7D6C3] text-xs uppercase text-[#1C1917]">
               <tr>
                 <th className="py-3 px-4">Nama Obat</th>
                 <th className="py-3 px-3">Kategori</th>
@@ -696,17 +707,17 @@ export const LabaScreen: React.FC = () => {
                 <th className="py-3 px-4 text-right">Laba Kotor</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/5 dark:divide-white/5">
+            <tbody className="divide-y divide-[#B7D6C3]">
               {report.byMedicine.map((m, i) => (
                 <tr key={i}>
-                  <td className="py-3 px-4 font-bold">{m.name}</td>
-                  <td className="py-3 px-3 text-xs opacity-75">{m.category}</td>
-                  <td className="py-3 px-3 text-right font-bold">{m.qty}</td>
-                  <td className="py-3 px-3 text-right">{formatIDR(m.revenue)}</td>
-                  <td className="py-3 px-3 text-right opacity-75">
+                  <td className="py-3 px-4 font-bold text-[#1C1917]">{m.name}</td>
+                  <td className="py-3 px-3 text-xs text-[#57534E]">{m.category}</td>
+                  <td className="py-3 px-3 text-right font-bold text-[#1C1917]">{m.qty}</td>
+                  <td className="py-3 px-3 text-right text-[#1C1917]">{formatIDR(m.revenue)}</td>
+                  <td className="py-3 px-3 text-right text-[#57534E]">
                     {formatIDR(m.hpp)}
                   </td>
-                  <td className="py-3 px-4 text-right font-bold text-[#2E7D32] dark:text-[#7EDC9A]">
+                  <td className="py-3 px-4 text-right font-bold text-[#166534]">
                     {formatIDR(m.revenue - m.hpp)}
                   </td>
                 </tr>
@@ -782,19 +793,21 @@ export const PbfScreen: React.FC = () => {
         title="Faktur PBF & Daftar Supplier"
         subtitle="Catatan belanja PBF (Tunai/Kredit), pengingat jatuh tempo, dan kontak supplier"
         action={
-          <div className="flex rounded-xl bg-white/15 p-1 text-xs font-bold">
+          <div className="flex rounded-xl bg-[#DCEBE2] border border-[#B7D6C3] p-1 text-xs font-bold gap-1">
             <button
+              type="button"
               onClick={() => setTab('FAKTUR')}
-              className={`px-3 py-1.5 rounded-lg ${
-                tab === 'FAKTUR' ? 'bg-[#15803D] text-white' : ''
+              className={`min-h-[44px] px-3.5 py-2 rounded-lg transition ${
+                tab === 'FAKTUR' ? 'bg-[#15803D] text-white' : 'text-[#1C1917] hover:bg-[#D0E3D8]'
               }`}
             >
               Faktur PBF ({purchases.length})
             </button>
             <button
+              type="button"
               onClick={() => setTab('PEMASOK')}
-              className={`px-3 py-1.5 rounded-lg ${
-                tab === 'PEMASOK' ? 'bg-[#15803D] text-white' : ''
+              className={`min-h-[44px] px-3.5 py-2 rounded-lg transition ${
+                tab === 'PEMASOK' ? 'bg-[#15803D] text-white' : 'text-[#1C1917] hover:bg-[#D0E3D8]'
               }`}
             >
               Supplier ({suppliers.length})
@@ -807,19 +820,22 @@ export const PbfScreen: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           <form
             onSubmit={handleSavePurchase}
-            className="lg:col-span-5 rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3 text-sm h-fit"
+            className="lg:col-span-5 rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-3 text-sm h-fit shadow-xs"
           >
-            <h3 className="font-extrabold text-base">Catat Faktur PBF Baru</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <h3 className="font-extrabold text-base text-[#1C1917]">Catat Faktur PBF Baru</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold mb-1">Nama PBF *</label>
+                <label htmlFor="pbf-name" className="block text-xs font-bold text-[#1C1917] mb-1">
+                  Nama PBF *
+                </label>
                 <input
+                  id="pbf-name"
                   required
                   list="pbf-suppliers-list"
                   value={pbfName}
                   onChange={(e) => setPbfName(e.target.value)}
                   placeholder="Pilih / ketik PBF"
-                  className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                 />
                 <datalist id="pbf-suppliers-list">
                   {suppliers.map((s) => (
@@ -828,70 +844,83 @@ export const PbfScreen: React.FC = () => {
                 </datalist>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">No. Faktur</label>
+                <label htmlFor="pbf-invoice" className="block text-xs font-bold text-[#1C1917] mb-1">
+                  No. Faktur
+                </label>
                 <input
+                  id="pbf-invoice"
                   value={invoiceNo}
                   onChange={(e) => setInvoiceNo(e.target.value)}
                   placeholder="Opsional"
-                  className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div>
-                <label className="block text-xs font-bold mb-1">Tgl Beli *</label>
+                <label htmlFor="pbf-date" className="block text-xs font-bold text-[#1C1917] mb-1">
+                  Tgl Beli *
+                </label>
                 <input
+                  id="pbf-date"
                   required
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">Pembayaran</label>
+                <label htmlFor="pbf-payment" className="block text-xs font-bold text-[#1C1917] mb-1">
+                  Pembayaran
+                </label>
                 <select
+                  id="pbf-payment"
                   value={paymentType}
                   onChange={(e) =>
                     setPaymentType(e.target.value as 'CASH' | 'KREDIT')
                   }
-                  className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
                 >
                   <option value="CASH">TUNAI (CASH)</option>
                   <option value="KREDIT">KREDIT (TEMPO)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1">PPN (Rp)</label>
+                <label htmlFor="pbf-ppn" className="block text-xs font-bold text-[#1C1917] mb-1">
+                  PPN (Rp)
+                </label>
                 <input
+                  id="pbf-ppn"
                   type="text"
                   inputMode="numeric"
                   value={ppn}
                   onChange={(e) => setPpn(formatThousandID(e.target.value))}
                   placeholder="0"
-                  className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                 />
               </div>
             </div>
 
             {paymentType === 'KREDIT' && (
               <div>
-                <label className="block text-xs font-bold mb-1">
+                <label htmlFor="pbf-due" className="block text-xs font-bold text-[#1C1917] mb-1">
                   Tgl Jatuh Tempo Kredit
                 </label>
                 <input
+                  id="pbf-due"
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
                 />
               </div>
             )}
 
             <div className="space-y-2 pt-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold">Daftar Obat Dibeli</label>
+                <span className="text-xs font-bold text-[#1C1917]">Daftar Obat Dibeli</span>
                 <button
                   type="button"
                   onClick={() =>
@@ -900,7 +929,7 @@ export const PbfScreen: React.FC = () => {
                       { medicineName: '', qty: '1', unit: 'Box', buyPrice: '' },
                     ])
                   }
-                  className="text-xs font-bold text-[#15803D] dark:text-[#86EFAC]"
+                  className="min-h-[44px] px-2 -mr-2 text-xs font-bold text-[#166534] hover:underline"
                 >
                   + Tambah Baris
                 </button>
@@ -909,6 +938,7 @@ export const PbfScreen: React.FC = () => {
                 <div key={idx} className="grid grid-cols-12 gap-1.5 items-center">
                   <input
                     required
+                    aria-label={`Nama obat baris ${idx + 1}`}
                     placeholder="Nama obat"
                     value={it.medicineName}
                     onChange={(e) =>
@@ -918,10 +948,11 @@ export const PbfScreen: React.FC = () => {
                         )
                       )
                     }
-                    className="col-span-5 px-2.5 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] text-xs"
+                    className="col-span-12 sm:col-span-5 min-h-[44px] px-2.5 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-xs text-[#1C1917] placeholder:text-[#57534E]"
                   />
                   <input
                     required
+                    aria-label={`Jumlah baris ${idx + 1}`}
                     type="number"
                     min="1"
                     placeholder="Qty"
@@ -933,10 +964,11 @@ export const PbfScreen: React.FC = () => {
                         )
                       )
                     }
-                    className="col-span-2 px-2 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] text-xs"
+                    className="col-span-4 sm:col-span-2 min-h-[44px] px-2 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-xs text-[#1C1917]"
                   />
                   <input
                     required
+                    aria-label={`Harga beli baris ${idx + 1}`}
                     type="text"
                     inputMode="numeric"
                     placeholder="Harga"
@@ -950,15 +982,16 @@ export const PbfScreen: React.FC = () => {
                         )
                       )
                     }
-                    className="col-span-4 px-2.5 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] text-xs"
+                    className={`${items.length > 1 ? 'col-span-6 sm:col-span-4' : 'col-span-8 sm:col-span-5'} min-h-[44px] px-2.5 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-xs text-[#1C1917] placeholder:text-[#57534E]`}
                   />
                   {items.length > 1 && (
                     <button
                       type="button"
                       onClick={() => setItems(items.filter((_, i) => i !== idx))}
-                      className="col-span-1 text-[#BA1A1A] flex justify-center"
+                      aria-label={`Hapus baris obat ${idx + 1}`}
+                      className="col-span-2 sm:col-span-1 min-w-[44px] min-h-[44px] text-[#BA1A1A] flex items-center justify-center rounded-xl hover:bg-red-500/10"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
                     </button>
                   )}
                 </div>
@@ -967,7 +1000,7 @@ export const PbfScreen: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-[#15803D] text-white font-bold"
+              className="w-full min-h-[44px] py-3 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white font-bold transition"
             >
               Simpan Faktur PBF
             </button>
@@ -975,7 +1008,7 @@ export const PbfScreen: React.FC = () => {
 
           <div className="lg:col-span-7 space-y-3">
             {purchases.length === 0 ? (
-              <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-10 text-center text-sm opacity-60">
+              <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-10 text-center text-sm text-[#57534E] shadow-xs">
                 Belum ada catatan faktur pembelian PBF.
               </div>
             ) : (
@@ -985,25 +1018,25 @@ export const PbfScreen: React.FC = () => {
                 return (
                   <div
                     key={p.id}
-                    className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3"
+                    className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-3 shadow-xs"
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-base">
+                          <span className="font-extrabold text-base text-[#1C1917]">
                             {p.pbfName}
                           </span>
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                               p.paymentType === 'KREDIT'
-                                ? 'bg-amber-500/20 text-amber-500'
-                                : 'bg-[#15803D]/20 text-[#15803D] dark:text-[#86EFAC]'
+                                ? 'bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]'
+                                : 'bg-[#DCFCE7] text-[#166534]'
                             }`}
                           >
                             {p.paymentType}
                           </span>
                         </div>
-                        <p className="text-xs opacity-70">
+                        <p className="text-xs text-[#57534E]">
                           Tgl: {formatDateID(p.date)}
                           {p.invoiceNo && ` • Faktur: ${p.invoiceNo}`}
                           {p.paymentType === 'KREDIT' &&
@@ -1014,20 +1047,20 @@ export const PbfScreen: React.FC = () => {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-extrabold text-base text-[#15803D] dark:text-[#86EFAC]">
+                        <p className="font-extrabold text-base text-[#166534]">
                           {formatIDR(p.total)}
                         </p>
                         {p.ppn > 0 && (
-                          <p className="text-[11px] opacity-65">
+                          <p className="text-[11px] text-[#57534E]">
                             Termasuk PPN {formatIDR(p.ppn)}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    <div className="text-xs space-y-1 bg-[#DCEBE2] dark:bg-[#0F241E] p-3 rounded-2xl">
+                    <div className="text-xs space-y-1 bg-[#DCEBE2] border border-[#B7D6C3] p-3 rounded-xl text-[#1C1917]">
                       {pItems.map((it) => (
-                        <div key={it.id} className="flex justify-between">
+                        <div key={it.id} className="flex justify-between gap-2">
                           <span>
                             {it.medicineName} ({it.qty} {it.unit} x{' '}
                             {formatIDR(it.buyPrice)})
@@ -1042,6 +1075,7 @@ export const PbfScreen: React.FC = () => {
                     <div className="flex justify-end gap-2">
                       {p.paymentType === 'KREDIT' && (
                         <button
+                          type="button"
                           onClick={() => {
                             try {
                               markPurchasePaid(p.id);
@@ -1050,12 +1084,13 @@ export const PbfScreen: React.FC = () => {
                               notify(err.message, 'error');
                             }
                           }}
-                          className="px-3 py-1.5 rounded-xl bg-[#43A047] text-white text-xs font-bold flex items-center gap-1"
+                          className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5 transition"
                         >
-                          <CheckCircle className="w-3.5 h-3.5" /> Tandai Lunas
+                          <CheckCircle className="w-3.5 h-3.5" aria-hidden="true" /> Tandai Lunas
                         </button>
                       )}
                       <button
+                        type="button"
                         onClick={() =>
                           askConfirm(
                             `Hapus faktur ${p.pbfName}?`,
@@ -1070,7 +1105,7 @@ export const PbfScreen: React.FC = () => {
                             { title: 'Hapus Faktur PBF', danger: true, confirmLabel: 'Hapus' }
                           )
                         }
-                        className="px-3 py-1.5 rounded-xl bg-red-500/15 text-[#BA1A1A] text-xs font-bold"
+                        className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#FEE2E2] hover:bg-[#FECACA] text-[#BA1A1A] text-xs font-bold transition"
                       >
                         Hapus
                       </button>
@@ -1095,60 +1130,66 @@ export const PbfScreen: React.FC = () => {
                 notify(err.message, 'error');
               }
             }}
-            className="lg:col-span-4 rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3 text-sm h-fit"
+            className="lg:col-span-4 rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-3 text-sm h-fit shadow-xs"
           >
-            <h3 className="font-extrabold text-base">Tambah Supplier PBF</h3>
+            <h3 className="font-extrabold text-base text-[#1C1917]">Tambah Supplier PBF</h3>
             <div>
-              <label className="block text-xs font-bold mb-1">Nama Supplier *</label>
+              <label htmlFor="sup-name" className="block text-xs font-bold text-[#1C1917] mb-1">
+                Nama Supplier *
+              </label>
               <input
+                id="sup-name"
                 required
                 value={supName}
                 onChange={(e) => setSupName(e.target.value)}
                 placeholder="Contoh: PT Enseval Putera"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">
+              <label htmlFor="sup-contact" className="block text-xs font-bold text-[#1C1917] mb-1">
                 Kontak / WhatsApp
               </label>
               <input
+                id="sup-contact"
                 value={supContact}
                 onChange={(e) => setSupContact(e.target.value)}
                 placeholder="0812..."
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
               />
             </div>
             <button
               type="submit"
-              className="w-full py-2.5 rounded-xl bg-[#15803D] text-white font-bold"
+              className="w-full min-h-[44px] py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white font-bold transition"
             >
               Simpan Supplier
             </button>
           </form>
 
-          <div className="lg:col-span-8 rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] divide-y divide-black/5 dark:divide-white/5">
+          <div className="lg:col-span-8 rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] divide-y divide-[#B7D6C3] shadow-xs overflow-hidden">
             {suppliers.length === 0 ? (
-              <p className="p-10 text-center text-sm opacity-60">
+              <p className="p-10 text-center text-sm text-[#57534E]">
                 Belum ada supplier terdaftar.
               </p>
             ) : (
               suppliers.map((s) => (
                 <div
                   key={s.id}
-                  className="p-4 flex items-center justify-between"
+                  className="p-4 flex items-center justify-between gap-2"
                 >
                   <div>
-                    <p className="font-bold text-sm">{s.name}</p>
-                    <p className="text-xs opacity-70">
+                    <p className="font-bold text-sm text-[#1C1917]">{s.name}</p>
+                    <p className="text-xs text-[#57534E]">
                       {s.contact || 'Tanpa nomor kontak'}
                     </p>
                   </div>
                   <button
+                    type="button"
                     onClick={() => deleteSupplier(s.id)}
-                    className="p-2 rounded-xl text-[#BA1A1A] hover:bg-red-500/10"
+                    aria-label={`Hapus supplier ${s.name}`}
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#BA1A1A] hover:bg-red-500/10"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </div>
               ))
@@ -1202,32 +1243,32 @@ export const PengingatScreen: React.FC = () => {
     <div className="space-y-5">
       <PageHeader
         title="Pengingat & Peringatan"
-        subtitle="Pantau obat stok menipis, kadaluarsa ≤30 hari, dan tagihan kredit PBF"
+        subtitle="Pantau obat stok menipis, kadaluarsa <=30 hari, dan tagihan kredit PBF"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Stok Menipis */}
-        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3">
-          <h3 className="font-extrabold text-base flex items-center justify-between">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-3 shadow-xs">
+          <h3 className="font-extrabold text-base text-[#1C1917] flex items-center justify-between">
             <span>Stok Rendah / Habis</span>
             <span className="px-2.5 py-0.5 rounded-full bg-[#BA1A1A] text-white text-xs">
               {lowStock.length}
             </span>
           </h3>
           {lowStock.length === 0 ? (
-            <p className="text-xs opacity-60 py-6 text-center">
-              Semua stok obat aman (≥10).
+            <p className="text-xs text-[#57534E] py-6 text-center">
+              Semua stok obat aman (&ge;10).
             </p>
           ) : (
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {lowStock.map((m) => (
                 <div
                   key={m.id}
-                  className="p-3 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] flex items-center justify-between"
+                  className="p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] flex items-center justify-between gap-2"
                 >
                   <div>
-                    <p className="font-bold text-sm">{m.name}</p>
-                    <p className="text-xs opacity-70">{m.category}</p>
+                    <p className="font-bold text-sm text-[#1C1917]">{m.name}</p>
+                    <p className="text-xs text-[#57534E]">{m.category}</p>
                   </div>
                   <StockPill stock={m.stock} />
                 </div>
@@ -1237,15 +1278,15 @@ export const PengingatScreen: React.FC = () => {
         </div>
 
         {/* Kadaluarsa */}
-        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3">
-          <h3 className="font-extrabold text-base flex items-center justify-between">
-            <span>Kadaluarsa ≤ 30 Hari</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-xs">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-3 shadow-xs">
+          <h3 className="font-extrabold text-base text-[#1C1917] flex items-center justify-between">
+            <span>Kadaluarsa &le; 30 Hari</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-[#92400E] text-white text-xs">
               {expiring.length}
             </span>
           </h3>
           {expiring.length === 0 ? (
-            <p className="text-xs opacity-60 py-6 text-center">
+            <p className="text-xs text-[#57534E] py-6 text-center">
               Tidak ada obat yang mendekati kadaluarsa.
             </p>
           ) : (
@@ -1255,17 +1296,17 @@ export const PengingatScreen: React.FC = () => {
                 return (
                   <div
                     key={m.id}
-                    className="p-3 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] flex items-center justify-between"
+                    className="p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] flex items-center justify-between gap-2"
                   >
                     <div>
-                      <p className="font-bold text-sm">{m.name}</p>
-                      <p className="text-xs opacity-70">
+                      <p className="font-bold text-sm text-[#1C1917]">{m.name}</p>
+                      <p className="text-xs text-[#57534E]">
                         Exp: {formatDateID(m.expiryDate)}
                       </p>
                     </div>
                     <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-bold text-white ${
-                        d <= 0 ? 'bg-[#BA1A1A]' : 'bg-amber-600'
+                      className={`px-2.5 py-1 rounded-full text-xs font-bold text-white shrink-0 ${
+                        d <= 0 ? 'bg-[#BA1A1A]' : 'bg-[#92400E]'
                       }`}
                     >
                       {d <= 0 ? 'Sudah Exp' : `${d} hari lagi`}
@@ -1278,15 +1319,15 @@ export const PengingatScreen: React.FC = () => {
         </div>
 
         {/* Tagihan Kredit PBF */}
-        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3">
-          <h3 className="font-extrabold text-base flex items-center justify-between">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-3 shadow-xs">
+          <h3 className="font-extrabold text-base text-[#1C1917] flex items-center justify-between">
             <span>Faktur Kredit PBF</span>
             <span className="px-2.5 py-0.5 rounded-full bg-[#15803D] text-white text-xs">
               {creditPbf.length}
             </span>
           </h3>
           {creditPbf.length === 0 ? (
-            <p className="text-xs opacity-60 py-6 text-center">
+            <p className="text-xs text-[#57534E] py-6 text-center">
               Tidak ada hutang faktur PBF yang belum lunas.
             </p>
           ) : (
@@ -1296,21 +1337,21 @@ export const PengingatScreen: React.FC = () => {
                 return (
                   <div
                     key={p.id}
-                    className="p-3 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] space-y-2"
+                    className="p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] space-y-2"
                   >
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start gap-2">
                       <div>
-                        <p className="font-bold text-sm">{p.pbfName}</p>
-                        <p className="text-xs opacity-70">
+                        <p className="font-bold text-sm text-[#1C1917]">{p.pbfName}</p>
+                        <p className="text-xs text-[#57534E]">
                           Tempo: {p.dueDate ? formatDateID(p.dueDate) : 'Belum diatur'}
                         </p>
                       </div>
-                      <p className="font-extrabold text-sm text-amber-500">
+                      <p className="font-extrabold text-sm text-[#92400E]">
                         {formatIDR(p.total)}
                       </p>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-[#1C1917]">
                         {left === null
                           ? ''
                           : left < 0
@@ -1318,6 +1359,7 @@ export const PengingatScreen: React.FC = () => {
                           : `${left} hari lagi`}
                       </span>
                       <button
+                        type="button"
                         onClick={() => {
                           try {
                             markPurchasePaid(p.id);
@@ -1326,7 +1368,7 @@ export const PengingatScreen: React.FC = () => {
                             notify(err.message, 'error');
                           }
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-[#43A047] text-white text-xs font-bold"
+                        className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold transition"
                       >
                         Lunasi
                       </button>
@@ -1435,12 +1477,12 @@ export const RiwayatScreen: React.FC = () => {
         {(['Tunai', 'QRIS', 'Transfer'] as const).map((m) => (
           <div
             key={m}
-            className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 shadow-xs min-w-0"
+            className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-4 shadow-xs min-w-0"
           >
-            <span className="text-xs text-[#78716C] dark:text-[#93B5A9]">
+            <span className="text-xs text-[#57534E]">
               Bulan Ini • {m === 'Tunai' ? 'Cash' : m}
             </span>
-            <p className="text-lg font-extrabold mt-0.5 text-[#15803D] dark:text-[#86EFAC] tabular-nums">
+            <p className="text-lg font-extrabold mt-0.5 text-[#166534] tabular-nums">
               <AnimatedNumber value={monthByMethod[m]} format={formatIDR} />
             </p>
           </div>
@@ -1448,7 +1490,7 @@ export const RiwayatScreen: React.FC = () => {
       </div>
 
       {/* Filter Card: Payment Pill Group + Search + Dynamic Summary Bar */}
-      <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs space-y-3 min-w-0">
+      <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-3.5 sm:p-4 shadow-xs space-y-3 min-w-0">
         <div className="flex flex-wrap gap-2 min-w-0" role="group" aria-label="Filter metode pembayaran">
           {PILLS.map((p) => {
             const isActive = paymentFilter === p.id;
@@ -1457,7 +1499,7 @@ export const RiwayatScreen: React.FC = () => {
                 key={p.id}
                 type="button"
                 onClick={() => setPaymentFilter(p.id)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
+                className={`min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-semibold transition whitespace-nowrap ${
                   isActive ? ACTIVE_PILL_CLS : INACTIVE_PILL_CLS
                 }`}
               >
@@ -1466,7 +1508,7 @@ export const RiwayatScreen: React.FC = () => {
                   className={`px-1.5 py-0.2 rounded-full text-[11px] font-bold tabular-nums ${
                     isActive
                       ? 'bg-white/20 text-white'
-                      : 'bg-[#DCEBE2] dark:bg-white/10 text-[#1C1917] dark:text-white'
+                      : 'bg-[#FAF8F4] text-[#1C1917]'
                   }`}
                 >
                   {methodCounts[p.id]}
@@ -1478,17 +1520,18 @@ export const RiwayatScreen: React.FC = () => {
 
         <input
           type="text"
+          aria-label="Cari nomor invoice, nama obat, atau cara bayar"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Cari nomor invoice, nama obat, atau cara bayar..."
-          className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41] text-sm text-[#1C1917] dark:text-white placeholder:text-[#78716C] focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+          className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-sm text-[#1C1917] placeholder:text-[#57534E] focus:ring-2 focus:ring-[#15803D]"
         />
 
-        <div className="pt-2.5 border-t border-dashed border-[#B7D6C3] dark:border-[#244C41] flex flex-wrap items-center justify-between gap-2 text-xs text-[#78716C] dark:text-[#93B5A9]">
+        <div className="pt-2.5 border-t border-dashed border-[#B7D6C3] flex flex-wrap items-center justify-between gap-2 text-xs text-[#57534E]">
           <span>
-            Menampilkan <strong className="text-[#1C1917] dark:text-white">{filtered.length}</strong> transaksi ({activePillLabel})
+            Menampilkan <strong className="text-[#1C1917]">{filtered.length}</strong> transaksi ({activePillLabel})
           </span>
-          <span className="font-extrabold text-[#1C1917] dark:text-white tabular-nums">
+          <span className="font-extrabold text-[#1C1917] tabular-nums">
             {formatIDR(filteredTotal)}
           </span>
         </div>
@@ -1496,7 +1539,7 @@ export const RiwayatScreen: React.FC = () => {
 
       <div className="space-y-3 min-w-0">
         {filtered.length === 0 ? (
-          <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-10 text-center text-sm text-[#78716C] dark:text-[#93B5A9]">
+          <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-10 text-center text-sm text-[#57534E]">
             Belum ada riwayat transaksi penjualan.
           </div>
         ) : (
@@ -1504,44 +1547,45 @@ export const RiwayatScreen: React.FC = () => {
             const its = itemsBySale.get(s.id) || [];
             const methodTone =
               s.paymentMethod === 'QRIS'
-                ? 'bg-[#E0F2FE] text-[#0369A1] dark:bg-[#0369A1]/30 dark:text-[#7DD3FC]'
+                ? 'bg-[#E0F2FE] text-[#0369A1]'
                 : s.paymentMethod === 'Transfer'
-                ? 'bg-[#FEF3C7] text-[#B45309] dark:bg-[#B45309]/30 dark:text-[#FDE68A]'
-                : 'bg-[#DCFCE7] text-[#166534] dark:bg-[#15803D]/30 dark:text-[#86EFAC]';
+                ? 'bg-[#FEF3C7] text-[#92400E]'
+                : 'bg-[#DCFCE7] text-[#166534]';
             return (
               <div
                 key={s.id}
-                className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 min-w-0"
+                className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 min-w-0"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 min-w-0">
-                    <span className="font-extrabold text-sm text-[#1C1917] dark:text-white">{s.invoiceNo}</span>
+                    <span className="font-extrabold text-sm text-[#1C1917]">{s.invoiceNo}</span>
                     <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${methodTone}`}>
                       {s.paymentMethod === 'Tunai' ? 'Cash' : s.paymentMethod}
                     </span>
-                    <span className="text-xs text-[#78716C] dark:text-[#93B5A9]">
+                    <span className="text-xs text-[#57534E]">
                       {formatDateTimeID(s.createdAt)}
                     </span>
                   </div>
-                  <p className="text-xs text-[#78716C] dark:text-[#93B5A9] mt-1 break-words">
+                  <p className="text-xs text-[#57534E] mt-1 break-words">
                     {its.map((i) => `${i.medicineName} (${i.qty})`).join(', ')}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0 ml-auto">
                   <div className="text-right">
-                    <p className="font-extrabold text-base text-[#15803D] dark:text-[#86EFAC] tabular-nums">
+                    <p className="font-extrabold text-base text-[#166534] tabular-nums">
                       {formatIDR(s.total)}
                     </p>
-                    <p className="text-[11px] text-[#78716C] dark:text-[#93B5A9] tabular-nums">
+                    <p className="text-[11px] text-[#57534E] tabular-nums">
                       Bayar: {formatIDR(s.amountPaid)} • Kembali:{' '}
                       {formatIDR(s.changeAmount)}
                     </p>
                   </div>
                   <button
+                    type="button"
                     onClick={() => setSelectedSale({ sale: s, items: its })}
-                    className="px-3 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5 transition"
+                    className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5 transition"
                   >
-                    <Printer className="w-3.5 h-3.5" /> Struk
+                    <Printer className="w-3.5 h-3.5" aria-hidden="true" /> Struk
                   </button>
                 </div>
               </div>
@@ -1621,29 +1665,30 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
       />
 
       {msg && (
-        <div className="p-4 rounded-2xl bg-[#15803D]/15 border border-[#15803D]/30 text-sm font-bold">
+        <div className="p-4 rounded-2xl bg-[#DCFCE7] border border-[#B7D6C3] text-sm font-bold text-[#1C1917]">
           {msg}
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Backup & Restore JSON */}
-        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-4">
-          <h3 className="font-extrabold text-base">
-            Backup & Restore (.json Android / Web)
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-4 shadow-xs">
+          <h3 className="font-extrabold text-base text-[#1C1917]">
+            Backup &amp; Restore (.json Android / Web)
           </h3>
-          <p className="text-xs opacity-75">
+          <p className="text-xs text-[#57534E]">
             File JSON dari Web ini bisa di-restore langsung di aplikasi Android, dan file backup dari HP Android juga bisa di-restore di sini.
           </p>
           <div className="flex flex-wrap gap-3">
             <button
+              type="button"
               onClick={handleDownloadBackup}
-              className="px-4 py-2.5 rounded-xl bg-[#15803D] text-white text-xs font-bold flex items-center gap-2"
+              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-2 transition"
             >
-              <Download className="w-4 h-4" /> Unduh Backup (.json)
+              <Download className="w-4 h-4" aria-hidden="true" /> Unduh Backup (.json)
             </button>
-            <label className="cursor-pointer px-4 py-2.5 rounded-xl bg-[#DCEBE2] dark:bg-[#0F241E] text-xs font-bold flex items-center gap-2">
-              <Upload className="w-4 h-4" /> Restore dari File (.json)
+            <label className="min-h-[44px] cursor-pointer px-4 py-2.5 rounded-xl bg-[#DCEBE2] hover:bg-[#D0E3D8] border border-[#B7D6C3] text-[#1C1917] text-xs font-bold flex items-center gap-2 transition">
+              <Upload className="w-4 h-4" aria-hidden="true" /> Restore dari File (.json)
               <input
                 type="file"
                 accept="application/json,.json"
@@ -1653,8 +1698,9 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
             </label>
           </div>
 
-          <div className="pt-4 border-t border-black/10 dark:border-white/10">
+          <div className="pt-4 border-t border-[#B7D6C3]">
             <button
+              type="button"
               onClick={() =>
                 askConfirm(
                   'PERINGATAN: Hapus SEMUA data lokal dan cloud secara permanen?',
@@ -1670,7 +1716,7 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
                   { title: 'Reset Semua Data', danger: true, confirmLabel: 'Reset Permanen' }
                 )
               }
-              className="px-4 py-2 rounded-xl bg-[#BA1A1A]/15 text-[#BA1A1A] text-xs font-bold"
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#FEE2E2] hover:bg-[#FECACA] text-[#BA1A1A] text-xs font-bold transition"
             >
               Reset Semua Data
             </button>
@@ -1678,11 +1724,11 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
         </div>
 
         {/* Tutup Buku Bulanan */}
-        <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-5 space-y-3">
-          <h3 className="font-extrabold text-base">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-3 shadow-xs">
+          <h3 className="font-extrabold text-base text-[#1C1917]">
             Tutup Buku Bulanan (Kunci Periode)
           </h3>
-          <p className="text-xs opacity-75">
+          <p className="text-xs text-[#57534E]">
             Bulan yang sudah ditutup terkunci dari penambahan/penghapusan kas, penjualan, dan faktur PBF.
           </p>
           <div className="space-y-2 max-h-72 overflow-y-auto">
@@ -1691,16 +1737,17 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
               return (
                 <div
                   key={b}
-                  className="p-3 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] flex items-center justify-between"
+                  className="p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] flex items-center justify-between gap-2"
                 >
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 opacity-60" />
-                    <span className="font-bold text-sm">
+                    <Calendar className="w-4 h-4 text-[#57534E]" aria-hidden="true" />
+                    <span className="font-bold text-sm text-[#1C1917]">
                       {namaBulanIndonesia(b)}
                     </span>
                   </div>
                   {locked ? (
                     <button
+                      type="button"
                       onClick={() => {
                         try {
                           bukaBulan(b);
@@ -1709,12 +1756,13 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
                           notify(err.message, 'error');
                         }
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-500 text-xs font-bold flex items-center gap-1"
+                      className="min-h-[44px] px-3 py-1.5 rounded-xl bg-[#FEF3C7] border border-[#FCD34D] text-[#92400E] text-xs font-bold flex items-center gap-1.5 transition"
                     >
-                      <Unlock className="w-3.5 h-3.5" /> Terkunci (Buka)
+                      <Unlock className="w-3.5 h-3.5" aria-hidden="true" /> Terkunci (Buka)
                     </button>
                   ) : (
                     <button
+                      type="button"
                       onClick={() => {
                         try {
                           tutupBulan(b);
@@ -1723,9 +1771,9 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
                           notify(err.message, 'error');
                         }
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-[#15803D] text-white text-xs font-bold flex items-center gap-1"
+                      className="min-h-[44px] px-3 py-1.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5 transition"
                     >
-                      <Lock className="w-3.5 h-3.5" /> Tutup Bulan
+                      <Lock className="w-3.5 h-3.5" aria-hidden="true" /> Tutup Bulan
                     </button>
                   )}
                 </div>

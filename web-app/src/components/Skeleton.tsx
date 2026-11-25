@@ -1,7 +1,6 @@
 import React from 'react';
 
-const CARD =
-  'bg-[#E8F2EC] dark:bg-[#142E27] rounded-2xl border border-[#B7D6C3] dark:border-[#244C41]';
+const CARD = 'bg-[#E8F2EC] rounded-2xl border border-[#B7D6C3]';
 
 const Bone: React.FC<{ className?: string }> = ({ className = '' }) => (
   <div className={`skeleton-shimmer rounded-xl ${className}`} />
@@ -36,7 +35,7 @@ export const PageSkeleton: React.FC<{ tab?: string }> = ({ tab = 'beranda' }) =>
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border border-[#B7D6C3]/70 dark:border-[#244C41] p-3 space-y-2.5"
+                  className="rounded-xl border border-[#B7D6C3]/70 p-3 space-y-2.5"
                 >
                   <Bone className="h-4 w-3/4" />
                   <Bone className="h-3 w-1/2" />
@@ -52,7 +51,7 @@ export const PageSkeleton: React.FC<{ tab?: string }> = ({ tab = 'beranda' }) =>
             <Bone className="h-5 w-32" />
             <Bone className="h-16 w-full" />
             <Bone className="h-16 w-full" />
-            <div className="pt-2 border-t border-[#B7D6C3] dark:border-[#244C41] space-y-2.5">
+            <div className="pt-2 border-t border-[#B7D6C3] space-y-2.5">
               <Bone className="h-5 w-full" />
               <Bone className="h-11 w-full rounded-xl" />
             </div>

@@ -47,15 +47,6 @@
     outline-offset: 2px;
   }
 
-  .dark a:focus-visible,
-  .dark button:focus-visible,
-  .dark input:focus-visible,
-  .dark select:focus-visible,
-  .dark textarea:focus-visible,
-  .dark [role='button']:focus-visible {
-    outline-color: #6EE7B7;
-  }
-
   /* Prevent iOS Safari auto-zoom on inputs smaller than 16px */
   @media (max-width: 767px) {
     input,
@@ -74,7 +65,7 @@
   --card-border: #B7D6C3;
   --card-soft: #DCEBE2;
   --text: #1C1917;
-  --muted: #78716C;
+  --muted: #57534E;
   --accent: #15803D;
   --accent-soft: #DCFCE7;
   --accent-text: #166534;
@@ -102,24 +93,6 @@
   background: #EFF6FF;
   border: 1px solid #93C5FD;
   color: #1E40AF;
-}
-
-.dark .alert-row-warn {
-  background: rgba(180, 83, 9, 0.22);
-  border-color: rgba(251, 191, 36, 0.45);
-  color: #FDE68A;
-}
-
-.dark .alert-row-danger {
-  background: rgba(220, 38, 38, 0.22);
-  border-color: rgba(248, 113, 113, 0.45);
-  color: #FECACA;
-}
-
-.dark .alert-row-info {
-  background: rgba(3, 105, 161, 0.22);
-  border-color: rgba(125, 211, 252, 0.45);
-  color: #BAE6FD;
 }
 
 @media print {
@@ -228,11 +201,6 @@
   background: linear-gradient(90deg, #d3e5da 0%, #e4f0e8 45%, #d3e5da 100%);
   background-size: 200% 100%;
   animation: skeletonShimmer 1.35s ease-in-out infinite;
-}
-
-.dark .skeleton-shimmer {
-  background: linear-gradient(90deg, #1b3b32 0%, #254f43 45%, #1b3b32 100%);
-  background-size: 200% 100%;
 }
 
 .skeleton-shimmer-dark {

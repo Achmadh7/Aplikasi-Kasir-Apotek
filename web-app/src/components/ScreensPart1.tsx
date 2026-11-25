@@ -47,11 +47,11 @@ export const PageHeader: React.FC<{
   subtitle?: string;
   action?: React.ReactNode;
 }> = ({ title, subtitle, action }) => (
-  <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] shadow-xs p-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+  <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] shadow-xs p-4 mb-5 flex flex-wrap items-center justify-between gap-3">
     <div className="min-w-0">
-      <h1 className="hdr-slideup text-xl font-extrabold tracking-tight text-[#1C1917] dark:text-white">{title}</h1>
+      <h1 className="hdr-slideup text-xl font-extrabold tracking-tight text-[#1C1917]">{title}</h1>
       {subtitle && (
-        <p className="text-xs text-[#78716C] dark:text-[#93B5A9] mt-0.5">{subtitle}</p>
+        <p className="text-xs text-[#57534E] mt-0.5">{subtitle}</p>
       )}
     </div>
     {action && <div className="flex items-center gap-2 flex-wrap">{action}</div>}
@@ -60,17 +60,17 @@ export const PageHeader: React.FC<{
 
 export const StockPill: React.FC<{ stock: number }> = ({ stock }) => {
   const label = stockLabel(stock);
-  const color =
+  const style =
     label === 'Aman'
-      ? 'bg-[#43A047]'
+      ? 'bg-[#15803D] text-white'
       : label === 'Sedang'
-      ? 'bg-[#0284C7]'
+      ? 'bg-[#0369A1] text-white'
       : label === 'Rendah'
-      ? 'bg-[#E3B341]'
-      : 'bg-[#BA1A1A] animate-pulse';
+      ? 'bg-[#E3B341] text-[#1C1917]'
+      : 'bg-[#BA1A1A] text-white';
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold text-[#1C1917] ${color}`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${style}`}
     >
       Stok {stock} • {label}
     </span>
@@ -179,48 +179,57 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
   return (
     <div className="space-y-4">
       {/* Top Bar: Ringkasan */}
-      <div>
-        <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-[#1C1917] dark:text-white">
-          Ringkasan Apotek
-        </h1>
-        <p className="text-xs text-[#78716C] dark:text-[#93B5A9]">
-          {dash.totalSalesToday} transaksi hari ini • Kemarin {formatIDR(dash.yesterdayIn)}
-        </p>
+      <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] shadow-xs p-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="hdr-slideup text-lg sm:text-xl font-extrabold tracking-tight text-[#1C1917]">
+            Ringkasan Apotek
+          </h1>
+          <p className="text-xs text-[#57534E] mt-0.5">
+            {dash.totalSalesToday} transaksi hari ini • Kemarin {formatIDR(dash.yesterdayIn)}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onNavigate('kasir')}
+          className="min-h-[44px] px-4 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5 transition shrink-0"
+        >
+          Buka Kasir
+        </button>
       </div>
 
       {/* 2-Card KPI Strip: Penjualan Hari Ini & Transaksi Hari Ini ONLY */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs min-w-0">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-3.5 sm:p-4 shadow-xs min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-[#1C1917] dark:text-white truncate">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[#1C1917] truncate">
               Penjualan Hari Ini
             </p>
-            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#DCFCE7] text-[#1C1917] dark:bg-[#15803D]/30 dark:text-white">
+            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#DCFCE7] text-[#166534]">
               {diffYesterday >= 0 ? 'Naik' : 'Turun'}
             </span>
           </div>
-          <p className="text-lg sm:text-2xl font-extrabold mt-1.5 tabular-nums text-[#1C1917] dark:text-white truncate">
+          <p className="text-lg sm:text-2xl font-extrabold mt-1.5 tabular-nums text-[#1C1917] truncate">
             <AnimatedNumber value={dash.todayIn} format={formatIDR} />
           </p>
-          <p className="text-[11px] mt-1 text-[#1C1917] dark:text-white truncate">
+          <p className="text-[11px] mt-1 text-[#57534E] truncate">
             {diffYesterday >= 0 ? '+' : ''}
             {formatCompactIDR(diffYesterday)} vs kemarin
           </p>
         </div>
 
-        <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-3.5 sm:p-4 shadow-xs min-w-0">
+        <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-3.5 sm:p-4 shadow-xs min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-[#1C1917] dark:text-white truncate">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[#1C1917] truncate">
               Transaksi Hari Ini
             </p>
-            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E0F2FE] text-[#1C1917] dark:bg-[#0369A1]/30 dark:text-white">
+            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E0F2FE] text-[#0369A1]">
               Struk
             </span>
           </div>
-          <p className="text-lg sm:text-2xl font-extrabold mt-1.5 tabular-nums text-[#1C1917] dark:text-white">
+          <p className="text-lg sm:text-2xl font-extrabold mt-1.5 tabular-nums text-[#1C1917]">
             <AnimatedNumber value={dash.totalSalesToday} /> Struk
           </p>
-          <p className="text-[11px] mt-1 text-[#1C1917] dark:text-white truncate">
+          <p className="text-[11px] mt-1 text-[#57534E] truncate">
             Rata-rata {formatCompactIDR(avgTicket)} / struk
           </p>
         </div>
@@ -228,26 +237,26 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
 
       {/* Main Content: 7-col Sales Chart with Numbers + 5-col Transaksi Terbaru & Pengingat Penting */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        <div className="lg:col-span-7 rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 sm:p-5 shadow-xs min-w-0">
+        <div className="lg:col-span-7 rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-4 sm:p-5 shadow-xs min-w-0">
           <div className="flex items-center justify-between gap-2 mb-3">
             <div>
-              <h3 className="font-bold text-sm sm:text-base text-[#1C1917] dark:text-white">
+              <h3 className="font-bold text-sm sm:text-base text-[#1C1917]">
                 Penjualan 7 Hari Terakhir
               </h3>
-              <p className="text-[11px] text-[#78716C] dark:text-[#93B5A9]">
+              <p className="text-[11px] text-[#57534E]">
                 Total omzet harian beserta angka nominal
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#DCFCE7] text-[#166534] dark:bg-[#15803D]/30 dark:text-[#86EFAC] shrink-0">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#DCFCE7] text-[#166534] shrink-0">
               7 Hari
             </span>
           </div>
 
           <div className="pt-4">
-            <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 items-end h-44 sm:h-52 border-b border-[#B7D6C3] dark:border-[#244C41] pb-2">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 items-end h-44 sm:h-52 border-b border-[#B7D6C3] pb-2">
               {dash.last7Days.map((d, i) => (
                 <div key={i} className="flex flex-col items-center justify-end h-full gap-1.5 min-w-0">
-                  <span className="text-[9.5px] sm:text-[11px] font-bold text-[#1C1917] dark:text-white tabular-nums whitespace-nowrap">
+                  <span className="text-[9.5px] sm:text-[11px] font-bold text-[#1C1917] tabular-nums whitespace-nowrap">
                     {d.inc > 0 ? formatCompactIDR(d.inc) : '0'}
                   </span>
                   <div
@@ -258,9 +267,7 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
                       transitionDelay: `${i * 55}ms`,
                     }}
                     className={`w-full max-w-[40px] rounded-t-lg ${
-                      d.isToday
-                        ? 'bg-[#15803D]'
-                        : 'bg-[#86EFAC] dark:bg-[#4ADE80]/80'
+                      d.isToday ? 'bg-[#15803D]' : 'bg-[#86EFAC]'
                     }`}
                   />
                 </div>
@@ -271,9 +278,7 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
                 <span
                   key={i}
                   className={`text-[10px] sm:text-[11.5px] font-semibold ${
-                    d.isToday
-                      ? 'text-[#166534] dark:text-[#86EFAC] font-bold'
-                      : 'text-[#78716C] dark:text-[#93B5A9]'
+                    d.isToday ? 'text-[#166534] font-bold' : 'text-[#57534E]'
                   }`}
                 >
                   {d.label}
@@ -282,16 +287,16 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
             </div>
           </div>
 
-          <div className="mt-3.5 pt-3 border-t border-dashed border-[#B7D6C3] dark:border-[#244C41] flex flex-wrap justify-between gap-2 text-xs text-[#78716C] dark:text-[#93B5A9]">
+          <div className="mt-3.5 pt-3 border-t border-dashed border-[#B7D6C3] flex flex-wrap justify-between gap-2 text-xs text-[#57534E]">
             <span>
               Total 7 Hari:{' '}
-              <strong className="text-[#1C1917] dark:text-white tabular-nums">
+              <strong className="text-[#1C1917] tabular-nums">
                 {formatIDR(dash.total7Days)}
               </strong>
             </span>
             <span>
               Rata-rata / Hari:{' '}
-              <strong className="text-[#1C1917] dark:text-white tabular-nums">
+              <strong className="text-[#1C1917] tabular-nums">
                 {formatIDR(dash.avg7Days)}
               </strong>
             </span>
@@ -301,25 +306,26 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
         {/* Right Stack: Transaksi Terbaru ABOVE Pengingat Penting */}
         <div className="lg:col-span-5 space-y-4 min-w-0">
           {/* 1. Transaksi Terbaru */}
-          <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 sm:p-5 shadow-xs">
+          <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-4 sm:p-5 shadow-xs">
             <div className="flex items-center justify-between mb-3 gap-2">
               <div>
-                <h3 className="font-bold text-sm text-[#1C1917] dark:text-white">
+                <h3 className="font-bold text-sm text-[#1C1917]">
                   Transaksi Terbaru
                 </h3>
-                <p className="text-[11px] text-[#1C1917] dark:text-white">
+                <p className="text-[11px] text-[#57534E]">
                   {dash.recentSales.length} penjualan terakhir
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => onNavigate('riwayat')}
-                className="text-xs font-bold text-[#1C1917] dark:text-white hover:underline shrink-0"
+                className="min-h-[44px] px-2 -mr-2 text-xs font-bold text-[#166534] hover:underline shrink-0"
               >
-                Lihat Semua →
+                Lihat Semua
               </button>
             </div>
             {dash.recentSales.length === 0 ? (
-              <p className="text-xs text-[#1C1917] dark:text-white py-4 text-center">
+              <p className="text-xs text-[#57534E] py-4 text-center">
                 Belum ada transaksi.
               </p>
             ) : (
@@ -328,21 +334,22 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
                   const itemCount = dash.itemsCountBySale.get(s.id) || 0;
                   const payTone =
                     s.paymentMethod === 'QRIS'
-                      ? 'bg-[#E0F2FE] text-[#1C1917]'
+                      ? 'bg-[#E0F2FE] text-[#0369A1]'
                       : s.paymentMethod === 'Transfer'
-                      ? 'bg-[#FEF3C7] text-[#1C1917]'
-                      : 'bg-[#DCFCE7] text-[#1C1917]';
+                      ? 'bg-[#FEF3C7] text-[#92400E]'
+                      : 'bg-[#DCFCE7] text-[#166534]';
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={s.id}
                       onClick={() => onNavigate('riwayat')}
-                      className="cursor-pointer rounded-xl bg-[#DCEBE2] dark:bg-[#0F241E] border border-[#B7D6C3] dark:border-[#244C41] px-3 py-2.5 flex items-center justify-between gap-2.5 hover:border-[#15803D]/50 transition"
+                      className="w-full text-left cursor-pointer rounded-xl bg-[#DCEBE2] border border-[#B7D6C3] px-3 py-2.5 flex items-center justify-between gap-2.5 hover:border-[#15803D] transition"
                     >
                       <div className="min-w-0">
-                        <p className="font-bold text-xs text-[#1C1917] dark:text-white truncate">
+                        <p className="font-bold text-xs text-[#1C1917] truncate">
                           {s.invoiceNo}
                         </p>
-                        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[#1C1917] dark:text-white flex-wrap">
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[#57534E] flex-wrap">
                           <span>{formatDateTimeID(s.createdAt)}</span>
                           <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${payTone}`}>
                             {s.paymentMethod === 'Tunai' ? 'Cash' : s.paymentMethod}
@@ -350,31 +357,31 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
                           {itemCount > 0 && <span>• {itemCount} item</span>}
                         </div>
                       </div>
-                      <span className="font-extrabold text-xs sm:text-sm text-[#1C1917] dark:text-white tabular-nums shrink-0">
+                      <span className="font-extrabold text-xs sm:text-sm text-[#1C1917] tabular-nums shrink-0">
                         {formatIDR(s.total)}
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
             )}
           </div>
 
-          {/* 2. Pengingat Penting (High-contrast rows on white background) */}
-          <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-4 sm:p-5 shadow-xs">
+          {/* 2. Pengingat Penting */}
+          <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-4 sm:p-5 shadow-xs">
             <div className="flex items-center justify-between mb-3 gap-2">
               <div>
-                <h3 className="font-bold text-sm text-[#1C1917] dark:text-white">
+                <h3 className="font-bold text-sm text-[#1C1917]">
                   Pengingat Penting
                 </h3>
-                <p className="text-[11px] text-[#78716C] dark:text-[#93B5A9]">
-                  Stok menipis, kadaluarsa & tagihan
+                <p className="text-[11px] text-[#57534E]">
+                  Stok menipis, kadaluarsa &amp; tagihan
                 </p>
               </div>
               <span
                 className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
                   totalAlerts > 0
-                    ? 'bg-[#FEE2E2] text-[#DC2626]'
+                    ? 'bg-[#FEE2E2] text-[#BA1A1A]'
                     : 'bg-[#DCFCE7] text-[#166534]'
                 }`}
               >
@@ -384,7 +391,7 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
 
             {totalAlerts === 0 ? (
               <div className="alert-row-info rounded-xl px-3 py-2.5 flex items-center gap-2 text-xs font-semibold">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
                 <span>Semua stok, ED, dan faktur dalam kondisi aman.</span>
               </div>
             ) : (
@@ -393,45 +400,45 @@ export const BerandaScreen: React.FC<{ onNavigate: (tab: string) => void }> = ({
                   <button
                     type="button"
                     onClick={() => onNavigate('pengingat')}
-                    className="w-full text-left alert-row-danger rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs font-semibold transition hover:opacity-90"
+                    className="w-full min-h-[44px] text-left alert-row-danger rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs font-semibold transition hover:opacity-90"
                   >
                     <span className="flex items-center gap-2 min-w-0">
-                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
                       <span className="truncate">
-                        {dash.expiringCount} obat kadaluarsa / ED ≤ 30 hari
+                        {dash.expiringCount} obat kadaluarsa / ED &le; 30 hari
                       </span>
                     </span>
-                    <span className="font-extrabold shrink-0">Cek →</span>
+                    <span className="font-extrabold shrink-0">Cek</span>
                   </button>
                 )}
                 {dash.lowStockCount > 0 && (
                   <button
                     type="button"
                     onClick={() => onNavigate('pengingat')}
-                    className="w-full text-left alert-row-warn rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs font-semibold transition hover:opacity-90"
+                    className="w-full min-h-[44px] text-left alert-row-warn rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs font-semibold transition hover:opacity-90"
                   >
                     <span className="flex items-center gap-2 min-w-0">
-                      <Package className="w-4 h-4 shrink-0" />
+                      <Package className="w-4 h-4 shrink-0" aria-hidden="true" />
                       <span className="truncate">
                         {dash.lowStockCount} obat stok menipis / habis (&lt; 10)
                       </span>
                     </span>
-                    <span className="font-extrabold shrink-0">Cek →</span>
+                    <span className="font-extrabold shrink-0">Cek</span>
                   </button>
                 )}
                 {dash.creditPbfCount > 0 && (
                   <button
                     type="button"
                     onClick={() => onNavigate('pbf')}
-                    className="w-full text-left alert-row-info rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs font-semibold transition hover:opacity-90"
+                    className="w-full min-h-[44px] text-left alert-row-info rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 text-xs font-semibold transition hover:opacity-90"
                   >
                     <span className="flex items-center gap-2 min-w-0">
-                      <TrendingUp className="w-4 h-4 shrink-0" />
+                      <TrendingUp className="w-4 h-4 shrink-0" aria-hidden="true" />
                       <span className="truncate">
                         {dash.creditPbfCount} faktur PBF kredit belum lunas
                       </span>
                     </span>
-                    <span className="font-extrabold shrink-0">Lihat →</span>
+                    <span className="font-extrabold shrink-0">Lihat</span>
                   </button>
                 )}
               </div>
@@ -621,13 +628,14 @@ export const StokScreen: React.FC = () => {
         action={
           <>
             <button
+              type="button"
               onClick={handleDownloadTemplate}
-              className="px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-bold flex items-center gap-1.5"
+              className="min-h-[44px] px-3 py-2 rounded-xl bg-[#DCEBE2] hover:bg-[#D0E3D8] border border-[#B7D6C3] text-[#1C1917] text-xs font-bold flex items-center gap-1.5 transition"
             >
-              <Download className="w-4 h-4" /> Template Excel
+              <Download className="w-4 h-4" aria-hidden="true" /> Template Excel
             </button>
-            <label className="cursor-pointer px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-bold flex items-center gap-1.5">
-              <Upload className="w-4 h-4" /> Impor Excel/CSV
+            <label className="min-h-[44px] cursor-pointer px-3 py-2 rounded-xl bg-[#DCEBE2] hover:bg-[#D0E3D8] border border-[#B7D6C3] text-[#1C1917] text-xs font-bold flex items-center gap-1.5 transition">
+              <Upload className="w-4 h-4" aria-hidden="true" /> Impor Excel/CSV
               <input
                 type="file"
                 accept=".xlsx,.xls,.csv"
@@ -636,25 +644,31 @@ export const StokScreen: React.FC = () => {
               />
             </label>
             <button
+              type="button"
               onClick={handleExportExcel}
-              className="px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-bold flex items-center gap-1.5"
+              className="min-h-[44px] px-3 py-2 rounded-xl bg-[#DCEBE2] hover:bg-[#D0E3D8] border border-[#B7D6C3] text-[#1C1917] text-xs font-bold flex items-center gap-1.5 transition"
             >
-              <Download className="w-4 h-4" /> Ekspor Excel
+              <Download className="w-4 h-4" aria-hidden="true" /> Ekspor Excel
             </button>
             <button
+              type="button"
               onClick={openAdd}
-              className="px-4 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5"
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5 transition"
             >
-              <Plus className="w-4 h-4" /> Tambah Obat
+              <Plus className="w-4 h-4" aria-hidden="true" /> Tambah Obat
             </button>
           </>
         }
       />
 
       {msg && (
-        <div className="mb-4 p-3 rounded-2xl bg-[#15803D]/15 border border-[#15803D]/30 text-sm flex items-center justify-between">
+        <div className="mb-4 p-3 rounded-2xl bg-[#DCFCE7] border border-[#B7D6C3] text-sm text-[#1C1917] flex items-center justify-between gap-2">
           <span>{msg}</span>
-          <button onClick={() => setMsg(null)} className="text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => setMsg(null)}
+            className="min-h-[44px] px-3 text-xs font-bold text-[#166534] hover:underline shrink-0"
+          >
             Tutup
           </button>
         </div>
@@ -663,19 +677,21 @@ export const StokScreen: React.FC = () => {
       {/* Search & Filter Controls */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative flex-1 min-w-[220px]">
-          <Search className="w-4 h-4 absolute left-3.5 top-3.5 opacity-50" />
+          <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-[#57534E]" aria-hidden="true" />
           <input
             type="text"
+            aria-label="Cari nama obat, kategori, atau scan barcode"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari nama obat, kategori, atau scan barcode..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+            className="w-full min-h-[44px] pl-10 pr-4 py-2.5 rounded-2xl bg-[#FAF8F4] border border-[#B7D6C3] text-sm text-[#1C1917] placeholder:text-[#57534E] focus:ring-2 focus:ring-[#15803D]"
           />
         </div>
         <select
+          aria-label="Filter kategori obat"
           value={catFilter}
           onChange={(e) => setCatFilter(e.target.value)}
-          className="px-3.5 py-2.5 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] text-sm font-medium"
+          className="min-h-[44px] px-3.5 py-2.5 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] text-sm font-medium text-[#1C1917]"
         >
           <option value="Semua">Semua Kategori</option>
           {CATEGORIES.map((c) => (
@@ -684,19 +700,24 @@ export const StokScreen: React.FC = () => {
             </option>
           ))}
         </select>
-        <div className="flex rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] p-1 text-xs font-bold">
+        <div
+          className="flex flex-wrap rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] p-1 text-xs font-bold gap-1"
+          role="group"
+          aria-label="Filter status stok"
+        >
           {(
             [
               ['ALL', 'Semua'],
               ['LOW', 'Stok < 10'],
-              ['EXP', 'Kadaluarsa ≤30h'],
+              ['EXP', 'Kadaluarsa <=30h'],
             ] as const
           ).map(([k, lbl]) => (
             <button
+              type="button"
               key={k}
               onClick={() => setStockFilter(k)}
-              className={`px-3 py-1.5 rounded-xl transition ${
-                stockFilter === k ? 'bg-[#15803D] text-white' : 'opacity-70'
+              className={`min-h-[38px] px-3 py-1.5 rounded-xl transition ${
+                stockFilter === k ? 'bg-[#15803D] text-white' : 'text-[#57534E] hover:text-[#1C1917]'
               }`}
             >
               {lbl}
@@ -704,8 +725,9 @@ export const StokScreen: React.FC = () => {
           ))}
         </div>
         <button
+          type="button"
           onClick={() => setSortAz(!sortAz)}
-          className="px-3.5 py-2.5 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] text-xs font-bold"
+          className="min-h-[44px] px-3.5 py-2.5 rounded-2xl bg-[#DCEBE2] hover:bg-[#D0E3D8] border border-[#B7D6C3] text-xs font-bold text-[#1C1917]"
         >
           Urut: {sortAz ? 'A-Z' : 'Z-A'}
         </button>
@@ -714,7 +736,7 @@ export const StokScreen: React.FC = () => {
       {/* Mobile Card List + Desktop Table */}
       <div className="md:hidden space-y-2.5">
         {filtered.length === 0 ? (
-          <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] py-10 text-center opacity-60 text-sm">
+          <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] py-10 text-center text-[#57534E] text-sm">
             Tidak ada data obat yang cocok.
           </div>
         ) : (
@@ -723,23 +745,23 @@ export const StokScreen: React.FC = () => {
             return (
               <div
                 key={m.id}
-                className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-3.5 space-y-2.5"
+                className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-3.5 space-y-2.5 shadow-xs"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-bold text-sm leading-snug break-words">{m.name}</p>
-                    <p className="text-xs opacity-65 mt-0.5">
+                    <p className="font-bold text-sm text-[#1C1917] leading-snug break-words">{m.name}</p>
+                    <p className="text-xs text-[#57534E] mt-0.5">
                       {m.category} • {m.unit}
                     </p>
                   </div>
                   <StockPill stock={m.stock} />
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-black/5 dark:border-white/5 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#B7D6C3] text-xs">
                   <div className="space-y-0.5">
-                    <p className="font-extrabold text-sm text-[#15803D] dark:text-[#86EFAC]">
+                    <p className="font-extrabold text-sm text-[#166534]">
                       Ecer: {formatIDR(m.sellPrice)}
                     </p>
-                    <p className="opacity-70">
+                    <p className="text-[#57534E]">
                       Beli: {m.buyPrice > 0 ? formatIDR(m.buyPrice) : '-'}
                       {m.wholesalePrice > 0 ? ` • Grosir: ${formatIDR(m.wholesalePrice)}` : ''}
                     </p>
@@ -749,8 +771,8 @@ export const StokScreen: React.FC = () => {
                           expDays !== null && expDays <= 0
                             ? 'text-[#BA1A1A] font-bold'
                             : expDays !== null && expDays <= 30
-                            ? 'text-amber-500 font-bold'
-                            : 'opacity-70'
+                            ? 'text-[#92400E] font-bold'
+                            : 'text-[#57534E]'
                         }
                       >
                         ED: {formatDateID(m.expiryDate)}
@@ -762,11 +784,11 @@ export const StokScreen: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => openEdit(m)}
-                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-[#DCEBE2] dark:bg-[#0F241E] hover:bg-black/10 dark:hover:bg-white/10"
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-[#DCEBE2] border border-[#B7D6C3] hover:bg-[#D0E3D8] text-[#1C1917]"
                       title="Edit Obat"
                       aria-label={`Edit ${m.name}`}
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2 className="w-4 h-4" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
@@ -780,11 +802,11 @@ export const StokScreen: React.FC = () => {
                           { title: 'Hapus Obat', danger: true, confirmLabel: 'Hapus' }
                         )
                       }
-                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-red-500/10 text-[#BA1A1A] dark:text-[#FCA5A5]"
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-[#FEE2E2] text-[#BA1A1A] hover:bg-[#FECACA]"
                       title="Hapus Obat"
                       aria-label={`Hapus ${m.name}`}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -794,10 +816,10 @@ export const StokScreen: React.FC = () => {
         )}
       </div>
 
-      <div className="hidden md:block rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] overflow-hidden">
+      <div className="hidden md:block rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#E1E2E8] dark:bg-[#0F241E] text-xs uppercase opacity-75">
+            <thead className="bg-[#DCEBE2] border-b border-[#B7D6C3] text-xs uppercase text-[#1C1917]">
               <tr>
                 <th className="py-3.5 px-4">Nama Obat</th>
                 <th className="py-3.5 px-3">Kategori / Satuan</th>
@@ -809,10 +831,10 @@ export const StokScreen: React.FC = () => {
                 <th className="py-3.5 px-4 text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/5 dark:divide-white/5">
+            <tbody className="divide-y divide-[#B7D6C3]">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center opacity-60">
+                  <td colSpan={8} className="py-10 text-center text-[#57534E]">
                     Tidak ada data obat yang cocok.
                   </td>
                 </tr>
@@ -822,26 +844,26 @@ export const StokScreen: React.FC = () => {
                   return (
                     <tr
                       key={m.id}
-                      className="hover:bg-black/5 dark:hover:bg-white/5 transition"
+                      className="hover:bg-[#DCEBE2]/60 transition"
                     >
-                      <td className="py-3 px-4 font-bold">
+                      <td className="py-3 px-4 font-bold text-[#1C1917]">
                         <div>{m.name}</div>
                         {m.barcode && (
-                          <div className="text-[11px] font-normal opacity-60">
+                          <div className="text-[11px] font-normal text-[#57534E]">
                             Barcode: {m.barcode}
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-3 text-xs">
+                      <td className="py-3 px-3 text-xs text-[#1C1917]">
                         <span className="font-semibold">{m.category}</span> • {m.unit}
                       </td>
-                      <td className="py-3 px-3 text-right opacity-80">
+                      <td className="py-3 px-3 text-right text-[#57534E]">
                         {m.buyPrice > 0 ? formatIDR(m.buyPrice) : '-'}
                       </td>
-                      <td className="py-3 px-3 text-right font-bold text-[#15803D] dark:text-[#86EFAC]">
+                      <td className="py-3 px-3 text-right font-bold text-[#166534]">
                         {formatIDR(m.sellPrice)}
                       </td>
-                      <td className="py-3 px-3 text-right opacity-80">
+                      <td className="py-3 px-3 text-right text-[#57534E]">
                         {m.wholesalePrice > 0 ? formatIDR(m.wholesalePrice) : '-'}
                       </td>
                       <td className="py-3 px-3">
@@ -854,8 +876,8 @@ export const StokScreen: React.FC = () => {
                               expDays !== null && expDays <= 0
                                 ? 'text-[#BA1A1A] font-bold'
                                 : expDays !== null && expDays <= 30
-                                ? 'text-amber-500 font-bold'
-                                : ''
+                                ? 'text-[#92400E] font-bold'
+                                : 'text-[#1C1917]'
                             }
                           >
                             {formatDateID(m.expiryDate)}
@@ -870,11 +892,11 @@ export const StokScreen: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => openEdit(m)}
-                            className="p-2.5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10"
+                            className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-xl hover:bg-[#DCEBE2] text-[#1C1917]"
                             title="Edit Obat"
                             aria-label={`Edit ${m.name}`}
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4" aria-hidden="true" />
                           </button>
                           <button
                             type="button"
@@ -888,11 +910,11 @@ export const StokScreen: React.FC = () => {
                                 { title: 'Hapus Obat', danger: true, confirmLabel: 'Hapus' }
                               )
                             }
-                            className="p-2.5 rounded-xl text-[#BA1A1A] dark:text-[#FCA5A5] hover:bg-red-500/10"
+                            className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-xl text-[#BA1A1A] hover:bg-red-500/10"
                             title="Hapus Obat"
                             aria-label={`Hapus ${m.name}`}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" aria-hidden="true" />
                           </button>
                         </div>
                       </td>
@@ -916,38 +938,44 @@ export const StokScreen: React.FC = () => {
           }}
           className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
         >
-          <div className="bg-[#F6F4EF] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] rounded-3xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#F6F4EF] border border-[#B7D6C3] rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 id="med-modal-title" className="text-lg font-extrabold">
+              <h3 id="med-modal-title" className="text-lg font-extrabold text-[#1C1917]">
                 {editing ? 'Ubah Data Obat' : 'Tambah Obat Baru'}
               </h3>
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
                 aria-label="Tutup modal obat"
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-black/5 dark:hover:bg-white/10"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-black/5"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
             <form onSubmit={handleSave} className="space-y-3.5 text-sm">
               <div>
-                <label className="block text-xs font-bold mb-1">Nama Obat *</label>
+                <label htmlFor="med-name" className="block text-xs font-bold text-[#1C1917] mb-1">
+                  Nama Obat *
+                </label>
                 <input
+                  id="med-name"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                   placeholder="Contoh: Paracetamol 500mg"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1">Kategori</label>
+                  <label htmlFor="med-cat" className="block text-xs font-bold text-[#1C1917] mb-1">
+                    Kategori
+                  </label>
                   <select
+                    id="med-cat"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c} value={c}>
@@ -957,11 +985,14 @@ export const StokScreen: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">Satuan</label>
+                  <label htmlFor="med-unit" className="block text-xs font-bold text-[#1C1917] mb-1">
+                    Satuan
+                  </label>
                   <select
+                    id="med-unit"
                     value={unit}
                     onChange={(e) => setUnit(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
                   >
                     {UNITS.map((u) => (
                       <option key={u} value={u}>
@@ -971,69 +1002,87 @@ export const StokScreen: React.FC = () => {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1">Harga Beli (HPP)</label>
+                  <label htmlFor="med-buy" className="block text-xs font-bold text-[#1C1917] mb-1">
+                    Harga Beli (HPP)
+                  </label>
                   <input
+                    id="med-buy"
                     type="number"
                     min="0"
                     value={buyPrice}
                     onChange={(e) => setBuyPrice(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">Harga Jual Ecer *</label>
+                  <label htmlFor="med-sell" className="block text-xs font-bold text-[#1C1917] mb-1">
+                    Harga Jual Ecer *
+                  </label>
                   <input
+                    id="med-sell"
                     required
                     type="number"
                     min="1"
                     value={sellPrice}
                     onChange={(e) => setSellPrice(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                     placeholder="10000"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">Harga Grosir</label>
+                  <label htmlFor="med-wholesale" className="block text-xs font-bold text-[#1C1917] mb-1">
+                    Harga Grosir
+                  </label>
                   <input
+                    id="med-wholesale"
                     type="number"
                     min="0"
                     value={wholesalePrice}
                     onChange={(e) => setWholesalePrice(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                     placeholder="0"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1">Stok *</label>
+                  <label htmlFor="med-stock" className="block text-xs font-bold text-[#1C1917] mb-1">
+                    Stok *
+                  </label>
                   <input
+                    id="med-stock"
                     required
                     type="number"
                     min="0"
                     value={stock}
                     onChange={(e) => setStock(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">Tgl Kadaluarsa</label>
+                  <label htmlFor="med-exp" className="block text-xs font-bold text-[#1C1917] mb-1">
+                    Tgl Kadaluarsa
+                  </label>
                   <input
+                    id="med-exp"
                     type="date"
                     value={expiryDate}
                     onChange={(e) => setExpiryDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">Barcode</label>
+                  <label htmlFor="med-barcode" className="block text-xs font-bold text-[#1C1917] mb-1">
+                    Barcode
+                  </label>
                   <input
+                    id="med-barcode"
                     value={barcode}
                     onChange={(e) => setBarcode(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                     placeholder="Opsional"
                   />
                 </div>
@@ -1042,13 +1091,13 @@ export const StokScreen: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 rounded-xl bg-black/10 dark:bg-white/10 font-bold"
+                  className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[#DCEBE2] hover:bg-[#D0E3D8] border border-[#B7D6C3] text-[#1C1917] font-bold"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-[#15803D] text-white font-bold"
+                  className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white font-bold"
                 >
                   Simpan Obat
                 </button>
@@ -1179,7 +1228,7 @@ export const ReceiptModal: React.FC<{
               <button
                 type="button"
                 onClick={() => selectPaper('58')}
-                className={`px-3 py-1 rounded-md ${
+                className={`min-h-[44px] px-3.5 py-1.5 rounded-md ${
                   paperWidth === '58'
                     ? 'bg-[#15803D] text-white'
                     : 'text-gray-700'
@@ -1190,7 +1239,7 @@ export const ReceiptModal: React.FC<{
               <button
                 type="button"
                 onClick={() => selectPaper('80')}
-                className={`px-3 py-1 rounded-md ${
+                className={`min-h-[44px] px-3.5 py-1.5 rounded-md ${
                   paperWidth === '80'
                     ? 'bg-[#15803D] text-white'
                     : 'text-gray-700'
@@ -1202,14 +1251,16 @@ export const ReceiptModal: React.FC<{
           </div>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => window.print()}
-              className="flex-1 py-2.5 rounded-xl bg-[#15803D] text-white font-bold text-sm flex items-center justify-center gap-2"
+              className="flex-1 min-h-[44px] py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white font-bold text-sm flex items-center justify-center gap-2"
             >
-              <Printer className="w-4 h-4" /> Cetak Struk
+              <Printer className="w-4 h-4" aria-hidden="true" /> Cetak Struk
             </button>
             <button
+              type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl bg-gray-200 text-gray-800 font-bold text-sm"
+              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-sm"
             >
               Selesai
             </button>
@@ -1341,7 +1392,7 @@ export const KasirScreen: React.FC = () => {
   }, [cart, paidNum, cartTotal, paymentMethod, lastReceipt]);
 
   return (
-    <div>
+    <div className={cart.length > 0 ? 'pb-24 lg:pb-0' : ''}>
       <PageHeader
         title="Kasir"
         subtitle="Pilih obat, atur harga Ecer/Grosir, proses pembayaran & cetak struk"
@@ -1351,10 +1402,11 @@ export const KasirScreen: React.FC = () => {
         {/* Medicine Picker */}
         <div className="lg:col-span-7 space-y-3">
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3.5 top-3.5 opacity-50" />
+            <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-[#57534E]" aria-hidden="true" />
             <input
               ref={searchInputRef}
               type="text"
+              aria-label="Cari obat atau scan barcode"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => {
@@ -1370,9 +1422,9 @@ export const KasirScreen: React.FC = () => {
                 }
               }}
               placeholder="Cari obat atau scan barcode lalu tekan Enter..."
-              className="w-full pl-10 pr-14 py-2.5 rounded-2xl bg-[#FAF8F4] dark:bg-[#0F241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+              className="w-full min-h-[44px] pl-10 pr-14 py-2.5 rounded-2xl bg-[#FAF8F4] border border-[#B7D6C3] text-sm text-[#1C1917] placeholder:text-[#57534E] focus:ring-2 focus:ring-[#15803D]"
             />
-            <kbd className="hidden sm:inline-block absolute right-3 top-2.5 px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[10px] font-bold opacity-70">
+            <kbd className="hidden sm:inline-block absolute right-3 top-3 px-1.5 py-0.5 rounded bg-[#DCEBE2] border border-[#B7D6C3] text-[10px] font-bold text-[#1C1917]">
               F2
             </kbd>
           </div>
@@ -1382,35 +1434,36 @@ export const KasirScreen: React.FC = () => {
               const inCart = cart.find((c) => c.medicineId === m.id)?.qty || 0;
               return (
                 <button
+                  type="button"
                   key={m.id}
                   disabled={m.stock <= 0}
                   onClick={() => addToCart(m)}
-                  className={`text-left p-4 rounded-2xl transition flex flex-col justify-between border ${
+                  className={`text-left p-4 rounded-2xl transition flex flex-col justify-between border shadow-xs ${
                     inCart > 0
-                      ? 'bg-[#15803D]/15 border-[#15803D]'
-                      : 'bg-[#E8F2EC] dark:bg-[#142E27] border-transparent hover:border-[#15803D]/40'
-                  } ${m.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      ? 'bg-[#DCFCE7] border-[#15803D]'
+                      : 'bg-[#E8F2EC] border-[#B7D6C3] hover:border-[#15803D]'
+                  } ${m.stock <= 0 ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-bold text-sm">{m.name}</p>
+                      <p className="font-bold text-sm text-[#1C1917]">{m.name}</p>
                       {inCart > 0 && (
                         <span className="px-2 py-0.5 rounded-full bg-[#15803D] text-white text-xs font-bold">
                           {inCart}x
                         </span>
                       )}
                     </div>
-                    <p className="text-xs opacity-65 mt-0.5">
+                    <p className="text-xs text-[#57534E] mt-0.5">
                       {m.category} • {m.unit}
                     </p>
                   </div>
-                  <div className="flex items-center justify-between mt-3 pt-2 border-t border-black/5 dark:border-white/5">
+                  <div className="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-[#B7D6C3]">
                     <div>
-                      <p className="font-extrabold text-sm text-[#15803D] dark:text-[#86EFAC]">
+                      <p className="font-extrabold text-sm text-[#166534]">
                         {formatIDR(m.sellPrice)}
                       </p>
                       {m.wholesalePrice > 0 && (
-                        <p className="text-[11px] opacity-70">
+                        <p className="text-[11px] text-[#57534E]">
                           Grosir: {formatIDR(m.wholesalePrice)}
                         </p>
                       )}
@@ -1425,15 +1478,16 @@ export const KasirScreen: React.FC = () => {
 
         {/* Cart & Payment Panel */}
         <div id="kasir-cart" className="lg:col-span-5 scroll-mt-20">
-          <div className="rounded-3xl bg-[#E8F2EC] dark:bg-[#142E27] p-4 sm:p-5 lg:sticky lg:top-4 space-y-4">
+          <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] shadow-xs p-4 sm:p-5 lg:sticky lg:top-4 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-base">
+              <h3 className="font-extrabold text-base text-[#1C1917]">
                 Keranjang ({cart.reduce((a, c) => a + c.qty, 0)} item)
               </h3>
               {cart.length > 0 && (
                 <button
+                  type="button"
                   onClick={() => setCart([])}
-                  className="text-xs text-[#BA1A1A] font-bold"
+                  className="min-h-[44px] px-2 -mr-2 text-xs text-[#BA1A1A] font-bold hover:underline"
                 >
                   Kosongkan
                 </button>
@@ -1441,7 +1495,7 @@ export const KasirScreen: React.FC = () => {
             </div>
 
             {cart.length === 0 ? (
-              <div className="py-12 text-center opacity-50 text-sm">
+              <div className="py-12 text-center text-[#57534E] text-sm">
                 Ketuk obat di sebelah kiri untuk memasukkan ke keranjang.
               </div>
             ) : (
@@ -1456,59 +1510,65 @@ export const KasirScreen: React.FC = () => {
                   return (
                     <div
                       key={c.medicineId}
-                      className="p-3 rounded-2xl bg-[#DCEBE2] dark:bg-[#0F241E] space-y-2"
+                      className="p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] space-y-2"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="font-bold text-sm">{m.name}</p>
-                          <p className="text-xs opacity-75">
+                          <p className="font-bold text-sm text-[#1C1917]">{m.name}</p>
+                          <p className="text-xs text-[#57534E]">
                             {formatIDR(unitPrice)} / {m.unit}
                           </p>
                         </div>
-                        <p className="font-extrabold text-sm">
+                        <p className="font-extrabold text-sm text-[#1C1917]">
                           {formatIDR(unitPrice * c.qty)}
                         </p>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         {m.wholesalePrice > 0 ? (
-                          <div className="flex gap-1 text-xs font-bold">
+                          <div className="flex gap-1.5 text-xs font-bold">
                             <button
+                              type="button"
                               onClick={() => c.useWholesale && toggleWholesale(m.id)}
-                              className={`px-2.5 py-1.5 sm:py-1 rounded-lg ${
+                              className={`min-h-[44px] px-3 rounded-xl border ${
                                 !c.useWholesale
-                                  ? 'bg-[#15803D] text-white'
-                                  : 'bg-black/10 dark:bg-white/10'
+                                  ? 'bg-[#15803D] border-[#15803D] text-white'
+                                  : 'bg-[#FAF8F4] border-[#B7D6C3] text-[#1C1917]'
                               }`}
                             >
                               Ecer
                             </button>
                             <button
+                              type="button"
                               onClick={() => !c.useWholesale && toggleWholesale(m.id)}
-                              className={`px-2.5 py-1.5 sm:py-1 rounded-lg ${
+                              className={`min-h-[44px] px-3 rounded-xl border ${
                                 c.useWholesale
-                                  ? 'bg-[#15803D] text-white'
-                                  : 'bg-black/10 dark:bg-white/10'
+                                  ? 'bg-[#15803D] border-[#15803D] text-white'
+                                  : 'bg-[#FAF8F4] border-[#B7D6C3] text-[#1C1917]'
                               }`}
                             >
                               Grosir
                             </button>
                           </div>
                         ) : (
-                          <span className="text-[11px] opacity-60">Harga Ecer</span>
+                          <span className="text-[11px] text-[#57534E]">Harga Ecer</span>
                         )}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <button
+                            type="button"
                             onClick={() => updateQty(m.id, c.qty - 1)}
-                            className="w-9 h-9 sm:w-7 sm:h-7 rounded-lg bg-black/10 dark:bg-white/10 font-bold"
+                            aria-label={`Kurangi jumlah ${m.name}`}
+                            className="min-w-[44px] min-h-[44px] rounded-xl bg-[#FAF8F4] hover:bg-white border border-[#B7D6C3] font-bold text-[#1C1917]"
                           >
                             -
                           </button>
-                          <span className="font-bold text-sm w-6 text-center">
+                          <span className="font-bold text-sm w-6 text-center text-[#1C1917]">
                             {c.qty}
                           </span>
                           <button
+                            type="button"
                             onClick={() => updateQty(m.id, c.qty + 1)}
-                            className="w-9 h-9 sm:w-7 sm:h-7 rounded-lg bg-black/10 dark:bg-white/10 font-bold"
+                            aria-label={`Tambah jumlah ${m.name}`}
+                            className="min-w-[44px] min-h-[44px] rounded-xl bg-[#FAF8F4] hover:bg-white border border-[#B7D6C3] font-bold text-[#1C1917]"
                           >
                             +
                           </button>
@@ -1520,29 +1580,29 @@ export const KasirScreen: React.FC = () => {
               </div>
             )}
 
-            <div className="border-t border-black/10 dark:border-white/10 pt-4 space-y-3">
+            <div className="border-t border-[#B7D6C3] pt-4 space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-bold opacity-75">Total Tagihan</span>
-                <span className="text-2xl font-extrabold text-[#15803D] dark:text-[#86EFAC]">
+                <span className="text-sm font-bold text-[#57534E]">Total Tagihan</span>
+                <span className="text-2xl font-extrabold text-[#166534]">
                   {formatIDR(cartTotal)}
                 </span>
               </div>
 
               {/* Payment Method */}
               <div>
-                <label className="block text-xs font-bold mb-1.5 opacity-75">
+                <p className="block text-xs font-bold text-[#57534E] mb-1.5">
                   Metode Pembayaran
-                </label>
-                <div className="grid grid-cols-3 gap-2">
+                </p>
+                <div className="grid grid-cols-3 gap-2" role="group" aria-label="Metode pembayaran">
                   {(['Tunai', 'QRIS', 'Transfer'] as const).map((pm) => (
                     <button
                       key={pm}
                       type="button"
                       onClick={() => setPaymentMethod(pm)}
-                      className={`py-2 rounded-xl text-xs font-bold transition ${
+                      className={`min-h-[44px] py-2 rounded-xl border text-xs font-bold transition ${
                         paymentMethod === pm
-                          ? 'bg-[#15803D] text-white'
-                          : 'bg-[#DCEBE2] dark:bg-[#0F241E]'
+                          ? 'bg-[#15803D] border-[#15803D] text-white'
+                          : 'bg-[#DCEBE2] border-[#B7D6C3] text-[#1C1917] hover:bg-[#D0E3D8]'
                       }`}
                     >
                       {pm}
@@ -1553,16 +1613,17 @@ export const KasirScreen: React.FC = () => {
 
               {paymentMethod === 'Tunai' && (
                 <div>
-                  <label className="block text-xs font-bold mb-1 opacity-75">
+                  <label htmlFor="kasir-paid" className="block text-xs font-bold text-[#57534E] mb-1">
                     Uang Diterima (Rp)
                   </label>
                   <input
+                    id="kasir-paid"
                     type="text"
                     inputMode="numeric"
                     value={formatThousands(amountPaidStr)}
                     onChange={(e) => setAmountPaidStr(e.target.value.replace(/\D/g, ''))}
                     placeholder={formatThousands(String(cartTotal))}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] dark:bg-[#0F241E] font-bold text-sm"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] font-bold text-sm text-[#1C1917] placeholder:text-[#57534E]"
                   />
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {[cartTotal, 20000, 50000, 100000]
@@ -1572,7 +1633,7 @@ export const KasirScreen: React.FC = () => {
                           key={nom}
                           type="button"
                           onClick={() => setAmountPaidStr(String(nom))}
-                          className="px-2.5 py-1 rounded-lg bg-[#DCEBE2] dark:bg-[#0F241E] text-xs font-bold hover:bg-[#15803D] hover:text-white transition"
+                          className="min-h-[44px] px-3 py-1.5 rounded-xl bg-[#DCEBE2] border border-[#B7D6C3] text-xs font-bold text-[#1C1917] hover:bg-[#15803D] hover:text-white transition"
                         >
                           {nom === cartTotal ? 'Uang Pas' : formatCompactIDR(nom)}
                         </button>
@@ -1582,18 +1643,19 @@ export const KasirScreen: React.FC = () => {
               )}
 
               <div className="flex justify-between text-sm font-bold pt-1">
-                <span>Kembalian</span>
-                <span className="text-[#2E7D32] dark:text-[#7EDC9A]">
+                <span className="text-[#1C1917]">Kembalian</span>
+                <span className="text-[#166534]">
                   {formatIDR(changeAmount)}
                 </span>
               </div>
 
               <button
+                type="button"
                 disabled={cart.length === 0 || paidNum < cartTotal}
                 onClick={handleCheckout}
-                className="w-full py-3.5 rounded-2xl bg-[#15803D] hover:bg-[#166534] disabled:opacity-40 text-white font-extrabold text-sm flex items-center justify-center gap-2 transition"
+                className="w-full min-h-[48px] py-3.5 rounded-2xl bg-[#15803D] hover:bg-[#166534] disabled:opacity-40 text-white font-extrabold text-sm flex items-center justify-center gap-2 transition"
               >
-                <CheckCircle2 className="w-5 h-5" /> Bayar & Cetak Struk
+                <CheckCircle2 className="w-5 h-5" aria-hidden="true" /> Bayar &amp; Cetak Struk
                 <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-white/20 text-[10px] font-bold">
                   F9
                 </kbd>
@@ -1604,13 +1666,13 @@ export const KasirScreen: React.FC = () => {
       </div>
 
       {cart.length > 0 && (
-        <div className="no-print lg:hidden fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom))] inset-x-3 z-20">
+        <div className="no-print lg:hidden fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] inset-x-3 z-20">
           <button
             type="button"
             onClick={() =>
               document.getElementById('kasir-cart')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }
-            className="w-full px-4 py-3 rounded-2xl bg-[#142E27] text-white shadow-xl border border-[#244C41] flex items-center justify-between gap-3"
+            className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#142E27] text-white shadow-xl border border-[#244C41] flex items-center justify-between gap-3"
           >
             <span className="text-xs font-bold">
               {cart.reduce((a, c) => a + c.qty, 0)} item • {formatIDR(cartTotal)}
