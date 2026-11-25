@@ -5,7 +5,7 @@ rules_version = '2';
 // 2) Koleksi web_* lama di users/{uid} tetap diizinkan untuk migrasi otomatis ke apotek/main.
 // 3) Koleksi non-web_ (APK Android) tetap terisolasi per users/{uid}.
 // 4) Dokumen authority/config hanya bisa dibaca akun Authority & ditulis akun ber-role Owner.
-// Deploy: npx --yes firebase-tools deploy --only firestore:rules
+// 5) Dokumen authority/pin hanya bisa dibaca & ditulis oleh Owner.
 service cloud.firestore {
   match /databases/{database}/documents {
     function isVerifiedAuth() {
@@ -52,7 +52,9 @@ service cloud.firestore {
     }
 
     match /apotek/main/{col}/{docId} {
-      allow read, create, update: if col.matches('web_.*') && isAuthorized();
+      allow read: if col.matches('web_.*') && isAuthorized();
+      allow create, update: if col.matches('web_.*') && col != 'web_meta' && isAuthorized();
+      allow write: if col == 'web_meta' && isOwner();
       allow delete: if col.matches('web_.*') && isOwner();
     }
 
@@ -75,6 +77,10 @@ service cloud.firestore {
     match /authority/config {
       allow read: if isAuthorized();
       allow write: if isOwner();
+    }
+
+    match /authority/pin {
+      allow read, write: if isOwner();
     }
   }
 }

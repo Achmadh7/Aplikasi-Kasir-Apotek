@@ -20,6 +20,8 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.SetOptions
 import id.apotek.lestari.data.local.DatabaseProvider
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.tasks.await
@@ -169,164 +171,249 @@ class SyncManager(private val repository: Repository) {
             var didorong = 0
             var ditarik = 0
             val akar = fs.collection("users").document(uid)
+            val prefs = context.getSharedPreferences("apotek_prefs", Context.MODE_PRIVATE)
 
-            // 0) Gabungkan obat duplikat lokal (nama+kategori+satuan sama,
-            //    mis. dari sinkron dua akun), lalu hapus dokumen awan baris
-            //    yang digabung supaya tidak turun lagi saat tarikan.
-            for (remoteId in repository.gabungkanObatDuplikat()) {
-                akar.collection("obat").document(remoteId).delete().await()
-            }
-
-            // 1) Dorong baris kotor: induk (obat, penjualan, pembelian,
-            // kas) lebih dulu, item sesudahnya karena item menunjuk
-            // remoteId induknya.
-            for (e in repository.obatKotor()) {
-                if (e.remoteId.isBlank()) continue
-                if (awanLebihBaru(akar, "obat", e.remoteId, e.updatedAt)) continue
-                akar.collection("obat").document(e.remoteId)
-                    .set(SyncLogic.obatKePeta(e)).await()
-                repository.tandaiBersihObat(e.remoteId, e.updatedAt)
-                didorong++
-            }
-            for (e in repository.penjualanKotor()) {
-                if (e.remoteId.isBlank()) continue
-                // TB1 (S1, audit 2026-11-17): jangan dorong baris di bulan
-                // tertutup — kuncinya tidak boleh ditembus sinkronisasi.
-                val bulanJual = bulanKeyDariIso(e.createdAt)
-                if (bulanJual != null && repository.bulanTerkunci(bulanJual)) {
-                    Log.w("TutupBuku", "Lewati dorong penjualan di bulan tertutup $bulanJual")
-                    continue
-                }
-                if (awanLebihBaru(akar, "penjualan", e.remoteId, e.updatedAt)) continue
-                akar.collection("penjualan").document(e.remoteId)
-                    .set(SyncLogic.penjualanKePeta(e)).await()
-                repository.tandaiBersihPenjualan(e.remoteId, e.updatedAt)
-                didorong++
-            }
-            for (e in repository.pbfKotor()) {
-                if (e.remoteId.isBlank()) continue
-                // TB1 (S1): faktur di bulan tertutup tidak didorong.
-                val bulanPbf = bulanKeyDariIso(e.date)
-                if (bulanPbf != null && repository.bulanTerkunci(bulanPbf)) {
-                    Log.w("TutupBuku", "Lewati dorong PBF di bulan tertutup $bulanPbf")
-                    continue
-                }
-                if (awanLebihBaru(akar, "pbf", e.remoteId, e.updatedAt)) continue
-                akar.collection("pbf").document(e.remoteId)
-                    .set(SyncLogic.pbfKePeta(e)).await()
-                repository.tandaiBersihPbf(e.remoteId, e.updatedAt)
-                didorong++
-            }
-            for (e in repository.kasKotor()) {
-                if (e.remoteId.isBlank()) continue
-                // TB1 (S1): kas di bulan tertutup tidak didorong.
-                val bulanKas = bulanKeyDariIso(e.createdAt)
-                if (bulanKas != null && repository.bulanTerkunci(bulanKas)) {
-                    Log.w("TutupBuku", "Lewati dorong kas di bulan tertutup $bulanKas")
-                    continue
-                }
-                if (awanLebihBaru(akar, "kas", e.remoteId, e.updatedAt)) continue
-                akar.collection("kas").document(e.remoteId)
-                    .set(SyncLogic.kasKePeta(e)).await()
-                repository.tandaiBersihKas(e.remoteId, e.updatedAt)
-                didorong++
-            }
-            for (e in repository.pemasokKotor()) {
-                if (e.remoteId.isBlank()) continue
-                if (awanLebihBaru(akar, "pemasok", e.remoteId, e.updatedAt)) continue
-                akar.collection("pemasok").document(e.remoteId)
-                    .set(SyncLogic.pemasokKePeta(e)).await()
-                repository.tandaiBersihPemasok(e.remoteId, e.updatedAt)
-                didorong++
-            }
-            for (e in repository.itemJualKotor()) {
-                if (e.remoteId.isBlank()) continue
-                val induk = repository.penjualanByIdSync(e.saleId) ?: continue
-                // TB1 (S1): item yang induknya di bulan tertutup tidak didorong.
-                val bulanInduk = bulanKeyDariIso(induk.createdAt)
-                if (bulanInduk != null && repository.bulanTerkunci(bulanInduk)) {
-                    Log.w("TutupBuku", "Lewati dorong item jual di bulan tertutup $bulanInduk")
-                    continue
-                }
-                val obat = repository.obatByIdSync(e.medicineId)
-                if (awanLebihBaru(akar, "penjualan_item", e.remoteId, e.updatedAt)) continue
-                akar.collection("penjualan_item").document(e.remoteId)
-                    .set(SyncLogic.itemJualKePeta(e, induk.remoteId, obat?.remoteId ?: "")).await()
-                repository.tandaiBersihItemJual(e.remoteId, e.updatedAt)
-                didorong++
-            }
-            for (e in repository.itemPbfKotor()) {
-                if (e.remoteId.isBlank()) continue
-                val induk = repository.pembelianByIdSync(e.purchaseId) ?: continue
-                // TB1 (S1): item yang induknya di bulan tertutup tidak didorong.
-                val bulanInduk = bulanKeyDariIso(induk.date)
-                if (bulanInduk != null && repository.bulanTerkunci(bulanInduk)) {
-                    Log.w("TutupBuku", "Lewati dorong item PBF di bulan tertutup $bulanInduk")
-                    continue
-                }
-                if (awanLebihBaru(akar, "pbf_item", e.remoteId, e.updatedAt)) continue
-                akar.collection("pbf_item").document(e.remoteId)
-                    .set(SyncLogic.itemPbfKePeta(e, induk.remoteId)).await()
-                repository.tandaiBersihItemPbf(e.remoteId, e.updatedAt)
-                didorong++
+            // Hormati reset epoch awan agar perangkat lain tidak membangkitkan data lama
+            val akarSnap = akar.get().await()
+            val remoteResetAt = akarSnap.getLong("resetAt") ?: 0L
+            val lastResetSeen = prefs.getLong("last_reset_seen_at", 0L)
+            if (remoteResetAt > lastResetSeen) {
+                repository.bersihkanDataSebelumReset(remoteResetAt)
+                prefs.edit().putLong("last_reset_seen_at", remoteResetAt).apply()
             }
 
-            // 2) Tarik semua dokumen dengan urutan yang sama; kemenangan
-            // diputuskan di Repository.terapkanRemote* (last-write-wins).
-            for (doc in akar.collection("obat").get().await().documents) {
-                val e = SyncLogic.obatDariPeta(doc.data ?: continue) ?: continue
+            // 0) Gabungkan obat duplikat lokal, lalu hapus dokumen awan dalam batch
+            for (potongan in repository.gabungkanObatDuplikat().chunked(400)) {
+                val batch = fs.batch()
+                for (remoteId in potongan) batch.delete(akar.collection("obat").document(remoteId))
+                batch.commit().await()
+            }
+
+            // 1) Dorong baris kotor dalam batch 400 (induk dulu, lalu item).
+            suspend fun <T> dorongKoleksi(
+                koleksi: String,
+                rows: List<T>,
+                remoteIdOf: (T) -> String,
+                updatedAtOf: (T) -> Long,
+                bolehDorong: suspend (T) -> Boolean = { true },
+                petaOf: suspend (T) -> Map<String, Any>?,
+                tandaiBersih: suspend (String, Long) -> Unit
+            ) {
+                val toPush = mutableListOf<Triple<String, Long, Map<String, Any>>>()
+                for (e in rows) {
+                    val rid = remoteIdOf(e)
+                    if (rid.isBlank() || !bolehDorong(e)) continue
+                    val uAt = updatedAtOf(e)
+                    if (awanLebihBaru(akar, koleksi, rid, uAt)) continue
+                    val map = petaOf(e) ?: continue
+                    toPush.add(Triple(rid, uAt, map))
+                }
+                for (potongan in toPush.chunked(400)) {
+                    val batch = fs.batch()
+                    for ((rid, _, map) in potongan) {
+                        batch.set(akar.collection(koleksi).document(rid), map)
+                    }
+                    batch.commit().await()
+                    for ((rid, uAt, _) in potongan) {
+                        tandaiBersih(rid, uAt)
+                        didorong++
+                    }
+                }
+            }
+
+            dorongKoleksi(
+                "obat",
+                repository.obatKotor(),
+                { it.remoteId },
+                { it.updatedAt },
+                petaOf = { SyncLogic.obatKePeta(it) },
+                tandaiBersih = { rid, uAt -> repository.tandaiBersihObat(rid, uAt) }
+            )
+            dorongKoleksi(
+                "penjualan",
+                repository.penjualanKotor(),
+                { it.remoteId },
+                { it.updatedAt },
+                bolehDorong = { e ->
+                    val b = bulanKeyDariIso(e.createdAt)
+                    if (b != null && repository.bulanTerkunci(b)) {
+                        Log.w("TutupBuku", "Lewati dorong penjualan di bulan tertutup $b")
+                        false
+                    } else true
+                },
+                petaOf = { SyncLogic.penjualanKePeta(it) },
+                tandaiBersih = { rid, uAt -> repository.tandaiBersihPenjualan(rid, uAt) }
+            )
+            dorongKoleksi(
+                "pbf",
+                repository.pbfKotor(),
+                { it.remoteId },
+                { it.updatedAt },
+                bolehDorong = { e ->
+                    val b = bulanKeyDariIso(e.date)
+                    if (b != null && repository.bulanTerkunci(b)) {
+                        Log.w("TutupBuku", "Lewati dorong PBF di bulan tertutup $b")
+                        false
+                    } else true
+                },
+                petaOf = { SyncLogic.pbfKePeta(it) },
+                tandaiBersih = { rid, uAt -> repository.tandaiBersihPbf(rid, uAt) }
+            )
+            dorongKoleksi(
+                "kas",
+                repository.kasKotor(),
+                { it.remoteId },
+                { it.updatedAt },
+                bolehDorong = { e ->
+                    val b = bulanKeyDariIso(e.createdAt)
+                    if (b != null && repository.bulanTerkunci(b)) {
+                        Log.w("TutupBuku", "Lewati dorong kas di bulan tertutup $b")
+                        false
+                    } else true
+                },
+                petaOf = { SyncLogic.kasKePeta(it) },
+                tandaiBersih = { rid, uAt -> repository.tandaiBersihKas(rid, uAt) }
+            )
+            dorongKoleksi(
+                "pemasok",
+                repository.pemasokKotor(),
+                { it.remoteId },
+                { it.updatedAt },
+                petaOf = { SyncLogic.pemasokKePeta(it) },
+                tandaiBersih = { rid, uAt -> repository.tandaiBersihPemasok(rid, uAt) }
+            )
+            dorongKoleksi(
+                "penjualan_item",
+                repository.itemJualKotor(),
+                { it.remoteId },
+                { it.updatedAt },
+                petaOf = { e ->
+                    val induk = repository.penjualanByIdSync(e.saleId)
+                    if (induk == null) null
+                    else {
+                        val b = bulanKeyDariIso(induk.createdAt)
+                        if (b != null && repository.bulanTerkunci(b)) {
+                            Log.w("TutupBuku", "Lewati dorong item jual di bulan tertutup $b")
+                            null
+                        } else {
+                            val obat = repository.obatByIdSync(e.medicineId)
+                            SyncLogic.itemJualKePeta(e, induk.remoteId, obat?.remoteId ?: "")
+                        }
+                    }
+                },
+                tandaiBersih = { rid, uAt -> repository.tandaiBersihItemJual(rid, uAt) }
+            )
+            dorongKoleksi(
+                "pbf_item",
+                repository.itemPbfKotor(),
+                { it.remoteId },
+                { it.updatedAt },
+                petaOf = { e ->
+                    val induk = repository.pembelianByIdSync(e.purchaseId)
+                    if (induk == null) null
+                    else {
+                        val b = bulanKeyDariIso(induk.date)
+                        if (b != null && repository.bulanTerkunci(b)) {
+                            Log.w("TutupBuku", "Lewati dorong item PBF di bulan tertutup $b")
+                            null
+                        } else SyncLogic.itemPbfKePeta(e, induk.remoteId)
+                    }
+                },
+                tandaiBersih = { rid, uAt -> repository.tandaiBersihItemPbf(rid, uAt) }
+            )
+
+            // 2) Tarik semua dokumen dengan urutan yang sama; jika habis restore
+            // backup JSON, dokumen awan lama yang tidak ada di backup ditandai
+            // tombstone terlebih dahulu agar tidak ditarik turun lagi.
+            val pendingRestoreAt = prefs.getLong("pending_restore_replace_at", 0L)
+            val aktifIds = if (pendingRestoreAt > 0L) repository.remoteIdsAktif() else null
+
+            suspend fun bacaDanBersihkan(
+                nama: String,
+                aktifSet: Set<String>?
+            ): List<Map<String, Any>> {
+                val docs = akar.collection(nama).get().await().documents
+                val hasil = mutableListOf<Map<String, Any>>()
+                val stale = mutableListOf<DocumentSnapshot>()
+                for (doc in docs) {
+                    val data = doc.data ?: continue
+                    val remUpdated = (data["updatedAt"] as? Number)?.toLong() ?: 0L
+                    val sudahTerhapus = data["terhapus"] == true
+                    if (pendingRestoreAt > 0L && aktifSet != null && !aktifSet.contains(doc.id) && !sudahTerhapus && remUpdated <= pendingRestoreAt) {
+                        stale.add(doc)
+                        continue
+                    }
+                    hasil.add(data)
+                }
+                if (stale.isNotEmpty()) {
+                    for (potongan in stale.chunked(400)) {
+                        val batch = fs.batch()
+                        for (d in potongan) {
+                            val merged = (d.data ?: emptyMap()).toMutableMap()
+                            merged["remoteId"] = d.id
+                            merged["terhapus"] = true
+                            merged["updatedAt"] = pendingRestoreAt
+                            batch.set(d.reference, merged)
+                        }
+                        batch.commit().await()
+                    }
+                }
+                return hasil
+            }
+
+            for (data in bacaDanBersihkan("obat", aktifIds?.obat)) {
+                val e = SyncLogic.obatDariPeta(data) ?: continue
                 val digabung = repository.terapkanRemoteObat(e)
                 if (digabung != null) {
-                    // Dokumen ini digabung ke baris lokal lain: hapus
-                    // dokumennya supaya tidak turun dan berduplikat lagi.
                     akar.collection("obat").document(digabung).delete().await()
                 }
                 ditarik++
             }
-            for (doc in akar.collection("penjualan").get().await().documents) {
-                val e = SyncLogic.penjualanDariPeta(doc.data ?: continue) ?: continue
+            for (data in bacaDanBersihkan("penjualan", aktifIds?.penjualan)) {
+                val e = SyncLogic.penjualanDariPeta(data) ?: continue
                 repository.terapkanRemotePenjualan(e)
                 ditarik++
             }
-            for (doc in akar.collection("pbf").get().await().documents) {
-                val e = SyncLogic.pbfDariPeta(doc.data ?: continue) ?: continue
+            for (data in bacaDanBersihkan("pbf", aktifIds?.pbf)) {
+                val e = SyncLogic.pbfDariPeta(data) ?: continue
                 repository.terapkanRemotePbf(e)
                 ditarik++
             }
-            for (doc in akar.collection("kas").get().await().documents) {
-                val e = SyncLogic.kasDariPeta(doc.data ?: continue) ?: continue
+            for (data in bacaDanBersihkan("kas", aktifIds?.kas)) {
+                val e = SyncLogic.kasDariPeta(data) ?: continue
                 repository.terapkanRemoteKas(e)
                 ditarik++
             }
-            for (doc in akar.collection("pemasok").get().await().documents) {
-                val e = SyncLogic.pemasokDariPeta(doc.data ?: continue) ?: continue
+            for (data in bacaDanBersihkan("pemasok", aktifIds?.pemasok)) {
+                val e = SyncLogic.pemasokDariPeta(data) ?: continue
                 repository.terapkanRemotePemasok(e)
                 ditarik++
             }
-            for (doc in akar.collection("penjualan_item").get().await().documents) {
-                val data = doc.data ?: continue
+            for (data in bacaDanBersihkan("penjualan_item", aktifIds?.penjualanItem)) {
                 val indukRemote = SyncLogic.itemJualIndukRemoteId(data) ?: continue
                 val induk = repository.penjualanByRemoteId(indukRemote) ?: continue
                 val obatRemote = SyncLogic.itemJualObatRemoteId(data)
                 val sementara = SyncLogic.itemJualDariPeta(data, induk.id, 0) ?: continue
                 var obat = if (obatRemote != null) repository.obatByRemoteId(obatRemote) else null
                 if (obat == null && obatRemote != null) {
-                    // Dokumen obatnya sudah digabung/dihapus (dedup): coba
-                    // selesaikan lewat nama+kategori+satuan (S3), jangan
-                    // langsung 0.
                     obat = repository.obatByNama(sementara.medicineName, sementara.category, sementara.unit)
                 }
                 val e = sementara.copy(medicineId = obat?.id ?: 0)
                 repository.terapkanRemoteItemJual(e)
                 ditarik++
             }
-            for (doc in akar.collection("pbf_item").get().await().documents) {
-                val data = doc.data ?: continue
+            for (data in bacaDanBersihkan("pbf_item", aktifIds?.pbfItem)) {
                 val indukRemote = SyncLogic.itemPbfIndukRemoteId(data) ?: continue
                 val induk = repository.pembelianByRemoteId(indukRemote) ?: continue
                 val e = SyncLogic.itemPbfDariPeta(data, induk.id) ?: continue
                 repository.terapkanRemoteItemPbf(e)
                 ditarik++
+            }
+
+            // Setelah dorong+tarik, pastikan isi cacheAwan tidak dipakai lintas siklus
+            cacheAwan.clear()
+            if (pendingRestoreAt > 0L) {
+                prefs.edit().remove("pending_restore_replace_at").apply()
             }
 
             // M3 (audit 2026-11-16): rekonsiliasi silang setelah semua
@@ -354,6 +441,7 @@ class SyncManager(private val repository: Repository) {
         val uid = FirebaseKit.auth()?.currentUser?.uid ?: return HasilReset.BelumMasuk
         val fs = FirebaseKit.firestore() ?: return HasilReset.BelumDikonfigurasi
         return try {
+            val resetMs = System.currentTimeMillis()
             val akar = fs.collection("users").document(uid)
             for (nama in listOf("obat", "penjualan", "penjualan_item", "kas", "pbf", "pbf_item", "pemasok")) {
                 val docs = akar.collection(nama).get().await().documents
@@ -363,6 +451,12 @@ class SyncManager(private val repository: Repository) {
                     batch.commit().await()
                 }
             }
+            akar.set(mapOf("resetAt" to resetMs), SetOptions.merge()).await()
+            context.getSharedPreferences("apotek_prefs", Context.MODE_PRIVATE)
+                .edit()
+                .putLong("last_reset_seen_at", resetMs)
+                .remove("pending_restore_replace_at")
+                .apply()
             HasilReset.Berhasil
         } catch (e: Exception) {
             HasilReset.Gagal(e.message ?: "Gagal menghapus data awan")

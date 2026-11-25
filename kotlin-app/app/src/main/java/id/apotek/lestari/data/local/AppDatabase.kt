@@ -1,6 +1,7 @@
 package id.apotek.lestari.data.local
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.room.Dao
 import androidx.room.ColumnInfo
 import androidx.room.Database
@@ -269,6 +270,9 @@ interface MedicineDao {
     @Query("DELETE FROM medicines")
     suspend fun deleteAll()
 
+    @Query("DELETE FROM medicines WHERE updatedAt <= :resetAt")
+    suspend fun deleteBeforeReset(resetAt: Long): Int
+
     @Query("UPDATE medicines SET stock = stock - :qty, kotor = 1, updatedAt = :now WHERE id = :id AND stock >= :qty AND terhapus = 0")
     suspend fun decrementStock(id: Int, qty: Int, now: Long): Int
 }
@@ -277,6 +281,9 @@ interface MedicineDao {
 interface SaleDao {
     @Query("SELECT * FROM sales WHERE terhapus = 0 ORDER BY id DESC")
     suspend fun getAll(): List<SaleEntity>
+
+    @Query("SELECT * FROM sales WHERE terhapus = 0 AND createdAt >= :sinceIso ORDER BY id DESC")
+    suspend fun getSince(sinceIso: String): List<SaleEntity>
 
     // OPT (2026-11-17): jendela LIMIT di SQL — dulu listSales() memuat
     // SEMUA penjualan lalu .take(limit) di Kotlin. Hasilnya sama persis
@@ -318,6 +325,9 @@ interface SaleDao {
 
     @Query("SELECT * FROM sale_items WHERE terhapus = 0")
     suspend fun getAllItems(): List<SaleItemEntity>
+
+    @Query("SELECT * FROM sale_items WHERE terhapus = 0 AND saleId IN (SELECT id FROM sales WHERE terhapus = 0 AND createdAt >= :sinceIso)")
+    suspend fun getItemsSince(sinceIso: String): List<SaleItemEntity>
 
     @Insert
     suspend fun insertItems(items: List<SaleItemEntity>)
@@ -368,12 +378,21 @@ interface SaleDao {
 
     @Query("DELETE FROM sale_items")
     suspend fun deleteAllItems()
+
+    @Query("DELETE FROM sales WHERE updatedAt <= :resetAt")
+    suspend fun deleteBeforeReset(resetAt: Long): Int
+
+    @Query("DELETE FROM sale_items WHERE updatedAt <= :resetAt")
+    suspend fun deleteItemsBeforeReset(resetAt: Long): Int
 }
 
 @Dao
 interface CashDao {
     @Query("SELECT * FROM cash_entries WHERE terhapus = 0 ORDER BY id DESC")
     suspend fun getAll(): List<CashEntryEntity>
+
+    @Query("SELECT * FROM cash_entries WHERE terhapus = 0 AND createdAt >= :sinceIso ORDER BY id DESC")
+    suspend fun getSince(sinceIso: String): List<CashEntryEntity>
 
     // OPT (2026-11-17): cari satu entri by id — dulu deleteCashEntry()
     // memuat SEMUA entri lalu firstOrNull di Kotlin. Filter terhapus = 0
@@ -409,6 +428,9 @@ interface CashDao {
 
     @Query("DELETE FROM cash_entries")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM cash_entries WHERE updatedAt <= :resetAt")
+    suspend fun deleteBeforeReset(resetAt: Long): Int
 }
 
 @Dao
@@ -485,6 +507,12 @@ interface PurchaseDao {
 
     @Query("DELETE FROM purchase_items")
     suspend fun deleteAllItems()
+
+    @Query("DELETE FROM purchases WHERE updatedAt <= :resetAt")
+    suspend fun deleteBeforeReset(resetAt: Long): Int
+
+    @Query("DELETE FROM purchase_items WHERE updatedAt <= :resetAt")
+    suspend fun deleteItemsBeforeReset(resetAt: Long): Int
 }
 
 @Dao
@@ -527,6 +555,9 @@ interface SupplierDao {
 
     @Query("DELETE FROM suppliers")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM suppliers WHERE updatedAt <= :resetAt")
+    suspend fun deleteBeforeReset(resetAt: Long): Int
 }
 
 @Dao
@@ -542,6 +573,9 @@ interface ClosedMonthDao {
 
     @Query("DELETE FROM tutup_buku WHERE bulan = :bulan")
     suspend fun deleteByBulan(bulan: String): Int
+
+    @Query("DELETE FROM tutup_buku")
+    suspend fun deleteAll(): Int
 }
 
 // ---- Database ----
@@ -765,7 +799,7 @@ const val DATABASE_VERSION = 18
 @Database(
     entities = [MedicineEntity::class, SaleEntity::class, SaleItemEntity::class, CashEntryEntity::class, PurchaseEntity::class, PurchaseItemEntity::class, SupplierEntity::class, ClosedMonthEntity::class],
     version = DATABASE_VERSION,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun medicineDao(): MedicineDao
@@ -780,8 +814,14 @@ object DatabaseProvider {
     @Volatile
     private var _db: AppDatabase? = null
 
+    @Volatile
+    private var appContext: Context? = null
+
     val db: AppDatabase
         get() = _db ?: throw IllegalStateException("DatabaseProvider belum diinisialisasi. Panggil init() terlebih dahulu.")
+
+    fun prefs(): SharedPreferences? =
+        appContext?.getSharedPreferences("apotek_prefs", Context.MODE_PRIVATE)
 
     // Jaring pengaman update (permintaan Achmad 2026-11-01): setiap kali
     // aplikasi terdeteksi baru diperbarui, berkas database disalin dulu
@@ -822,6 +862,7 @@ object DatabaseProvider {
     }
 
     fun init(context: Context) {
+        appContext = context.applicationContext
         snapshotDatabaseBeforeUpdate(context)
         if (_db == null) {
             synchronized(this) {

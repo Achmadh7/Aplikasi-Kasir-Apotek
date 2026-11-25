@@ -52,6 +52,12 @@ export const AuthorityScreen: React.FC = () => {
   const isOwner = currentRole === 'owner';
 
   useEffect(() => {
+    if (!isOwner) {
+      setLoadingPin(false);
+      setPinError(false);
+      setPinConfig(null);
+      return;
+    }
     let active = true;
     fetchAuthorityPin()
       .then((cfg) => {
@@ -70,17 +76,17 @@ export const AuthorityScreen: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [notify]);
+  }, [isOwner, notify]);
 
   useEffect(() => {
-    if (!unlocked) return;
+    if (!unlocked || !isOwner) return;
     const timer = window.setTimeout(() => {
       setUnlocked(false);
       setShowChangePin(false);
       notify('Menu Authority dikunci otomatis', 'info');
     }, UNLOCK_TTL_MS);
     return () => window.clearTimeout(timer);
-  }, [unlocked, notify]);
+  }, [unlocked, isOwner, notify]);
 
   useEffect(() => {
     if (!lockedUntil) return;
@@ -188,7 +194,7 @@ export const AuthorityScreen: React.FC = () => {
     }
   };
 
-  if (loadingPin) {
+  if (isOwner && loadingPin) {
     return (
       <div className="max-w-sm mx-auto mt-6">
         <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-6 text-center text-xs font-semibold text-[#78716C] dark:text-[#93B5A9]">
@@ -198,7 +204,7 @@ export const AuthorityScreen: React.FC = () => {
     );
   }
 
-  if (pinError) {
+  if (isOwner && pinError) {
     return (
       <div className="max-w-sm mx-auto mt-6">
         <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#142E27] border border-[#B7D6C3] dark:border-[#244C41] p-6 text-center space-y-3">
@@ -227,7 +233,7 @@ export const AuthorityScreen: React.FC = () => {
     );
   }
 
-  if (!unlocked) {
+  if (isOwner && !unlocked) {
     const isSetup = !pinConfig;
     const isResetting = !isSetup && showResetPin && isOwner;
     const isSettingPin = isSetup || isResetting;
@@ -378,8 +384,8 @@ export const AuthorityScreen: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {isOwner && (
+          {isOwner && (
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -392,19 +398,19 @@ export const AuthorityScreen: React.FC = () => {
                 <KeyRound className="w-3.5 h-3.5" />
                 Ubah PIN
               </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setUnlocked(false);
-                setShowChangePin(false);
-              }}
-              className="px-3 py-1.5 rounded-xl border border-[#B7D6C3] dark:border-[#244C41] text-xs font-bold text-[#1C1917] dark:text-[#86EFAC] hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-1.5 transition"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              Kunci
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setUnlocked(false);
+                  setShowChangePin(false);
+                }}
+                className="px-3 py-1.5 rounded-xl border border-[#B7D6C3] dark:border-[#244C41] text-xs font-bold text-[#1C1917] dark:text-[#86EFAC] hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-1.5 transition"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                Kunci
+              </button>
+            </div>
+          )}
         </div>
 
         {isOwner && showChangePin && (
@@ -442,16 +448,16 @@ export const AuthorityScreen: React.FC = () => {
           </form>
         )}
 
-        <form onSubmit={handleAdd} className="mt-4 flex flex-col sm:flex-row gap-2">
-          <input
-            type="email"
-            required
-            value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
-            placeholder="Tambah email Google (contoh: kasir@gmail.com)"
-            className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D]"
-          />
-          {isOwner && (
+        {isOwner ? (
+          <form onSubmit={handleAdd} className="mt-4 flex flex-col sm:flex-row gap-2">
+            <input
+              type="email"
+              required
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="Tambah email Google (contoh: kasir@gmail.com)"
+              className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-[#142E27] text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+            />
             <select
               value={newRole}
               onChange={(e) => setNewRole(e.target.value as AuthorityRole)}
@@ -461,16 +467,20 @@ export const AuthorityScreen: React.FC = () => {
               <option value="kasir">Kasir</option>
               <option value="owner">Owner</option>
             </select>
-          )}
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-sm font-bold flex items-center justify-center gap-1.5 disabled:opacity-60 transition"
-          >
-            <Plus className="w-4 h-4" />
-            Tambah
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-sm font-bold flex items-center justify-center gap-1.5 disabled:opacity-60 transition"
+            >
+              <Plus className="w-4 h-4" />
+              Tambah
+            </button>
+          </form>
+        ) : (
+          <div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/25 px-3.5 py-2.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
+            Mode Baca (Kasir): hanya akun Owner yang dapat mengubah PIN atau daftar email Authority.
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl bg-[#E8F2EC] dark:bg-[#101F38] border border-[#B7D6C3] dark:border-white/10 overflow-hidden shadow-sm">
@@ -489,7 +499,7 @@ export const AuthorityScreen: React.FC = () => {
             const isEmailOwner = ownerEmails.includes(email);
             const isLastOwner = isEmailOwner && ownerEmails.length <= 1;
             const disableDelete =
-              saving || authorityEmails.length <= 1 || isLastOwner || (!isOwner && isEmailOwner);
+              saving || authorityEmails.length <= 1 || isLastOwner;
             return (
               <div
                 key={email}
@@ -514,8 +524,8 @@ export const AuthorityScreen: React.FC = () => {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {isOwner && (
+                {isOwner && (
+                  <div className="flex items-center gap-2 shrink-0">
                     <select
                       value={isEmailOwner ? 'owner' : 'kasir'}
                       onChange={(e) => handleRoleChange(email, e.target.value as AuthorityRole)}
@@ -526,24 +536,22 @@ export const AuthorityScreen: React.FC = () => {
                       <option value="owner">Owner</option>
                       <option value="kasir">Kasir</option>
                     </select>
-                  )}
-                  <button
-                    onClick={() => handleRemove(email)}
-                    disabled={disableDelete}
-                    title={
-                      authorityEmails.length <= 1
-                        ? 'Minimal harus tersisa 1 email'
-                        : isLastOwner
-                          ? 'Minimal harus tersisa 1 Owner'
-                          : !isOwner && isEmailOwner
-                            ? 'Hanya Owner yang dapat menghapus Owner'
+                    <button
+                      onClick={() => handleRemove(email)}
+                      disabled={disableDelete}
+                      title={
+                        authorityEmails.length <= 1
+                          ? 'Minimal harus tersisa 1 email'
+                          : isLastOwner
+                            ? 'Minimal harus tersisa 1 Owner'
                             : 'Hapus dari Authority'
-                    }
-                    className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 disabled:opacity-35 transition shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                      }
+                      className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 disabled:opacity-35 transition shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}

@@ -3,7 +3,12 @@ import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { useFeedback } from './Feedback';
 import { AnimatedNumber } from './AnimatedNumber';
-import { exportRowsToXlsx, exportMedicineTemplateXlsx, readSpreadsheetMatrix } from '../excel';
+import {
+  exportRowsToXlsx,
+  exportMedicineTemplateXlsx,
+  readSpreadsheetMatrix,
+  parseMedicineSpreadsheet,
+} from '../excel';
 import {
   CATEGORIES,
   UNITS,
@@ -574,27 +579,10 @@ export const StokScreen: React.FC = () => {
     if (!file) return;
     try {
       const matrix = await readSpreadsheetMatrix(file);
-      if (matrix.length < 2) throw new Error('File kosong');
-      const headerIdx = matrix.findIndex(
-        (cols) => cols[0]?.trim().toLowerCase().replace(/\s*\*$/, '') === 'nama obat'
-      );
-      const dataRows = headerIdx >= 0 ? matrix.slice(headerIdx + 1) : matrix.slice(1);
-      const rows = dataRows
-        .filter((cols) => cols[0] && cols[0].trim().toUpperCase() !== 'TOTAL')
-        .map((cols) => ({
-        name: cols[0] || '',
-        category: cols[1] || 'Umum',
-        unit: cols[2] || 'Strip',
-        buyPrice: parseInt(cols[3], 10) || 0,
-        sellPrice: parseInt(cols[4], 10) || 0,
-        wholesalePrice: parseInt(cols[5], 10) || 0,
-        stock: parseInt(cols[6], 10) || 0,
-        expiryDate: cols[7] || null,
-        barcode: cols[8] || null,
-      }));
+      const { rows, skippedInvalid } = parseMedicineSpreadsheet(matrix);
       const res = bulkImportMedicines(rows);
       setMsg(
-        `Impor selesai: ${res.inserted} baru, ${res.updated} diperbarui, ${res.skipped} dilewati.`
+        `Impor selesai: ${res.inserted} baru, ${res.updated} diperbarui, ${res.skipped + skippedInvalid} dilewati.`
       );
     } catch (err: any) {
       notify('Gagal membaca Excel/CSV: ' + err.message, 'error');
@@ -629,7 +617,7 @@ export const StokScreen: React.FC = () => {
     <div>
       <PageHeader
         title="Stok Obat"
-        subtitle={`${medicines.length} jenis obat terdaftar • Sinkron otomatis dengan aplikasi Android`}
+        subtitle={`${medicines.length} jenis obat terdaftar • Tersimpan lokal & cloud Web (tukar ke Android lewat JSON/Excel)`}
         action={
           <>
             <button

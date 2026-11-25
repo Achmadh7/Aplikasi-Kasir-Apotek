@@ -447,7 +447,14 @@ export const KeuanganScreen: React.FC = () => {
                       {e.source !== 'sale' && (
                         <button
                           type="button"
-                          onClick={() => deleteCashEntry(e.id)}
+                          onClick={() => {
+                            try {
+                              deleteCashEntry(e.id);
+                              notify('Catatan kas dihapus', 'info');
+                            } catch (err: any) {
+                              notify(err.message, 'error');
+                            }
+                          }}
                           aria-label="Hapus catatan kas"
                           className="p-1.5 rounded-lg text-[#BA1A1A] hover:bg-red-500/10"
                         >
@@ -1035,7 +1042,14 @@ export const PbfScreen: React.FC = () => {
                     <div className="flex justify-end gap-2">
                       {p.paymentType === 'KREDIT' && (
                         <button
-                          onClick={() => markPurchasePaid(p.id)}
+                          onClick={() => {
+                            try {
+                              markPurchasePaid(p.id);
+                              notify(`Faktur ${p.pbfName} ditandai lunas`, 'success');
+                            } catch (err: any) {
+                              notify(err.message, 'error');
+                            }
+                          }}
                           className="px-3 py-1.5 rounded-xl bg-[#43A047] text-white text-xs font-bold flex items-center gap-1"
                         >
                           <CheckCircle className="w-3.5 h-3.5" /> Tandai Lunas
@@ -1046,8 +1060,12 @@ export const PbfScreen: React.FC = () => {
                           askConfirm(
                             `Hapus faktur ${p.pbfName}?`,
                             () => {
-                              deletePurchase(p.id);
-                              notify(`Faktur ${p.pbfName} dihapus`, 'info');
+                              try {
+                                deletePurchase(p.id);
+                                notify(`Faktur ${p.pbfName} dihapus`, 'info');
+                              } catch (err: any) {
+                                notify(err.message, 'error');
+                              }
                             },
                             { title: 'Hapus Faktur PBF', danger: true, confirmLabel: 'Hapus' }
                           )
@@ -1147,6 +1165,7 @@ export const PbfScreen: React.FC = () => {
 // ============================================================================
 export const PengingatScreen: React.FC = () => {
   const { medicines, purchases, markPurchasePaid } = useStore();
+  const { notify } = useFeedback();
 
   const lowStock = useMemo(
     () =>
@@ -1299,7 +1318,14 @@ export const PengingatScreen: React.FC = () => {
                           : `${left} hari lagi`}
                       </span>
                       <button
-                        onClick={() => markPurchasePaid(p.id)}
+                        onClick={() => {
+                          try {
+                            markPurchasePaid(p.id);
+                            notify(`Faktur ${p.pbfName} ditandai lunas`, 'success');
+                          } catch (err: any) {
+                            notify(err.message, 'error');
+                          }
+                        }}
                         className="px-2.5 py-1 rounded-lg bg-[#43A047] text-white text-xs font-bold"
                       >
                         Lunasi
@@ -1554,10 +1580,12 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
   const handleDownloadBackup = () => {
     const json = exportBackupJson();
     const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = url;
     a.download = `backup-apotek-lestari-${dayKeyID()}.json`;
     a.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     setMsg('File backup JSON berhasil diunduh.');
   };
 
@@ -1631,9 +1659,13 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
                 askConfirm(
                   'PERINGATAN: Hapus SEMUA data lokal dan cloud secara permanen?',
                   async () => {
-                    await resetAllData();
-                    setMsg('Semua data telah direset.');
-                    notify('Semua data telah direset', 'info');
+                    try {
+                      await resetAllData();
+                      setMsg('Semua data telah direset.');
+                      notify('Semua data telah direset', 'info');
+                    } catch (err: any) {
+                      notify(err?.message || 'Gagal mereset data', 'error');
+                    }
                   },
                   { title: 'Reset Semua Data', danger: true, confirmLabel: 'Reset Permanen' }
                 )
@@ -1669,14 +1701,28 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
                   </div>
                   {locked ? (
                     <button
-                      onClick={() => bukaBulan(b)}
+                      onClick={() => {
+                        try {
+                          bukaBulan(b);
+                          notify(`${namaBulanIndonesia(b)} dibuka kembali`, 'info');
+                        } catch (err: any) {
+                          notify(err.message, 'error');
+                        }
+                      }}
                       className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-500 text-xs font-bold flex items-center gap-1"
                     >
                       <Unlock className="w-3.5 h-3.5" /> Terkunci (Buka)
                     </button>
                   ) : (
                     <button
-                      onClick={() => tutupBulan(b)}
+                      onClick={() => {
+                        try {
+                          tutupBulan(b);
+                          notify(`${namaBulanIndonesia(b)} ditutup`, 'success');
+                        } catch (err: any) {
+                          notify(err.message, 'error');
+                        }
+                      }}
                       className="px-3 py-1.5 rounded-xl bg-[#15803D] text-white text-xs font-bold flex items-center gap-1"
                     >
                       <Lock className="w-3.5 h-3.5" /> Tutup Bulan

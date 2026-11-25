@@ -312,81 +312,79 @@ object ExcelHelper {
         ByteArrayInputStream(bytes).use { input ->
             val wb = WorkbookFactory.create(input)
             try {
-                val sheet = wb.getSheet(SHEET_STOK) ?: wb.getSheetAt(0)
+            val sheet = wb.getSheet(SHEET_STOK)
+                ?: wb.getSheet("Input Stok Obat")
+                ?: wb.getSheetAt(0)
                 // S7 (audit 2026-11-14): paksa locale Indonesia — DataFormatter
                 // default (locale HP/CI) bisa merender angka 12000 berformat
                 // #,##0 sebagai "12,000" yang lalu diparse jadi 12.
                 val formatter = DataFormatter(Locale("id", "ID"))
-                val colIndex = mutableMapOf<String, Int>()
-                sheet.getRow(0)?.forEach { cell ->
-                    val h = formatter.formatCellValue(cell).trim()
-                    if (h.isNotEmpty()) colIndex[h.lowercase()] = cell.columnIndex
+                fun normalizeHeader(raw: String): String =
+                    raw.trim().removeSuffix("*").trim().lowercase()
+                var headerRowIdx = -1
+                var colIndex = mutableMapOf<String, Int>()
+                val maxScan = minOf(10, sheet.lastRowNum)
+                for (r in 0..maxScan) {
+                    val candidate = mutableMapOf<String, Int>()
+                    sheet.getRow(r)?.forEach { cell ->
+                        val h = normalizeHeader(formatter.formatCellValue(cell))
+                        if (h.isNotEmpty() && !candidate.containsKey(h)) {
+                            candidate[h] = cell.columnIndex
+                        }
+                    }
+                    if (candidate.containsKey("nama obat")) {
+                        headerRowIdx = r
+                        colIndex = candidate
+                        break
+                    }
                 }
                 // C11: file harus template Stok Obat — kolom "Nama Obat" wajib ada.
-                if (!colIndex.containsKey("nama obat")) {
+                if (headerRowIdx < 0) {
                     throw IllegalArgumentException(
                         "File bukan template Stok Obat: kolom 'Nama Obat' tidak ditemukan"
                     )
                 }
-                fun idx(name: String, fallback: Int) = colIndex[name.lowercase()] ?: fallback
-                fun text(row: Row, name: String, fallback: Int): String {
-                    val cell = row.getCell(idx(name, fallback)) ?: return ""
+                fun colOf(vararg aliases: String): Int? =
+                    aliases.firstNotNullOfOrNull { colIndex[it] }
+                val nameCol = colOf("nama obat") ?: 0
+                val catCol = colOf("kategori")
+                val unitCol = colOf("satuan")
+                val sellCol = colOf("harga jual", "harga jual ecer")
+                val grosirCol = colOf("harga jual grosir", "harga grosir")
+                val beliCol = colOf("harga beli")
+                val stockCol = colOf("stok")
+                val expiryCol = colOf("tanggal kadaluarsa", "kadaluarsa (yyyy-mm-dd)", "kadaluarsa")
+                fun textAt(row: Row, colIdx: Int): String {
+                    val cell = row.getCell(colIdx) ?: return ""
                     return formatter.formatCellValue(cell).trim()
                 }
-                for (row in sheet) {
-                    if (row.rowNum == 0) continue
-                    val name = text(row, "Nama Obat", 0)
+                val knownCols = listOfNotNull(nameCol, catCol, unitCol, sellCol, grosirCol, beliCol, stockCol, expiryCol)
+                for (rowIdx in (headerRowIdx + 1)..sheet.lastRowNum) {
+                    val row = sheet.getRow(rowIdx) ?: continue
+                    val name = textAt(row, nameCol)
                     if (name.isBlank()) {
-                        val anyValue = HEADERS.indices.any { text(row, HEADERS[it], it).isNotEmpty() }
+                        val anyValue = knownCols.any { textAt(row, it).isNotEmpty() }
                         if (anyValue) skipped.add(row.rowNum + 1)
                         continue
                     }
-                    // Kolom Barcode sudah tidak dipakai (dihapus dari template
-                    // 2026-10-29); file lama yang masih punya kolom itu tetap
-                    // bisa diimpor — kolomnya diabaikan dan obat dicocokkan
-                    // lewat Nama + Kategori + Satuan di Repository.bulkImport.
-                    val category = text(row, "Kategori", 1).ifBlank { "Umum" }
-                    val unit = text(row, "Satuan", 2).ifBlank { "Strip" }
-                    // A7: angka rusak (null dari parser) jangan diam-diam jadi 0 —
-                    // baris dilewati dan dicatat di skippedRows. R24: sel KOSONG
-                    // berarti 0 (sesuai Petunjuk); hanya isi yang tidak bisa
-                    // di-parse yang membuat baris dilewati.
-                    val sellText = text(row, "Harga Jual", 3)
-                    val stockText = text(row, "Stok", 6)
+                    if (name.equals("TOTAL", ignoreCase = true)) continue
+                    val category = catCol?.let { textAt(row, it) }.orEmpty().ifBlank { "Umum" }
+                    val unit = unitCol?.let { textAt(row, it) }.orEmpty().ifBlank { "Strip" }
+                    val sellText = sellCol?.let { textAt(row, it) }.orEmpty()
+                    val stockText = stockCol?.let { textAt(row, it) }.orEmpty()
                     val sell = if (sellText.isBlank()) 0 else sellText.toIntOrNullStrict()
                     val stock = if (stockText.isBlank()) 0 else stockText.toIntOrNullStrict()
                     if (sell == null || stock == null) {
                         skipped.add(row.rowNum + 1)
                         continue
                     }
-                    // Harga grosir OPSIONAL: kosong / isinya rusak -> 0
-                    // (belum diatur), baris tetap diterima. Kolom ini dibaca
-                    // HANYA bila header-nya benar-benar ada di file — jangan
-                    // pakai fallback posisi: di template lama, posisi 5 itu
-                    // Harga Jual (layout era barcode) atau Stok (layout 7
-                    // kolom), jadi file lama akan mengisi harga grosir palsu
-                    // (bug N1, audit 2026-10-30).
-                    val grosir = if (colIndex.containsKey("harga jual grosir")) {
-                        text(row, "Harga Jual Grosir", 4).toIntOrNullStrict() ?: 0
-                    } else {
-                        0
-                    }
-                    // Harga Beli OPSIONAL seperti grosir: dibaca HANYA bila
-                    // header-nya ada (pola yang sama — jangan pakai fallback
-                    // posisi, supaya file lama tidak terisi nilai palsu).
-                    // Kosong / rusak -> 0 (belum diatur).
-                    val beli = if (colIndex.containsKey("harga beli")) {
-                        text(row, "Harga Beli", 5).toIntOrNullStrict() ?: 0
-                    } else {
-                        0
-                    }
-                    // C7: tanggal terisi tapi tidak bisa diparse -> baris dilewati;
-                    // tanggal kosong -> null (boleh).
-                    val expiryRaw = text(row, "Tanggal Kadaluarsa", 7)
-                    val expiry = if (expiryRaw.isBlank()) {
+                    val grosir = grosirCol?.let { textAt(row, it).toIntOrNullStrict() } ?: 0
+                    val beli = beliCol?.let { textAt(row, it).toIntOrNullStrict() } ?: 0
+                    val expiryRaw = expiryCol?.let { textAt(row, it) }.orEmpty()
+                    val expiry = if (expiryRaw.isBlank() || expiryCol == null) {
                         null
                     } else {
-                        readExpiry(row, idx("Tanggal Kadaluarsa", 7), formatter)
+                        readExpiry(row, expiryCol, formatter)
                     }
                     if (expiryRaw.isNotBlank() && expiry == null) {
                         skipped.add(row.rowNum + 1)

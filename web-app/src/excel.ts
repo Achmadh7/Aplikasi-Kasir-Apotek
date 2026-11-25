@@ -18,13 +18,18 @@ const THIN_BORDER = {
   right: { style: 'thin', color: { rgb: 'CBD5E1' } },
 };
 
+async function loadXlsx(): Promise<typeof XLSX> {
+  const mod = (await import('xlsx-js-style')) as unknown as typeof XLSX & { default?: typeof XLSX };
+  return mod.default && typeof mod.default.read === 'function' ? mod.default : mod;
+}
+
 export async function exportRowsToXlsx(
   filename: string,
   sheetName: string,
   rows: Record<string, string | number>[],
   options?: ExportXlsxOptions
 ): Promise<void> {
-  const XLSX = await import('xlsx-js-style');
+  const XLSX = await loadXlsx();
   const wb = XLSX.utils.book_new();
   if (rows.length === 0) {
     const ws = XLSX.utils.aoa_to_sheet(
@@ -258,7 +263,7 @@ export async function exportMedicineTemplateXlsx(
   categories: string[],
   units: string[]
 ): Promise<void> {
-  const XLSX = await import('xlsx-js-style');
+  const XLSX = await loadXlsx();
   const wb = XLSX.utils.book_new();
 
   const headers = [
@@ -397,14 +402,237 @@ export async function exportMedicineTemplateXlsx(
 }
 
 export async function readSpreadsheetMatrix(file: File): Promise<string[][]> {
-  const XLSX = await import('xlsx-js-style');
+  const XLSX = await loadXlsx();
   const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type: 'array' });
-  const firstSheet = wb.SheetNames[0];
-  if (!firstSheet) return [];
-  const ws = wb.Sheets[firstSheet];
-  const matrix = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' });
-  return matrix
-    .map((row) => (Array.isArray(row) ? row.map((c) => String(c ?? '').trim()) : []))
-    .filter((row) => row.some((c) => c !== ''));
+  const wb = XLSX.read(buf, { type: 'array', cellNF: true });
+  const preferredSheet =
+    wb.SheetNames.find((n) => {
+      const low = n.trim().toLowerCase();
+      return low === 'stok obat' || low === 'input stok obat';
+    }) || wb.SheetNames[0];
+  if (!preferredSheet) return [];
+  const ws = wb.Sheets[preferredSheet];
+  const ref = ws['!ref'];
+  if (!ref) return [];
+  const range = XLSX.utils.decode_range(ref);
+  const rows: string[][] = [];
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    const row: string[] = [];
+    let hasValue = false;
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      const cell = ws[addr];
+      let text = '';
+      if (cell) {
+        if (cell.t === 'n' && typeof cell.v === 'number') {
+          const fmt = typeof cell.z === 'string' ? cell.z : '';
+          if (fmt && XLSX.SSF?.is_date?.(fmt)) {
+            const dc = XLSX.SSF.parse_date_code(cell.v);
+            if (dc && dc.y && dc.m && dc.d) {
+              text = `${String(dc.y).padStart(4, '0')}-${String(dc.m).padStart(2, '0')}-${String(dc.d).padStart(2, '0')}`;
+            } else {
+              text = String(cell.v).trim();
+            }
+          } else {
+            text = String(cell.v).trim();
+          }
+        } else if (cell.t === 'd' && cell.v instanceof Date && !isNaN(cell.v.getTime())) {
+          text = cell.v.toISOString().slice(0, 10);
+        } else {
+          text = String(cell.v ?? '').trim();
+        }
+      }
+      if (text !== '') hasValue = true;
+      row.push(text);
+    }
+    if (hasValue) rows.push(row);
+  }
+  return rows;
+}
+
+export interface ParsedMedicineImportRow {
+  name: string;
+  category: string;
+  unit: string;
+  buyPrice: number;
+  sellPrice: number;
+  wholesalePrice: number;
+  stock: number;
+  expiryDate: string | null;
+  barcode: string | null;
+}
+
+const normalizeHeader = (raw: string): string =>
+  raw.trim().replace(/\s*\*$/, '').trim().toLowerCase();
+
+export function parseStrictMoneyInt(raw: string): number | null {
+  if (!raw.trim()) return 0;
+  const cleaned = raw.trim().replace(/^rp\.?\s*/i, '').replace(/\s+/g, '');
+  if (!cleaned) return null;
+  if (cleaned.startsWith('-')) return null;
+  if (/[^0-9.,]/.test(cleaned)) return null;
+
+  let normalized = cleaned;
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(cleaned)) {
+    normalized = cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(cleaned)) {
+    normalized = cleaned.replace(/,/g, '');
+  } else if (cleaned.includes(',') && !cleaned.includes('.')) {
+    normalized = cleaned.replace(',', '.');
+  } else if (cleaned.includes(',') && cleaned.includes('.')) {
+    normalized = cleaned.replace(/\./g, '').replace(',', '.');
+  }
+
+  const num = Number(normalized);
+  if (!Number.isFinite(num) || num < 0 || !Number.isInteger(num) || num > 2147483647) {
+    return null;
+  }
+  return num;
+}
+
+function strictCalendarDate(y: number, m: number, d: number): string | null {
+  if (m < 1 || m > 12 || d < 1 || y < 1900 || y > 2200) return null;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (
+    dt.getUTCFullYear() !== y ||
+    dt.getUTCMonth() !== m - 1 ||
+    dt.getUTCDate() !== d
+  ) {
+    return null;
+  }
+  return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+export function normalizeImportDate(raw: string): { valid: boolean; value: string | null } {
+  const s = raw.trim();
+  if (!s) return { valid: true, value: null };
+
+  if (/^\d{5}$/.test(s)) {
+    const serial = Number(s);
+    if (serial >= 20000 && serial <= 100000) {
+      const dt = new Date(Date.UTC(1899, 11, 30) + serial * 86_400_000);
+      return { valid: true, value: dt.toISOString().slice(0, 10) };
+    }
+  }
+
+  let match = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const res = strictCalendarDate(Number(match[1]), Number(match[2]), Number(match[3]));
+    return res ? { valid: true, value: res } : { valid: false, value: null };
+  }
+  match = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (match) {
+    const res = strictCalendarDate(Number(match[3]), Number(match[2]), Number(match[1]));
+    return res ? { valid: true, value: res } : { valid: false, value: null };
+  }
+  match = s.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+  if (match) {
+    const res = strictCalendarDate(Number(match[1]), Number(match[2]), Number(match[3]));
+    return res ? { valid: true, value: res } : { valid: false, value: null };
+  }
+  match = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (match) {
+    const res = strictCalendarDate(Number(match[3]), Number(match[2]), Number(match[1]));
+    return res ? { valid: true, value: res } : { valid: false, value: null };
+  }
+
+  return { valid: false, value: null };
+}
+
+/**
+ * Header-aware spreadsheet parser compatible with both Web exports/templates
+ * and Android Kotlin ExcelHelper templates/exports.
+ */
+export function parseMedicineSpreadsheet(matrix: string[][]): {
+  rows: ParsedMedicineImportRow[];
+  skippedInvalid: number;
+} {
+  if (matrix.length < 2) throw new Error('File kosong');
+
+  let headerIdx = -1;
+  const colIndex = new Map<string, number>();
+  const scanLimit = Math.min(matrix.length, 12);
+  for (let r = 0; r < scanLimit; r++) {
+    const candidate = new Map<string, number>();
+    matrix[r].forEach((cell, idx) => {
+      const h = normalizeHeader(cell || '');
+      if (h && !candidate.has(h)) candidate.set(h, idx);
+    });
+    if (candidate.has('nama obat')) {
+      headerIdx = r;
+      candidate.forEach((v, k) => colIndex.set(k, v));
+      break;
+    }
+  }
+
+  if (headerIdx < 0) {
+    throw new Error("File bukan template Stok Obat: kolom 'Nama Obat' tidak ditemukan");
+  }
+
+  const colOf = (...aliases: string[]): number | undefined => {
+    for (const a of aliases) {
+      const idx = colIndex.get(a);
+      if (idx !== undefined) return idx;
+    }
+    return undefined;
+  };
+
+  const iName = colOf('nama obat')!;
+  const iCat = colOf('kategori');
+  const iUnit = colOf('satuan');
+  const iBuy = colOf('harga beli');
+  const iSell = colOf('harga jual ecer', 'harga jual');
+  const iWholesale = colOf('harga grosir', 'harga jual grosir');
+  const iStock = colOf('stok');
+  const iExpiry = colOf('kadaluarsa (yyyy-mm-dd)', 'tanggal kadaluarsa', 'kadaluarsa');
+  const iBarcode = colOf('barcode');
+
+  const cellText = (row: string[], idx: number | undefined): string =>
+    idx !== undefined && idx < row.length ? String(row[idx] ?? '').trim() : '';
+
+  const rows: ParsedMedicineImportRow[] = [];
+  let skippedInvalid = 0;
+
+  for (const rawRow of matrix.slice(headerIdx + 1)) {
+    const name = cellText(rawRow, iName);
+    if (!name) {
+      const hasAnyOther = rawRow.some((c) => String(c ?? '').trim() !== '');
+      if (hasAnyOther) skippedInvalid++;
+      continue;
+    }
+    if (name.toUpperCase() === 'TOTAL') continue;
+
+    const sellParsed = iSell !== undefined ? parseStrictMoneyInt(cellText(rawRow, iSell)) : 0;
+    const stockParsed = iStock !== undefined ? parseStrictMoneyInt(cellText(rawRow, iStock)) : 0;
+    const buyParsed = iBuy !== undefined ? parseStrictMoneyInt(cellText(rawRow, iBuy)) : 0;
+
+    if (sellParsed === null || stockParsed === null || buyParsed === null) {
+      skippedInvalid++;
+      continue;
+    }
+
+    const wholesaleRaw = iWholesale !== undefined ? parseStrictMoneyInt(cellText(rawRow, iWholesale)) : 0;
+    const wholesalePrice = wholesaleRaw ?? 0;
+
+    const expiryCheck = normalizeImportDate(cellText(rawRow, iExpiry));
+    if (!expiryCheck.valid) {
+      skippedInvalid++;
+      continue;
+    }
+
+    const barcode = cellText(rawRow, iBarcode) || null;
+    rows.push({
+      name,
+      category: cellText(rawRow, iCat) || 'Umum',
+      unit: cellText(rawRow, iUnit) || 'Strip',
+      buyPrice: buyParsed,
+      sellPrice: sellParsed,
+      wholesalePrice,
+      stock: stockParsed,
+      expiryDate: expiryCheck.value,
+      barcode,
+    });
+  }
+
+  return { rows, skippedInvalid };
 }

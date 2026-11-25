@@ -80,6 +80,13 @@ class Repository {
     /** Cap waktu sekarang (ms epoch) untuk kolom sinkronisasi updatedAt. */
     private fun nowMillis(): Long = System.currentTimeMillis()
 
+    /** Batas awal aman filter SQL (`createdAt >= :sinceIso`) — mundur 1 hari UTC
+     *  agar perbedaan +07:00 WIB maupun string tanggal polos tidak pernah terlewat. */
+    private fun sqlWindowStart(startMillis: Long): String =
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }.format(Date(startMillis - 86_400_000L))
+
     /** M8 (audit 2026-11-16): yyyy-MM-dd ketat — bentuk 4-2-2 digit dan
      *  tanggal kalender yang benar (menolak 2026-02-30, 2026-13-01). */
     private fun tanggalValid(s: String): Boolean {
@@ -124,14 +131,16 @@ class Repository {
 
     suspend fun getDashboard(): ApiResult<Dashboard> = call {
         val db = DatabaseProvider.db
-        val entries = db.cashDao().getAll()
-        val meds = db.medicineDao().getAll()
-        val salesRows = db.saleDao().getAll()
-        val items = db.saleDao().getAllItems()
         val startToday = jakartaDayStartMillis(0)
         val endToday = jakartaDayStartMillis(1)
         val startYesterday = jakartaDayStartMillis(-1)
         val startMonth = jakartaMonthStartMillis()
+        val earliestStart = minOf(startMonth, startYesterday, jakartaDayStartMillis(-6))
+        val sinceIso = sqlWindowStart(earliestStart)
+        val entries = db.cashDao().getSince(sinceIso)
+        val meds = db.medicineDao().getAll()
+        val salesRows = db.saleDao().getSince(sinceIso)
+        val items = db.saleDao().getItemsSince(sinceIso)
         val in30Key = dayKeyID(Date(jakartaDayStartMillis(30)))
         val medById = meds.associateBy { it.id }
 
@@ -534,7 +543,7 @@ class Repository {
     suspend fun getMonthSalesByMethod(): ApiResult<Map<String, Long>> = call {
         val startMonth = jakartaMonthStartMillis()
         val endToday = jakartaDayStartMillis(1)
-        val hasil = agregatPenjualanPerMetode(DatabaseProvider.db.saleDao().getAll(), startMonth, endToday)
+        val hasil = agregatPenjualanPerMetode(DatabaseProvider.db.saleDao().getSince(sqlWindowStart(startMonth)), startMonth, endToday)
         // M4: metode tak dikenal dilewati agregasi, bukan diam-diam —
         // catat supaya salah eja / metode baru ketahuan di log.
         if (hasil.metodeTakDikenal.isNotEmpty()) {
@@ -595,11 +604,6 @@ class Repository {
 
     suspend fun getProfitReport(period: String = "month"): ApiResult<ProfitReport> = call {
         val db = DatabaseProvider.db
-        val salesRows = db.saleDao().getAll()
-        val items = db.saleDao().getAllItems()
-        val meds = db.medicineDao().getAll()
-        val entries = db.cashDao().getAll()
-        val medById = meds.associateBy { it.id }
         val now = Date()
         val startToday = jakartaDayStartMillis(0)
         val endToday = jakartaDayStartMillis(1)
@@ -613,6 +617,12 @@ class Repository {
             else -> throw IllegalArgumentException(tr("Periode tidak dikenal: $period", "Unknown period: $period"))
         }
         val end = if (period == "all") Long.MAX_VALUE else endToday
+        val windowSince = if (period == "all") null else sqlWindowStart(minOf(start, if (period == "today") jakartaDayStartMillis(-6) else start))
+        val salesRows = if (windowSince != null) db.saleDao().getSince(windowSince) else db.saleDao().getAll()
+        val items = if (windowSince != null) db.saleDao().getItemsSince(windowSince) else db.saleDao().getAllItems()
+        val meds = db.medicineDao().getAll()
+        val entries = if (windowSince != null) db.cashDao().getSince(windowSince) else db.cashDao().getAll()
+        val medById = meds.associateBy { it.id }
         fun inPeriod(iso: String): Boolean {
             val t = parseISODate(iso)?.time ?: return false
             return t in start until end
@@ -747,10 +757,6 @@ class Repository {
      *  diuji unit tanpa database. */
     suspend fun getRekapPenjualan(period: String = "month"): ApiResult<RekapPenjualan> = call {
         val db = DatabaseProvider.db
-        val salesRows = db.saleDao().getAll()
-        val items = db.saleDao().getAllItems()
-        val meds = db.medicineDao().getAll()
-        val medById = meds.associateBy { it.id }
         val startToday = jakartaDayStartMillis(0)
         val endToday = jakartaDayStartMillis(1)
         val startMonth = jakartaMonthStartMillis()
@@ -763,6 +769,11 @@ class Repository {
             else -> throw IllegalArgumentException(tr("Periode tidak dikenal: $period", "Unknown period: $period"))
         }
         val end = if (period == "all") Long.MAX_VALUE else endToday
+        val sinceIso = if (period == "all") null else sqlWindowStart(start)
+        val salesRows = if (sinceIso != null) db.saleDao().getSince(sinceIso) else db.saleDao().getAll()
+        val items = if (sinceIso != null) db.saleDao().getItemsSince(sinceIso) else db.saleDao().getAllItems()
+        val meds = db.medicineDao().getAll()
+        val medById = meds.associateBy { it.id }
         agregatRekapPenjualan(salesRows, items, medById, start, end, period)
     }
 
@@ -1085,6 +1096,7 @@ class Repository {
     suspend fun importBackup(json: String): ApiResult<String> = call {
         val data = BackupHelper.parseJson(json) // melempar kalau format bukan backup
         val db = DatabaseProvider.db
+        val restoreAt = nowMillis()
         db.withTransaction {
             db.medicineDao().deleteAll()
             db.saleDao().deleteAll()
@@ -1093,21 +1105,21 @@ class Repository {
             db.purchaseDao().deleteAll()
             db.purchaseDao().deleteAllItems()
             db.supplierDao().deleteAll()
-            data.medicines.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("obat") }, kotor = 1) }
+            data.medicines.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("obat") }, updatedAt = maxOf(it.updatedAt, restoreAt), kotor = 1) }
                 .forEach { db.medicineDao().insert(it) }
-            data.sales.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("jual") }, kotor = 1) }
+            data.sales.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("jual") }, updatedAt = maxOf(it.updatedAt, restoreAt), kotor = 1) }
                 .forEach { db.saleDao().insert(it) }
             if (data.saleItems.isNotEmpty()) db.saleDao().insertItems(
-                data.saleItems.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("jualitem") }, kotor = 1) }
+                data.saleItems.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("jualitem") }, updatedAt = maxOf(it.updatedAt, restoreAt), kotor = 1) }
             )
-            data.cashEntries.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("kas") }, kotor = 1) }
+            data.cashEntries.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("kas") }, updatedAt = maxOf(it.updatedAt, restoreAt), kotor = 1) }
                 .forEach { db.cashDao().insert(it) }
-            data.purchases.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("pbf") }, kotor = 1) }
+            data.purchases.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("pbf") }, updatedAt = maxOf(it.updatedAt, restoreAt), kotor = 1) }
                 .forEach { db.purchaseDao().insert(it) }
             if (data.purchaseItems.isNotEmpty()) db.purchaseDao().insertItems(
-                data.purchaseItems.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("pbfitem") }, kotor = 1) }
+                data.purchaseItems.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("pbfitem") }, updatedAt = maxOf(it.updatedAt, restoreAt), kotor = 1) }
             )
-            data.suppliers.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("pemasok") }, kotor = 1) }
+            data.suppliers.map { it.copy(remoteId = it.remoteId.ifBlank { genRemoteId("pemasok") }, updatedAt = maxOf(it.updatedAt, restoreAt), kotor = 1) }
                 .forEach { db.supplierDao().insert(it) }
             // S3: pulihkan kunci bulan sebagai gabungan (union) — bulan
             // yang sudah tertutup tidak pernah terbuka diam-diam karena
@@ -1118,6 +1130,7 @@ class Repository {
                 }
             }
         }
+        DatabaseProvider.prefs()?.edit()?.putLong("pending_restore_replace_at", restoreAt)?.apply()
         tr("Dipulihkan: ${data.medicines.size} obat, ${data.sales.size} penjualan, ${data.saleItems.size} item, ${data.cashEntries.size} kas, ${data.purchases.size} pembelian PBF.", "Restored: ${data.medicines.size} medicines, ${data.sales.size} sales, ${data.saleItems.size} items, ${data.cashEntries.size} cash entries, ${data.purchases.size} PBF purchases.")
     }
 
@@ -1140,6 +1153,45 @@ class Repository {
     /** Kosongkan semua tabel lokal (Reset Semua Data). */
     suspend fun hapusSemuaDataLokal() {
         withContext(Dispatchers.IO) { DatabaseProvider.db.clearAllTables() }
+    }
+
+    data class RemoteIdSnapshot(
+        val obat: Set<String>,
+        val penjualan: Set<String>,
+        val penjualanItem: Set<String>,
+        val kas: Set<String>,
+        val pbf: Set<String>,
+        val pbfItem: Set<String>,
+        val pemasok: Set<String>
+    )
+
+    suspend fun remoteIdsAktif(): RemoteIdSnapshot {
+        val db = DatabaseProvider.db
+        return RemoteIdSnapshot(
+            obat = db.medicineDao().getAll().mapNotNull { it.remoteId.takeIf(String::isNotBlank) }.toSet(),
+            penjualan = db.saleDao().getAll().mapNotNull { it.remoteId.takeIf(String::isNotBlank) }.toSet(),
+            penjualanItem = db.saleDao().getAllItems().mapNotNull { it.remoteId.takeIf(String::isNotBlank) }.toSet(),
+            kas = db.cashDao().getAll().mapNotNull { it.remoteId.takeIf(String::isNotBlank) }.toSet(),
+            pbf = db.purchaseDao().getAll().mapNotNull { it.remoteId.takeIf(String::isNotBlank) }.toSet(),
+            pbfItem = db.purchaseDao().getAllItems().mapNotNull { it.remoteId.takeIf(String::isNotBlank) }.toSet(),
+            pemasok = db.supplierDao().getAll().mapNotNull { it.remoteId.takeIf(String::isNotBlank) }.toSet()
+        )
+    }
+
+    suspend fun bersihkanDataSebelumReset(resetAt: Long) {
+        val db = DatabaseProvider.db
+        db.withTransaction {
+            db.medicineDao().deleteBeforeReset(resetAt)
+            db.saleDao().deleteBeforeReset(resetAt)
+            db.saleDao().deleteItemsBeforeReset(resetAt)
+            db.cashDao().deleteBeforeReset(resetAt)
+            db.purchaseDao().deleteBeforeReset(resetAt)
+            db.purchaseDao().deleteItemsBeforeReset(resetAt)
+            db.supplierDao().deleteBeforeReset(resetAt)
+            if (db.saleDao().getAll().isEmpty() && db.purchaseDao().getAll().isEmpty() && db.cashDao().getAll().isEmpty()) {
+                db.closedMonthDao().deleteAll()
+            }
+        }
     }
 
     suspend fun adaDataKotor(): Boolean =

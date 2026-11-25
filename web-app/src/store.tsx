@@ -10,11 +10,12 @@ import {
   genRemoteId,
   nowIso,
   invoiceDateWIB,
-  remoteMenang,
   bulanKeyDariIso,
   bulanValid,
   bulanSelesai,
 } from './types';
+import { LocalDB, PushedWatermarks, applyCloudResetEpoch, mergeSyncIntoState } from './syncMerge';
+import { parseAndValidateBackupJson } from './backup';
 import {
   auth,
   onAuthStateChanged,
@@ -22,7 +23,9 @@ import {
   User,
   FirestoreMapper,
   fetchCollectionDocs,
-  pushSingleDoc,
+  fetchCloudSyncMeta,
+  pushBatchDocs,
+  tombstoneCloudDocs,
   migrateLegacyUserWebData,
   resetAllCloudData,
   DEFAULT_AUTHORITY_EMAILS,
@@ -37,18 +40,6 @@ import { idbGet, idbSet } from './idb';
 
 export type SyncStatus = 'NONAKTIF' | 'BELUM_MASUK' | 'PROSES' | 'BERHASIL' | 'GAGAL';
 
-interface LocalDB {
-  medicines: Medicine[];
-  sales: Sale[];
-  saleItems: SaleItem[];
-  cashEntries: CashEntry[];
-  purchases: Purchase[];
-  purchaseItems: PurchaseItem[];
-  suppliers: Supplier[];
-  closedMonths: string[];
-  lastSyncAt: number;
-}
-
 const STORAGE_KEY = 'apotek_lestari_web_db_v1';
 
 const emptyDB = (): LocalDB => ({
@@ -61,6 +52,8 @@ const emptyDB = (): LocalDB => ({
   suppliers: [],
   closedMonths: [],
   lastSyncAt: 0,
+  pendingCloudReplaceAt: 0,
+  lastResetSeenAt: 0,
 });
 
 function normalizeDB(parsed: any): LocalDB {
@@ -75,6 +68,8 @@ function normalizeDB(parsed: any): LocalDB {
     suppliers: Array.isArray(parsed.suppliers) ? parsed.suppliers : [],
     closedMonths: Array.isArray(parsed.closedMonths) ? parsed.closedMonths : [],
     lastSyncAt: Number(parsed.lastSyncAt) || 0,
+    pendingCloudReplaceAt: Number(parsed.pendingCloudReplaceAt) || 0,
+    lastResetSeenAt: Number(parsed.lastResetSeenAt) || 0,
   };
 }
 
@@ -197,6 +192,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const dbRef = useRef(dbState);
   dbRef.current = dbState;
   const syncingRef = useRef(false);
+  const pendingSyncRef = useRef(false);
+  const autoSyncTimerRef = useRef<number | null>(null);
+  const resyncTimerRef = useRef<number | null>(null);
+  const idbSaveTimerRef = useRef<number | null>(null);
+  const dirtyIdbRef = useRef(false);
   const autoSyncRef = useRef(autoSync);
   autoSyncRef.current = autoSync;
 
@@ -235,15 +235,42 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     })();
     return () => {
       active = false;
+      if (autoSyncTimerRef.current) window.clearTimeout(autoSyncTimerRef.current);
+      if (resyncTimerRef.current) window.clearTimeout(resyncTimerRef.current);
     };
   }, []);
 
   useEffect(() => {
     if (!idbReady) return;
-    idbSet(STORAGE_KEY, dbState).catch((e) => {
-      console.error('Failed saving IndexedDB', e);
-    });
+    dirtyIdbRef.current = true;
+    if (idbSaveTimerRef.current) window.clearTimeout(idbSaveTimerRef.current);
+    idbSaveTimerRef.current = window.setTimeout(() => {
+      idbSaveTimerRef.current = null;
+      dirtyIdbRef.current = false;
+      idbSet(STORAGE_KEY, dbRef.current).catch((e) => {
+        console.error('Failed saving IndexedDB', e);
+      });
+    }, 200);
   }, [dbState, idbReady]);
+
+  useEffect(() => {
+    const flushIdb = () => {
+      if (!dirtyIdbRef.current) return;
+      dirtyIdbRef.current = false;
+      if (idbSaveTimerRef.current) {
+        window.clearTimeout(idbSaveTimerRef.current);
+        idbSaveTimerRef.current = null;
+      }
+      void idbSet(STORAGE_KEY, dbRef.current).catch(() => {});
+    };
+    window.addEventListener('pagehide', flushIdb);
+    window.addEventListener('beforeunload', flushIdb);
+    return () => {
+      window.removeEventListener('pagehide', flushIdb);
+      window.removeEventListener('beforeunload', flushIdb);
+      if (idbSaveTimerRef.current) window.clearTimeout(idbSaveTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -364,18 +391,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Two-way Last-Write-Wins Sync matching OnlineSync.kt
   const syncNow = async (silent = false, overrideUser?: User | null) => {
     const activeUser = overrideUser !== undefined ? overrideUser : user;
-    if (!activeUser || syncingRef.current) return;
+    if (!activeUser) return;
+    if (syncingRef.current) {
+      pendingSyncRef.current = true;
+      return;
+    }
     syncingRef.current = true;
+    pendingSyncRef.current = false;
     setSyncStatus('PROSES');
     if (!silent) setSyncMessage(null);
 
     try {
       const uid = activeUser.uid;
-      let cur = { ...dbRef.current };
+      const rawSnap = dbRef.current;
       let pushed = 0;
-      let pulled = 0;
 
-      // Fetch remote collections once from shared apotek/main/web_*
+      // Fetch remote collections + sync reset meta from shared apotek/main
       const [
         remObat,
         remJual,
@@ -384,6 +415,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         remPemasok,
         remItemJual,
         remItemPbf,
+        cloudMeta,
       ] = await Promise.all([
         fetchCollectionDocs('obat'),
         fetchCollectionDocs('penjualan'),
@@ -392,7 +424,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         fetchCollectionDocs('pemasok'),
         fetchCollectionDocs('penjualan_item'),
         fetchCollectionDocs('pbf_item'),
+        fetchCloudSyncMeta(),
       ]);
+
+      const remoteResetAt = cloudMeta.resetAt || 0;
+      const snap = applyCloudResetEpoch(rawSnap, remoteResetAt);
 
       // One-time migration of legacy per-account users/{uid}/web_* data into shared apotek/main/web_*
       const legacyFlagKey = `apotek_lestari_migrated_shared_${uid}`;
@@ -426,257 +462,128 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return m;
       };
 
-      const mapObat = remoteUpdatedMap(remObat);
-      const mapJual = remoteUpdatedMap(remJual);
-      const mapPbf = remoteUpdatedMap(remPbf);
-      const mapKas = remoteUpdatedMap(remKas);
-      const mapPemasok = remoteUpdatedMap(remPemasok);
-      const mapItemJual = remoteUpdatedMap(remItemJual);
-      const mapItemPbf = remoteUpdatedMap(remItemPbf);
+      const pushedWatermarks: PushedWatermarks = {
+        medicines: new Map(),
+        sales: new Map(),
+        purchases: new Map(),
+        cashEntries: new Map(),
+        suppliers: new Map(),
+        saleItems: new Map(),
+        purchaseItems: new Map(),
+      };
 
-      // 1) Push dirty local rows where local.updatedAt >= remote.updatedAt
-      for (const e of cur.medicines.filter((x) => x.kotor)) {
-        if (!e.remoteId) continue;
-        if ((mapObat.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc('obat', e.remoteId, FirestoreMapper.obatToMap(e));
-          pushed++;
-        }
-        e.kotor = false;
-      }
-
-      for (const e of cur.sales.filter((x) => x.kotor)) {
-        if (!e.remoteId) continue;
-        const b = bulanKeyDariIso(e.createdAt);
-        if (b && cur.closedMonths.includes(b)) continue;
-        if ((mapJual.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc('penjualan', e.remoteId, FirestoreMapper.penjualanToMap(e));
-          pushed++;
-        }
-        e.kotor = false;
-      }
-
-      for (const e of cur.purchases.filter((x) => x.kotor)) {
-        if (!e.remoteId) continue;
-        const b = bulanKeyDariIso(e.date);
-        if (b && cur.closedMonths.includes(b)) continue;
-        if ((mapPbf.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc('pbf', e.remoteId, FirestoreMapper.pbfToMap(e));
-          pushed++;
-        }
-        e.kotor = false;
-      }
-
-      for (const e of cur.cashEntries.filter((x) => x.kotor)) {
-        if (!e.remoteId) continue;
-        const b = bulanKeyDariIso(e.createdAt);
-        if (b && cur.closedMonths.includes(b)) continue;
-        if ((mapKas.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc('kas', e.remoteId, FirestoreMapper.kasToMap(e));
-          pushed++;
-        }
-        e.kotor = false;
-      }
-
-      for (const e of cur.suppliers.filter((x) => x.kotor)) {
-        if (!e.remoteId) continue;
-        if ((mapPemasok.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc('pemasok', e.remoteId, FirestoreMapper.pemasokToMap(e));
-          pushed++;
-        }
-        e.kotor = false;
-      }
-
-      for (const e of cur.saleItems.filter((x) => x.kotor)) {
-        if (!e.remoteId || !e.saleRemoteId) continue;
-        if ((mapItemJual.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc('penjualan_item', e.remoteId, FirestoreMapper.itemJualToMap(e));
-          pushed++;
-        }
-        e.kotor = false;
-      }
-
-      for (const e of cur.purchaseItems.filter((x) => x.kotor)) {
-        if (!e.remoteId || !e.purchaseRemoteId) continue;
-        if ((mapItemPbf.get(e.remoteId) || 0) <= e.updatedAt) {
-          await pushSingleDoc('pbf_item', e.remoteId, FirestoreMapper.itemPbfToMap(e));
-          pushed++;
-        }
-        e.kotor = false;
-      }
-
-      // 2) Pull & Merge Remote Docs (Last-Write-Wins)
-      let nextMedId = cur.medicines.reduce((m, x) => Math.max(m, x.id), 0) + 1;
-      const medsByRemote = new Map(cur.medicines.map((x) => [x.remoteId, x]));
-      for (const docSnap of remObat) {
-        const existing = medsByRemote.get(docSnap.id);
-        const mapped = FirestoreMapper.obatFromMap(docSnap.data, existing?.id ?? nextMedId);
-        if (!mapped) continue;
-        if (!existing) {
-          if (!mapped.terhapus) {
-            nextMedId++;
-            cur.medicines.push(mapped);
-            medsByRemote.set(mapped.remoteId, mapped);
-            pulled++;
+      const pushTable = async <T extends { remoteId: string; updatedAt: number; kotor?: boolean }>(
+        rows: T[],
+        colName: string,
+        remoteUpdated: Map<string, number>,
+        watermark: Map<string, number>,
+        toMap: (row: T) => Record<string, any>,
+        canPush: (row: T) => boolean = () => true
+      ) => {
+        const toPush: Array<{ remoteId: string; data: Record<string, any> }> = [];
+        const marked: Array<[string, number]> = [];
+        for (const e of rows) {
+          if (!e.kotor || !e.remoteId) continue;
+          if (!canPush(e)) continue;
+          if ((remoteUpdated.get(e.remoteId) || 0) <= e.updatedAt) {
+            toPush.push({ remoteId: e.remoteId, data: toMap(e) });
           }
-        } else if (
-          remoteMenang(mapped.updatedAt, mapped.terhapus, existing.updatedAt, existing.terhapus)
-        ) {
-          Object.assign(existing, mapped, { id: existing.id, kotor: false });
-          pulled++;
+          marked.push([e.remoteId, e.updatedAt]);
         }
-      }
-
-      let nextSaleId = cur.sales.reduce((m, x) => Math.max(m, x.id), 0) + 1;
-      const salesByRemote = new Map(cur.sales.map((x) => [x.remoteId, x]));
-      for (const docSnap of remJual) {
-        const existing = salesByRemote.get(docSnap.id);
-        const mapped = FirestoreMapper.penjualanFromMap(docSnap.data, existing?.id ?? nextSaleId);
-        if (!mapped) continue;
-        if (!existing) {
-          if (!mapped.terhapus) {
-            nextSaleId++;
-            cur.sales.push(mapped);
-            salesByRemote.set(mapped.remoteId, mapped);
-            pulled++;
-          }
-        } else if (
-          remoteMenang(mapped.updatedAt, mapped.terhapus, existing.updatedAt, existing.terhapus)
-        ) {
-          Object.assign(existing, mapped, { id: existing.id, kotor: false });
-          pulled++;
+        if (toPush.length > 0) {
+          await pushBatchDocs(colName, toPush);
+          pushed += toPush.length;
         }
-      }
+        for (const [rid, uAt] of marked) {
+          watermark.set(rid, uAt);
+        }
+      };
 
-      let nextPbfId = cur.purchases.reduce((m, x) => Math.max(m, x.id), 0) + 1;
-      const pbfByRemote = new Map(cur.purchases.map((x) => [x.remoteId, x]));
-      for (const docSnap of remPbf) {
-        const existing = pbfByRemote.get(docSnap.id);
-        const mapped = FirestoreMapper.pbfFromMap(docSnap.data, existing?.id ?? nextPbfId);
-        if (!mapped) continue;
-        if (!existing) {
-          if (!mapped.terhapus) {
-            nextPbfId++;
-            cur.purchases.push(mapped);
-            pbfByRemote.set(mapped.remoteId, mapped);
-            pulled++;
-          }
-        } else if (
-          remoteMenang(mapped.updatedAt, mapped.terhapus, existing.updatedAt, existing.updatedAt === -1)
-        ) {
-          if (
-            remoteMenang(mapped.updatedAt, mapped.terhapus, existing.updatedAt, existing.terhapus)
-          ) {
-            Object.assign(existing, mapped, { id: existing.id, kotor: false });
-            pulled++;
+      const closedSet = new Set(snap.closedMonths);
+      const isClosedMonth = (iso?: string | null) => {
+        const b = bulanKeyDariIso(iso);
+        return Boolean(b && closedSet.has(b));
+      };
+      const saleMonthByRemote = new Map(snap.sales.map((s) => [s.remoteId, s.createdAt]));
+      const pbfMonthByRemote = new Map(snap.purchases.map((p) => [p.remoteId, p.date]));
+
+      // 1) Push dirty local rows from snapshot (parents before children; skip closed months)
+      await pushTable(snap.medicines, 'obat', remoteUpdatedMap(remObat), pushedWatermarks.medicines, FirestoreMapper.obatToMap);
+      await pushTable(snap.sales, 'penjualan', remoteUpdatedMap(remJual), pushedWatermarks.sales, FirestoreMapper.penjualanToMap, (e) => !isClosedMonth(e.createdAt));
+      await pushTable(snap.purchases, 'pbf', remoteUpdatedMap(remPbf), pushedWatermarks.purchases, FirestoreMapper.pbfToMap, (e) => !isClosedMonth(e.date));
+      await pushTable(snap.cashEntries, 'kas', remoteUpdatedMap(remKas), pushedWatermarks.cashEntries, FirestoreMapper.kasToMap, (e) => !isClosedMonth(e.createdAt));
+      await pushTable(snap.suppliers, 'pemasok', remoteUpdatedMap(remPemasok), pushedWatermarks.suppliers, FirestoreMapper.pemasokToMap);
+      await pushTable(
+        snap.saleItems,
+        'penjualan_item',
+        remoteUpdatedMap(remItemJual),
+        pushedWatermarks.saleItems,
+        FirestoreMapper.itemJualToMap,
+        (e) => Boolean(e.saleRemoteId) && !isClosedMonth(saleMonthByRemote.get(e.saleRemoteId))
+      );
+      await pushTable(
+        snap.purchaseItems,
+        'pbf_item',
+        remoteUpdatedMap(remItemPbf),
+        pushedWatermarks.purchaseItems,
+        FirestoreMapper.itemPbfToMap,
+        (e) => Boolean(e.purchaseRemoteId) && !isClosedMonth(pbfMonthByRemote.get(e.purchaseRemoteId))
+      );
+
+      // 1b) After a local backup restore, tombstone older remote docs missing from backup
+      const replaceAt = snap.pendingCloudReplaceAt || 0;
+      if (replaceAt > 0) {
+        const replacePairs: Array<[string, Array<{ id: string; data: Record<string, any> }>, Array<{ remoteId: string; terhapus: boolean }>]> = [
+          ['obat', remObat, snap.medicines],
+          ['penjualan', remJual, snap.sales],
+          ['pbf', remPbf, snap.purchases],
+          ['kas', remKas, snap.cashEntries],
+          ['pemasok', remPemasok, snap.suppliers],
+          ['penjualan_item', remItemJual, snap.saleItems],
+          ['pbf_item', remItemPbf, snap.purchaseItems],
+        ];
+        for (const [colName, remDocs, localRows] of replacePairs) {
+          const keepSet = new Set(localRows.filter((x) => !x.terhapus && x.remoteId).map((x) => x.remoteId));
+          const staleDocs = remDocs.filter(
+            (d) => !keepSet.has(d.id) && d.data?.terhapus !== true && (Number(d.data?.updatedAt) || 0) <= replaceAt
+          );
+          if (staleDocs.length > 0) {
+            await tombstoneCloudDocs(colName, staleDocs, replaceAt);
+            pushed += staleDocs.length;
+            for (const d of staleDocs) {
+              d.data = { ...d.data, terhapus: true, updatedAt: replaceAt };
+            }
           }
         }
       }
 
-      let nextKasId = cur.cashEntries.reduce((m, x) => Math.max(m, x.id), 0) + 1;
-      const kasByRemote = new Map(cur.cashEntries.map((x) => [x.remoteId, x]));
-      for (const docSnap of remKas) {
-        const existing = kasByRemote.get(docSnap.id);
-        const mapped = FirestoreMapper.kasFromMap(docSnap.data, existing?.id ?? nextKasId);
-        if (!mapped) continue;
-        if (!existing) {
-          if (!mapped.terhapus) {
-            nextKasId++;
-            cur.cashEntries.push(mapped);
-            kasByRemote.set(mapped.remoteId, mapped);
-            pulled++;
-          }
-        } else if (
-          remoteMenang(mapped.updatedAt, mapped.terhapus, existing.updatedAt, existing.terhapus)
-        ) {
-          Object.assign(existing, mapped, { id: existing.id, kotor: false });
-          pulled++;
-        }
-      }
-
-      let nextSupId = cur.suppliers.reduce((m, x) => Math.max(m, x.id), 0) + 1;
-      const supByRemote = new Map(cur.suppliers.map((x) => [x.remoteId, x]));
-      for (const docSnap of remPemasok) {
-        const existing = supByRemote.get(docSnap.id);
-        const mapped = FirestoreMapper.pemasokFromMap(docSnap.data, existing?.id ?? nextSupId);
-        if (!mapped) continue;
-        if (!existing) {
-          if (!mapped.terhapus) {
-            nextSupId++;
-            cur.suppliers.push(mapped);
-            supByRemote.set(mapped.remoteId, mapped);
-            pulled++;
-          }
-        } else if (
-          remoteMenang(mapped.updatedAt, mapped.terhapus, existing.updatedAt, existing.terhapus)
-        ) {
-          Object.assign(existing, mapped, { id: existing.id, kotor: false });
-          pulled++;
-        }
-      }
-
-      let nextSaleItemId = cur.saleItems.reduce((m, x) => Math.max(m, x.id), 0) + 1;
-      const saleItemByRemote = new Map(cur.saleItems.map((x) => [x.remoteId, x]));
-      for (const docSnap of remItemJual) {
-        const d = docSnap.data;
-        const parentSale = salesByRemote.get(String(d.saleRemoteId || ''));
-        if (!parentSale) continue;
-        const med = medsByRemote.get(String(d.medicineRemoteId || ''));
-        const existing = saleItemByRemote.get(docSnap.id);
-        const mapped = FirestoreMapper.itemJualFromMap(
-          d,
-          existing?.id ?? nextSaleItemId,
-          parentSale.id,
-          med?.id ?? 0
-        );
-        if (!mapped) continue;
-        if (!existing) {
-          if (!mapped.terhapus) {
-            nextSaleItemId++;
-            cur.saleItems.push(mapped);
-            saleItemByRemote.set(mapped.remoteId, mapped);
-            pulled++;
-          }
-        } else if (
-          remoteMenang(mapped.updatedAt, mapped.terhapus, existing.updatedAt, existing.terhapus)
-        ) {
-          Object.assign(existing, mapped, { id: existing.id, kotor: false });
-          pulled++;
-        }
-      }
-
-      let nextPbfItemId = cur.purchaseItems.reduce((m, x) => Math.max(m, x.id), 0) + 1;
-      const pbfItemByRemote = new Map(cur.purchaseItems.map((x) => [x.remoteId, x]));
-      for (const docSnap of remItemPbf) {
-        const d = docSnap.data;
-        const parentPbf = pbfByRemote.get(String(d.purchaseRemoteId || ''));
-        if (!parentPbf) continue;
-        const existing = pbfItemByRemote.get(docSnap.id);
-        const mapped = FirestoreMapper.itemPbfFromMap(
-          d,
-          existing?.id ?? nextPbfItemId,
-          parentPbf.id
-        );
-        if (!mapped) continue;
-        if (!existing) {
-          if (!mapped.terhapus) {
-            nextPbfItemId++;
-            cur.purchaseItems.push(mapped);
-            pbfItemByRemote.set(mapped.remoteId, mapped);
-            pulled++;
-          }
-        } else if (
-          remoteMenang(mapped.updatedAt, mapped.terhapus, existing.updatedAt, existing.terhapus)
-        ) {
-          Object.assign(existing, mapped, { id: existing.id, kotor: false });
-          pulled++;
-        }
-      }
-
-      cur.lastSyncAt = Date.now();
-      setDbState({ ...cur });
+      // 2) Pull & merge atomically against live React state without clobbering mid-sync mutations
+      const remoteBundle = {
+        obat: remObat,
+        penjualan: remJual,
+        pbf: remPbf,
+        kas: remKas,
+        pemasok: remPemasok,
+        penjualan_item: remItemJual,
+        pbf_item: remItemPbf,
+      };
+      const nowMs = Date.now();
+      const mergeOpts = { replaceHandledAt: replaceAt, remoteResetAt };
+      const preview = mergeSyncIntoState(
+        dbRef.current,
+        remoteBundle,
+        pushedWatermarks,
+        FirestoreMapper,
+        nowMs,
+        mergeOpts
+      );
+      setDbState((prev) =>
+        mergeSyncIntoState(prev, remoteBundle, pushedWatermarks, FirestoreMapper, nowMs, mergeOpts).nextDb
+      );
+      if (preview.stillDirty) pendingSyncRef.current = true;
       setSyncStatus('BERHASIL');
       if (!silent) {
-        setSyncMessage(`Tersinkron (↑${pushed} ↓${pulled})`);
+        setSyncMessage(`Tersinkron (↑${pushed} ↓${preview.pulled})`);
       }
     } catch (e: any) {
       console.error('Sync error:', e);
@@ -684,14 +591,29 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSyncMessage(e?.message || 'Sinkronisasi gagal');
     } finally {
       syncingRef.current = false;
+      if (pendingSyncRef.current && autoSyncRef.current && auth.currentUser) {
+        pendingSyncRef.current = false;
+        if (resyncTimerRef.current) window.clearTimeout(resyncTimerRef.current);
+        resyncTimerRef.current = window.setTimeout(() => {
+          resyncTimerRef.current = null;
+          void syncNow(true);
+        }, 250);
+      }
     }
   };
 
   // Auto-push helper right after local mutation
   const queueAutoSync = () => {
-    if (auth.currentUser && autoSyncRef.current) {
-      setTimeout(() => syncNow(true), 1200);
+    if (!auth.currentUser || !autoSyncRef.current) return;
+    if (syncingRef.current) {
+      pendingSyncRef.current = true;
+      return;
     }
+    if (autoSyncTimerRef.current) window.clearTimeout(autoSyncTimerRef.current);
+    autoSyncTimerRef.current = window.setTimeout(() => {
+      autoSyncTimerRef.current = null;
+      void syncNow(true);
+    }, 1200);
   };
 
   // ---- Medicine Mutations ----
@@ -702,16 +624,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Stok / Harga tidak boleh negatif');
 
     const bc = med.barcode?.trim() || null;
+    if (bc) {
+      const dup = dbRef.current.medicines.find(
+        (m) => !m.terhapus && m.id !== editId && m.barcode?.toLowerCase() === bc.toLowerCase()
+      );
+      if (dup) throw new Error(`Barcode ${bc} sudah dipakai untuk ${dup.name}`);
+    }
     const now = Date.now();
 
     setDbState((prev) => {
-      if (bc) {
-        const dup = prev.medicines.find(
-          (m) => !m.terhapus && m.id !== editId && m.barcode?.toLowerCase() === bc.toLowerCase()
-        );
-        if (dup) throw new Error(`Barcode ${bc} sudah dipakai untuk ${dup.name}`);
-      }
-
       if (editId !== undefined) {
         return {
           ...prev,
@@ -778,17 +699,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         continue;
       }
       const bc = item.barcode?.trim() || null;
-      const existing = bc
-        ? curMeds.find((m) => m.barcode?.toLowerCase() === bc.toLowerCase())
-        : curMeds.find(
+      const existingIdx = bc
+        ? curMeds.findIndex((m) => m.barcode?.toLowerCase() === bc.toLowerCase())
+        : curMeds.findIndex(
             (m) =>
               m.name.toLowerCase() === item.name.trim().toLowerCase() &&
               m.category.toLowerCase() === (item.category || 'Umum').toLowerCase() &&
               m.unit.toLowerCase() === (item.unit || 'Strip').toLowerCase()
           );
 
-      if (existing) {
-        Object.assign(existing, {
+      if (existingIdx >= 0) {
+        const existing = curMeds[existingIdx];
+        curMeds[existingIdx] = {
+          ...existing,
           name: item.name.trim(),
           category: item.category || existing.category,
           unit: item.unit || existing.unit,
@@ -802,7 +725,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           terhapus: false,
           updatedAt: now,
           kotor: true,
-        });
+        };
         updated++;
       } else {
         curMeds.push({
@@ -1194,171 +1117,58 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const importBackupJson = (jsonStr: string): string => {
-    const root = JSON.parse(jsonStr);
-    if (root.version !== 1 || root.app !== 'apotek-lestari') {
-      throw new Error('File bukan backup Apotek Lestari yang sah (versi 1)');
-    }
-    if (
-      !Array.isArray(root.medicines) ||
-      !Array.isArray(root.sales) ||
-      !Array.isArray(root.saleItems) ||
-      !Array.isArray(root.cashEntries)
-    ) {
-      throw new Error('Backup tidak lengkap: array wajib tidak ditemukan');
-    }
+    const nowMs = Date.now();
+    const parsed = parseAndValidateBackupJson(jsonStr, genRemoteId, nowMs);
+    const cur = dbRef.current;
 
-    const meds: Medicine[] = root.medicines.map((m: any) => ({
-      id: Number(m.id),
-      name: String(m.name || ''),
-      category: String(m.category || 'Umum'),
-      unit: String(m.unit || 'Strip'),
-      buyPrice: Number(m.buyPrice) || 0,
-      sellPrice: Number(m.sellPrice) || 0,
-      wholesalePrice: Number(m.wholesalePrice) || 0,
-      stock: Number(m.stock) || 0,
-      expiryDate: m.expiryDate || null,
-      barcode: m.barcode || null,
-      createdAt: String(m.createdAt || ''),
-      remoteId: String(m.remoteId || genRemoteId('obat')),
-      updatedAt: Number(m.updatedAt) || Date.now(),
-      terhapus: false,
-      kotor: true,
-    }));
-
-    const sales: Sale[] = root.sales.map((s: any) => ({
-      id: Number(s.id),
-      invoiceNo: String(s.invoiceNo || ''),
-      total: Number(s.total) || 0,
-      paymentMethod: s.paymentMethod || 'Tunai',
-      amountPaid: Number(s.amountPaid) || 0,
-      changeAmount: Number(s.changeAmount) || 0,
-      createdAt: String(s.createdAt || ''),
-      remoteId: String(s.remoteId || genRemoteId('jual')),
-      updatedAt: Number(s.updatedAt) || Date.now(),
-      terhapus: false,
-      kotor: true,
-    }));
-
-    const saleRemoteById = new Map(sales.map((s) => [s.id, s.remoteId]));
-    const medRemoteById = new Map(meds.map((m) => [m.id, m.remoteId]));
-
-    const saleItems: SaleItem[] = root.saleItems.map((it: any) => ({
-      id: Number(it.id),
-      saleId: Number(it.saleId),
-      saleRemoteId: saleRemoteById.get(Number(it.saleId)) || '',
-      medicineId: Number(it.medicineId) || 0,
-      medicineRemoteId: medRemoteById.get(Number(it.medicineId)) || '',
-      medicineName: String(it.medicineName || ''),
-      category: String(it.category || ''),
-      unit: String(it.unit || ''),
-      qty: Number(it.qty) || 0,
-      price: Number(it.price) || 0,
-      priceType: it.priceType === 'GROSIR' ? 'GROSIR' : 'ECER',
-      buyPrice: Number(it.buyPrice) || 0,
-      subtotal: Number(it.subtotal) || 0,
-      remoteId: String(it.remoteId || genRemoteId('jualitem')),
-      updatedAt: Number(it.updatedAt) || Date.now(),
-      terhapus: false,
-      kotor: true,
-    }));
-
-    const cashEntries: CashEntry[] = root.cashEntries.map((e: any) => ({
-      id: Number(e.id),
-      type: e.type === 'out' ? 'out' : 'in',
-      category: String(e.category || ''),
-      description: String(e.description || ''),
-      amount: Number(e.amount) || 0,
-      source: e.source === 'sale' ? 'sale' : 'manual',
-      createdAt: String(e.createdAt || ''),
-      remoteId: String(e.remoteId || genRemoteId('kas')),
-      updatedAt: Number(e.updatedAt) || Date.now(),
-      terhapus: false,
-      kotor: true,
-    }));
-
-    const purchases: Purchase[] = (root.purchases || []).map((p: any) => ({
-      id: Number(p.id),
-      pbfName: String(p.pbfName || ''),
-      invoiceNo: String(p.invoiceNo || ''),
-      date: String(p.date || ''),
-      total: Number(p.total) || 0,
-      ppn: Number(p.ppn) || 0,
-      paymentType: p.paymentType === 'KREDIT' ? 'KREDIT' : 'CASH',
-      dueDate: String(p.dueDate || ''),
-      createdAt: String(p.createdAt || ''),
-      remoteId: String(p.remoteId || genRemoteId('pbf')),
-      updatedAt: Number(p.updatedAt) || Date.now(),
-      terhapus: false,
-      kotor: true,
-    }));
-
-    const pbfRemoteById = new Map(purchases.map((p) => [p.id, p.remoteId]));
-
-    const purchaseItems: PurchaseItem[] = (root.purchaseItems || []).map((pi: any) => ({
-      id: Number(pi.id),
-      purchaseId: Number(pi.purchaseId),
-      purchaseRemoteId: pbfRemoteById.get(Number(pi.purchaseId)) || '',
-      medicineName: String(pi.medicineName || ''),
-      qty: Number(pi.qty) || 0,
-      unit: String(pi.unit || 'Strip'),
-      buyPrice: Number(pi.buyPrice) || 0,
-      subtotal: Number(pi.subtotal) || 0,
-      remoteId: String(pi.remoteId || genRemoteId('pbfitem')),
-      updatedAt: Number(pi.updatedAt) || Date.now(),
-      terhapus: false,
-      kotor: true,
-    }));
-
-    const suppliers: Supplier[] = (root.suppliers || []).map((sp: any) => ({
-      id: Number(sp.id),
-      name: String(sp.name || ''),
-      contact: String(sp.contact || ''),
-      createdAt: String(sp.createdAt || ''),
-      remoteId: String(sp.remoteId || genRemoteId('pemasok')),
-      updatedAt: Number(sp.updatedAt) || Date.now(),
-      terhapus: false,
-      kotor: true,
-    }));
+    const withOrphanTombstones = <
+      T extends { remoteId: string; updatedAt: number; terhapus: boolean; kotor?: boolean }
+    >(
+      oldRows: T[],
+      nextRows: T[]
+    ): T[] => {
+      const nextRemote = new Set(nextRows.map((x) => x.remoteId));
+      const orphans = oldRows
+        .filter((r) => Boolean(r.remoteId) && !nextRemote.has(r.remoteId))
+        .map((r) => ({ ...r, terhapus: true, updatedAt: nowMs, kotor: true }));
+      return [...nextRows, ...orphans];
+    };
 
     const unionClosed = Array.from(
-      new Set([...dbRef.current.closedMonths, ...(root.closedMonths || []).filter(bulanValid)])
+      new Set([...cur.closedMonths, ...parsed.closedMonths])
     )
       .sort()
       .reverse();
 
     setDbState({
-      medicines: meds,
-      sales,
-      saleItems,
-      cashEntries,
-      purchases,
-      purchaseItems,
-      suppliers,
+      medicines: withOrphanTombstones(cur.medicines, parsed.medicines),
+      sales: withOrphanTombstones(cur.sales, parsed.sales),
+      saleItems: withOrphanTombstones(cur.saleItems, parsed.saleItems),
+      cashEntries: withOrphanTombstones(cur.cashEntries, parsed.cashEntries),
+      purchases: withOrphanTombstones(cur.purchases, parsed.purchases),
+      purchaseItems: withOrphanTombstones(cur.purchaseItems, parsed.purchaseItems),
+      suppliers: withOrphanTombstones(cur.suppliers, parsed.suppliers),
       closedMonths: unionClosed,
-      lastSyncAt: dbRef.current.lastSyncAt,
+      lastSyncAt: cur.lastSyncAt,
+      pendingCloudReplaceAt: nowMs,
+      lastResetSeenAt: cur.lastResetSeenAt || 0,
     });
 
     queueAutoSync();
-    return `Dipulihkan: ${meds.length} obat, ${sales.length} penjualan, ${cashEntries.length} kas, ${purchases.length} faktur PBF.`;
+    return `Dipulihkan: ${parsed.medicines.length} obat, ${parsed.sales.length} penjualan, ${parsed.cashEntries.length} kas, ${parsed.purchases.length} faktur PBF.`;
   };
 
   const resetAllData = async () => {
+    const resetAt = Date.now();
     if (user) {
       if (currentRole !== 'owner') {
         throw new Error('Hanya akun Owner yang dapat mereset seluruh data cloud.');
       }
-      await resetAllCloudData();
+      await resetAllCloudData(resetAt);
     }
     setDbState({
-      medicines: [],
-      sales: [],
-      saleItems: [],
-      cashEntries: [],
-      purchases: [],
-      purchaseItems: [],
-      suppliers: [],
-      closedMonths: [],
-      lastSyncAt: 0,
+      ...emptyDB(),
+      lastResetSeenAt: resetAt,
     });
   };
 

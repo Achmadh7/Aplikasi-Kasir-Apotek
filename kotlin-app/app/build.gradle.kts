@@ -102,6 +102,10 @@ kotlin {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 // Penjaga signing rilis (audit 2026-11-02, M4): dijalankan hanya di jalur
 // build release (preReleaseBuild), jadi build debug — yang di CI berjalan
 // sebelum keystore disiapkan — tidak ikut terhalang. Bila signing.properties

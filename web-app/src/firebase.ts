@@ -1,5 +1,5 @@
 // Firebase configuration from kotlin-app/app/google-services.json
-// Syncs to users/{uid}/web_{collection}/{remoteId} (isolated from APK collections)
+// Syncs Web data to shared `apotek/main/web_{collection}/{remoteId}` (isolated from Android APK `users/{uid}`).
 
 import { initializeApp } from 'firebase/app';
 import {
@@ -19,6 +19,7 @@ import {
   onSnapshot,
   setDoc,
   deleteDoc,
+  deleteField,
   writeBatch,
 } from 'firebase/firestore';
 import {
@@ -81,6 +82,32 @@ function resolveOwnerEmails(emails: string[], rawOwners: unknown): string[] {
   return emails.length > 0 ? [emails[0]] : [...DEFAULT_AUTHORITY_EMAILS];
 }
 
+const AUTHORITY_CACHE_KEY = 'apotek_lestari_authority_cfg_v1';
+
+function readAuthorityCache(): AuthorityConfig | null {
+  try {
+    const raw = localStorage.getItem(AUTHORITY_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const emails = normalizeEmailList(parsed?.emails);
+    if (emails.length === 0) return null;
+    return {
+      emails,
+      ownerEmails: resolveOwnerEmails(emails, parsed?.ownerEmails),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeAuthorityCache(cfg: AuthorityConfig) {
+  try {
+    localStorage.setItem(AUTHORITY_CACHE_KEY, JSON.stringify(cfg));
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
 export async function fetchAuthorityConfig(seedIfEmpty = false): Promise<AuthorityConfig> {
   const ref = doc(db, 'authority', 'config');
   try {
@@ -89,30 +116,40 @@ export async function fetchAuthorityConfig(seedIfEmpty = false): Promise<Authori
       const data = snap.data();
       const parsed = normalizeEmailList(data?.emails);
       if (parsed.length > 0) {
-        return {
+        const cfg = {
           emails: parsed,
           ownerEmails: resolveOwnerEmails(parsed, data?.ownerEmails),
         };
+        writeAuthorityCache(cfg);
+        return cfg;
       }
     }
     if (seedIfEmpty) {
+      const defCfg = {
+        emails: [...DEFAULT_AUTHORITY_EMAILS],
+        ownerEmails: [...DEFAULT_AUTHORITY_EMAILS],
+      };
       await setDoc(
         ref,
         {
-          emails: DEFAULT_AUTHORITY_EMAILS,
-          ownerEmails: DEFAULT_AUTHORITY_EMAILS,
+          emails: defCfg.emails,
+          ownerEmails: defCfg.ownerEmails,
           updatedAt: Date.now(),
         },
         { merge: true }
       ).catch(() => {});
+      writeAuthorityCache(defCfg);
+      return defCfg;
     }
-  } catch {
-    // Fallback to default owner emails if Firestore rules/network block read
+  } catch (err: any) {
+    const code = err?.code || '';
+    if (code === 'permission-denied' || code === 'unauthenticated') {
+      return { emails: [], ownerEmails: [] };
+    }
+    const cached = readAuthorityCache();
+    if (cached) return cached;
   }
-  return {
-    emails: [...DEFAULT_AUTHORITY_EMAILS],
-    ownerEmails: [...DEFAULT_AUTHORITY_EMAILS],
-  };
+  return { emails: [], ownerEmails: [] };
 }
 
 export async function saveAuthorityConfig(
@@ -159,10 +196,12 @@ export function subscribeAuthorityConfig(onUpdate: (cfg: AuthorityConfig) => voi
       const data = snap.data();
       const parsed = normalizeEmailList(data?.emails);
       const emails = parsed.length > 0 ? parsed : [...DEFAULT_AUTHORITY_EMAILS];
-      onUpdate({
+      const cfg = {
         emails,
         ownerEmails: resolveOwnerEmails(emails, data?.ownerEmails),
-      });
+      };
+      writeAuthorityCache(cfg);
+      onUpdate(cfg);
     },
     () => {
       // Ignore transient listener errors during sign-out or offline state
@@ -175,18 +214,44 @@ export async function loginWithGoogle(): Promise<User> {
   return res.user;
 }
 
+export type PinAlgo = 'pbkdf2-sha256-100k' | 'sha256-v1';
+
 export interface AuthorityPinConfig {
   pinHash: string;
   pinSalt: string;
+  algo?: PinAlgo;
 }
 
-async function hashPin(pin: string, salt: string): Promise<string> {
+const PIN_PBKDF2_ITERATIONS = 100_000;
+
+async function hashPinLegacySha256(pin: string, salt: string): Promise<string> {
   if (!globalThis.crypto?.subtle) {
     throw new Error('Browser tidak mendukung enkripsi PIN (butuh HTTPS).');
   }
   const bytes = new TextEncoder().encode(`${salt}:${pin}`);
   const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashPinPbkdf2(pin: string, salt: string): Promise<string> {
+  if (!globalThis.crypto?.subtle) {
+    throw new Error('Browser tidak mendukung enkripsi PIN (butuh HTTPS).');
+  }
+  const enc = new TextEncoder();
+  const baseKey = await globalThis.crypto.subtle.importKey('raw', enc.encode(pin), 'PBKDF2', false, [
+    'deriveBits',
+  ]);
+  const bits = await globalThis.crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode(salt),
+      iterations: PIN_PBKDF2_ITERATIONS,
+      hash: 'SHA-256',
+    },
+    baseKey,
+    256
+  );
+  return Array.from(new Uint8Array(bits), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 function generatePinSalt(): string {
@@ -196,11 +261,24 @@ function generatePinSalt(): string {
 }
 
 export async function fetchAuthorityPin(): Promise<AuthorityPinConfig | null> {
-  const snap = await getDoc(doc(db, 'authority', 'config'));
-  if (!snap.exists()) return null;
-  const data = snap.data();
-  if (typeof data?.pinHash === 'string' && data.pinHash && typeof data?.pinSalt === 'string' && data.pinSalt) {
-    return { pinHash: data.pinHash, pinSalt: data.pinSalt };
+  const pinSnap = await getDoc(doc(db, 'authority', 'pin'));
+  if (pinSnap.exists()) {
+    const data = pinSnap.data();
+    if (typeof data?.pinHash === 'string' && data.pinHash && typeof data?.pinSalt === 'string' && data.pinSalt) {
+      return {
+        pinHash: data.pinHash,
+        pinSalt: data.pinSalt,
+        algo: data.algo === 'sha256-v1' ? 'sha256-v1' : 'pbkdf2-sha256-100k',
+      };
+    }
+  }
+  // Backward-compatible read for legacy SHA-256 PIN still stored on authority/config
+  const legacySnap = await getDoc(doc(db, 'authority', 'config'));
+  if (legacySnap.exists()) {
+    const data = legacySnap.data();
+    if (typeof data?.pinHash === 'string' && data.pinHash && typeof data?.pinSalt === 'string' && data.pinSalt) {
+      return { pinHash: data.pinHash, pinSalt: data.pinSalt, algo: 'sha256-v1' };
+    }
   }
   return null;
 }
@@ -210,22 +288,36 @@ export async function saveAuthorityPin(pin: string): Promise<AuthorityPinConfig>
     throw new Error('PIN harus berupa 4 sampai 6 digit angka.');
   }
   const pinSalt = generatePinSalt();
-  const pinHash = await hashPin(pin, pinSalt);
+  const pinHash = await hashPinPbkdf2(pin, pinSalt);
   await setDoc(
-    doc(db, 'authority', 'config'),
+    doc(db, 'authority', 'pin'),
     {
       pinHash,
       pinSalt,
+      algo: 'pbkdf2-sha256-100k',
       pinUpdatedAt: Date.now(),
     },
     { merge: true }
   );
-  return { pinHash, pinSalt };
+  // Strip legacy hash fields from readable authority/config document
+  await setDoc(
+    doc(db, 'authority', 'config'),
+    {
+      pinHash: deleteField(),
+      pinSalt: deleteField(),
+      pinUpdatedAt: deleteField(),
+    },
+    { merge: true }
+  ).catch(() => {});
+  return { pinHash, pinSalt, algo: 'pbkdf2-sha256-100k' };
 }
 
 export async function verifyAuthorityPin(pin: string, config: AuthorityPinConfig): Promise<boolean> {
   if (!/^\d{4,6}$/.test(pin)) return false;
-  const candidate = await hashPin(pin, config.pinSalt);
+  const candidate =
+    config.algo === 'sha256-v1'
+      ? await hashPinLegacySha256(pin, config.pinSalt)
+      : await hashPinPbkdf2(pin, config.pinSalt);
   return candidate === config.pinHash;
 }
 
@@ -492,6 +584,19 @@ export async function pushSingleDoc(
   await setDoc(ref, data);
 }
 
+export async function pushBatchDocs(
+  colName: string,
+  items: Array<{ remoteId: string; data: Record<string, any> }>
+) {
+  for (let i = 0; i < items.length; i += 400) {
+    const batch = writeBatch(db);
+    for (const item of items.slice(i, i + 400)) {
+      batch.set(doc(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol(colName), item.remoteId), item.data);
+    }
+    await batch.commit();
+  }
+}
+
 export async function fetchCollectionDocs(colName: string) {
   const snap = await getDocs(collection(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol(colName)));
   return snap.docs.map((d) => ({ id: d.id, data: d.data() }));
@@ -544,7 +649,36 @@ export async function migrateLegacyUserWebData(
   return migrated;
 }
 
-export async function resetAllCloudData() {
+export async function fetchCloudSyncMeta(): Promise<{ resetAt: number }> {
+  try {
+    const snap = await getDoc(doc(db, SHARED_ROOT[0], SHARED_ROOT[1], 'web_meta', 'sync'));
+    if (!snap.exists()) return { resetAt: 0 };
+    return { resetAt: Number(snap.data()?.resetAt) || 0 };
+  } catch {
+    return { resetAt: 0 };
+  }
+}
+
+export async function tombstoneCloudDocs(
+  colName: string,
+  docsToTombstone: Array<{ id: string; data: Record<string, any> }>,
+  updatedAt: number
+) {
+  for (let i = 0; i < docsToTombstone.length; i += 400) {
+    const batch = writeBatch(db);
+    for (const d of docsToTombstone.slice(i, i + 400)) {
+      batch.set(doc(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol(colName), d.id), {
+        ...d.data,
+        remoteId: d.id,
+        terhapus: true,
+        updatedAt,
+      });
+    }
+    await batch.commit();
+  }
+}
+
+export async function resetAllCloudData(resetAt: number = Date.now()) {
   for (const colName of WEB_SYNC_COLS) {
     const snap = await getDocs(collection(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol(colName)));
     const docs = snap.docs;
@@ -554,4 +688,9 @@ export async function resetAllCloudData() {
       await batch.commit();
     }
   }
+  await setDoc(
+    doc(db, SHARED_ROOT[0], SHARED_ROOT[1], 'web_meta', 'sync'),
+    { resetAt },
+    { merge: true }
+  );
 }

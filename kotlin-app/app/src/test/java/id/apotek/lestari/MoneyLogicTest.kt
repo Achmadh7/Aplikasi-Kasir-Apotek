@@ -260,6 +260,47 @@ class MoneyLogicTest {
     }
 
     @Test
+    fun excel_webTemplateWithBannerAndFooter_parsesCorrectColumns() {
+        val wb = XSSFWorkbook()
+        val sheet = wb.createSheet("Input Stok Obat")
+        sheet.createRow(0).createCell(0).setCellValue("APOTEK LESTARI - TEMPLATE")
+        sheet.createRow(1).createCell(0).setCellValue("Petunjuk pengisian")
+        val headers = listOf(
+            "Nama Obat *", "Kategori", "Satuan", "Harga Beli *",
+            "Harga Jual Ecer *", "Harga Grosir", "Stok *", "Kadaluarsa (YYYY-MM-DD)"
+        )
+        val headerRow = sheet.createRow(3)
+        headers.forEachIndexed { i, h -> headerRow.createCell(i).setCellValue(h) }
+        val row = sheet.createRow(4)
+        row.createCell(0).setCellValue("Paracetamol Web")
+        row.createCell(1).setCellValue("Pereda Nyeri")
+        row.createCell(2).setCellValue("Strip")
+        row.createCell(3).setCellValue(8000.0)
+        row.createCell(4).setCellValue(12000.0)
+        row.createCell(5).setCellValue(10500.0)
+        row.createCell(6).setCellValue(50.0)
+        row.createCell(7).setCellValue("2028-06-30")
+        val totalRow = sheet.createRow(5)
+        totalRow.createCell(0).setCellValue("TOTAL")
+        totalRow.createCell(6).setCellValue(50.0)
+
+        val out = ByteArrayOutputStream()
+        wb.write(out)
+        wb.close()
+
+        val parsed = ExcelHelper.parseImport(out.toByteArray())
+        assertEquals(1, parsed.items.size)
+        assertTrue(parsed.skippedRows.isEmpty())
+        val item = parsed.items[0]
+        assertEquals("Paracetamol Web", item.name)
+        assertEquals(8000, item.buyPrice)
+        assertEquals(12000, item.sellPrice)
+        assertEquals(10500, item.wholesalePrice)
+        assertEquals(50, item.stock)
+        assertEquals("2028-06-30", item.expiryDate)
+    }
+
+    @Test
     fun excel_export_writesFormattedNumbersAndRealDates() {
         // X3: harga/stok pakai format #,##0, kadaluarsa sel tanggal asli.
         val wb = WorkbookFactory.create(ByteArrayInputStream(ExcelHelper.exportBytes(sampleMedicines())))

@@ -337,6 +337,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                 repoOnline.hapusSemuaDataLokal()
                 onlinePrefs.edit()
                     .remove("online_sync_terakhir")
+                    .remove("pending_restore_replace_at")
                     .remove("last_backup_at")
                     .remove("last_backup_name")
                     .remove(PREF_AUTO_BACKUP_TERAKHIR)
