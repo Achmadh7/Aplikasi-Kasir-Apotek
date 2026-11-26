@@ -327,6 +327,7 @@ test('parseMedicineSpreadsheet imports Kotlin column order without swapping pric
   assert.deepEqual(parsed.rows[0], {
     name: 'Paracetamol 500mg',
     category: 'Pereda Nyeri',
+    medicineType: '',
     unit: 'Strip',
     buyPrice: 8000,
     sellPrice: 12000,
@@ -344,6 +345,7 @@ test('parseMedicineSpreadsheet imports Web template with banner rows and asteris
     [
       'Nama Obat *',
       'Kategori',
+      'Jenis Obat',
       'Satuan',
       'Harga Beli *',
       'Harga Jual Ecer *',
@@ -351,12 +353,13 @@ test('parseMedicineSpreadsheet imports Web template with banner rows and asteris
       'Stok *',
       'Kadaluarsa (YYYY-MM-DD)',
     ],
-    ['Vitamin C', 'Vitamin', 'Botol', 'Rp 35.000', '50,000', '42.000,00', '20', '31/12/2027'],
+    ['Vitamin C', 'Vitamin', 'Generik', 'Botol', 'Rp 35.000', '50,000', '42.000,00', '20', '31/12/2027'],
   ];
 
   const parsed = parseMedicineSpreadsheet(webMatrix);
   assert.equal(parsed.rows.length, 1);
   assert.equal(parsed.skippedInvalid, 0);
+  assert.equal(parsed.rows[0].medicineType, 'Generik');
   assert.equal(parsed.rows[0].buyPrice, 35000);
   assert.equal(parsed.rows[0].sellPrice, 50000);
   assert.equal(parsed.rows[0].wholesalePrice, 42000);
@@ -402,4 +405,17 @@ test('readSpreadsheetMatrix extracts Excel date serial and numeric values cleanl
   assert.equal(parsed.rows[0].sellPrice, 12000);
   assert.equal(parsed.rows[0].buyPrice, 8000);
   assert.equal(parsed.rows[0].expiryDate, '2027-12-31');
+});
+
+test('parseMedicineSpreadsheet allows empty price and expiry columns for name-only import', () => {
+  const parsed = parseMedicineSpreadsheet([
+    ['Nama Obat *', 'Golongan', 'Jenis Obat', 'Satuan', 'Harga Beli *', 'Harga Jual Ecer *', 'Harga Grosir', 'Stok *', 'Kadaluarsa (YYYY-MM-DD)'],
+    ['Acarbose 100 Mg Dexa Medica', 'Obat Keras', '', 'Strip', '', '', '', '10', ''],
+  ]);
+  assert.equal(parsed.rows.length, 1);
+  assert.equal(parsed.skippedInvalid, 0);
+  assert.equal(parsed.rows[0].sellPrice, 0);
+  assert.equal(parsed.rows[0].buyPrice, 0);
+  assert.equal(parsed.rows[0].wholesalePrice, 0);
+  assert.equal(parsed.rows[0].expiryDate, null);
 });

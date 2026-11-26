@@ -7,6 +7,11 @@ import {
   computeDeltaSinceMs,
   mergeSyncIntoState,
 } from '../src/syncMerge.ts';
+import {
+  compareNameID,
+  filterAndRankMedicines,
+  nextProgressiveLimit,
+} from '../src/types.ts';
 
 let seq = 1;
 const fakeGenId = (prefix) => `${prefix}-test-${seq++}`;
@@ -235,4 +240,57 @@ test('computeDeltaSinceMs uses overlap window for auto-sync and falls back to fu
   assert.equal(computeDeltaSinceMs({ ...okBase, pendingCloudReplaceAt: 999 }), 0);
   assert.equal(computeDeltaSinceMs({ ...okBase, remoteResetAt: 600 }), 0);
   assert.equal(computeDeltaSinceMs({ ...okBase, forceFull: true }), 0);
+});
+
+test('nextProgressiveLimit clamps batches cleanly and compareNameID sorts numerically', () => {
+  assert.equal(nextProgressiveLimit(0, 60, 0), 0);
+  assert.equal(nextProgressiveLimit(60, 60, 1609), 120);
+  assert.equal(nextProgressiveLimit(1580, 60, 1609), 1609);
+  assert.equal(nextProgressiveLimit(-10, 50, 25), 25);
+
+  const sorted = ['Obat 10', 'Obat 2', 'amoxicillin'].sort(compareNameID);
+  assert.deepEqual(sorted, ['amoxicillin', 'Obat 2', 'Obat 10']);
+});
+
+test('filterAndRankMedicines matches multi-token queries, ranks prefixes, and prioritizes sellable items', () => {
+  const mk = (id, name, stock, sellPrice, barcode = null) => ({
+    id,
+    name,
+    category: 'Obat Bebas',
+    medicineType: 'Analgesik',
+    unit: 'Strip',
+    buyPrice: 0,
+    sellPrice,
+    wholesalePrice: 0,
+    stock,
+    expiryDate: null,
+    barcode,
+    createdAt: '2026-11-01T00:00:00.000Z',
+    remoteId: `m-${id}`,
+    updatedAt: 1,
+    terhapus: false,
+    kotor: false,
+  });
+
+  const meds = [
+    mk(1, 'DEXTRAL 500 PARACETAMOL', 20, 8000),
+    mk(2, 'PARACETAMOL 500MG TAB', 0, 0),
+    mk(3, 'PARACETAMOL 500MG KAP', 15, 4000),
+    mk(4, 'AMOXICILLIN 500MG', 10, 6000, '8990001'),
+  ];
+
+  // Multi-token match ranks name prefix ahead of middle match, and sellable first in Kasir
+  const kasirRes = filterAndRankMedicines(meds, 'para 500', { prioritizeSellable: true });
+  assert.deepEqual(
+    kasirRes.map((m) => m.name),
+    ['PARACETAMOL 500MG KAP', 'PARACETAMOL 500MG TAB', 'DEXTRAL 500 PARACETAMOL']
+  );
+
+  // Empty query in Kasir surfaces ready-to-sell items ahead of unpriced/empty stock
+  const kasirDefault = filterAndRankMedicines(meds, '', { prioritizeSellable: true });
+  assert.equal(kasirDefault[kasirDefault.length - 1].name, 'PARACETAMOL 500MG TAB');
+
+  // Exact barcode wins top rank
+  const byBarcode = filterAndRankMedicines(meds, '8990001');
+  assert.deepEqual(byBarcode.map((m) => m.name), ['AMOXICILLIN 500MG']);
 });

@@ -19,6 +19,24 @@
     touch-action: manipulation;
   }
 
+  input,
+  select,
+  textarea {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  input[type='date'] {
+    appearance: none;
+    -webkit-appearance: none;
+    min-height: 44px;
+    text-align: left;
+  }
+
+  input[type='date']::-webkit-date-and-time-value {
+    text-align: left;
+  }
+
   a[href],
   button:not(:disabled),
   summary,
@@ -148,19 +166,19 @@
   }
 }
 
-/* Menu transition: Opsi 7 (Clip-Path Wipe 350ms) + Header Varian B (Slide Up + Fade 240ms) */
+/* GPU-composited tab entrance (smooth across mobile, tablet, desktop) */
 .anim-opsi7 {
-  animation: clipWipe 350ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation: tabFadeIn 200ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
-@keyframes clipWipe {
+@keyframes tabFadeIn {
   from {
-    opacity: 0.25;
-    clip-path: inset(-6px -6px 14% -6px round 8px);
+    opacity: 0;
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    clip-path: inset(-6px -6px -6px -6px round 0px);
+    transform: translateY(0);
   }
 }
 
@@ -225,4 +243,9 @@
   .skeleton-shimmer-dark {
     animation: none !important;
   }
+}
+
+.cv-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 112px;
 }

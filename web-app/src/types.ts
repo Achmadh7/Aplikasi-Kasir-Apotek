@@ -1,18 +1,21 @@
 // Models & Helpers — 100% compatible with Kotlin Android (Models.kt, SyncLogic.kt, TutupBukuLogic.kt, Theme.kt)
 
 export const CATEGORIES = [
-  'Umum',
   'Obat Bebas',
   'Obat Bebas Terbatas',
   'Obat Keras',
+  'Narkotika',
+  'Obat Herbal/Tradisional',
+];
+
+export const MEDICINE_TYPES = [
+  'Analgesik & Antipiretik',
+  'Antihistamin/Alergi',
   'Antibiotik',
-  'Vitamin',
-  'Pereda Nyeri',
-  'Obat Batuk & Flu',
-  'Pencernaan',
-  'Kulit',
-  'Mata',
-  'Lainnya',
+  'Antivirus',
+  'Saluran Cerna',
+  'Kardiovaskular',
+  'Saluran Pernafasan',
 ];
 
 export const UNITS = [
@@ -40,6 +43,7 @@ export interface BaseEntity {
 export interface Medicine extends BaseEntity {
   name: string;
   category: string;
+  medicineType?: string;
   unit: string;
   buyPrice: number;
   sellPrice: number;
@@ -134,9 +138,11 @@ export function genRemoteId(prefix: string): string {
 }
 
 // ---- Currency & Stock Helpers (Theme.kt) ----
+const ID_INT_FMT = new Intl.NumberFormat('id-ID');
+
 export function formatIDR(n: number): string {
   const val = Math.round(n || 0);
-  return 'Rp ' + val.toLocaleString('id-ID');
+  return 'Rp ' + ID_INT_FMT.format(val);
 }
 
 export function formatCompactIDR(n: number): string {
@@ -161,18 +167,40 @@ export function stockLabel(stock: number): 'Habis' | 'Rendah' | 'Sedang' | 'Aman
 
 // ---- WIB (Asia/Jakarta) Date & Time Helpers ----
 const WIB_TZ = 'Asia/Jakarta';
+const WIB_DAY_FMT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: WIB_TZ,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+const WIB_DATETIME_FMT = new Intl.DateTimeFormat('id-ID', {
+  timeZone: WIB_TZ,
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+const WIB_DATE_FMT = new Intl.DateTimeFormat('id-ID', {
+  timeZone: WIB_TZ,
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
+const WIB_MONTH_YEAR_FMT = new Intl.DateTimeFormat('id-ID', {
+  timeZone: WIB_TZ,
+  month: 'long',
+  year: 'numeric',
+});
+
+let cachedWibTodayStart = 0;
+let cachedWibTomorrowStart = 0;
 
 export function nowIso(): string {
   return new Date().toISOString();
 }
 
 export function dayKeyID(d: Date = new Date()): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: WIB_TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(d);
+  const parts = WIB_DAY_FMT.formatToParts(d);
   const y = parts.find((p) => p.type === 'year')?.value ?? '2026';
   const m = parts.find((p) => p.type === 'month')?.value ?? '01';
   const day = parts.find((p) => p.type === 'day')?.value ?? '01';
@@ -190,10 +218,13 @@ export function invoiceDateWIB(d: Date = new Date()): string {
 }
 
 export function jakartaDayStartMillis(offsetDays = 0): number {
-  const todayStr = dayKeyID(new Date());
-  // Midnight WIB is UTC-7h
-  const baseUtc = new Date(`${todayStr}T00:00:00+07:00`).getTime();
-  return baseUtc + offsetDays * 86_400_000;
+  const now = Date.now();
+  if (now < cachedWibTodayStart || now >= cachedWibTomorrowStart) {
+    const todayStr = dayKeyID(new Date(now));
+    cachedWibTodayStart = new Date(`${todayStr}T00:00:00+07:00`).getTime();
+    cachedWibTomorrowStart = cachedWibTodayStart + 86_400_000;
+  }
+  return cachedWibTodayStart + offsetDays * 86_400_000;
 }
 
 export function jakartaMonthStartMillis(): number {
@@ -215,24 +246,13 @@ export function parseISODate(s?: string | null): Date | null {
 export function formatDateTimeID(s?: string | null): string {
   const d = parseISODate(s);
   if (!d) return s || '-';
-  return new Intl.DateTimeFormat('id-ID', {
-    timeZone: WIB_TZ,
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(d);
+  return WIB_DATETIME_FMT.format(d);
 }
 
 export function formatDateID(s?: string | null): string {
   const d = parseISODate(s);
   if (!d) return s || '-';
-  return new Intl.DateTimeFormat('id-ID', {
-    timeZone: WIB_TZ,
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(d);
+  return WIB_DATE_FMT.format(d);
 }
 
 export function daysUntilExpiry(expiry?: string | null): number | null {
@@ -286,9 +306,62 @@ export function bulanSelesai(bulan: string): boolean {
 export function namaBulanIndonesia(bulan: string): string {
   const r = rentangBulan(bulan);
   if (!r) return bulan;
-  return new Intl.DateTimeFormat('id-ID', {
-    timeZone: WIB_TZ,
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(r[0]));
+  return WIB_MONTH_YEAR_FMT.format(new Date(r[0]));
+}
+
+const ID_NAME_COLLATOR = new Intl.Collator('id-ID', {
+  sensitivity: 'base',
+  numeric: true,
+});
+
+export function compareNameID(a: string, b: string): number {
+  return ID_NAME_COLLATOR.compare(a, b);
+}
+
+export function nextProgressiveLimit(current: number, step: number, total: number): number {
+  if (total <= 0) return 0;
+  return Math.min(total, Math.max(0, current) + Math.max(1, step));
+}
+
+export function filterAndRankMedicines(
+  medicines: readonly Medicine[],
+  rawQuery: string,
+  opts: { sortAz?: boolean; prioritizeSellable?: boolean } = {}
+): Medicine[] {
+  const { sortAz = true, prioritizeSellable = false } = opts;
+  const q = rawQuery.trim().toLowerCase();
+  const tokens = q ? q.split(/\s+/).filter(Boolean) : [];
+
+  const matched =
+    tokens.length === 0
+      ? [...medicines]
+      : medicines.filter((m) => {
+          const hay = `${m.name} ${m.category} ${m.medicineType || ''} ${m.barcode || ''}`.toLowerCase();
+          return tokens.every((t) => hay.includes(t));
+        });
+
+  const scoreOf = (m: Medicine): number => {
+    if (!q) return 0;
+    const barcode = m.barcode?.toLowerCase() || '';
+    if (barcode && barcode === q) return 0;
+    const name = m.name.toLowerCase();
+    if (name.startsWith(q)) return 1;
+    if (tokens.length > 0 && name.startsWith(tokens[0])) return 2;
+    if (name.includes(q) || tokens.every((t) => name.includes(t))) return 3;
+    return 4;
+  };
+
+  return matched.sort((a, b) => {
+    if (q) {
+      const sa = scoreOf(a);
+      const sb = scoreOf(b);
+      if (sa !== sb) return sa - sb;
+    }
+    if (prioritizeSellable) {
+      const ra = a.stock > 0 && a.sellPrice > 0 ? 0 : 1;
+      const rb = b.stock > 0 && b.sellPrice > 0 ? 0 : 1;
+      if (ra !== rb) return ra - rb;
+    }
+    return sortAz ? compareNameID(a.name, b.name) : compareNameID(b.name, a.name);
+  });
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, useRef } from 'react';
 import {
   Medicine,
   Sale,
@@ -116,7 +116,7 @@ interface StoreContextType {
   syncMessage: string | null;
   autoSync: boolean;
   setAutoSync: (enabled: boolean) => void;
-  syncNow: (silent?: boolean) => Promise<void>;
+  syncNow: (silent?: boolean, overrideUser?: User | null, forceFull?: boolean) => Promise<void>;
   // Medicine actions
   saveMedicine: (
     med: Omit<Medicine, 'id' | 'remoteId' | 'updatedAt' | 'terhapus' | 'createdAt' | 'kotor'>,
@@ -127,6 +127,7 @@ interface StoreContextType {
     rows: Array<{
       name: string;
       category: string;
+      medicineType?: string;
       unit: string;
       buyPrice: number;
       sellPrice: number;
@@ -208,9 +209,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const lastPullAttemptRef = useRef(0);
   const autoSyncRef = useRef(autoSync);
   autoSyncRef.current = autoSync;
-  const syncNowRef = useRef<(silent?: boolean, overrideUser?: User | null) => Promise<void>>(
-    async () => {}
-  );
+  const initialSyncedUidRef = useRef<string | null>(null);
+  const syncNowRef = useRef<
+    (silent?: boolean, overrideUser?: User | null, forceFull?: boolean) => Promise<void>
+  >(async () => {});
 
   const setAutoSync = (enabled: boolean) => {
     setAutoSyncState(enabled);
@@ -313,14 +315,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setOwnerEmails(cfg.ownerEmails);
       setUser(u);
       setAuthLoading(false);
-      // Trigger initial sync upon sign-in
-      setTimeout(() => syncNow(false, u), 200);
     });
     return () => {
       active = false;
       unsub();
     };
   }, []);
+
+  // Wait for both auth and IndexedDB load before initial delta sync so lastSyncAt is intact
+  useEffect(() => {
+    if (!user) {
+      initialSyncedUidRef.current = null;
+      return;
+    }
+    if (!idbReady) return;
+    if (initialSyncedUidRef.current === user.uid) return;
+    initialSyncedUidRef.current = user.uid;
+    void syncNowRef.current(false, user, false);
+  }, [user, idbReady]);
 
   // Auto-logout immediately when the signed-in email is removed from Authority
   useEffect(() => {
@@ -401,7 +413,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Two-way Last-Write-Wins Sync matching OnlineSync.kt
-  const syncNow = async (silent = false, overrideUser?: User | null) => {
+  const syncNow = async (
+    silent = false,
+    overrideUser?: User | null,
+    forceFull = false
+  ) => {
     const activeUser = overrideUser !== undefined ? overrideUser : (user ?? auth.currentUser);
     if (!activeUser) return;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -447,7 +463,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         pendingCloudReplaceAt: snap.pendingCloudReplaceAt || 0,
         remoteResetAt,
         lastResetSeenAt: rawSnap.lastResetSeenAt || 0,
-        forceFull: !silent,
+        forceFull,
       });
 
       const [
@@ -671,8 +687,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // ---- Medicine Mutations ----
   const saveMedicine: StoreContextType['saveMedicine'] = (med, editId) => {
     if (!med.name.trim()) throw new Error('Nama obat tidak boleh kosong');
-    if (med.sellPrice <= 0) throw new Error('Harga jual harus lebih dari 0');
-    if (med.stock < 0 || med.buyPrice < 0 || med.wholesalePrice < 0)
+    if (med.stock < 0 || med.buyPrice < 0 || med.sellPrice < 0 || med.wholesalePrice < 0)
       throw new Error('Stok / Harga tidak boleh negatif');
 
     const bc = med.barcode?.trim() || null;
@@ -694,6 +709,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   ...m,
                   ...med,
                   name: med.name.trim(),
+                  medicineType: (med.medicineType || '').trim(),
                   barcode: bc,
                   updatedAt: now,
                   kotor: true,
@@ -711,6 +727,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           kotor: true,
           name: med.name.trim(),
           category: med.category || 'Umum',
+          medicineType: (med.medicineType || '').trim(),
           unit: med.unit || 'Strip',
           buyPrice: med.buyPrice || 0,
           sellPrice: med.sellPrice,
@@ -744,21 +761,29 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const now = Date.now();
     const curMeds = [...dbRef.current.medicines];
     let nextId = curMeds.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+    const byBarcode = new Map<string, number>();
+    const byKey = new Map<string, number>();
+    const keyOf = (name: string, cat: string, unit: string) =>
+      `${name.trim().toLowerCase()}|${(cat || 'Umum').toLowerCase()}|${(unit || 'Strip').toLowerCase()}`;
+    curMeds.forEach((m, idx) => {
+      if (m.barcode) {
+        const bk = m.barcode.toLowerCase();
+        if (!byBarcode.has(bk)) byBarcode.set(bk, idx);
+      }
+      const k = keyOf(m.name, m.category, m.unit);
+      if (!byKey.has(k)) byKey.set(k, idx);
+    });
 
     for (const item of rows) {
-      if (!item.name?.trim() || item.sellPrice <= 0 || item.stock < 0 || item.buyPrice < 0) {
+      if (!item.name?.trim() || item.sellPrice < 0 || item.stock < 0 || item.buyPrice < 0) {
         skipped++;
         continue;
       }
       const bc = item.barcode?.trim() || null;
+      const itemKey = keyOf(item.name, item.category || 'Umum', item.unit || 'Strip');
       const existingIdx = bc
-        ? curMeds.findIndex((m) => m.barcode?.toLowerCase() === bc.toLowerCase())
-        : curMeds.findIndex(
-            (m) =>
-              m.name.toLowerCase() === item.name.trim().toLowerCase() &&
-              m.category.toLowerCase() === (item.category || 'Umum').toLowerCase() &&
-              m.unit.toLowerCase() === (item.unit || 'Strip').toLowerCase()
-          );
+        ? (byBarcode.get(bc.toLowerCase()) ?? -1)
+        : (byKey.get(itemKey) ?? -1);
 
       if (existingIdx >= 0) {
         const existing = curMeds[existingIdx];
@@ -766,8 +791,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           ...existing,
           name: item.name.trim(),
           category: item.category || existing.category,
+          medicineType: item.medicineType?.trim() || existing.medicineType || '',
           unit: item.unit || existing.unit,
-          sellPrice: item.sellPrice,
+          sellPrice: item.sellPrice > 0 ? item.sellPrice : existing.sellPrice,
           buyPrice: item.buyPrice > 0 ? item.buyPrice : existing.buyPrice,
           wholesalePrice:
             item.wholesalePrice > 0 ? item.wholesalePrice : existing.wholesalePrice,
@@ -778,8 +804,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           updatedAt: now,
           kotor: true,
         };
+        if (bc) byBarcode.set(bc.toLowerCase(), existingIdx);
+        byKey.set(keyOf(curMeds[existingIdx].name, curMeds[existingIdx].category, curMeds[existingIdx].unit), existingIdx);
         updated++;
       } else {
+        const newIdx = curMeds.length;
         curMeds.push({
           id: nextId++,
           remoteId: genRemoteId('obat'),
@@ -788,6 +817,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           kotor: true,
           name: item.name.trim(),
           category: item.category || 'Umum',
+          medicineType: (item.medicineType || '').trim(),
           unit: item.unit || 'Strip',
           buyPrice: item.buyPrice || 0,
           sellPrice: item.sellPrice,
@@ -797,6 +827,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           barcode: bc,
           createdAt: nowIso(),
         });
+        if (bc) byBarcode.set(bc.toLowerCase(), newIdx);
+        byKey.set(itemKey, newIdx);
         inserted++;
       }
     }
@@ -840,6 +872,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const med = medMap.get(c.medicineId)!;
       const wholesale = c.useWholesale && med.wholesalePrice > 0;
       const unitPrice = wholesale ? med.wholesalePrice : med.sellPrice;
+      if (unitPrice <= 0) {
+        throw new Error(`Harga jual ${med.name} belum diatur`);
+      }
       const subtotal = unitPrice * c.qty;
       total += subtotal;
       return {
@@ -968,7 +1003,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // ---- PBF Purchases & Suppliers ----
   const createPurchase: StoreContextType['createPurchase'] = (args) => {
-    if (!args.pbfName.trim()) throw new Error('Nama PBF tidak boleh kosong');
+    const pbfClean = args.pbfName.trim();
+    if (!pbfClean) throw new Error('Pilih Nama PBF dari daftar Supplier terlebih dahulu');
     if (args.items.length === 0) throw new Error('Isi minimal satu obat yang dibeli');
     const bKey = bulanKeyDariIso(args.date);
     if (bKey && bulanTerkunci(bKey)) {
@@ -976,6 +1012,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     const now = Date.now();
     const cur = dbRef.current;
+    const validSupplier = cur.suppliers.some(
+      (s) => !s.terhapus && s.name.trim().toLowerCase() === pbfClean.toLowerCase()
+    );
+    if (!validSupplier) {
+      throw new Error('Nama PBF belum terdaftar. Tambahkan supplier terlebih dahulu di menu Supplier.');
+    }
     const purchaseId = cur.purchases.reduce((m, x) => Math.max(m, x.id), 0) + 1;
     const purchaseRemoteId = genRemoteId('pbf');
     let nextItemId = cur.purchaseItems.reduce((m, x) => Math.max(m, x.id), 0) + 1;
@@ -1224,16 +1266,45 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
+  const activeMedicines = useMemo(
+    () => dbState.medicines.filter((x) => !x.terhapus),
+    [dbState.medicines]
+  );
+  const activeSales = useMemo(
+    () => dbState.sales.filter((x) => !x.terhapus),
+    [dbState.sales]
+  );
+  const activeSaleItems = useMemo(
+    () => dbState.saleItems.filter((x) => !x.terhapus),
+    [dbState.saleItems]
+  );
+  const activeCashEntries = useMemo(
+    () => dbState.cashEntries.filter((x) => !x.terhapus),
+    [dbState.cashEntries]
+  );
+  const activePurchases = useMemo(
+    () => dbState.purchases.filter((x) => !x.terhapus),
+    [dbState.purchases]
+  );
+  const activePurchaseItems = useMemo(
+    () => dbState.purchaseItems.filter((x) => !x.terhapus),
+    [dbState.purchaseItems]
+  );
+  const activeSuppliers = useMemo(
+    () => dbState.suppliers.filter((x) => !x.terhapus),
+    [dbState.suppliers]
+  );
+
   return (
     <StoreContext.Provider
       value={{
-        medicines: dbState.medicines.filter((x) => !x.terhapus),
-        sales: dbState.sales.filter((x) => !x.terhapus),
-        saleItems: dbState.saleItems.filter((x) => !x.terhapus),
-        cashEntries: dbState.cashEntries.filter((x) => !x.terhapus),
-        purchases: dbState.purchases.filter((x) => !x.terhapus),
-        purchaseItems: dbState.purchaseItems.filter((x) => !x.terhapus),
-        suppliers: dbState.suppliers.filter((x) => !x.terhapus),
+        medicines: activeMedicines,
+        sales: activeSales,
+        saleItems: activeSaleItems,
+        cashEntries: activeCashEntries,
+        purchases: activePurchases,
+        purchaseItems: activePurchaseItems,
+        suppliers: activeSuppliers,
         closedMonths: dbState.closedMonths,
         user,
         authLoading,

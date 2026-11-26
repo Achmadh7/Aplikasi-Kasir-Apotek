@@ -1,6 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import Lenis from 'lenis';
-import 'lenis/dist/lenis.css';
+import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { StoreProvider, useStore } from './store';
 import { loginWithGoogle, logoutFirebase } from './firebase';
 import { daysUntilExpiry } from './types';
@@ -49,6 +47,7 @@ import {
   Database,
   ShieldCheck,
   ChevronDown,
+  ArrowUp,
   LogIn,
   LogOut,
   Menu,
@@ -82,30 +81,28 @@ const MainLayout: React.FC = () => {
   const authReadyRef = useRef(false);
   const prevUserKeyRef = useRef<string | null>(null);
   const swipeTouchRef = useRef<{ x: number; y: number; blocked: boolean } | null>(null);
-  const lenisRef = useRef<Lenis | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const lenis = new Lenis({
-      autoRaf: true,
-      lerp: 0.1,
-      smoothWheel: true,
-      allowNestedScroll: true,
-    });
-    lenisRef.current = lenis;
-    return () => {
-      lenis.destroy();
-      lenisRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
+    const html = document.documentElement;
     if (mobileMenuOpen) {
-      lenisRef.current?.stop();
+      html.style.overflow = 'hidden';
     } else {
-      lenisRef.current?.start();
+      html.style.overflow = '';
     }
+    return () => {
+      html.style.overflow = '';
+    };
   }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const next = window.scrollY > 360;
+      setShowScrollTop((prev) => (prev === next ? prev : next));
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const isSwipeOpenBlocked = (target: EventTarget | null): boolean => {
     let el = target as HTMLElement | null;
@@ -223,18 +220,26 @@ const MainLayout: React.FC = () => {
     prevUserKeyRef.current = currentKey;
   }, [authLoading, user, storeAuthError, notify]);
 
-  const alertCount =
-    medicines.filter((m) => m.stock < 10).length +
-    medicines.filter((m) => {
+  const alertCount = useMemo(() => {
+    let count = 0;
+    for (const m of medicines) {
+      if (m.stock < 10) count++;
       const d = daysUntilExpiry(m.expiryDate);
-      return d !== null && d <= 30;
-    }).length +
-    purchases.filter((p) => p.paymentType === 'KREDIT').length;
+      if (d !== null && d <= 30) count++;
+    }
+    for (const p of purchases) {
+      if (p.paymentType === 'KREDIT') count++;
+    }
+    return count;
+  }, [medicines, purchases]);
 
-  const visibleNavItems =
-    currentRole === 'owner'
-      ? NAV_ITEMS
-      : NAV_ITEMS.filter((item) => item.id !== 'authority');
+  const visibleNavItems = useMemo(
+    () =>
+      currentRole === 'owner'
+        ? NAV_ITEMS
+        : NAV_ITEMS.filter((item) => item.id !== 'authority'),
+    [currentRole]
+  );
   const activeNav = visibleNavItems.find((n) => n.id === activeTab) || visibleNavItems[0];
 
   useEffect(() => {
@@ -288,11 +293,7 @@ const MainLayout: React.FC = () => {
   const selectTab = (id: string) => {
     setActiveTab(id);
     setMobileMenuOpen(false);
-    if (lenisRef.current) {
-      lenisRef.current.scrollTo(0, { immediate: true });
-    } else {
-      window.scrollTo(0, 0);
-    }
+    window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
   const userInitials = (() => {
@@ -553,7 +554,7 @@ const MainLayout: React.FC = () => {
         <div
           aria-hidden="true"
           onClick={() => setMobileMenuOpen(false)}
-          className={`no-print md:hidden fixed inset-0 z-40 bg-black/45 backdrop-blur-sm transition-opacity duration-300 ${
+          className={`no-print md:hidden fixed inset-0 z-40 bg-black/45 transition-opacity duration-200 ${
             mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
         />
@@ -663,6 +664,18 @@ const MainLayout: React.FC = () => {
             </div>
           </Suspense>
         </main>
+
+        {showScrollTop && (
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            aria-label="Kembali ke atas"
+            title="Kembali ke atas"
+            className="no-print fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] lg:bottom-5 right-4 z-20 min-w-[44px] min-h-[44px] rounded-full bg-[#142E27] hover:bg-[#1D4036] text-white border border-[#244C41] shadow-lg flex items-center justify-center transition"
+          >
+            <ArrowUp className="w-4 h-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
   );
 };

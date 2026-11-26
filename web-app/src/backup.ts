@@ -99,6 +99,7 @@ export function parseAndValidateBackupJson(
       id: reqInt(o, 'id', label),
       name: reqString(o, 'name', label),
       category: String(o.category ?? 'Umum'),
+      medicineType: String(o.medicineType ?? '').trim(),
       unit: String(o.unit ?? 'Strip'),
       buyPrice: optInt(o, 'buyPrice', label, 0),
       sellPrice: reqInt(o, 'sellPrice', label),

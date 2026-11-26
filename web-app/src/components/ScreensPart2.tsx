@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useStore } from '../store';
 import { useFeedback } from './Feedback';
 import { exportRowsToXlsx } from '../excel';
@@ -6,6 +6,7 @@ import {
   UNITS,
   Sale,
   SaleItem,
+  PurchaseItem,
   formatIDR,
   jakartaDayStartMillis,
   jakartaMonthStartMillis,
@@ -20,6 +21,7 @@ import {
 } from '../types';
 import { PageHeader, StockPill, ReceiptModal } from './ScreensPart1';
 import { AnimatedNumber } from './AnimatedNumber';
+import { useProgressiveList, ListPaginationFooter } from './ProgressiveList';
 import {
   Plus,
   Trash2,
@@ -135,6 +137,12 @@ export const KeuanganScreen: React.FC = () => {
         : filtered.filter((e) => e.type === typeFilter),
     [filtered, typeFilter]
   );
+
+  const cashPager = useProgressiveList(visibleEntries, {
+    initial: 50,
+    step: 50,
+    resetKey: `${period}|${typeFilter}`,
+  });
 
   const periodLabel =
     period === 'today' ? 'Hari Ini' : period === 'month' ? 'Bulan Ini' : 'Semua';
@@ -405,75 +413,87 @@ export const KeuanganScreen: React.FC = () => {
                   Belum ada catatan kas pada filter ini.
                 </p>
               ) : (
-                visibleEntries.map((e) => (
-                  <div
-                    key={e.id}
-                    className="p-4 flex items-center justify-between gap-3 hover:bg-[#DCEBE2]/70 transition"
-                  >
-                    <div className="flex items-start gap-3 min-w-0">
-                      <span
-                        className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center ${
-                          e.type === 'in'
-                            ? 'bg-[#DCFCE7] text-[#166534]'
-                            : 'bg-[#FEE2E2] text-[#BA1A1A]'
-                        }`}
-                      >
-                        {e.type === 'in' ? (
-                          <ArrowDownLeft className="w-4 h-4" aria-hidden="true" />
-                        ) : (
-                          <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
-                        )}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
-                              e.type === 'in'
-                                ? 'bg-[#DCFCE7] text-[#166534]'
-                                : 'bg-[#FEE2E2] text-[#BA1A1A]'
-                            }`}
-                          >
-                            {e.category}
-                          </span>
-                          <span className="text-xs text-[#57534E]">
-                            {formatDateTimeID(e.createdAt)}
-                          </span>
+                <>
+                  {cashPager.visibleItems.map((e) => (
+                    <div
+                      key={e.id}
+                      className="cv-card p-4 flex items-center justify-between gap-3 hover:bg-[#DCEBE2]/70 transition"
+                    >
+                      <div className="flex items-start gap-3 min-w-0">
+                        <span
+                          className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center ${
+                            e.type === 'in'
+                              ? 'bg-[#DCFCE7] text-[#166534]'
+                              : 'bg-[#FEE2E2] text-[#BA1A1A]'
+                          }`}
+                        >
+                          {e.type === 'in' ? (
+                            <ArrowDownLeft className="w-4 h-4" aria-hidden="true" />
+                          ) : (
+                            <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+                          )}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
+                                e.type === 'in'
+                                  ? 'bg-[#DCFCE7] text-[#166534]'
+                                  : 'bg-[#FEE2E2] text-[#BA1A1A]'
+                              }`}
+                            >
+                              {e.category}
+                            </span>
+                            <span className="text-xs text-[#57534E]">
+                              {formatDateTimeID(e.createdAt)}
+                            </span>
+                          </div>
+                          <p className="font-bold text-sm text-[#1C1917] mt-1 truncate">
+                            {e.description || e.category}
+                          </p>
                         </div>
-                        <p className="font-bold text-sm text-[#1C1917] mt-1 truncate">
-                          {e.description || e.category}
-                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={`font-extrabold text-sm tabular-nums ${
+                            e.type === 'in'
+                              ? 'text-[#166534]'
+                              : 'text-[#BA1A1A]'
+                          }`}
+                        >
+                          {e.type === 'in' ? '+' : '-'} {formatIDR(e.amount)}
+                        </span>
+                        {e.source !== 'sale' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                deleteCashEntry(e.id);
+                                notify('Catatan kas dihapus', 'info');
+                              } catch (err: any) {
+                                notify(err.message, 'error');
+                              }
+                            }}
+                            aria-label="Hapus catatan kas"
+                            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#BA1A1A] hover:bg-red-500/10"
+                          >
+                            <Trash2 className="w-4 h-4" aria-hidden="true" />
+                          </button>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span
-                        className={`font-extrabold text-sm tabular-nums ${
-                          e.type === 'in'
-                            ? 'text-[#166534]'
-                            : 'text-[#BA1A1A]'
-                        }`}
-                      >
-                        {e.type === 'in' ? '+' : '-'} {formatIDR(e.amount)}
-                      </span>
-                      {e.source !== 'sale' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            try {
-                              deleteCashEntry(e.id);
-                              notify('Catatan kas dihapus', 'info');
-                            } catch (err: any) {
-                              notify(err.message, 'error');
-                            }
-                          }}
-                          aria-label="Hapus catatan kas"
-                          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#BA1A1A] hover:bg-red-500/10"
-                        >
-                          <Trash2 className="w-4 h-4" aria-hidden="true" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
+                  ))}
+                  <ListPaginationFooter
+                    shown={cashPager.shownCount}
+                    total={cashPager.total}
+                    remaining={cashPager.remaining}
+                    step={cashPager.step}
+                    itemLabel="catatan kas"
+                    onLoadMore={cashPager.loadMore}
+                    sentinelRef={cashPager.sentinelRef}
+                    className="bg-[#DCEBE2]/45"
+                  />
+                </>
               )}
             </div>
           </div>
@@ -570,6 +590,14 @@ export const LabaScreen: React.FC = () => {
       ),
     };
   }, [medicines, sales, saleItems, cashEntries, period]);
+
+  const labaScrollRef = useRef<HTMLDivElement>(null);
+  const labaPager = useProgressiveList(report.byMedicine, {
+    initial: 60,
+    step: 60,
+    resetKey: period,
+    scrollContainerRef: labaScrollRef,
+  });
 
   const exportRekapExcel = () => {
     const periodLabel =
@@ -695,9 +723,12 @@ export const LabaScreen: React.FC = () => {
         <div className="p-4 font-extrabold text-sm text-[#1C1917] border-b border-[#B7D6C3]">
           Rincian Penjualan &amp; Laba per Obat ({report.byMedicine.length} jenis)
         </div>
-        <div className="overflow-x-auto">
+        <div
+          ref={labaScrollRef}
+          className="overflow-auto max-h-[65vh] overscroll-contain"
+        >
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#DCEBE2] border-b border-[#B7D6C3] text-xs uppercase text-[#1C1917]">
+            <thead className="sticky top-0 z-10 bg-[#DCEBE2] shadow-[inset_0_-1px_0_#B7D6C3] text-xs uppercase text-[#1C1917]">
               <tr>
                 <th className="py-3 px-4">Nama Obat</th>
                 <th className="py-3 px-3">Kategori</th>
@@ -708,7 +739,7 @@ export const LabaScreen: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#B7D6C3]">
-              {report.byMedicine.map((m, i) => (
+              {labaPager.visibleItems.map((m, i) => (
                 <tr key={i}>
                   <td className="py-3 px-4 font-bold text-[#1C1917]">{m.name}</td>
                   <td className="py-3 px-3 text-xs text-[#57534E]">{m.category}</td>
@@ -724,6 +755,16 @@ export const LabaScreen: React.FC = () => {
               ))}
             </tbody>
           </table>
+          <ListPaginationFooter
+            shown={labaPager.shownCount}
+            total={labaPager.total}
+            remaining={labaPager.remaining}
+            step={labaPager.step}
+            itemLabel="obat"
+            onLoadMore={labaPager.loadMore}
+            sentinelRef={labaPager.sentinelRef}
+            className="sticky left-0 border-t border-[#B7D6C3] bg-[#DCEBE2]/55"
+          />
         </div>
       </div>
     </div>
@@ -753,6 +794,17 @@ export const PbfScreen: React.FC = () => {
   const [paymentType, setPaymentType] = useState<'CASH' | 'KREDIT'>('CASH');
   const [dueDate, setDueDate] = useState('');
   const [ppn, setPpn] = useState('');
+  const purchasesPager = useProgressiveList(purchases, { initial: 30, step: 30, resetKey: tab });
+  const suppliersPager = useProgressiveList(suppliers, { initial: 50, step: 50, resetKey: tab });
+  const itemsByPurchase = useMemo(() => {
+    const map = new Map<number, PurchaseItem[]>();
+    for (const it of purchaseItems) {
+      const arr = map.get(it.purchaseId);
+      if (arr) arr.push(it);
+      else map.set(it.purchaseId, [it]);
+    }
+    return map;
+  }, [purchaseItems]);
   const [items, setItems] = useState<
     Array<{ medicineName: string; qty: string; unit: string; buyPrice: string }>
   >([{ medicineName: '', qty: '1', unit: 'Box', buyPrice: '' }]);
@@ -817,33 +869,37 @@ export const PbfScreen: React.FC = () => {
       />
 
       {tab === 'FAKTUR' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
           <form
             onSubmit={handleSavePurchase}
-            className="lg:col-span-5 rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-3 text-sm h-fit shadow-xs"
+            className="xl:col-span-5 min-w-0 rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-3 text-sm h-fit shadow-xs"
           >
             <h3 className="font-extrabold text-base text-[#1C1917]">Catat Faktur PBF Baru</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
+              <div className="min-w-0">
                 <label htmlFor="pbf-name" className="block text-xs font-bold text-[#1C1917] mb-1">
-                  Nama PBF *
+                  Nama PBF (Supplier) *
                 </label>
-                <input
+                <select
                   id="pbf-name"
                   required
-                  list="pbf-suppliers-list"
                   value={pbfName}
                   onChange={(e) => setPbfName(e.target.value)}
-                  placeholder="Pilih / ketik PBF"
-                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
-                />
-                <datalist id="pbf-suppliers-list">
+                  className="w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
+                >
+                  <option value="">
+                    {suppliers.length === 0
+                      ? 'Belum ada supplier (isi di menu Supplier)'
+                      : 'Pilih nama supplier...'}
+                  </option>
                   {suppliers.map((s) => (
-                    <option key={s.id} value={s.name} />
+                    <option key={s.id} value={s.name}>
+                      {s.name}
+                    </option>
                   ))}
-                </datalist>
+                </select>
               </div>
-              <div>
+              <div className="min-w-0">
                 <label htmlFor="pbf-invoice" className="block text-xs font-bold text-[#1C1917] mb-1">
                   No. Faktur
                 </label>
@@ -852,13 +908,13 @@ export const PbfScreen: React.FC = () => {
                   value={invoiceNo}
                   onChange={(e) => setInvoiceNo(e.target.value)}
                   placeholder="Opsional"
-                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
+                  className="w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="min-w-0">
                 <label htmlFor="pbf-date" className="block text-xs font-bold text-[#1C1917] mb-1">
                   Tgl Beli *
                 </label>
@@ -868,10 +924,10 @@ export const PbfScreen: React.FC = () => {
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
+                  className="w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label htmlFor="pbf-payment" className="block text-xs font-bold text-[#1C1917] mb-1">
                   Pembayaran
                 </label>
@@ -881,13 +937,13 @@ export const PbfScreen: React.FC = () => {
                   onChange={(e) =>
                     setPaymentType(e.target.value as 'CASH' | 'KREDIT')
                   }
-                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
+                  className="w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
                 >
                   <option value="CASH">TUNAI (CASH)</option>
                   <option value="KREDIT">KREDIT (TEMPO)</option>
                 </select>
               </div>
-              <div>
+              <div className={`min-w-0 ${paymentType !== 'KREDIT' ? 'sm:col-span-2' : ''}`}>
                 <label htmlFor="pbf-ppn" className="block text-xs font-bold text-[#1C1917] mb-1">
                   PPN (Rp)
                 </label>
@@ -898,25 +954,24 @@ export const PbfScreen: React.FC = () => {
                   value={ppn}
                   onChange={(e) => setPpn(formatThousandID(e.target.value))}
                   placeholder="0"
-                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
+                  className="w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                 />
               </div>
+              {paymentType === 'KREDIT' && (
+                <div className="min-w-0">
+                  <label htmlFor="pbf-due" className="block text-xs font-bold text-[#1C1917] mb-1">
+                    Tgl Jatuh Tempo Kredit
+                  </label>
+                  <input
+                    id="pbf-due"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
+                  />
+                </div>
+              )}
             </div>
-
-            {paymentType === 'KREDIT' && (
-              <div>
-                <label htmlFor="pbf-due" className="block text-xs font-bold text-[#1C1917] mb-1">
-                  Tgl Jatuh Tempo Kredit
-                </label>
-                <input
-                  id="pbf-due"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
-                />
-              </div>
-            )}
 
             <div className="space-y-2 pt-2">
               <div className="flex items-center justify-between">
@@ -1006,113 +1061,125 @@ export const PbfScreen: React.FC = () => {
             </button>
           </form>
 
-          <div className="lg:col-span-7 space-y-3">
+          <div className="xl:col-span-7 min-w-0 space-y-3">
             {purchases.length === 0 ? (
               <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-10 text-center text-sm text-[#57534E] shadow-xs">
                 Belum ada catatan faktur pembelian PBF.
               </div>
             ) : (
-              purchases.map((p) => {
-                const pItems = purchaseItems.filter((it) => it.purchaseId === p.id);
-                const left = dueDaysLeft(p.dueDate);
-                return (
-                  <div
-                    key={p.id}
-                    className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-3 shadow-xs"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-base text-[#1C1917]">
-                            {p.pbfName}
-                          </span>
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                              p.paymentType === 'KREDIT'
-                                ? 'bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]'
-                                : 'bg-[#DCFCE7] text-[#166534]'
-                            }`}
-                          >
-                            {p.paymentType}
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#57534E]">
-                          Tgl: {formatDateID(p.date)}
-                          {p.invoiceNo && ` • Faktur: ${p.invoiceNo}`}
-                          {p.paymentType === 'KREDIT' &&
-                            p.dueDate &&
-                            ` • Tempo: ${formatDateID(p.dueDate)} (${
-                              left !== null ? `${left} hari` : ''
-                            })`}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-extrabold text-base text-[#166534]">
-                          {formatIDR(p.total)}
-                        </p>
-                        {p.ppn > 0 && (
-                          <p className="text-[11px] text-[#57534E]">
-                            Termasuk PPN {formatIDR(p.ppn)}
+              <>
+                {purchasesPager.visibleItems.map((p) => {
+                  const pItems = itemsByPurchase.get(p.id) || [];
+                  const left = dueDaysLeft(p.dueDate);
+                  return (
+                    <div
+                      key={p.id}
+                      className="cv-card rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 space-y-3 shadow-xs"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-base text-[#1C1917]">
+                              {p.pbfName}
+                            </span>
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                                p.paymentType === 'KREDIT'
+                                  ? 'bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]'
+                                  : 'bg-[#DCFCE7] text-[#166534]'
+                              }`}
+                            >
+                              {p.paymentType}
+                            </span>
+                          </div>
+                          <p className="text-xs text-[#57534E]">
+                            Tgl: {formatDateID(p.date)}
+                            {p.invoiceNo && ` • Faktur: ${p.invoiceNo}`}
+                            {p.paymentType === 'KREDIT' &&
+                              p.dueDate &&
+                              ` • Tempo: ${formatDateID(p.dueDate)} (${
+                                left !== null ? `${left} hari` : ''
+                              })`}
                           </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="text-xs space-y-1 bg-[#DCEBE2] border border-[#B7D6C3] p-3 rounded-xl text-[#1C1917]">
-                      {pItems.map((it) => (
-                        <div key={it.id} className="flex justify-between gap-2">
-                          <span>
-                            {it.medicineName} ({it.qty} {it.unit} x{' '}
-                            {formatIDR(it.buyPrice)})
-                          </span>
-                          <span className="font-bold">
-                            {formatIDR(it.subtotal)}
-                          </span>
                         </div>
-                      ))}
-                    </div>
+                        <div className="text-right">
+                          <p className="font-extrabold text-base text-[#166534]">
+                            {formatIDR(p.total)}
+                          </p>
+                          {p.ppn > 0 && (
+                            <p className="text-[11px] text-[#57534E]">
+                              Termasuk PPN {formatIDR(p.ppn)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
 
-                    <div className="flex justify-end gap-2">
-                      {p.paymentType === 'KREDIT' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            try {
-                              markPurchasePaid(p.id);
-                              notify(`Faktur ${p.pbfName} ditandai lunas`, 'success');
-                            } catch (err: any) {
-                              notify(err.message, 'error');
-                            }
-                          }}
-                          className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5 transition"
-                        >
-                          <CheckCircle className="w-3.5 h-3.5" aria-hidden="true" /> Tandai Lunas
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          askConfirm(
-                            `Hapus faktur ${p.pbfName}?`,
-                            () => {
+                      <div className="text-xs space-y-1 bg-[#DCEBE2] border border-[#B7D6C3] p-3 rounded-xl text-[#1C1917]">
+                        {pItems.map((it) => (
+                          <div key={it.id} className="flex justify-between gap-2">
+                            <span>
+                              {it.medicineName} ({it.qty} {it.unit} x{' '}
+                              {formatIDR(it.buyPrice)})
+                            </span>
+                            <span className="font-bold">
+                              {formatIDR(it.subtotal)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex justify-end gap-2">
+                        {p.paymentType === 'KREDIT' && (
+                          <button
+                            type="button"
+                            onClick={() => {
                               try {
-                                deletePurchase(p.id);
-                                notify(`Faktur ${p.pbfName} dihapus`, 'info');
+                                markPurchasePaid(p.id);
+                                notify(`Faktur ${p.pbfName} ditandai lunas`, 'success');
                               } catch (err: any) {
                                 notify(err.message, 'error');
                               }
-                            },
-                            { title: 'Hapus Faktur PBF', danger: true, confirmLabel: 'Hapus' }
-                          )
-                        }
-                        className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#FEE2E2] hover:bg-[#FECACA] text-[#BA1A1A] text-xs font-bold transition"
-                      >
-                        Hapus
-                      </button>
+                            }}
+                            className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5 transition"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" aria-hidden="true" /> Tandai Lunas
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            askConfirm(
+                              `Hapus faktur ${p.pbfName}?`,
+                              () => {
+                                try {
+                                  deletePurchase(p.id);
+                                  notify(`Faktur ${p.pbfName} dihapus`, 'info');
+                                } catch (err: any) {
+                                  notify(err.message, 'error');
+                                }
+                              },
+                              { title: 'Hapus Faktur PBF', danger: true, confirmLabel: 'Hapus' }
+                            )
+                          }
+                          className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#FEE2E2] hover:bg-[#FECACA] text-[#BA1A1A] text-xs font-bold transition"
+                        >
+                          Hapus
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+                <ListPaginationFooter
+                  shown={purchasesPager.shownCount}
+                  total={purchasesPager.total}
+                  remaining={purchasesPager.remaining}
+                  step={purchasesPager.step}
+                  itemLabel="faktur"
+                  onLoadMore={purchasesPager.loadMore}
+                  sentinelRef={purchasesPager.sentinelRef}
+                  className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3]"
+                />
+              </>
             )}
           </div>
         </div>
@@ -1172,27 +1239,39 @@ export const PbfScreen: React.FC = () => {
                 Belum ada supplier terdaftar.
               </p>
             ) : (
-              suppliers.map((s) => (
-                <div
-                  key={s.id}
-                  className="p-4 flex items-center justify-between gap-2"
-                >
-                  <div>
-                    <p className="font-bold text-sm text-[#1C1917]">{s.name}</p>
-                    <p className="text-xs text-[#57534E]">
-                      {s.contact || 'Tanpa nomor kontak'}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => deleteSupplier(s.id)}
-                    aria-label={`Hapus supplier ${s.name}`}
-                    className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#BA1A1A] hover:bg-red-500/10"
+              <>
+                {suppliersPager.visibleItems.map((s) => (
+                  <div
+                    key={s.id}
+                    className="cv-card p-4 flex items-center justify-between gap-2"
                   >
-                    <Trash2 className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                </div>
-              ))
+                    <div>
+                      <p className="font-bold text-sm text-[#1C1917]">{s.name}</p>
+                      <p className="text-xs text-[#57534E]">
+                        {s.contact || 'Tanpa nomor kontak'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => deleteSupplier(s.id)}
+                      aria-label={`Hapus supplier ${s.name}`}
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#BA1A1A] hover:bg-red-500/10"
+                    >
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                ))}
+                <ListPaginationFooter
+                  shown={suppliersPager.shownCount}
+                  total={suppliersPager.total}
+                  remaining={suppliersPager.remaining}
+                  step={suppliersPager.step}
+                  itemLabel="supplier"
+                  onLoadMore={suppliersPager.loadMore}
+                  sentinelRef={suppliersPager.sentinelRef}
+                  className="bg-[#DCEBE2]/45"
+                />
+              </>
             )}
           </div>
         </div>
@@ -1239,6 +1318,13 @@ export const PengingatScreen: React.FC = () => {
     [purchases]
   );
 
+  const lowRef = useRef<HTMLDivElement>(null);
+  const expRef = useRef<HTMLDivElement>(null);
+  const pbfRef = useRef<HTMLDivElement>(null);
+  const lowPager = useProgressiveList(lowStock, { initial: 40, step: 40, scrollContainerRef: lowRef });
+  const expPager = useProgressiveList(expiring, { initial: 40, step: 40, scrollContainerRef: expRef });
+  const pbfPager = useProgressiveList(creditPbf, { initial: 40, step: 40, scrollContainerRef: pbfRef });
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -1260,11 +1346,11 @@ export const PengingatScreen: React.FC = () => {
               Semua stok obat aman (&ge;10).
             </p>
           ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {lowStock.map((m) => (
+            <div ref={lowRef} className="space-y-2 max-h-96 overflow-y-auto overscroll-contain pr-1">
+              {lowPager.visibleItems.map((m) => (
                 <div
                   key={m.id}
-                  className="p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] flex items-center justify-between gap-2"
+                  className="cv-card p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] flex items-center justify-between gap-2"
                 >
                   <div>
                     <p className="font-bold text-sm text-[#1C1917]">{m.name}</p>
@@ -1273,6 +1359,16 @@ export const PengingatScreen: React.FC = () => {
                   <StockPill stock={m.stock} />
                 </div>
               ))}
+              <ListPaginationFooter
+                shown={lowPager.shownCount}
+                total={lowPager.total}
+                remaining={lowPager.remaining}
+                step={lowPager.step}
+                itemLabel="obat"
+                onLoadMore={lowPager.loadMore}
+                sentinelRef={lowPager.sentinelRef}
+                className="px-1 py-2"
+              />
             </div>
           )}
         </div>
@@ -1290,13 +1386,13 @@ export const PengingatScreen: React.FC = () => {
               Tidak ada obat yang mendekati kadaluarsa.
             </p>
           ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {expiring.map((m) => {
+            <div ref={expRef} className="space-y-2 max-h-96 overflow-y-auto overscroll-contain pr-1">
+              {expPager.visibleItems.map((m) => {
                 const d = daysUntilExpiry(m.expiryDate) ?? 0;
                 return (
                   <div
                     key={m.id}
-                    className="p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] flex items-center justify-between gap-2"
+                    className="cv-card p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] flex items-center justify-between gap-2"
                   >
                     <div>
                       <p className="font-bold text-sm text-[#1C1917]">{m.name}</p>
@@ -1314,6 +1410,16 @@ export const PengingatScreen: React.FC = () => {
                   </div>
                 );
               })}
+              <ListPaginationFooter
+                shown={expPager.shownCount}
+                total={expPager.total}
+                remaining={expPager.remaining}
+                step={expPager.step}
+                itemLabel="obat"
+                onLoadMore={expPager.loadMore}
+                sentinelRef={expPager.sentinelRef}
+                className="px-1 py-2"
+              />
             </div>
           )}
         </div>
@@ -1331,13 +1437,13 @@ export const PengingatScreen: React.FC = () => {
               Tidak ada hutang faktur PBF yang belum lunas.
             </p>
           ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {creditPbf.map((p) => {
+            <div ref={pbfRef} className="space-y-2 max-h-96 overflow-y-auto overscroll-contain pr-1">
+              {pbfPager.visibleItems.map((p) => {
                 const left = dueDaysLeft(p.dueDate);
                 return (
                   <div
                     key={p.id}
-                    className="p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] space-y-2"
+                    className="cv-card p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] space-y-2"
                   >
                     <div className="flex justify-between items-start gap-2">
                       <div>
@@ -1376,6 +1482,16 @@ export const PengingatScreen: React.FC = () => {
                   </div>
                 );
               })}
+              <ListPaginationFooter
+                shown={pbfPager.shownCount}
+                total={pbfPager.total}
+                remaining={pbfPager.remaining}
+                step={pbfPager.step}
+                itemLabel="faktur"
+                onLoadMore={pbfPager.loadMore}
+                sentinelRef={pbfPager.sentinelRef}
+                className="px-1 py-2"
+              />
             </div>
           )}
         </div>
@@ -1391,7 +1507,6 @@ type PaymentFilter = 'ALL' | 'Tunai' | 'QRIS' | 'Transfer';
 
 export const RiwayatScreen: React.FC = () => {
   const { sales, saleItems } = useStore();
-  const [search, setSearch] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('ALL');
   const [selectedSale, setSelectedSale] = useState<{
     sale: Sale;
@@ -1432,29 +1547,25 @@ export const RiwayatScreen: React.FC = () => {
   }, [sales]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return [...sales]
       .sort(
         (a, b) =>
           (parseISODate(b.createdAt)?.getTime() ?? 0) -
           (parseISODate(a.createdAt)?.getTime() ?? 0)
       )
-      .filter((s) => {
-        if (paymentFilter !== 'ALL' && s.paymentMethod !== paymentFilter) return false;
-        if (!q) return true;
-        const its = itemsBySale.get(s.id) || [];
-        return (
-          s.invoiceNo.toLowerCase().includes(q) ||
-          s.paymentMethod.toLowerCase().includes(q) ||
-          its.some((i) => i.medicineName.toLowerCase().includes(q))
-        );
-      });
-  }, [sales, itemsBySale, search, paymentFilter]);
+      .filter((s) => paymentFilter === 'ALL' || s.paymentMethod === paymentFilter);
+  }, [sales, paymentFilter]);
 
   const filteredTotal = useMemo(
     () => filtered.reduce((sum, s) => sum + s.total, 0),
     [filtered]
   );
+
+  const salesPager = useProgressiveList(filtered, {
+    initial: 50,
+    step: 50,
+    resetKey: paymentFilter,
+  });
 
   const PILLS: { id: PaymentFilter; label: string }[] = [
     { id: 'ALL', label: 'Semua' },
@@ -1489,7 +1600,7 @@ export const RiwayatScreen: React.FC = () => {
         ))}
       </div>
 
-      {/* Filter Card: Payment Pill Group + Search + Dynamic Summary Bar */}
+      {/* Filter Card: Payment Pill Group + Dynamic Summary Bar */}
       <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-3.5 sm:p-4 shadow-xs space-y-3 min-w-0">
         <div className="flex flex-wrap gap-2 min-w-0" role="group" aria-label="Filter metode pembayaran">
           {PILLS.map((p) => {
@@ -1518,15 +1629,6 @@ export const RiwayatScreen: React.FC = () => {
           })}
         </div>
 
-        <input
-          type="text"
-          aria-label="Cari nomor invoice, nama obat, atau cara bayar"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cari nomor invoice, nama obat, atau cara bayar..."
-          className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-sm text-[#1C1917] placeholder:text-[#57534E] focus:ring-2 focus:ring-[#15803D]"
-        />
-
         <div className="pt-2.5 border-t border-dashed border-[#B7D6C3] flex flex-wrap items-center justify-between gap-2 text-xs text-[#57534E]">
           <span>
             Menampilkan <strong className="text-[#1C1917]">{filtered.length}</strong> transaksi ({activePillLabel})
@@ -1543,54 +1645,66 @@ export const RiwayatScreen: React.FC = () => {
             Belum ada riwayat transaksi penjualan.
           </div>
         ) : (
-          filtered.map((s) => {
-            const its = itemsBySale.get(s.id) || [];
-            const methodTone =
-              s.paymentMethod === 'QRIS'
-                ? 'bg-[#E0F2FE] text-[#0369A1]'
-                : s.paymentMethod === 'Transfer'
-                ? 'bg-[#FEF3C7] text-[#92400E]'
-                : 'bg-[#DCFCE7] text-[#166534]';
-            return (
-              <div
-                key={s.id}
-                className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 min-w-0"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2 min-w-0">
-                    <span className="font-extrabold text-sm text-[#1C1917]">{s.invoiceNo}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${methodTone}`}>
-                      {s.paymentMethod === 'Tunai' ? 'Cash' : s.paymentMethod}
-                    </span>
-                    <span className="text-xs text-[#57534E]">
-                      {formatDateTimeID(s.createdAt)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[#57534E] mt-1 break-words">
-                    {its.map((i) => `${i.medicineName} (${i.qty})`).join(', ')}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0 ml-auto">
-                  <div className="text-right">
-                    <p className="font-extrabold text-base text-[#166534] tabular-nums">
-                      {formatIDR(s.total)}
-                    </p>
-                    <p className="text-[11px] text-[#57534E] tabular-nums">
-                      Bayar: {formatIDR(s.amountPaid)} • Kembali:{' '}
-                      {formatIDR(s.changeAmount)}
+          <>
+            {salesPager.visibleItems.map((s) => {
+              const its = itemsBySale.get(s.id) || [];
+              const methodTone =
+                s.paymentMethod === 'QRIS'
+                  ? 'bg-[#E0F2FE] text-[#0369A1]'
+                  : s.paymentMethod === 'Transfer'
+                  ? 'bg-[#FEF3C7] text-[#92400E]'
+                  : 'bg-[#DCFCE7] text-[#166534]';
+              return (
+                <div
+                  key={s.id}
+                  className="cv-card rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 min-w-0"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                      <span className="font-extrabold text-sm text-[#1C1917]">{s.invoiceNo}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${methodTone}`}>
+                        {s.paymentMethod === 'Tunai' ? 'Cash' : s.paymentMethod}
+                      </span>
+                      <span className="text-xs text-[#57534E]">
+                        {formatDateTimeID(s.createdAt)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#57534E] mt-1 break-words">
+                      {its.map((i) => `${i.medicineName} (${i.qty})`).join(', ')}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSale({ sale: s, items: its })}
-                    className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5 transition"
-                  >
-                    <Printer className="w-3.5 h-3.5" aria-hidden="true" /> Struk
-                  </button>
+                  <div className="flex items-center gap-3 shrink-0 ml-auto">
+                    <div className="text-right">
+                      <p className="font-extrabold text-base text-[#166534] tabular-nums">
+                        {formatIDR(s.total)}
+                      </p>
+                      <p className="text-[11px] text-[#57534E] tabular-nums">
+                        Bayar: {formatIDR(s.amountPaid)} • Kembali:{' '}
+                        {formatIDR(s.changeAmount)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSale({ sale: s, items: its })}
+                      className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-1.5 transition"
+                    >
+                      <Printer className="w-3.5 h-3.5" aria-hidden="true" /> Struk
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+            <ListPaginationFooter
+              shown={salesPager.shownCount}
+              total={salesPager.total}
+              remaining={salesPager.remaining}
+              step={salesPager.step}
+              itemLabel="transaksi"
+              onLoadMore={salesPager.loadMore}
+              sentinelRef={salesPager.sentinelRef}
+              className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3]"
+            />
+          </>
         )}
       </div>
 
@@ -1731,7 +1845,7 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
           <p className="text-xs text-[#57534E]">
             Bulan yang sudah ditutup terkunci dari penambahan/penghapusan kas, penjualan, dan faktur PBF.
           </p>
-          <div className="space-y-2 max-h-72 overflow-y-auto">
+          <div className="space-y-2 max-h-72 overflow-y-auto overscroll-contain">
             {pastMonths.map((b) => {
               const locked = closedMonths.includes(b);
               return (

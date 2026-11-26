@@ -261,14 +261,16 @@ export async function exportRowsToXlsx(
 export async function exportMedicineTemplateXlsx(
   filename: string,
   categories: string[],
-  units: string[]
+  units: string[],
+  medicineTypes: string[] = []
 ): Promise<void> {
   const XLSX = await loadXlsx();
   const wb = XLSX.utils.book_new();
 
   const headers = [
     'Nama Obat *',
-    'Kategori',
+    'Golongan',
+    'Jenis Obat',
     'Satuan',
     'Harga Beli *',
     'Harga Jual Ecer *',
@@ -276,17 +278,17 @@ export async function exportMedicineTemplateXlsx(
     'Stok *',
     'Kadaluarsa (YYYY-MM-DD)',
   ];
-  const requiredCols = new Set([0, 3, 4, 6]);
-  const numericCols = new Set([3, 4, 5, 6]);
+  const requiredCols = new Set([0, 4, 5, 7]);
+  const numericCols = new Set([4, 5, 6, 7]);
 
   const samples: (string | number)[][] = [
-    ['Paracetamol 500mg (Contoh)', 'Obat Bebas', 'Strip', 2500, 4000, 3500, 50, '2027-12-31'],
-    ['Amoxicillin 500mg (Contoh)', 'Antibiotik', 'Strip', 4200, 6500, 5800, 30, '2028-06-30'],
+    ['Paracetamol 500mg (Contoh)', 'Obat Bebas', 'Analgesik & Antipiretik', 'Strip', 2500, 4000, 3500, 50, '2027-12-31'],
+    ['Amoxicillin 500mg (Contoh)', 'Obat Keras', 'Antibiotik', 'Strip', 4200, 6500, 5800, 30, '2028-06-30'],
   ];
 
   const aoa: (string | number)[][] = [
     ['APOTEK LESTARI — TEMPLATE IMPOR STOK OBAT'],
-    ['Petunjuk: Isi mulai baris 5 (hapus/timpa baris contoh hijau). Kolom (*) wajib diisi. Lihat sheet "Panduan & Pilihan" untuk daftar Kategori & Satuan.'],
+    ['Petunjuk: Isi mulai baris 5 (hapus/timpa baris contoh hijau). Kolom (*) wajib diisi. Lihat sheet "Panduan & Pilihan" untuk daftar Golongan, Jenis Obat & Satuan.'],
     [],
     headers,
     ...samples,
@@ -323,7 +325,7 @@ export async function exportMedicineTemplateXlsx(
       fill: { fgColor: { rgb: isReq ? '047857' : '334155' } },
       font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
       border: THIN_BORDER,
-      alignment: { vertical: 'center', horizontal: numericCols.has(cIdx) ? 'right' : cIdx === 7 ? 'center' : 'left' },
+      alignment: { vertical: 'center', horizontal: numericCols.has(cIdx) ? 'right' : cIdx === 8 ? 'center' : 'left' },
     };
   });
 
@@ -333,7 +335,7 @@ export async function exportMedicineTemplateXlsx(
       const addr = XLSX.utils.encode_cell({ r: rIdx, c: cIdx });
       const cell = ws[addr] ?? (ws[addr] = { t: 's', v: '' });
       const isNum = numericCols.has(cIdx);
-      const isDate = cIdx === 7;
+      const isDate = cIdx === 8;
       cell.s = {
         fill: { fgColor: { rgb: isSample ? 'F0FDF4' : 'FFFFFF' } },
         font: { sz: 10, color: { rgb: '1E293B' } },
@@ -345,7 +347,7 @@ export async function exportMedicineTemplateXlsx(
   }
 
   ws['!cols'] = [
-    { wch: 30 }, { wch: 20 }, { wch: 14 }, { wch: 15 },
+    { wch: 30 }, { wch: 20 }, { wch: 16 }, { wch: 14 }, { wch: 15 },
     { wch: 17 }, { wch: 15 }, { wch: 11 }, { wch: 24 },
   ];
   XLSX.utils.book_append_sheet(wb, ws, 'Input Stok Obat');
@@ -355,28 +357,29 @@ export async function exportMedicineTemplateXlsx(
     '1. Nama Obat sama akan otomatis memperbarui data lama.',
     '2. Format Kadaluarsa wajib YYYY-MM-DD (mis. 2027-12-31), atau kosongkan.',
     '3. Harga & Stok isi angka polos tanpa "Rp" atau titik.',
-    '4. Kategori/Satuan kosong otomatis memakai default (Umum / Strip).',
+    '4. Golongan/Satuan kosong otomatis memakai default (Obat Bebas / Strip).',
     '5. Hapus atau timpa 2 baris contoh hijau sebelum impor.',
   ];
-  const guideRows = Math.max(categories.length, units.length, notes.length);
+  const guideRows = Math.max(categories.length, medicineTypes.length, units.length, notes.length);
   const guideAoa: string[][] = [
     ['PANDUAN PENGISIAN & DAFTAR PILIHAN VALID'],
-    ['Kategori Valid (Default: Umum)', 'Satuan Valid (Default: Strip)', 'Catatan Penting Impor'],
+    ['Golongan Valid', 'Jenis Obat Valid (Opsional)', 'Satuan Valid (Default: Strip)', 'Catatan Penting Impor'],
     ...Array.from({ length: guideRows }, (_, i) => [
       categories[i] ?? '',
+      medicineTypes[i] ?? '',
       units[i] ?? '',
       notes[i] ?? '',
     ]),
   ];
   const wsGuide = XLSX.utils.aoa_to_sheet(guideAoa);
-  wsGuide['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
+  wsGuide['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }];
   wsGuide['!rows'] = [{ hpt: 26 }, { hpt: 22 }, ...Array(guideRows).fill({ hpt: 19 })];
   setBannerStyle(wsGuide['A1'], '064E3B', 'FFFFFF', 12, true);
-  [0, 1, 2].forEach((cIdx) => {
+  [0, 1, 2, 3].forEach((cIdx) => {
     const cell = wsGuide[XLSX.utils.encode_cell({ r: 1, c: cIdx })];
     if (cell) {
       cell.s = {
-        fill: { fgColor: { rgb: cIdx < 2 ? '047857' : '334155' } },
+        fill: { fgColor: { rgb: cIdx < 3 ? '047857' : '334155' } },
         font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
         border: THIN_BORDER,
         alignment: { vertical: 'center', horizontal: 'left' },
@@ -384,7 +387,7 @@ export async function exportMedicineTemplateXlsx(
     }
   });
   for (let r = 2; r < guideAoa.length; r++) {
-    [0, 1, 2].forEach((cIdx) => {
+    [0, 1, 2, 3].forEach((cIdx) => {
       const addr = XLSX.utils.encode_cell({ r, c: cIdx });
       const cell = wsGuide[addr] ?? (wsGuide[addr] = { t: 's', v: '' });
       cell.s = {
@@ -395,7 +398,7 @@ export async function exportMedicineTemplateXlsx(
       };
     });
   }
-  wsGuide['!cols'] = [{ wch: 28 }, { wch: 26 }, { wch: 62 }];
+  wsGuide['!cols'] = [{ wch: 26 }, { wch: 26 }, { wch: 24 }, { wch: 60 }];
   XLSX.utils.book_append_sheet(wb, wsGuide, 'Panduan & Pilihan');
 
   XLSX.writeFile(wb, filename);
@@ -453,6 +456,7 @@ export async function readSpreadsheetMatrix(file: File): Promise<string[][]> {
 export interface ParsedMedicineImportRow {
   name: string;
   category: string;
+  medicineType: string;
   unit: string;
   buyPrice: number;
   sellPrice: number;
@@ -578,7 +582,8 @@ export function parseMedicineSpreadsheet(matrix: string[][]): {
   };
 
   const iName = colOf('nama obat')!;
-  const iCat = colOf('kategori');
+  const iCat = colOf('golongan', 'kategori');
+  const iType = colOf('jenis obat', 'jenis');
   const iUnit = colOf('satuan');
   const iBuy = colOf('harga beli');
   const iSell = colOf('harga jual ecer', 'harga jual');
@@ -624,6 +629,7 @@ export function parseMedicineSpreadsheet(matrix: string[][]): {
     rows.push({
       name,
       category: cellText(rawRow, iCat) || 'Umum',
+      medicineType: cellText(rawRow, iType),
       unit: cellText(rawRow, iUnit) || 'Strip',
       buyPrice: buyParsed,
       sellPrice: sellParsed,
