@@ -4,7 +4,9 @@ import { parseAndValidateBackupJson } from '../src/backup.ts';
 import {
   DELTA_OVERLAP_MS,
   applyCloudResetEpoch,
+  computeAtomicStockUpdates,
   computeDeltaSinceMs,
+  mergeMedicineDeltaRows,
   mergeSyncIntoState,
 } from '../src/syncMerge.ts';
 import {
@@ -293,4 +295,106 @@ test('filterAndRankMedicines matches multi-token queries, ranks prefixes, and pr
   // Exact barcode wins top rank
   const byBarcode = filterAndRankMedicines(meds, '8990001');
   assert.deepEqual(byBarcode.map((m) => m.name), ['AMOXICILLIN 500MG']);
+});
+
+test('computeAtomicStockUpdates prevents concurrent oversell and handles clock skew monotonically', () => {
+  const med = {
+    id: 1,
+    name: 'Paracetamol 500mg',
+    category: 'Obat Bebas',
+    medicineType: 'Analgesik',
+    unit: 'Strip',
+    buyPrice: 2000,
+    sellPrice: 4000,
+    wholesalePrice: 3500,
+    stock: 10,
+    expiryDate: null,
+    barcode: null,
+    createdAt: '2026-11-01T00:00:00.000Z',
+    remoteId: 'obat-1',
+    updatedAt: 5000,
+    terhapus: false,
+    kotor: false,
+  };
+  const toMap = (m) => ({ ...m });
+
+  // Cashier A sells 2 from server stock 10 -> 8
+  const resA = computeAtomicStockUpdates(
+    [{ medicine: med, qty: 2 }],
+    [{ exists: true, data: { remoteId: 'obat-1', stock: 10, updatedAt: 5000, terhapus: false } }],
+    6000,
+    toMap
+  );
+  assert.equal(resA.ok, true);
+  assert.equal(resA.updates[0].stock, 8);
+  assert.equal(resA.updates[0].updatedAt, 6000);
+
+  // Cashier B (stale local stock 10, slower clock 5500) retries against server stock 8 buying 3 -> 5, updatedAt 6001
+  const resB = computeAtomicStockUpdates(
+    [{ medicine: med, qty: 3 }],
+    [{ exists: true, data: resA.updates[0].docData }],
+    5500,
+    toMap
+  );
+  assert.equal(resB.ok, true);
+  assert.equal(resB.updates[0].stock, 5);
+  assert.equal(resB.updates[0].updatedAt, 6001);
+
+  // Cashier C tries buying 6 against server stock 5 -> rejected with exact remaining stock 5
+  const resC = computeAtomicStockUpdates(
+    [{ medicine: med, qty: 6 }],
+    [{ exists: true, data: resB.updates[0].docData }],
+    7000,
+    toMap
+  );
+  assert.equal(resC.ok, false);
+  assert.equal(resC.serverStock, 5);
+  assert.equal(resC.remoteId, 'obat-1');
+});
+
+test('mergeMedicineDeltaRows applies newer remote stock and ignores self-echo or older docs', () => {
+  const med = {
+    id: 1,
+    name: 'Paracetamol 500mg',
+    category: 'Obat Bebas',
+    medicineType: '',
+    unit: 'Strip',
+    buyPrice: 2000,
+    sellPrice: 4000,
+    wholesalePrice: 0,
+    stock: 10,
+    expiryDate: null,
+    barcode: null,
+    createdAt: '2026-11-01T00:00:00.000Z',
+    remoteId: 'obat-1',
+    updatedAt: 5000,
+    terhapus: false,
+    kotor: false,
+  };
+  const db = {
+    medicines: [med],
+    sales: [],
+    saleItems: [],
+    cashEntries: [],
+    purchases: [],
+    purchaseItems: [],
+    suppliers: [],
+    closedMonths: [],
+    lastSyncAt: 5000,
+  };
+  const fromMap = (m, localId) => ({ ...med, ...m, id: localId, kotor: false });
+
+  // Self-echo with same updatedAt returns exact same reference (no spurious re-render)
+  const echo = mergeMedicineDeltaRows(db, [{ id: 'obat-1', data: { ...med, updatedAt: 5000 } }], fromMap);
+  assert.equal(echo, db);
+
+  // Newer remote stock deduction from another cashier updates immediately
+  const updated = mergeMedicineDeltaRows(
+    db,
+    [{ id: 'obat-1', data: { ...med, stock: 7, updatedAt: 6000 } }],
+    fromMap
+  );
+  assert.notEqual(updated, db);
+  assert.equal(updated.medicines[0].stock, 7);
+  assert.equal(updated.medicines[0].updatedAt, 6000);
 });

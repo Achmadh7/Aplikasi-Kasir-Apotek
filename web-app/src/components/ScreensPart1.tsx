@@ -1358,6 +1358,8 @@ export const KasirScreen: React.FC = () => {
     'Tunai'
   );
   const [amountPaidStr, setAmountPaidStr] = useState('');
+  const [checkingOut, setCheckingOut] = useState(false);
+  const checkingOutRef = useRef(false);
   const [lastReceipt, setLastReceipt] = useState<{
     sale: Sale;
     items: SaleItem[];
@@ -1447,16 +1449,22 @@ export const KasirScreen: React.FC = () => {
       : parseInt(amountPaidStr.replace(/\D/g, ''), 10) || 0;
   const changeAmount = Math.max(0, paidNum - cartTotal);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
+    if (checkingOutRef.current) return;
+    checkingOutRef.current = true;
+    setCheckingOut(true);
     try {
       const finalPaid = paymentMethod !== 'Tunai' ? cartTotal : paidNum;
-      const res = createSale(cart, paymentMethod, finalPaid);
+      const res = await createSale(cart, paymentMethod, finalPaid);
       setCart([]);
       setAmountPaidStr('');
       setLastReceipt(res);
       notify('Transaksi berhasil disimpan', 'success');
     } catch (err: any) {
-      notify(err.message, 'error');
+      notify(err?.message || 'Gagal memproses transaksi', 'error');
+    } finally {
+      checkingOutRef.current = false;
+      setCheckingOut(false);
     }
   };
 
@@ -1464,8 +1472,8 @@ export const KasirScreen: React.FC = () => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F9') {
         e.preventDefault();
-        if (!lastReceipt && cart.length > 0 && paidNum >= cartTotal) {
-          handleCheckout();
+        if (!checkingOutRef.current && !lastReceipt && cart.length > 0 && paidNum >= cartTotal) {
+          void handleCheckout();
         }
       }
     };
@@ -1781,11 +1789,12 @@ export const KasirScreen: React.FC = () => {
 
               <button
                 type="button"
-                disabled={cart.length === 0 || paidNum < cartTotal}
-                onClick={handleCheckout}
+                disabled={checkingOut || cart.length === 0 || paidNum < cartTotal}
+                onClick={() => void handleCheckout()}
                 className="w-full min-h-[48px] py-3.5 rounded-2xl bg-[#15803D] hover:bg-[#166534] disabled:opacity-40 text-white font-extrabold text-sm flex items-center justify-center gap-2 transition"
               >
-                <CheckCircle2 className="w-5 h-5" aria-hidden="true" /> Bayar &amp; Cetak Struk
+                <CheckCircle2 className="w-5 h-5" aria-hidden="true" />{' '}
+                {checkingOut ? 'Memproses...' : 'Bayar & Cetak Struk'}
                 <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-white/20 text-[10px] font-bold">
                   F9
                 </kbd>

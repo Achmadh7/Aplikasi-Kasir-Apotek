@@ -19,6 +19,7 @@ import {
   PushedWatermarks,
   applyCloudResetEpoch,
   computeDeltaSinceMs,
+  mergeMedicineDeltaRows,
   mergeSyncIntoState,
 } from './syncMerge';
 import { parseAndValidateBackupJson } from './backup';
@@ -28,6 +29,9 @@ import {
   logoutFirebase,
   User,
   FirestoreMapper,
+  StockConflictError,
+  commitAtomicSaleToCloud,
+  subscribeMedicineDelta,
   fetchCollectionDocs,
   fetchCloudSyncMeta,
   pushBatchDocs,
@@ -142,7 +146,7 @@ interface StoreContextType {
     cart: Array<{ medicineId: number; qty: number; useWholesale: boolean }>,
     paymentMethod: 'Tunai' | 'QRIS' | 'Transfer',
     amountPaid: number
-  ) => { sale: Sale; items: SaleItem[] };
+  ) => Promise<{ sale: Sale; items: SaleItem[] }>;
   // Cash actions
   createCashEntry: (
     type: 'in' | 'out',
@@ -333,6 +337,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     initialSyncedUidRef.current = user.uid;
     void syncNowRef.current(false, user, false);
   }, [user, idbReady]);
+
+  // Realtime delta listener on web_obat so concurrent cashiers see stock changes in <1s
+  useEffect(() => {
+    if (!user || !idbReady || !autoSync) return;
+    const sinceMs = Date.now() - 5_000;
+    const unsub = subscribeMedicineDelta(
+      sinceMs,
+      (docs) => {
+        setDbState((prev) => mergeMedicineDeltaRows(prev, docs, FirestoreMapper.obatFromMap));
+      },
+      (err) => {
+        console.warn('Realtime obat delta listener warning:', err);
+      }
+    );
+    return () => unsub();
+  }, [user, idbReady, autoSync]);
 
   // Auto-logout immediately when the signed-in email is removed from Authority
   useEffect(() => {
@@ -838,8 +858,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return { inserted, updated, skipped };
   };
 
-  // ---- POS Sale Mutation (Repository.createSale) ----
-  const createSale: StoreContextType['createSale'] = (cart, paymentMethod, amountPaid) => {
+  // ---- POS Sale Mutation (Atomic Firestore Transaction when online, offline fallback) ----
+  const createSale: StoreContextType['createSale'] = async (cart, paymentMethod, amountPaid) => {
     if (cart.length === 0) throw new Error('Keranjang kosong');
     const cur = dbRef.current;
     const nowMs = Date.now();
@@ -857,10 +877,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     const medMap = new Map(cur.medicines.filter((m) => !m.terhapus).map((m) => [m.id, m]));
+    const deductions: Array<{ medicine: Medicine; qty: number }> = [];
     for (const [mId, totalQty] of qtyByMed.entries()) {
       const m = medMap.get(mId);
       if (!m) throw new Error('Obat tidak ditemukan');
       if (m.stock < totalQty) throw new Error(`Stok ${m.name} tidak cukup (sisa ${m.stock})`);
+      deductions.push({ medicine: m, qty: totalQty });
     }
 
     let total = 0;
@@ -930,6 +952,56 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       source: 'sale',
       createdAt,
     };
+
+    const isOnline = typeof navigator === 'undefined' || navigator.onLine !== false;
+    if (auth.currentUser && isOnline) {
+      try {
+        const serverStocks = await commitAtomicSaleToCloud({
+          deductions,
+          sale: newSale,
+          items: newItems,
+          cash: newCash,
+          nowMs,
+        });
+        const syncedSale: Sale = { ...newSale, kotor: false };
+        const syncedItems: SaleItem[] = newItems.map((it) => ({ ...it, kotor: false }));
+        const syncedCash: CashEntry = { ...newCash, kotor: false };
+
+        setDbState((prev) => ({
+          ...prev,
+          medicines: prev.medicines.map((m) => {
+            const u = serverStocks.get(m.remoteId);
+            return u ? { ...m, stock: u.stock, updatedAt: u.updatedAt, kotor: false } : m;
+          }),
+          sales: [syncedSale, ...prev.sales],
+          saleItems: [...prev.saleItems, ...syncedItems],
+          cashEntries: [syncedCash, ...prev.cashEntries],
+        }));
+        return { sale: syncedSale, items: syncedItems };
+      } catch (err: any) {
+        if (err instanceof StockConflictError) {
+          setDbState((prev) => ({
+            ...prev,
+            medicines: prev.medicines.map((m) =>
+              m.remoteId === err.remoteId
+                ? { ...m, stock: err.serverStock, updatedAt: Math.max(m.updatedAt, nowMs), kotor: false }
+                : m
+            ),
+          }));
+          throw err;
+        }
+        const code = String(err?.code || '');
+        const isTransientNet =
+          code === 'unavailable' ||
+          code === 'deadline-exceeded' ||
+          code === 'cancelled' ||
+          (typeof navigator !== 'undefined' && navigator.onLine === false);
+        if (!isTransientNet) {
+          throw err;
+        }
+        // shortcut: offline fallback uses LWW stock; upgrade to ledger only if multi-cashier offline concurrency is needed
+      }
+    }
 
     setDbState((prev) => ({
       ...prev,

@@ -21,9 +21,11 @@ import {
   deleteDoc,
   deleteField,
   query,
+  runTransaction,
   where,
   writeBatch,
 } from 'firebase/firestore';
+import { computeAtomicStockUpdates } from './syncMerge';
 import {
   Medicine,
   Sale,
@@ -682,6 +684,88 @@ export async function tombstoneCloudDocs(
     }
     await batch.commit();
   }
+}
+
+export class StockConflictError extends Error {
+  remoteId: string;
+  serverStock: number;
+  constructor(message: string, remoteId: string, serverStock: number) {
+    super(message);
+    this.name = 'StockConflictError';
+    this.remoteId = remoteId;
+    this.serverStock = serverStock;
+  }
+}
+
+export async function commitAtomicSaleToCloud(params: {
+  deductions: Array<{ medicine: Medicine; qty: number }>;
+  sale: Sale;
+  items: SaleItem[];
+  cash: CashEntry;
+  nowMs: number;
+}): Promise<Map<string, { stock: number; updatedAt: number }>> {
+  const ordered = [...params.deductions].sort((a, b) =>
+    a.medicine.remoteId.localeCompare(b.medicine.remoteId)
+  );
+  return runTransaction(db, async (tx) => {
+    const obatRefs = ordered.map((d) =>
+      doc(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol('obat'), d.medicine.remoteId)
+    );
+    const snaps = await Promise.all(obatRefs.map((ref) => tx.get(ref)));
+    const plan = computeAtomicStockUpdates(
+      ordered,
+      snaps.map((s) => ({ exists: s.exists(), data: s.exists() ? s.data() : undefined })),
+      params.nowMs,
+      FirestoreMapper.obatToMap
+    );
+    if (!plan.ok) {
+      throw new StockConflictError(plan.error, plan.remoteId, plan.serverStock);
+    }
+
+    const updatedStocks = new Map<string, { stock: number; updatedAt: number }>();
+    plan.updates.forEach((u, i) => {
+      tx.set(obatRefs[i], u.docData);
+      updatedStocks.set(u.remoteId, { stock: u.stock, updatedAt: u.updatedAt });
+    });
+
+    tx.set(
+      doc(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol('penjualan'), params.sale.remoteId),
+      FirestoreMapper.penjualanToMap(params.sale)
+    );
+    for (const it of params.items) {
+      tx.set(
+        doc(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol('penjualan_item'), it.remoteId),
+        FirestoreMapper.itemJualToMap(it)
+      );
+    }
+    tx.set(
+      doc(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol('kas'), params.cash.remoteId),
+      FirestoreMapper.kasToMap(params.cash)
+    );
+    return updatedStocks;
+  });
+}
+
+export function subscribeMedicineDelta(
+  sinceMs: number,
+  onDocs: (docs: Array<{ id: string; data: Record<string, any> }>) => void,
+  onError?: (err: unknown) => void
+): () => void {
+  const colRef = collection(db, SHARED_ROOT[0], SHARED_ROOT[1], webCol('obat'));
+  const q = query(colRef, where('updatedAt', '>', sinceMs));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const changed = snap
+        .docChanges()
+        .filter((ch) => ch.type === 'added' || ch.type === 'modified')
+        .map((ch) => ({ id: ch.doc.id, data: ch.doc.data() }));
+      if (changed.length > 0) onDocs(changed);
+    },
+    (err) => {
+      onError?.(err);
+    }
+  );
 }
 
 export async function resetAllCloudData(resetAt: number = Date.now()) {

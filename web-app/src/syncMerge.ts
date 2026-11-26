@@ -405,3 +405,155 @@ export function mergeSyncIntoState(
     stillDirty,
   };
 }
+
+export interface AtomicStockDeduction {
+  medicine: Medicine;
+  qty: number;
+}
+
+export interface AtomicServerSnap {
+  exists: boolean;
+  data?: Record<string, any>;
+}
+
+export type AtomicStockResult =
+  | {
+      ok: true;
+      updates: Array<{
+        remoteId: string;
+        stock: number;
+        updatedAt: number;
+        docData: Record<string, any>;
+      }>;
+    }
+  | {
+      ok: false;
+      error: string;
+      remoteId: string;
+      serverStock: number;
+    };
+
+/**
+ * Validates and computes new stock documents inside a Firestore checkout transaction
+ * so concurrent cashiers never clobber each other's deductions or oversell stock.
+ */
+export function computeAtomicStockUpdates(
+  deductions: readonly AtomicStockDeduction[],
+  serverSnaps: readonly AtomicServerSnap[],
+  nowMs: number,
+  obatToMap: (m: Medicine) => Record<string, any>
+): AtomicStockResult {
+  const updates: Array<{
+    remoteId: string;
+    stock: number;
+    updatedAt: number;
+    docData: Record<string, any>;
+  }> = [];
+
+  for (let i = 0; i < deductions.length; i++) {
+    const { medicine, qty } = deductions[i];
+    const snap = serverSnaps[i];
+    if (snap?.exists && snap.data) {
+      if (snap.data.terhapus === true) {
+        return {
+          ok: false,
+          error: `Obat ${medicine.name} sudah dihapus di server`,
+          remoteId: medicine.remoteId,
+          serverStock: 0,
+        };
+      }
+      const serverStock = Math.max(0, Math.round(Number(snap.data.stock) || 0));
+      if (serverStock < qty) {
+        return {
+          ok: false,
+          error: `Stok ${medicine.name} di server tidak cukup (sisa ${serverStock})`,
+          remoteId: medicine.remoteId,
+          serverStock,
+        };
+      }
+      const nextStock = serverStock - qty;
+      const serverUpdatedAt = Number(snap.data.updatedAt) || 0;
+      const nextUpdatedAt = Math.max(nowMs, serverUpdatedAt + 1);
+      updates.push({
+        remoteId: medicine.remoteId,
+        stock: nextStock,
+        updatedAt: nextUpdatedAt,
+        docData: {
+          ...snap.data,
+          remoteId: medicine.remoteId,
+          stock: nextStock,
+          updatedAt: nextUpdatedAt,
+        },
+      });
+    } else {
+      if (medicine.stock < qty) {
+        return {
+          ok: false,
+          error: `Stok ${medicine.name} tidak cukup (sisa ${medicine.stock})`,
+          remoteId: medicine.remoteId,
+          serverStock: medicine.stock,
+        };
+      }
+      const nextStock = medicine.stock - qty;
+      const nextUpdatedAt = Math.max(nowMs, (medicine.updatedAt || 0) + 1);
+      const docData = obatToMap({
+        ...medicine,
+        stock: nextStock,
+        updatedAt: nextUpdatedAt,
+      });
+      updates.push({
+        remoteId: medicine.remoteId,
+        stock: nextStock,
+        updatedAt: nextUpdatedAt,
+        docData,
+      });
+    }
+  }
+
+  return { ok: true, updates };
+}
+
+/**
+ * Applies realtime medicine delta snapshots without disturbing newer local dirty edits
+ * or triggering unnecessary state updates on self-echoed documents.
+ */
+export function mergeMedicineDeltaRows(
+  prev: LocalDB,
+  docs: readonly RemoteDocSnap[],
+  obatFromMap: (m: Record<string, any>, localId: number) => Medicine | null
+): LocalDB {
+  if (docs.length === 0) return prev;
+  let nextMeds: Medicine[] | null = null;
+  let nextId = prev.medicines.reduce((max, x) => Math.max(max, x.id), 0) + 1;
+  const idxByRemote = new Map<string, number>();
+  prev.medicines.forEach((m, i) => {
+    if (m.remoteId) idxByRemote.set(m.remoteId, i);
+  });
+
+  for (const d of docs) {
+    const idx = idxByRemote.get(d.id);
+    if (idx !== undefined) {
+      const local = (nextMeds ?? prev.medicines)[idx];
+      const remoteUpdatedAt = Number(d.data.updatedAt) || 0;
+      const remoteTerhapus = d.data.terhapus === true;
+      if (local.kotor && local.updatedAt >= remoteUpdatedAt) continue;
+      if (!remoteMenang(remoteUpdatedAt, remoteTerhapus, local.updatedAt, local.terhapus)) {
+        continue;
+      }
+      const parsed = obatFromMap(d.data, local.id);
+      if (!parsed) continue;
+      if (!nextMeds) nextMeds = [...prev.medicines];
+      nextMeds[idx] = { ...parsed, kotor: false };
+    } else if (d.data.terhapus !== true) {
+      const parsed = obatFromMap(d.data, nextId);
+      if (!parsed) continue;
+      if (!nextMeds) nextMeds = [...prev.medicines];
+      idxByRemote.set(d.id, nextMeds.length);
+      nextMeds.push({ ...parsed, kotor: false });
+      nextId++;
+    }
+  }
+
+  if (!nextMeds) return prev;
+  return { ...prev, medicines: nextMeds };
+}
