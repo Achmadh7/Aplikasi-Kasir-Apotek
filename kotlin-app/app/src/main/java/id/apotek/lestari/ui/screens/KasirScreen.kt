@@ -349,7 +349,7 @@ fun KasirScreen() {
         }
             }
             itemsIndexed(sorted, key = { _, m -> m.id }) { _, m ->
-                val out = m.stock <= 0
+                val out = m.stock <= 0 || m.sellPrice <= 0
                 // K1 (pilihan Achmad 2026-11-16): kotak 20dp senada P3.
                 ExpressiveCard(
                     shape = RoundedCornerShape(20.dp),
@@ -405,8 +405,13 @@ fun KasirScreen() {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("${m.category} • ${m.unit}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                             Spacer(Modifier.width(12.dp))
-                            // am210: harga putih (dark) / hitam (light).
-                            Text(formatIDR(m.sellPrice), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.End)
+                            // am210: harga putih (dark) / hitam (light); merah bila belum ada harga.
+                            Text(
+                                if (m.sellPrice > 0) formatIDR(m.sellPrice) else tr("Belum ada harga", "No price yet"),
+                                style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
+                                color = if (m.sellPrice > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
+                                textAlign = TextAlign.End
+                            )
                         }
                     }
                 }

@@ -347,18 +347,19 @@ object ExcelHelper {
                 fun colOf(vararg aliases: String): Int? =
                     aliases.firstNotNullOfOrNull { colIndex[it] }
                 val nameCol = colOf("nama obat") ?: 0
-                val catCol = colOf("kategori")
+                val catCol = colOf("kategori", "golongan")
                 val unitCol = colOf("satuan")
                 val sellCol = colOf("harga jual", "harga jual ecer")
                 val grosirCol = colOf("harga jual grosir", "harga grosir")
                 val beliCol = colOf("harga beli")
                 val stockCol = colOf("stok")
                 val expiryCol = colOf("tanggal kadaluarsa", "kadaluarsa (yyyy-mm-dd)", "kadaluarsa")
+                val barcodeCol = colOf("barcode")
                 fun textAt(row: Row, colIdx: Int): String {
                     val cell = row.getCell(colIdx) ?: return ""
                     return formatter.formatCellValue(cell).trim()
                 }
-                val knownCols = listOfNotNull(nameCol, catCol, unitCol, sellCol, grosirCol, beliCol, stockCol, expiryCol)
+                val knownCols = listOfNotNull(nameCol, catCol, unitCol, sellCol, grosirCol, beliCol, stockCol, expiryCol, barcodeCol)
                 for (rowIdx in (headerRowIdx + 1)..sheet.lastRowNum) {
                     val row = sheet.getRow(rowIdx) ?: continue
                     val name = textAt(row, nameCol)
@@ -390,7 +391,8 @@ object ExcelHelper {
                         skipped.add(row.rowNum + 1)
                         continue
                     }
-                    items.add(MedicineArgs(name, category, unit, sell, stock, expiry, wholesalePrice = grosir, buyPrice = beli))
+                    val barcode = barcodeCol?.let { textAt(row, it) }.orEmpty().ifBlank { null }
+                    items.add(MedicineArgs(name, category, unit, sell, stock, expiry, barcode = barcode, wholesalePrice = grosir, buyPrice = beli))
                 }
             } finally {
                 wb.close()

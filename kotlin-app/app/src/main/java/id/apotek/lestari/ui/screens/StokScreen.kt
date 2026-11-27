@@ -140,7 +140,7 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                     val r = response.data
                     importSummary = buildString {
                         append(tr("${r.inserted} obat baru ditambahkan, ${r.updated} diperbarui", "${r.inserted} new medicines added, ${r.updated} updated"))
-                        if (r.skipped > 0) append(tr(", ${r.skipped} baris dilewati (nama kosong)", ", ${r.skipped} rows skipped (empty name)"))
+                        if (r.skipped > 0) append(tr(", ${r.skipped} baris dilewati (data tidak valid)", ", ${r.skipped} rows skipped (invalid data)"))
                         if (parsed.skippedRows.isNotEmpty()) append(tr("\nBaris dilewati: ${parsed.skippedRows.joinToString(", ")}", "\nRows skipped: ${parsed.skippedRows.joinToString(", ")}"))
                         append(tr("\nTotal baris diproses: ${r.total}", "\nTotal rows processed: ${r.total}"))
                     }
@@ -460,7 +460,7 @@ fun StokScreen(cariAwal: String = "", cariNonce: Int = 0) {
                         )
                         Spacer(Modifier.height(SpaceXS))
                         Text(
-                            "${m.category} • ${m.unit} • ${formatIDR(m.sellPrice)}",
+                            "${m.category} • ${m.unit} • ${if (m.sellPrice > 0) formatIDR(m.sellPrice) else tr("Belum ada harga", "No price yet")}",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
@@ -628,7 +628,7 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
     LaunchedEffect(expiryInteraction) {
         expiryInteraction.interactions.collect { if (it is PressInteraction.Press && !noExpiry) showDatePicker = true }
     }
-    var sell by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.sellPrice?.toString() ?: ""))) }
+    var sell by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.sellPrice?.takeIf { it > 0 }?.toString() ?: ""))) }
     // Harga jual grosir: boleh kosong (= belum diatur, nilai 0); ditampilkan
     // kosong bila 0 supaya tidak tertukar dengan harga beneran.
     var grosir by remember(editing) { mutableStateOf(TextFieldValue(formatDecimal(editing?.wholesalePrice?.takeIf { it > 0 }?.toString() ?: ""))) }
@@ -762,7 +762,7 @@ fun MedicineFormDialog(editing: Medicine?, onDismiss: () -> Unit, onSaved: () ->
                             }
                         }
                     },
-                    enabled = name.isNotBlank() && parseDecimal(sell.text) > 0,
+                    enabled = name.isNotBlank(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.weight(1f).height(52.dp)

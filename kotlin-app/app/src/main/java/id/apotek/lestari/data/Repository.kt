@@ -231,7 +231,7 @@ class Repository {
 
     suspend fun createMedicine(args: MedicineArgs): ApiResult<IdResponse> = call {
         if (args.name.isBlank()) throw IllegalArgumentException(tr("Nama obat tidak boleh kosong", "Medicine name must not be empty"))
-        if (args.sellPrice <= 0) throw IllegalArgumentException(tr("Harga jual harus lebih dari 0", "Sell price must be more than 0"))
+        if (args.sellPrice < 0) throw IllegalArgumentException(tr("Harga jual tidak boleh negatif", "Sell price must not be negative"))
         // R52 (audit 2026-11-15): stok/harga grosir negatif tidak pernah
         // valid — tolak di sini supaya tidak masuk lewat jalur tulis mana pun.
         if (args.stock < 0) throw IllegalArgumentException(tr("Stok tidak boleh negatif", "Stock must not be negative"))
@@ -276,7 +276,7 @@ class Repository {
 
     suspend fun updateMedicine(args: UpdateMedicineArgs): ApiResult<OkResponse> = call {
         if (args.name.isBlank()) throw IllegalArgumentException(tr("Nama obat tidak boleh kosong", "Medicine name must not be empty"))
-        if (args.sellPrice <= 0) throw IllegalArgumentException(tr("Harga jual harus lebih dari 0", "Sell price must be more than 0"))
+        if (args.sellPrice < 0) throw IllegalArgumentException(tr("Harga jual tidak boleh negatif", "Sell price must not be negative"))
         // R52 (audit 2026-11-15): lihat createMedicine.
         if (args.stock < 0) throw IllegalArgumentException(tr("Stok tidak boleh negatif", "Stock must not be negative"))
         if (args.wholesalePrice < 0) throw IllegalArgumentException(tr("Harga grosir tidak boleh negatif", "Wholesale price must not be negative"))
@@ -329,7 +329,7 @@ class Repository {
                     skipped++
                     continue
                 }
-                if (item.sellPrice <= 0) {
+                if (item.sellPrice < 0) {
                     skipped++
                     continue
                 }
@@ -358,7 +358,7 @@ class Repository {
                     dao.update(
                         existing.copy(
                             name = item.name, category = item.category, unit = item.unit,
-                            sellPrice = item.sellPrice,
+                            sellPrice = if (item.sellPrice > 0) item.sellPrice else existing.sellPrice,
                             // Harga grosir dari file dipakai bila terisi (> 0);
                             // file lama tanpa kolom itu / sel kosong TIDAK
                             // menghapus harga grosir yang sudah tersimpan.
@@ -435,6 +435,7 @@ class Repository {
             // Jenisnya disimpan juga (priceType) untuk keterangan di invoice.
             val wholesale = item.useWholesale && med.wholesalePrice > 0
             val unitPrice = if (wholesale) med.wholesalePrice else med.sellPrice
+            if (unitPrice <= 0) throw IllegalArgumentException(tr("Harga jual ${med.name} belum diatur", "Sell price for ${med.name} is not set"))
             // R1 (audit 2026-11-15): kalikan sebagai Long supaya harga x qty
             // tidak meluber diam-diam menjadi negatif.
             val subtotal = unitPrice.toLong() * item.qty

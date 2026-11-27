@@ -301,6 +301,45 @@ class MoneyLogicTest {
     }
 
     @Test
+    fun excel_webTemplateWithGolonganAndEmptyPriceStock_parsesCleanly() {
+        val wb = XSSFWorkbook()
+        val sheet = wb.createSheet("Input Stok Obat")
+        sheet.createRow(0).createCell(0).setCellValue("APOTEK LESTARI — TEMPLATE IMPOR STOK OBAT")
+        sheet.createRow(1).createCell(0).setCellValue("Petunjuk pengisian")
+        val headers = listOf(
+            "Nama Obat *", "Golongan", "Jenis Obat", "Satuan",
+            "Harga Beli *", "Harga Jual Ecer *", "Harga Grosir", "Stok *",
+            "Kadaluarsa (YYYY-MM-DD)", "Barcode"
+        )
+        val headerRow = sheet.createRow(3)
+        headers.forEachIndexed { i, h -> headerRow.createCell(i).setCellValue(h) }
+        val row = sheet.createRow(4)
+        row.createCell(0).setCellValue("Acarbose 100 Mg")
+        row.createCell(1).setCellValue("Obat Keras")
+        row.createCell(2).setCellValue("Kardiovaskular")
+        row.createCell(3).setCellValue("Strip")
+        row.createCell(9).setCellValue("89900123")
+
+        val out = ByteArrayOutputStream()
+        wb.write(out)
+        wb.close()
+
+        val parsed = ExcelHelper.parseImport(out.toByteArray())
+        assertEquals(1, parsed.items.size)
+        assertTrue(parsed.skippedRows.isEmpty())
+        val item = parsed.items[0]
+        assertEquals("Acarbose 100 Mg", item.name)
+        assertEquals("Obat Keras", item.category)
+        assertEquals("Strip", item.unit)
+        assertEquals(0, item.buyPrice)
+        assertEquals(0, item.sellPrice)
+        assertEquals(0, item.wholesalePrice)
+        assertEquals(0, item.stock)
+        assertNull(item.expiryDate)
+        assertEquals("89900123", item.barcode)
+    }
+
+    @Test
     fun excel_export_writesFormattedNumbersAndRealDates() {
         // X3: harga/stok pakai format #,##0, kadaluarsa sel tanggal asli.
         val wb = WorkbookFactory.create(ByteArrayInputStream(ExcelHelper.exportBytes(sampleMedicines())))
