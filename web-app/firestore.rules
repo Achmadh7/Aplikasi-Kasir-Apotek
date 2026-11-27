@@ -53,7 +53,27 @@ service cloud.firestore {
 
     match /apotek/main/{col}/{docId} {
       allow read: if col.matches('web_.*') && isAuthorized();
-      allow create, update: if col.matches('web_.*') && col != 'web_meta' && isAuthorized();
+      allow create: if col.matches('web_.*') && col != 'web_meta' && (
+        isOwner()
+        || (
+          isAuthorized()
+          && (
+            !(col in ['web_penjualan', 'web_penjualan_item', 'web_kas'])
+            || request.resource.data.terhapus == false
+          )
+        )
+      );
+      allow update: if col.matches('web_.*') && col != 'web_meta' && (
+        isOwner()
+        || (
+          isAuthorized()
+          && !(col in ['web_penjualan', 'web_penjualan_item'])
+          && (
+            col != 'web_kas'
+            || (resource.data.source != 'sale' && request.resource.data.source != 'sale')
+          )
+        )
+      );
       allow write: if col == 'web_meta' && isOwner();
       allow delete: if col.matches('web_.*') && isOwner();
     }

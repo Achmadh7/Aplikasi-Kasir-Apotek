@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { useFeedback } from './Feedback';
 import { exportRowsToXlsx } from '../excel';
@@ -6,6 +6,7 @@ import {
   UNITS,
   Sale,
   SaleItem,
+  Purchase,
   PurchaseItem,
   formatIDR,
   jakartaDayStartMillis,
@@ -24,6 +25,7 @@ import { AnimatedNumber } from './AnimatedNumber';
 import { useProgressiveList, ListPaginationFooter } from './ProgressiveList';
 import {
   Plus,
+  Pencil,
   Trash2,
   Printer,
   Download,
@@ -35,6 +37,7 @@ import {
   Calendar,
   ArrowDownLeft,
   ArrowUpRight,
+  X,
 } from 'lucide-react';
 
 const ACTIVE_PILL_CLS = 'bg-[#15803D] text-white border-[#15803D]';
@@ -780,6 +783,7 @@ export const PbfScreen: React.FC = () => {
     purchaseItems,
     suppliers,
     createPurchase,
+    updatePurchase,
     markPurchasePaid,
     deletePurchase,
     saveSupplier,
@@ -794,6 +798,28 @@ export const PbfScreen: React.FC = () => {
   const [paymentType, setPaymentType] = useState<'CASH' | 'KREDIT'>('CASH');
   const [dueDate, setDueDate] = useState('');
   const [ppn, setPpn] = useState('');
+
+  // Dedicated Edit Modal state (matches StokScreen Edit Modal — instant popup on click)
+  const [editTarget, setEditTarget] = useState<Purchase | null>(null);
+  const [editPbfName, setEditPbfName] = useState('');
+  const [editInvoiceNo, setEditInvoiceNo] = useState('');
+  const [editDate, setEditDate] = useState(dayKeyID());
+  const [editPaymentType, setEditPaymentType] = useState<'CASH' | 'KREDIT'>('CASH');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editPpn, setEditPpn] = useState('');
+  const [editItems, setEditItems] = useState<
+    Array<{ medicineName: string; qty: string; unit: string; buyPrice: string }>
+  >([{ medicineName: '', qty: '1', unit: 'Box', buyPrice: '' }]);
+
+  useEffect(() => {
+    if (!editTarget) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setEditTarget(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [editTarget]);
+
   const purchasesPager = useProgressiveList(purchases, { initial: 30, step: 30, resetKey: tab });
   const suppliersPager = useProgressiveList(suppliers, { initial: 50, step: 50, resetKey: tab });
   const itemsByPurchase = useMemo(() => {
@@ -811,6 +837,32 @@ export const PbfScreen: React.FC = () => {
 
   const [supName, setSupName] = useState('');
   const [supContact, setSupContact] = useState('');
+
+  const normalizeDateInput = (raw?: string | null) => {
+    const s = (raw || '').trim().slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : dayKeyID();
+  };
+
+  const startEditPurchase = (p: Purchase) => {
+    const pItems = itemsByPurchase.get(p.id) || [];
+    setEditTarget(p);
+    setEditPbfName(p.pbfName || '');
+    setEditInvoiceNo(p.invoiceNo || '');
+    setEditDate(normalizeDateInput(p.date));
+    setEditPaymentType(p.paymentType === 'KREDIT' ? 'KREDIT' : 'CASH');
+    setEditDueDate(p.dueDate ? p.dueDate.trim().slice(0, 10) : '');
+    setEditPpn((p.ppn || 0) > 0 ? formatThousandID(String(p.ppn)) : '');
+    setEditItems(
+      pItems.length > 0
+        ? pItems.map((it) => ({
+            medicineName: it.medicineName || '',
+            qty: String(it.qty || 1),
+            unit: it.unit || 'Box',
+            buyPrice: formatThousandID(String(it.buyPrice || 0)),
+          }))
+        : [{ medicineName: '', qty: '1', unit: 'Box', buyPrice: '' }]
+    );
+  };
 
   const handleSavePurchase = (e: React.FormEvent) => {
     e.preventDefault();
@@ -831,6 +883,9 @@ export const PbfScreen: React.FC = () => {
       });
       setPbfName('');
       setInvoiceNo('');
+      setDate(dayKeyID());
+      setPaymentType('CASH');
+      setDueDate('');
       setPpn('');
       setItems([{ medicineName: '', qty: '1', unit: 'Box', buyPrice: '' }]);
       notify('Faktur PBF tersimpan', 'success');
@@ -838,6 +893,39 @@ export const PbfScreen: React.FC = () => {
       notify(err.message, 'error');
     }
   };
+
+  const handleSaveEditPurchase = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    try {
+      updatePurchase(editTarget.id, {
+        pbfName: editPbfName,
+        invoiceNo: editInvoiceNo,
+        date: editDate,
+        ppn: parseThousandID(editPpn),
+        paymentType: editPaymentType,
+        dueDate: editDueDate,
+        items: editItems.map((it) => ({
+          medicineName: it.medicineName,
+          qty: parseInt(it.qty, 10) || 0,
+          unit: it.unit,
+          buyPrice: parseThousandID(it.buyPrice),
+        })),
+      });
+      setEditTarget(null);
+      notify('Faktur PBF diperbarui', 'success');
+    } catch (err: any) {
+      notify(err.message, 'error');
+    }
+  };
+
+  const editPreviewTotal = useMemo(() => {
+    const sub = editItems.reduce(
+      (sum, it) => sum + (parseInt(it.qty, 10) || 0) * parseThousandID(it.buyPrice),
+      0
+    );
+    return sub + parseThousandID(editPpn);
+  }, [editItems, editPpn]);
 
   return (
     <div className="space-y-5">
@@ -1128,7 +1216,7 @@ export const PbfScreen: React.FC = () => {
                         ))}
                       </div>
 
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-wrap justify-end gap-2">
                         {p.paymentType === 'KREDIT' && (
                           <button
                             type="button"
@@ -1147,12 +1235,20 @@ export const PbfScreen: React.FC = () => {
                         )}
                         <button
                           type="button"
+                          onClick={() => startEditPurchase(p)}
+                          className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#DCEBE2] hover:bg-[#D0E3D8] border border-[#B7D6C3] text-[#1C1917] text-xs font-bold flex items-center gap-1.5 transition"
+                        >
+                          <Pencil className="w-3.5 h-3.5" aria-hidden="true" /> Edit
+                        </button>
+                        <button
+                          type="button"
                           onClick={() =>
                             askConfirm(
                               `Hapus faktur ${p.pbfName}?`,
                               () => {
                                 try {
                                   deletePurchase(p.id);
+                                  if (editTarget?.id === p.id) setEditTarget(null);
                                   notify(`Faktur ${p.pbfName} dihapus`, 'info');
                                 } catch (err: any) {
                                   notify(err.message, 'error');
@@ -1274,6 +1370,259 @@ export const PbfScreen: React.FC = () => {
               </>
             )}
           </div>
+        </div>
+      )}
+
+      {editTarget && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pbf-edit-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditTarget(null);
+          }}
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+        >
+          <form
+            onSubmit={handleSaveEditPurchase}
+            className="w-full max-w-2xl max-h-[90dvh] overflow-y-auto overscroll-contain rounded-3xl bg-[#E8F2EC] border border-[#B7D6C3] p-5 sm:p-6 space-y-4 text-sm shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-2 pb-3 border-b border-[#B7D6C3]">
+              <div>
+                <h3 id="pbf-edit-modal-title" className="text-lg font-extrabold text-[#1C1917]">
+                  Edit Faktur PBF
+                </h3>
+                <p className="text-xs text-[#57534E]">
+                  Tambah obat yang terlewat atau perbaiki jumlah, harga, dan info faktur.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditTarget(null)}
+                aria-label="Tutup modal edit faktur"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-black/5 text-[#1C1917]"
+              >
+                <X className="w-5 h-5" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="min-w-0">
+                <label htmlFor="edit-pbf-name" className="block text-xs font-bold text-[#1C1917] mb-1">
+                  Nama PBF (Supplier) *
+                </label>
+                <select
+                  id="edit-pbf-name"
+                  required
+                  value={editPbfName}
+                  onChange={(e) => setEditPbfName(e.target.value)}
+                  className="w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
+                >
+                  <option value="">Pilih nama supplier...</option>
+                  {editPbfName && !suppliers.some((s) => s.name === editPbfName) && (
+                    <option value={editPbfName}>{editPbfName}</option>
+                  )}
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="min-w-0">
+                <label htmlFor="edit-pbf-invoice" className="block text-xs font-bold text-[#1C1917] mb-1">
+                  No. Faktur
+                </label>
+                <input
+                  id="edit-pbf-invoice"
+                  value={editInvoiceNo}
+                  onChange={(e) => setEditInvoiceNo(e.target.value)}
+                  placeholder="Opsional"
+                  className="w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="min-w-0">
+                <label htmlFor="edit-pbf-date" className="block text-xs font-bold text-[#1C1917] mb-1">
+                  Tgl Beli *
+                </label>
+                <input
+                  id="edit-pbf-date"
+                  required
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
+                />
+              </div>
+              <div className="min-w-0">
+                <label htmlFor="edit-pbf-payment" className="block text-xs font-bold text-[#1C1917] mb-1">
+                  Pembayaran
+                </label>
+                <select
+                  id="edit-pbf-payment"
+                  value={editPaymentType}
+                  onChange={(e) => setEditPaymentType(e.target.value as 'CASH' | 'KREDIT')}
+                  className="w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
+                >
+                  <option value="CASH">TUNAI (CASH)</option>
+                  <option value="KREDIT">KREDIT (TEMPO)</option>
+                </select>
+              </div>
+              <div className={`min-w-0 ${editPaymentType !== 'KREDIT' ? 'sm:col-span-2' : ''}`}>
+                <label htmlFor="edit-pbf-ppn" className="block text-xs font-bold text-[#1C1917] mb-1">
+                  PPN (Rp)
+                </label>
+                <input
+                  id="edit-pbf-ppn"
+                  type="text"
+                  inputMode="numeric"
+                  value={editPpn}
+                  onChange={(e) => setEditPpn(formatThousandID(e.target.value))}
+                  placeholder="0"
+                  className="w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
+                />
+              </div>
+              {editPaymentType === 'KREDIT' && (
+                <div className="min-w-0">
+                  <label htmlFor="edit-pbf-due" className="block text-xs font-bold text-[#1C1917] mb-1">
+                    Tgl Jatuh Tempo Kredit
+                  </label>
+                  <input
+                    id="edit-pbf-due"
+                    type="date"
+                    value={editDueDate}
+                    onChange={(e) => setEditDueDate(e.target.value)}
+                    className="w-full min-w-0 min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917]"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#1C1917]">Daftar Obat Dibeli</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditItems([
+                      ...editItems,
+                      { medicineName: '', qty: '1', unit: 'Box', buyPrice: '' },
+                    ])
+                  }
+                  className="min-h-[44px] px-2 -mr-2 text-xs font-bold text-[#166534] hover:underline"
+                >
+                  + Tambah Baris
+                </button>
+              </div>
+              {editItems.map((it, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-1.5 items-center">
+                  <input
+                    required
+                    aria-label={`Edit nama obat baris ${idx + 1}`}
+                    placeholder="Nama obat"
+                    value={it.medicineName}
+                    onChange={(e) =>
+                      setEditItems(
+                        editItems.map((x, i) =>
+                          i === idx ? { ...x, medicineName: e.target.value } : x
+                        )
+                      )
+                    }
+                    className="col-span-12 sm:col-span-4 min-h-[44px] px-2.5 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-xs text-[#1C1917] placeholder:text-[#57534E]"
+                  />
+                  <input
+                    required
+                    aria-label={`Edit jumlah baris ${idx + 1}`}
+                    type="number"
+                    min="1"
+                    placeholder="Qty"
+                    value={it.qty}
+                    onChange={(e) =>
+                      setEditItems(
+                        editItems.map((x, i) =>
+                          i === idx ? { ...x, qty: e.target.value } : x
+                        )
+                      )
+                    }
+                    className="col-span-3 sm:col-span-2 min-h-[44px] px-2 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-xs text-[#1C1917]"
+                  />
+                  <select
+                    aria-label={`Edit satuan baris ${idx + 1}`}
+                    value={it.unit}
+                    onChange={(e) =>
+                      setEditItems(
+                        editItems.map((x, i) =>
+                          i === idx ? { ...x, unit: e.target.value } : x
+                        )
+                      )
+                    }
+                    className="col-span-4 sm:col-span-2 min-h-[44px] px-2 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-xs text-[#1C1917]"
+                  >
+                    {!UNITS.includes(it.unit) && <option value={it.unit}>{it.unit}</option>}
+                    {UNITS.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    required
+                    aria-label={`Edit harga beli baris ${idx + 1}`}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Harga"
+                    value={it.buyPrice}
+                    onChange={(e) =>
+                      setEditItems(
+                        editItems.map((x, i) =>
+                          i === idx
+                            ? { ...x, buyPrice: formatThousandID(e.target.value) }
+                            : x
+                        )
+                      )
+                    }
+                    className={`${editItems.length > 1 ? 'col-span-3 sm:col-span-3' : 'col-span-5 sm:col-span-4'} min-h-[44px] px-2.5 py-2 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-xs text-[#1C1917] placeholder:text-[#57534E]`}
+                  />
+                  {editItems.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setEditItems(editItems.filter((_, i) => i !== idx))}
+                      aria-label={`Hapus baris obat edit ${idx + 1}`}
+                      className="col-span-2 sm:col-span-1 min-w-[44px] min-h-[44px] text-[#BA1A1A] flex items-center justify-center rounded-xl hover:bg-red-500/10"
+                    >
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-[#B7D6C3]">
+              <span className="text-xs font-bold text-[#57534E]">Total Faktur</span>
+              <span className="text-base font-extrabold text-[#166534]">
+                {formatIDR(editPreviewTotal)}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setEditTarget(null)}
+                className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[#DCEBE2] hover:bg-[#D0E3D8] border border-[#B7D6C3] text-[#1C1917] font-bold transition"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white font-bold transition"
+              >
+                Simpan Perubahan
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
@@ -1724,6 +2073,7 @@ export const RiwayatScreen: React.FC = () => {
 // ============================================================================
 export const BackupAndTutupBukuScreen: React.FC = () => {
   const {
+    currentRole,
     closedMonths,
     tutupBulan,
     bukaBulan,
@@ -1731,6 +2081,7 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
     importBackupJson,
     resetAllData,
   } = useStore();
+  const isOwner = currentRole === 'owner';
   const { notify, askConfirm } = useFeedback();
   const [msg, setMsg] = useState<string | null>(null);
   const pastMonths = useMemo(() => getPastMonthsList(12), []);
@@ -1801,40 +2152,48 @@ export const BackupAndTutupBukuScreen: React.FC = () => {
             >
               <Download className="w-4 h-4" aria-hidden="true" /> Unduh Backup (.json)
             </button>
-            <label className="min-h-[44px] cursor-pointer px-4 py-2.5 rounded-xl bg-[#DCEBE2] hover:bg-[#D0E3D8] border border-[#B7D6C3] text-[#1C1917] text-xs font-bold flex items-center gap-2 transition">
-              <Upload className="w-4 h-4" aria-hidden="true" /> Restore dari File (.json)
-              <input
-                type="file"
-                accept="application/json,.json"
-                onChange={handleRestoreFile}
-                className="hidden"
-              />
-            </label>
+            {isOwner && (
+              <label className="min-h-[44px] cursor-pointer px-4 py-2.5 rounded-xl bg-[#DCEBE2] hover:bg-[#D0E3D8] border border-[#B7D6C3] text-[#1C1917] text-xs font-bold flex items-center gap-2 transition">
+                <Upload className="w-4 h-4" aria-hidden="true" /> Restore dari File (.json)
+                <input
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={handleRestoreFile}
+                  className="hidden"
+                />
+              </label>
+            )}
           </div>
 
-          <div className="pt-4 border-t border-[#B7D6C3]">
-            <button
-              type="button"
-              onClick={() =>
-                askConfirm(
-                  'PERINGATAN: Hapus SEMUA data lokal dan cloud secara permanen?',
-                  async () => {
-                    try {
-                      await resetAllData();
-                      setMsg('Semua data telah direset.');
-                      notify('Semua data telah direset', 'info');
-                    } catch (err: any) {
-                      notify(err?.message || 'Gagal mereset data', 'error');
-                    }
-                  },
-                  { title: 'Reset Semua Data', danger: true, confirmLabel: 'Reset Permanen' }
-                )
-              }
-              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#FEE2E2] hover:bg-[#FECACA] text-[#BA1A1A] text-xs font-bold transition"
-            >
-              Reset Semua Data
-            </button>
-          </div>
+          {isOwner ? (
+            <div className="pt-4 border-t border-[#B7D6C3]">
+              <button
+                type="button"
+                onClick={() =>
+                  askConfirm(
+                    'PERINGATAN: Hapus SEMUA data lokal dan cloud secara permanen?',
+                    async () => {
+                      try {
+                        await resetAllData();
+                        setMsg('Semua data telah direset.');
+                        notify('Semua data telah direset', 'info');
+                      } catch (err: any) {
+                        notify(err?.message || 'Gagal mereset data', 'error');
+                      }
+                    },
+                    { title: 'Reset Semua Data', danger: true, confirmLabel: 'Reset Permanen' }
+                  )
+                }
+                className="min-h-[44px] px-4 py-2 rounded-xl bg-[#FEE2E2] hover:bg-[#FECACA] text-[#BA1A1A] text-xs font-bold transition"
+              >
+                Reset Semua Data
+              </button>
+            </div>
+          ) : (
+            <p className="text-[11px] text-[#57534E] pt-2 border-t border-[#B7D6C3]">
+              Restore backup dan Reset Semua Data hanya tersedia untuk akun Owner.
+            </p>
+          )}
         </div>
 
         {/* Tutup Buku Bulanan */}

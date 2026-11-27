@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
 import { parseAndValidateBackupJson } from '../src/backup.ts';
+import { sanitizeExcelCellValue } from '../src/excel.ts';
 import {
   DELTA_OVERLAP_MS,
   applyCloudResetEpoch,
@@ -397,4 +400,30 @@ test('mergeMedicineDeltaRows applies newer remote stock and ignores self-echo or
   assert.notEqual(updated, db);
   assert.equal(updated.medicines[0].stock, 7);
   assert.equal(updated.medicines[0].updatedAt, 6000);
+});
+
+test('root and web-app firestore.rules stay identical and protect sales & sale cash from kasir updates', () => {
+  const webRules = fs.readFileSync(path.resolve('firestore.rules'), 'utf8');
+  const rootRules = fs.readFileSync(path.resolve('..', 'firestore.rules'), 'utf8');
+  assert.equal(webRules, rootRules);
+  assert.match(webRules, /!\(col in \['web_penjualan', 'web_penjualan_item'\]\)/);
+  assert.match(webRules, /resource\.data\.source != 'sale' && request\.resource\.data\.source != 'sale'/);
+  assert.match(webRules, /request\.resource\.data\.terhapus == false/);
+});
+
+test('sanitizeExcelCellValue escapes formula prefixes and firebase.json defines security headers', () => {
+  assert.equal(sanitizeExcelCellValue('=CMD|"/C calc"!A0'), '\'=CMD|"/C calc"!A0');
+  assert.equal(sanitizeExcelCellValue('+1+1'), '\'+1+1');
+  assert.equal(sanitizeExcelCellValue('-2+3'), '\'-2+3');
+  assert.equal(sanitizeExcelCellValue('@SUM(A1:A2)'), '\'@SUM(A1:A2)');
+  assert.equal(sanitizeExcelCellValue('Paracetamol 500mg'), 'Paracetamol 500mg');
+  assert.equal(sanitizeExcelCellValue(-5000), -5000);
+
+  const fb = JSON.parse(fs.readFileSync(path.resolve('firebase.json'), 'utf8'));
+  const globalRule = fb.hosting.headers.find((h) => h.source === '**');
+  assert.ok(globalRule);
+  const headerMap = Object.fromEntries(globalRule.headers.map((h) => [h.key, h.value]));
+  assert.equal(headerMap['X-Content-Type-Options'], 'nosniff');
+  assert.equal(headerMap['X-Frame-Options'], 'DENY');
+  assert.equal(headerMap['Referrer-Policy'], 'strict-origin-when-cross-origin');
 });

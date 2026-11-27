@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { StoreProvider, useStore } from './store';
-import { loginWithGoogle, logoutFirebase } from './firebase';
+import { loginWithGoogle } from './firebase';
 import { daysUntilExpiry } from './types';
 import { FeedbackProvider, useFeedback } from './components/Feedback';
 import { AppBootSkeleton, PageSkeleton } from './components/Skeleton';
@@ -70,7 +70,7 @@ const NAV_ITEMS = [
 const NAV_GROUPS = ['Harian', 'Stok & Keuangan', 'Pengaturan'] as const;
 
 const MainLayout: React.FC = () => {
-  const { user, authLoading, authError: storeAuthError, clearAuthError, currentRole, syncStatus, syncSilent, syncMessage, autoSync, setAutoSync, medicines, purchases } = useStore();
+  const { user, authLoading, authError: storeAuthError, clearAuthError, currentRole, syncStatus, syncSilent, syncMessage, autoSync, setAutoSync, medicines, purchases, logoutAndClear } = useStore();
   const { notify, dismissByKey } = useFeedback();
   const [activeTab, setActiveTab] = useState('beranda');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -383,7 +383,7 @@ const MainLayout: React.FC = () => {
             type="button"
             onClick={() => {
               setAccountMenuOpen(false);
-              void logoutFirebase();
+              void logoutAndClear();
             }}
             className="mt-2 w-full min-h-[44px] flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-semibold text-[#DC2626] hover:bg-red-50 transition cursor-pointer"
           >

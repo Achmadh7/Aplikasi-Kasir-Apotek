@@ -6,6 +6,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  reauthenticateWithPopup,
   signOut as fbSignOut,
   onAuthStateChanged,
   User,
@@ -109,6 +110,14 @@ function writeAuthorityCache(cfg: AuthorityConfig) {
     localStorage.setItem(AUTHORITY_CACHE_KEY, JSON.stringify(cfg));
   } catch {
     // ignore storage quota errors
+  }
+}
+
+export function clearAuthorityCache() {
+  try {
+    localStorage.removeItem(AUTHORITY_CACHE_KEY);
+  } catch {
+    // ignore storage errors
   }
 }
 
@@ -218,6 +227,14 @@ export async function loginWithGoogle(): Promise<User> {
   return res.user;
 }
 
+export async function reauthenticateOwnerWithGoogle(): Promise<void> {
+  const cur = auth.currentUser;
+  if (!cur) {
+    throw new Error('Sesi login tidak ditemukan. Silakan masuk ulang.');
+  }
+  await reauthenticateWithPopup(cur, googleProvider);
+}
+
 export type PinAlgo = 'pbkdf2-sha256-100k' | 'sha256-v1';
 
 export interface AuthorityPinConfig {
@@ -316,13 +333,22 @@ export async function saveAuthorityPin(pin: string): Promise<AuthorityPinConfig>
   return { pinHash, pinSalt, algo: 'pbkdf2-sha256-100k' };
 }
 
+function timingSafeEqualStr(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 export async function verifyAuthorityPin(pin: string, config: AuthorityPinConfig): Promise<boolean> {
   if (!/^\d{4,6}$/.test(pin)) return false;
   const candidate =
     config.algo === 'sha256-v1'
       ? await hashPinLegacySha256(pin, config.pinSalt)
       : await hashPinPbkdf2(pin, config.pinSalt);
-  return candidate === config.pinHash;
+  return timingSafeEqualStr(candidate, config.pinHash);
 }
 
 export async function logoutFirebase(): Promise<void> {

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocalShipping
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
@@ -71,6 +73,7 @@ fun PbfScreen() {
     // muat faktur diam-diam menampilkan ringkasan 0.
     var loadError by remember { mutableStateOf<String?>(null) }
     var showForm by remember { mutableStateOf(false) }
+    var editTarget by remember { mutableStateOf<Purchase?>(null) }
     var deleteTarget by remember { mutableStateOf<Purchase?>(null) }
     var paidTarget by remember { mutableStateOf<Purchase?>(null) }
     var dueTarget by remember { mutableStateOf<Purchase?>(null) }
@@ -387,6 +390,18 @@ fun PbfScreen() {
                                         }
                                     }
                                 }
+                                // Tombol Edit faktur PBF: memungkinkan menambah obat
+                                // yang terlewat atau memperbaiki harga/jumlah/PPN.
+                                OutlinedButton(
+                                    onClick = { editTarget = p },
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                                ) {
+                                    Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(tr("Edit Faktur", "Edit Invoice"))
+                                }
+                                Spacer(Modifier.height(SpaceS))
                                 // Hapus gaya H1 (pilihan Achmad 2026-11-18,
                                 // revamp tombol Hapus): tombol merah penuh
                                 // selebar kartu, 48dp, sudut 12dp, teks +
@@ -443,6 +458,18 @@ fun PbfScreen() {
                 showForm = false
                 resumeKey++
                 scope.launch { snackbarHostState.showSnackbar(tr("Pembelian tercatat.", "Purchase recorded.")) }
+            }
+        )
+    }
+
+    editTarget?.let { target ->
+        PurchaseFormSheet(
+            initial = target,
+            onDismiss = { editTarget = null },
+            onSaved = {
+                editTarget = null
+                resumeKey++
+                scope.launch { snackbarHostState.showSnackbar(tr("Faktur PBF diperbarui.", "PBF invoice updated.")) }
             }
         )
     }
@@ -554,14 +581,36 @@ fun PbfScreen() {
 
 
 @Composable
-fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
-    var pbfName by remember { mutableStateOf("") }
-    var invoiceNo by remember { mutableStateOf("") }
-    var ppn by remember { mutableStateOf(TextFieldValue("")) }
-    var paymentType by remember { mutableStateOf("CASH") }
-    var dueDate by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf(dayKeyID(Date())) }
-    var rows by remember { mutableStateOf(listOf(PurchaseItemRow())) }
+fun PurchaseFormSheet(initial: Purchase? = null, onDismiss: () -> Unit, onSaved: () -> Unit) {
+    val isEdit = initial != null
+    var pbfName by remember(initial?.id) { mutableStateOf(initial?.pbfName ?: "") }
+    var invoiceNo by remember(initial?.id) { mutableStateOf(initial?.invoiceNo ?: "") }
+    var ppn by remember(initial?.id) {
+        mutableStateOf(
+            if (initial != null && initial.ppn > 0) {
+                val formatted = formatDecimal(initial.ppn.toString())
+                TextFieldValue(formatted, TextRange(formatted.length))
+            } else TextFieldValue("")
+        )
+    }
+    var paymentType by remember(initial?.id) { mutableStateOf(initial?.paymentType ?: "CASH") }
+    var dueDate by remember(initial?.id) { mutableStateOf(initial?.dueDate ?: "") }
+    var date by remember(initial?.id) { mutableStateOf(initial?.date ?: dayKeyID(Date())) }
+    var rows by remember(initial?.id) {
+        mutableStateOf(
+            if (initial != null && initial.items.isNotEmpty()) {
+                initial.items.map { item ->
+                    val priceFormatted = formatDecimal(item.buyPrice.toString())
+                    PurchaseItemRow().apply {
+                        name = item.medicineName
+                        unit = item.unit.ifBlank { "Strip" }
+                        qty = item.qty.toString()
+                        price = TextFieldValue(priceFormatted, TextRange(priceFormatted.length))
+                    }
+                }
+            } else listOf(PurchaseItemRow())
+        )
+    }
     var activeRow by remember { mutableStateOf<PurchaseItemRow?>(null) }
     var unitPickerRow by remember { mutableStateOf<PurchaseItemRow?>(null) }
     var meds by remember { mutableStateOf<List<Medicine>>(emptyList()) }
@@ -621,7 +670,13 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(SpaceS)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Catat Pembelian PBF", "Record PBF Purchase"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text(
+                    if (isEdit) tr("Edit Pembelian PBF", "Edit PBF Purchase")
+                    else tr("Catat Pembelian PBF", "Record PBF Purchase"),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Tutup", "Close")) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -772,17 +827,16 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 onClick = {
                     scope.launch {
                         formError = ""
-                        val res = repo.createPurchase(
-                            CreatePurchaseArgs(
-                                pbfName = pbfName,
-                                date = date,
-                                items = rows.map { CreatePurchaseItemArgs(it.name, it.qty.toIntOrNull() ?: 0, parseDecimal(it.price.text), it.unit) },
-                                invoiceNo = invoiceNo,
-                                ppn = parseDecimal(ppn.text),
-                                paymentType = paymentType,
-                                dueDate = if (paymentType == "KREDIT") dueDate else ""
-                            )
+                        val payload = CreatePurchaseArgs(
+                            pbfName = pbfName,
+                            date = date,
+                            items = rows.map { CreatePurchaseItemArgs(it.name, it.qty.toIntOrNull() ?: 0, parseDecimal(it.price.text), it.unit) },
+                            invoiceNo = invoiceNo,
+                            ppn = parseDecimal(ppn.text),
+                            paymentType = paymentType,
+                            dueDate = if (paymentType == "KREDIT") dueDate else ""
                         )
+                        val res = if (initial != null) repo.updatePurchase(initial.id, payload) else repo.createPurchase(payload)
                         if (res is ApiResult.Success) onSaved()
                         else formError = (res as? ApiResult.Error)?.message ?: tr("Gagal menyimpan", "Failed to save")
                     }
@@ -790,7 +844,7 @@ fun PurchaseFormSheet(onDismiss: () -> Unit, onSaved: () -> Unit) {
                 enabled = valid,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(52.dp),
                 shape = RoundedCornerShape(28.dp),
-            ) { Text(tr("Simpan", "Save")) }
+            ) { Text(if (isEdit) tr("Simpan Perubahan", "Save Changes") else tr("Simpan", "Save")) }
         }
     }
     if (showDatePicker) {

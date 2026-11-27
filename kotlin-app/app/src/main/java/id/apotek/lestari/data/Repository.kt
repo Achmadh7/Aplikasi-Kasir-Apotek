@@ -989,6 +989,68 @@ class Repository {
         IdResponse(newId)
     }
 
+    suspend fun updatePurchase(id: Int, args: CreatePurchaseArgs): ApiResult<OkResponse> = call {
+        if (args.pbfName.isBlank()) throw IllegalArgumentException(tr("Faktur PBF tidak boleh kosong", "The PBF name must not be empty"))
+        if (args.items.isEmpty()) throw IllegalArgumentException(tr("Isi minimal satu obat yang dibeli", "Add at least one purchased medicine"))
+        args.items.forEach {
+            if (it.medicineName.isBlank()) throw IllegalArgumentException(tr("Nama obat tidak boleh kosong", "Medicine name must not be empty"))
+            if (it.qty <= 0) throw IllegalArgumentException(tr("Jumlah obat harus lebih dari 0", "Quantity must be more than 0"))
+            if (it.buyPrice <= 0) throw IllegalArgumentException(tr("Harga beli harus lebih dari 0", "Buy price must be more than 0"))
+        }
+        if (args.ppn < 0) throw IllegalArgumentException(tr("PPN tidak boleh negatif", "PPN/VAT must not be negative"))
+        if (args.paymentType !in setOf("CASH", "KREDIT")) throw IllegalArgumentException(tr("Jenis pembayaran PBF tidak dikenal: ${args.paymentType}", "Unknown PBF payment type: ${args.paymentType}"))
+        if (!tanggalValid(args.date)) throw IllegalArgumentException(tr("Tanggal beli tidak valid (format yyyy-MM-dd)", "Purchase date is invalid (yyyy-MM-dd format)"))
+        if (args.paymentType == "KREDIT" && args.dueDate.isNotBlank() && !tanggalValid(args.dueDate)) throw IllegalArgumentException(tr("Tanggal jatuh tempo tidak valid (format yyyy-MM-dd)", "Due date is invalid (yyyy-MM-dd format)"))
+
+        val db = DatabaseProvider.db
+        val dao = db.purchaseDao()
+        val ada = dao.getByIdAny(id)?.takeIf { it.terhapus == 0 }
+            ?: throw IllegalStateException(tr("Catatan pembelian tidak ditemukan", "Purchase record not found"))
+        val bulanLama = bulanKeyDariIso(ada.date)
+        if (bulanLama != null && bulanTerkunci(bulanLama))
+            throw IllegalStateException(tr("Bulan $bulanLama sudah ditutup, faktur PBF tidak bisa diubah", "Month $bulanLama is closed, PBF invoices cannot be edited"))
+        val bulanBaru = bulanKeyDariIso(args.date)
+        if (bulanBaru != null && bulanTerkunci(bulanBaru))
+            throw IllegalArgumentException(tr("Bulan $bulanBaru sudah ditutup, tanggal faktur tidak bisa dipindahkan ke bulan tersebut", "Month $bulanBaru is closed, invoice date cannot be moved into it"))
+
+        val total = args.items.sumOf { it.qty.toLong() * it.buyPrice } + args.ppn
+        if (total > Int.MAX_VALUE) throw IllegalArgumentException(tr("Total pembelian terlalu besar", "The purchase total is too large"))
+
+        db.withTransaction {
+            val cap = maxOf(nowMillis(), ada.updatedAt + 1L)
+            dao.update(
+                ada.copy(
+                    pbfName = args.pbfName.trim(),
+                    invoiceNo = args.invoiceNo.trim(),
+                    date = args.date,
+                    total = total.toInt(),
+                    ppn = args.ppn,
+                    paymentType = args.paymentType,
+                    dueDate = if (args.paymentType == "KREDIT") args.dueDate.trim() else "",
+                    updatedAt = cap,
+                    kotor = 1
+                )
+            )
+            // Soft-delete item lama agar sinkronisasi lintas perangkat men-tombstone
+            // item lama, lalu sisipkan item baru yang sudah diedit.
+            dao.deleteItemsForPurchase(id, cap)
+            dao.insertItems(args.items.map {
+                PurchaseItemEntity(
+                    purchaseId = id,
+                    medicineName = it.medicineName.trim(),
+                    qty = it.qty,
+                    unit = it.unit.ifBlank { "Strip" },
+                    buyPrice = it.buyPrice,
+                    subtotal = (it.qty.toLong() * it.buyPrice).toInt(),
+                    remoteId = genRemoteId("pbfitem"),
+                    updatedAt = cap,
+                    kotor = 1
+                )
+            })
+        }
+        OkResponse(true)
+    }
+
     suspend fun deletePurchase(id: Int): ApiResult<OkResponse> = call {
         val db = DatabaseProvider.db
         val dao = db.purchaseDao()
@@ -1231,6 +1293,15 @@ class Repository {
                 db.closedMonthDao().deleteAll()
             }
         }
+    }
+
+    suspend fun adaDataLokal(): Boolean {
+        val db = DatabaseProvider.db
+        return db.medicineDao().getAll().isNotEmpty() ||
+            db.saleDao().getAll().isNotEmpty() ||
+            db.cashDao().getAll().isNotEmpty() ||
+            db.purchaseDao().getAll().isNotEmpty() ||
+            db.supplierDao().getAll().isNotEmpty()
     }
 
     suspend fun adaDataKotor(): Boolean =

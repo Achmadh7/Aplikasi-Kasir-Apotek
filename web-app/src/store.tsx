@@ -43,10 +43,11 @@ import {
   fetchAuthorityConfig,
   saveAuthorityConfig,
   subscribeAuthorityConfig,
+  clearAuthorityCache,
   isEmailAuthorized,
   normalizeEmail,
 } from './firebase';
-import { idbGet, idbSet } from './idb';
+import { idbDel, idbGet, idbSet } from './idb';
 
 export type SyncStatus = 'NONAKTIF' | 'BELUM_MASUK' | 'PROSES' | 'BERHASIL' | 'GAGAL';
 
@@ -166,6 +167,18 @@ interface StoreContextType {
     dueDate: string;
     items: Array<{ medicineName: string; qty: number; unit: string; buyPrice: number }>;
   }) => void;
+  updatePurchase: (
+    id: number,
+    args: {
+      pbfName: string;
+      invoiceNo: string;
+      date: string;
+      ppn: number;
+      paymentType: 'CASH' | 'KREDIT';
+      dueDate: string;
+      items: Array<{ medicineName: string; qty: number; unit: string; buyPrice: number }>;
+    }
+  ) => void;
   markPurchasePaid: (id: number) => void;
   setPurchaseDueDate: (id: number, dueDate: string) => void;
   deletePurchase: (id: number) => void;
@@ -179,6 +192,7 @@ interface StoreContextType {
   exportBackupJson: () => string;
   importBackupJson: (jsonStr: string) => string;
   resetAllData: () => Promise<void>;
+  logoutAndClear: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | null>(null);
@@ -258,8 +272,34 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, []);
 
+  const wipeLocalSessionData = async () => {
+    dirtyIdbRef.current = false;
+    if (idbSaveTimerRef.current) {
+      window.clearTimeout(idbSaveTimerRef.current);
+      idbSaveTimerRef.current = null;
+    }
+    if (autoSyncTimerRef.current) {
+      window.clearTimeout(autoSyncTimerRef.current);
+      autoSyncTimerRef.current = null;
+    }
+    if (resyncTimerRef.current) {
+      window.clearTimeout(resyncTimerRef.current);
+      resyncTimerRef.current = null;
+    }
+    const clean = emptyDB();
+    dbRef.current = clean;
+    setDbState(clean);
+    clearAuthorityCache();
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore storage errors
+    }
+    await idbDel(STORAGE_KEY).catch(() => {});
+  };
+
   useEffect(() => {
-    if (!idbReady) return;
+    if (!idbReady || !user) return;
     dirtyIdbRef.current = true;
     if (idbSaveTimerRef.current) window.clearTimeout(idbSaveTimerRef.current);
     idbSaveTimerRef.current = window.setTimeout(() => {
@@ -269,11 +309,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.error('Failed saving IndexedDB', e);
       });
     }, 200);
-  }, [dbState, idbReady]);
+  }, [dbState, idbReady, user]);
 
   useEffect(() => {
     const flushIdb = () => {
-      if (!dirtyIdbRef.current) return;
+      if (!dirtyIdbRef.current || !auth.currentUser) return;
       dirtyIdbRef.current = false;
       if (idbSaveTimerRef.current) {
         window.clearTimeout(idbSaveTimerRef.current);
@@ -298,12 +338,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setUser(null);
         setAuthLoading(false);
         setSyncStatus('BELUM_MASUK');
+        await wipeLocalSessionData();
         return;
       }
       setAuthLoading(true);
       const cfg = await fetchAuthorityConfig(true);
       if (!active) return;
       if (!isEmailAuthorized(u.email, cfg.emails)) {
+        await wipeLocalSessionData();
         await logoutFirebase().catch(() => {});
         if (!active) return;
         setUser(null);
@@ -366,7 +408,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setAuthError(
           `Akses dicabut: email ${user.email || '(tanpa email)'} telah dihapus dari kolom Authority.`
         );
-        void logoutFirebase().catch(() => {});
+        void wipeLocalSessionData().finally(() => {
+          void logoutFirebase().catch(() => {});
+        });
       }
     });
     return () => {
@@ -597,8 +641,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         (e) => Boolean(e.purchaseRemoteId) && !isClosedMonth(pbfMonthByRemote.get(e.purchaseRemoteId))
       );
 
-      // 1b) After a local backup restore, tombstone older remote docs missing from backup
-      const replaceAt = snap.pendingCloudReplaceAt || 0;
+      // 1b) After a local backup restore (Owner-only), tombstone older remote docs missing from backup
+      const replaceAt = currentRole === 'owner' ? snap.pendingCloudReplaceAt || 0 : 0;
       if (replaceAt > 0) {
         const replacePairs: Array<[string, Array<{ id: string; data: Record<string, any> }>, Array<{ remoteId: string; terhapus: boolean }>]> = [
           ['obat', remObat, snap.medicines],
@@ -1139,6 +1183,87 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     queueAutoSync();
   };
 
+  const updatePurchase: StoreContextType['updatePurchase'] = (id, args) => {
+    const cur = dbRef.current;
+    const existing = cur.purchases.find((x) => x.id === id && !x.terhapus);
+    if (!existing) throw new Error('Faktur PBF tidak ditemukan');
+    const pbfClean = args.pbfName.trim();
+    if (!pbfClean) throw new Error('Pilih Nama PBF dari daftar Supplier terlebih dahulu');
+    if (args.items.length === 0) throw new Error('Isi minimal satu obat yang dibeli');
+    if ((args.ppn || 0) < 0) throw new Error('PPN tidak boleh negatif');
+
+    const oldMonth = bulanKeyDariIso(existing.date);
+    if (oldMonth && bulanTerkunci(oldMonth)) {
+      throw new Error(`Bulan ${oldMonth} sudah ditutup, faktur PBF tidak bisa diubah`);
+    }
+    const newMonth = bulanKeyDariIso(args.date);
+    if (newMonth && bulanTerkunci(newMonth)) {
+      throw new Error(`Bulan ${newMonth} sudah ditutup, tanggal faktur tidak bisa dipindahkan ke bulan tersebut`);
+    }
+
+    const sameOldSupplier = pbfClean.toLowerCase() === existing.pbfName.trim().toLowerCase();
+    const validSupplier =
+      sameOldSupplier ||
+      cur.suppliers.some(
+        (s) => !s.terhapus && s.name.trim().toLowerCase() === pbfClean.toLowerCase()
+      );
+    if (!validSupplier) {
+      throw new Error('Nama PBF belum terdaftar. Tambahkan supplier terlebih dahulu di menu Supplier.');
+    }
+
+    const now = Math.max(Date.now(), existing.updatedAt + 1);
+    let nextItemId = cur.purchaseItems.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+    const newItems: PurchaseItem[] = args.items.map((it) => {
+      if (!it.medicineName.trim() || it.qty <= 0 || it.buyPrice <= 0) {
+        throw new Error('Nama obat, jumlah, dan harga beli wajib diisi dengan benar');
+      }
+      return {
+        id: nextItemId++,
+        purchaseId: existing.id,
+        purchaseRemoteId: existing.remoteId,
+        remoteId: genRemoteId('pbfitem'),
+        updatedAt: now,
+        terhapus: false,
+        kotor: true,
+        medicineName: it.medicineName.trim(),
+        qty: it.qty,
+        unit: it.unit || 'Box',
+        buyPrice: it.buyPrice,
+        subtotal: it.qty * it.buyPrice,
+      };
+    });
+
+    const total = newItems.reduce((acc, x) => acc + x.subtotal, 0) + (args.ppn || 0);
+    setDbState((prev) => ({
+      ...prev,
+      purchases: prev.purchases.map((x) =>
+        x.id === id
+          ? {
+              ...x,
+              pbfName: pbfClean,
+              invoiceNo: args.invoiceNo.trim(),
+              date: args.date,
+              total,
+              ppn: args.ppn || 0,
+              paymentType: args.paymentType,
+              dueDate: args.paymentType === 'KREDIT' ? args.dueDate.trim() : '',
+              updatedAt: now,
+              kotor: true,
+            }
+          : x
+      ),
+      purchaseItems: [
+        ...prev.purchaseItems.map((it) =>
+          it.purchaseId === id && !it.terhapus
+            ? { ...it, terhapus: true, updatedAt: now, kotor: true }
+            : it
+        ),
+        ...newItems,
+      ],
+    }));
+    queueAutoSync();
+  };
+
   const markPurchasePaid = (id: number) => {
     const p = dbRef.current.purchases.find((x) => x.id === id);
     if (!p) return;
@@ -1283,6 +1408,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const importBackupJson = (jsonStr: string): string => {
+    if (user && currentRole !== 'owner') {
+      throw new Error('Hanya akun Owner yang dapat memulihkan (restore) data backup.');
+    }
     const nowMs = Date.now();
     const parsed = parseAndValidateBackupJson(jsonStr, genRemoteId, nowMs);
     const cur = dbRef.current;
@@ -1322,6 +1450,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     queueAutoSync();
     return `Dipulihkan: ${parsed.medicines.length} obat, ${parsed.sales.length} penjualan, ${parsed.cashEntries.length} kas, ${parsed.purchases.length} faktur PBF.`;
+  };
+
+  const logoutAndClear = async () => {
+    await wipeLocalSessionData();
+    await logoutFirebase();
   };
 
   const resetAllData = async () => {
@@ -1402,6 +1535,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         createCashEntry,
         deleteCashEntry,
         createPurchase,
+        updatePurchase,
         markPurchasePaid,
         setPurchaseDueDate,
         deletePurchase,
@@ -1413,6 +1547,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         exportBackupJson,
         importBackupJson,
         resetAllData,
+        logoutAndClear,
       }}
     >
       {children}

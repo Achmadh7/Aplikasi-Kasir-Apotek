@@ -1,4 +1,4 @@
-const CACHE_NAME = 'apotek-lestari-v1';
+const CACHE_NAME = 'apotek-lestari-v2';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/logo-512.jpg'];
 
 self.addEventListener('install', (event) => {

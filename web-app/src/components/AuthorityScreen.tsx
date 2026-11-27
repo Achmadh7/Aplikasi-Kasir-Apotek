@@ -7,6 +7,7 @@ import {
   AuthorityRole,
   fetchAuthorityPin,
   normalizeEmail,
+  reauthenticateOwnerWithGoogle,
   saveAuthorityPin,
   verifyAuthorityPin,
 } from '../firebase';
@@ -14,7 +15,29 @@ import {
 const UNLOCK_TTL_MS = 5 * 60 * 1000;
 const MAX_FAILED_ATTEMPTS = 5;
 const COOLDOWN_MS = 30 * 1000;
+const PIN_LOCK_STORAGE_KEY = 'apotek_lestari_pin_lock_until';
 const cleanDigits = (value: string) => value.replace(/\D/g, '').slice(0, 6);
+
+function readPersistedLockUntil(): number {
+  try {
+    const raw = Number(sessionStorage.getItem(PIN_LOCK_STORAGE_KEY) || 0);
+    return Number.isFinite(raw) && raw > Date.now() ? raw : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writePersistedLockUntil(until: number) {
+  try {
+    if (until > Date.now()) {
+      sessionStorage.setItem(PIN_LOCK_STORAGE_KEY, String(until));
+    } else {
+      sessionStorage.removeItem(PIN_LOCK_STORAGE_KEY);
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
 
 export const AuthorityScreen: React.FC = () => {
   const {
@@ -41,8 +64,11 @@ export const AuthorityScreen: React.FC = () => {
   const [pinInput, setPinInput] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [failedAttempts, setFailedAttempts] = useState(0);
-  const [lockedUntil, setLockedUntil] = useState(0);
-  const [cooldownSec, setCooldownSec] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState(() => readPersistedLockUntil());
+  const [cooldownSec, setCooldownSec] = useState(() => {
+    const rem = Math.ceil((readPersistedLockUntil() - Date.now()) / 1000);
+    return rem > 0 ? rem : 0;
+  });
 
   const [showChangePin, setShowChangePin] = useState(false);
   const [newPin, setNewPin] = useState('');
@@ -94,6 +120,7 @@ export const AuthorityScreen: React.FC = () => {
       const rem = Math.ceil((lockedUntil - Date.now()) / 1000);
       if (rem <= 0) {
         setLockedUntil(0);
+        writePersistedLockUntil(0);
         setCooldownSec(0);
         setFailedAttempts(0);
       } else {
@@ -118,12 +145,16 @@ export const AuthorityScreen: React.FC = () => {
     }
     setVerifying(true);
     try {
+      if (isResetting) {
+        await reauthenticateOwnerWithGoogle();
+      }
       const saved = await saveAuthorityPin(pinInput);
       setPinConfig(saved);
       setPinInput('');
       setConfirmPin('');
       setFailedAttempts(0);
       setLockedUntil(0);
+      writePersistedLockUntil(0);
       setCooldownSec(0);
       setShowResetPin(false);
       setUnlocked(true);
@@ -154,7 +185,9 @@ export const AuthorityScreen: React.FC = () => {
         const nextFails = failedAttempts + 1;
         setPinInput('');
         if (nextFails >= MAX_FAILED_ATTEMPTS) {
-          setLockedUntil(Date.now() + COOLDOWN_MS);
+          const until = Date.now() + COOLDOWN_MS;
+          setLockedUntil(until);
+          writePersistedLockUntil(until);
           setFailedAttempts(nextFails);
           notify('Terlalu banyak percobaan salah. Tunggu 30 detik.', 'error');
         } else {
@@ -277,7 +310,7 @@ export const AuthorityScreen: React.FC = () => {
               {isSetup
                 ? 'Atur PIN 4 sampai 6 digit untuk mengunci akses menu Authority.'
                 : isResetting
-                  ? 'Masukkan PIN baru 4 sampai 6 digit untuk mengganti PIN lama.'
+                  ? 'Masukkan PIN baru 4 sampai 6 digit. Anda akan diminta verifikasi ulang akun Google Owner.'
                   : 'Masukkan PIN Authority untuk melihat dan mengubah daftar email.'}
             </p>
           </div>

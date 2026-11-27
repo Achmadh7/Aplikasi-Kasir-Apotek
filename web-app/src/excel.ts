@@ -23,6 +23,11 @@ async function loadXlsx(): Promise<typeof XLSX> {
   return mod.default && typeof mod.default.read === 'function' ? mod.default : mod;
 }
 
+export function sanitizeExcelCellValue(val: string | number): string | number {
+  if (typeof val !== 'string' || !val) return val;
+  return /^[=+\-@\t\r]/.test(val) ? `'${val}` : val;
+}
+
 export async function exportRowsToXlsx(
   filename: string,
   sheetName: string,
@@ -71,7 +76,7 @@ export async function exportRowsToXlsx(
 
   const dataStartIdx = aoa.length;
   for (const r of rows) {
-    aoa.push(headers.map((h) => r[h] ?? ''));
+    aoa.push(headers.map((h) => sanitizeExcelCellValue(r[h] ?? '')));
   }
   const dataEndIdx = aoa.length - 1;
 

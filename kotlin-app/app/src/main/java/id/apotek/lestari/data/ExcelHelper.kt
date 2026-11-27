@@ -48,6 +48,15 @@ object ExcelHelper {
     const val SHEET_REKAP_HARIAN = "Rekap Harian"
     const val SHEET_REKAP_OBAT = "Per Obat"
 
+    /** Lindungi ekspor Excel dari formula injection (teks diawali =, +, -, @, tab, CR). */
+    internal fun sanitasiSelTeks(nilai: String): String {
+        if (nilai.isEmpty()) return nilai
+        return when (nilai[0]) {
+            '=', '+', '-', '@', '\t', '\r' -> "'$nilai"
+            else -> nilai
+        }
+    }
+
     val HEADERS = arrayOf(
         "Nama Obat", "Kategori", "Satuan",
         "Harga Jual", "Harga Jual Grosir", "Harga Beli", "Stok", "Tanggal Kadaluarsa"
@@ -268,11 +277,11 @@ object ExcelHelper {
                             } else {
                                 // R23 (audit 2026-11-18): label TOTAL juga
                                 // bergaya tebal seperti angka di baris sama.
-                                cell.setCellValue(s)
+                                cell.setCellValue(sanitasiSelTeks(s))
                                 if (bold) cell.cellStyle = boldStyle
                             }
                         } else {
-                            cell.setCellValue(s)
+                            cell.setCellValue(sanitasiSelTeks(s))
                             if (bold) cell.cellStyle = boldStyle
                             else if (banded) cell.cellStyle = textStyleBand
                         }
@@ -452,8 +461,8 @@ object ExcelHelper {
                             if (parsed != null) {
                                 cell.setCellValue(DateUtil.getExcelDate(parsed))
                                 cell.cellStyle = dateStyle
-                            } else cell.setCellValue(s)
-                        } else cell.setCellValue(s)
+                            } else cell.setCellValue(sanitasiSelTeks(s))
+                        } else cell.setCellValue(sanitasiSelTeks(s))
                     }
                 }
             }

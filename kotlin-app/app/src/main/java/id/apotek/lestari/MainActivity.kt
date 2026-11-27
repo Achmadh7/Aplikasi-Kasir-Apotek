@@ -287,6 +287,8 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
     var tampilKonfirmasiKeluar by remember { mutableStateOf(false) }
     var tampilKonfirmasiReset by remember { mutableStateOf(false) }
     var sibukReset by remember { mutableStateOf(false) }
+    var emailGantiAkunLama by remember { mutableStateOf<String?>(null) }
+    var sibukGantiAkun by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val perluLogin = onlineSiap && emailOnline == null && !lewatiLogin
 
@@ -388,28 +390,25 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
         // dari status masuk — cadangan lokal tidak butuh akun.
         jadwalkanBackupOtomatis(context)
         if (emailOnline != null) {
-            // Konsolidasi ganti akun: bila akun yang masuk berbeda dari
-            // akun sinkron terakhir (atau belum pernah tercatat, mis.
-            // setelah pembaruan dari versi sebelum fitur ini), naikkan
-            // seluruh isi lokal ke akun ini supaya data awan tidak
-            // terbelah mengikuti akun. Penanda disimpan lebih dulu;
-            // baris yang gagal naik tetap kotor dan ikut putaran
-            // sinkron berikutnya.
             val emailSebelumnya = onlinePrefs.getString("online_email_terakhir", null)
-            if (emailSebelumnya != emailOnline) {
-                repoOnline.tandaiSemuaKotor()
-                onlinePrefs.edit().putString("online_email_terakhir", emailOnline).apply()
+            val gantiAkunBeda = emailSebelumnya != null && emailSebelumnya != emailOnline
+            if (gantiAkunBeda && repoOnline.adaDataLokal()) {
+                // Tahan sinkron sampai pengguna memilih: kosongkan data lokal
+                // akun lama atau gabungkan ke akun baru, agar data akun lama
+                // tidak otomatis terunggah ke akun Google lain.
+                emailGantiAkunLama = emailSebelumnya
+            } else {
+                if (emailSebelumnya != emailOnline) {
+                    if (emailSebelumnya == null) repoOnline.tandaiSemuaKotor()
+                    onlinePrefs.edit().putString("online_email_terakhir", emailOnline).apply()
+                }
+                jadwalkanSyncBerkala(context)
+                val bersuara = baruSajaMasuk
+                baruSajaMasuk = false
+                jalankanSync(senyap = !bersuara)
             }
-            jadwalkanSyncBerkala(context)
-            // Kabar sinkron hanya untuk masuk yang benar-benar baru
-            // (lewat gerbang) dan ketukan manual. Buka app dengan
-            // sesi tersimpan = sinkron senyap, supaya kabar itu
-            // tidak muncul di setiap app dibuka (permintaan Achmad
-            // 2026-11-11, pola yang sama seperti Kasir).
-            val bersuara = baruSajaMasuk
-            baruSajaMasuk = false
-            jalankanSync(senyap = !bersuara)
         } else if (onlineSiap) {
+            emailGantiAkunLama = null
             statusSync = StatusSync.BELUM_MASUK
         }
     }
@@ -439,7 +438,7 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                         // Hanya jalan bila memang ada data kotor: tulisan
                         // dari sinkron itu sendiri tidak memicu putaran
                         // kosong, dan sinkron otomatis berjalan senyap.
-                        if (repoOnline.adaDataKotor()) jalankanSync(senyap = true)
+                        if (emailGantiAkunLama == null && repoOnline.adaDataKotor()) jalankanSync(senyap = true)
                     }
                 }
             }
@@ -760,6 +759,80 @@ if (tampilKonfirmasiReset) {
             },
             dismissButton = {
                 TextButton(onClick = { tampilKonfirmasiReset = false }, enabled = !sibukReset) { Text(tr("Tidak", "No")) }
+            }
+        )
+    }
+    if (emailGantiAkunLama != null && emailOnline != null) {
+        val akunLama = emailGantiAkunLama
+        val akunBaru = emailOnline
+        AlertDialog(
+            onDismissRequest = { /* wajib pilih agar data akun lama tidak salah terunggah */ },
+            title = { Text(tr("Ganti Akun Google", "Switch Google Account")) },
+            text = {
+                Text(
+                    tr(
+                        "HP ini masih menyimpan data lokal dari akun $akunLama. Anda sekarang masuk sebagai $akunBaru.\n\nPilih \"Kosongkan & Tarik Data Baru\" (disarankan) agar data akun lama tidak menyalin ke akun baru, atau \"Gabungkan\" jika memang ingin memindahkan data ke akun baru.",
+                        "This phone still holds local data from $akunLama. You are now signed in as $akunBaru.\n\nChoose \"Clear & Pull New\" (recommended) so previous account data is not uploaded to the new account, or \"Merge\" if you intentionally want to move local data."
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !sibukGantiAkun,
+                    onClick = {
+                        appScope.launch {
+                            sibukGantiAkun = true
+                            try {
+                                repoOnline.hapusSemuaDataLokal()
+                                val uidBaru = FirebaseKit.auth()?.currentUser?.uid
+                                onlinePrefs.edit()
+                                    .putString("online_email_terakhir", akunBaru)
+                                    .remove("online_sync_terakhir")
+                                    .remove("pending_restore_replace_at")
+                                    .remove("last_reset_seen_at")
+                                    .apply {
+                                        if (uidBaru != null) {
+                                            remove("online_sync_synced_at_$uidBaru")
+                                            remove("online_sync_delta_at_$uidBaru")
+                                        }
+                                    }
+                                    .apply()
+                                syncTerakhir = 0L
+                                emailGantiAkunLama = null
+                                baruSajaMasuk = false
+                                jadwalkanSyncBerkala(context)
+                                jalankanSync(senyap = false)
+                            } finally {
+                                sibukGantiAkun = false
+                            }
+                        }
+                    }
+                ) {
+                    Text(
+                        if (sibukGantiAkun) tr("Memproses…", "Processing…")
+                        else tr("Kosongkan & Tarik Data Baru", "Clear & Pull New")
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !sibukGantiAkun,
+                    onClick = {
+                        appScope.launch {
+                            sibukGantiAkun = true
+                            try {
+                                repoOnline.tandaiSemuaKotor()
+                                onlinePrefs.edit().putString("online_email_terakhir", akunBaru).apply()
+                                emailGantiAkunLama = null
+                                baruSajaMasuk = false
+                                jadwalkanSyncBerkala(context)
+                                jalankanSync(senyap = false)
+                            } finally {
+                                sibukGantiAkun = false
+                            }
+                        }
+                    }
+                ) { Text(tr("Gabungkan", "Merge")) }
             }
         )
     }

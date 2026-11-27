@@ -1,5 +1,6 @@
 package id.apotek.lestari
 
+import id.apotek.lestari.data.ExcelHelper
 import id.apotek.lestari.data.SyncLogic
 import id.apotek.lestari.data.local.CashEntryEntity
 import id.apotek.lestari.data.local.MedicineEntity
@@ -235,5 +236,15 @@ class SyncLogicTest {
         assertTrue(SyncLogic.bolehFallbackOfflineCheckout("ABORTED", timeout = false))
         assertFalse(SyncLogic.bolehFallbackOfflineCheckout("PERMISSION_DENIED", timeout = false))
         assertFalse(SyncLogic.bolehFallbackOfflineCheckout("FAILED_PRECONDITION", timeout = false))
+    }
+
+    @Test
+    fun excelSanitasiSelTeks_cegahFormulaInjection() {
+        assertEquals("'=1+1", ExcelHelper.sanitasiSelTeks("=1+1"))
+        assertEquals("'+SUM(A1)", ExcelHelper.sanitasiSelTeks("+SUM(A1)"))
+        assertEquals("'-2+3", ExcelHelper.sanitasiSelTeks("-2+3"))
+        assertEquals("'@HYPERLINK", ExcelHelper.sanitasiSelTeks("@HYPERLINK"))
+        assertEquals("Paracetamol 500mg", ExcelHelper.sanitasiSelTeks("Paracetamol 500mg"))
+        assertEquals("", ExcelHelper.sanitasiSelTeks(""))
     }
 }
