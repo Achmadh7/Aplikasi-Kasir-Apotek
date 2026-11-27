@@ -1,5 +1,6 @@
 package id.apotek.lestari.data
 
+import android.content.Context
 import android.util.Log
 import id.apotek.lestari.data.local.CashEntryEntity
 import id.apotek.lestari.data.local.ClosedMonthEntity
@@ -407,7 +408,7 @@ class Repository {
 
     // ---- Penjualan ----
 
-    suspend fun createSale(args: CreateSaleArgs): ApiResult<CreateSaleResponse> = call {
+    suspend fun createSale(args: CreateSaleArgs, context: Context? = null): ApiResult<CreateSaleResponse> = call {
         // TB1: penjualan selalu "sekarang" — bulan berjalan tidak bisa
         // ditutup (aturan tutup), jadi cek ini mustahil terpicu; tetap
         // ada sebagai jaring pengaman bila aturan berubah.
@@ -449,6 +450,7 @@ class Repository {
         if (args.amountPaid < total) throw IllegalArgumentException(tr("Uang dibayar kurang dari total", "The amount paid is less than the total"))
         val change = args.amountPaid - total
         val now = Date()
+        val nowMs = nowMillis()
         // Format nomor invoice: "INV - dd/MM/yy" (mis. "INV - 01/11/26"),
         // tanpa nomor urut supaya pendek (permintaan Achmad 2026-11-01).
         // Konsekuensi yang disadari: semua penjualan di hari yang sama
@@ -458,38 +460,74 @@ class Repository {
             timeZone = jakarta
         }.format(now)
         val createdAt = nowIso()
+        val medById = lines.associate { it.med.id to it.med }
         val nameById = lines.associate { it.med.id to it.med.name }
-        db.withTransaction {
-            // Kurangi stok secara atomik; decrementStock return 0 = stok tidak cukup.
-            for ((medicineId, qty) in qtyById) {
-                val changed = db.medicineDao().decrementStock(medicineId, qty, nowMillis())
-                if (changed == 0) throw IllegalStateException(tr("Stok ${nameById[medicineId] ?: "obat"} tidak cukup", "Not enough stock of ${nameById[medicineId] ?: "the medicine"}"))
-            }
-            val saleId = db.saleDao().insert(
-                SaleEntity(
-                    invoiceNo = invoiceNo, total = total.toInt(), paymentMethod = args.paymentMethod,
-                    amountPaid = args.amountPaid, changeAmount = change.toInt(), createdAt = createdAt,
-                    remoteId = genRemoteId("jual"), updatedAt = nowMillis()
+
+        val saleSeed = SaleEntity(
+            invoiceNo = invoiceNo, total = total.toInt(), paymentMethod = args.paymentMethod,
+            amountPaid = args.amountPaid, changeAmount = change.toInt(), createdAt = createdAt,
+            remoteId = genRemoteId("jual"), updatedAt = nowMs
+        )
+        val itemSeeds = lines.map {
+            SaleItemEntity(
+                saleId = 0, medicineId = it.med.id, medicineName = it.med.name,
+                qty = it.qty, price = it.unitPrice, priceType = it.priceType, buyPrice = it.med.buyPrice,
+                subtotal = it.subtotal.toInt(), category = it.med.category, unit = it.med.unit,
+                remoteId = genRemoteId("jualitem"), updatedAt = nowMs
+            ) to it.med.remoteId
+        }
+        val cashSeed = CashEntryEntity(
+            type = "in", category = "Penjualan", description = "Penjualan $invoiceNo",
+            amount = total.toInt(), source = "sale", createdAt = createdAt,
+            remoteId = genRemoteId("kas"), updatedAt = nowMs
+        )
+        val itemsUnik = qtyById.mapNotNull { (medicineId, qty) ->
+            medById[medicineId]?.let { ItemCheckoutAtomik(it, qty) }
+        }
+
+        // Jalur online atomik (2 kasir aman): kurangi stok + tulis nota di
+        // Firestore runTransaction dulu. Jika stok di server kurang/dihapus,
+        // perbarui stok lokal & tolak bayar. Jika offline/gangguan jaringan,
+        // jatuh kembali mulus ke jalur lokal Room (kotor = 1).
+        val stokCloud = if (context != null) {
+            try {
+                OnlineCheckout.bayarAtomik(
+                    context = context,
+                    itemsUnik = itemsUnik,
+                    sale = saleSeed,
+                    saleItems = itemSeeds,
+                    cash = cashSeed,
+                    nowMs = nowMs
                 )
-            ).toInt()
-            db.saleDao().insertItems(
-                lines.map {
-                    SaleItemEntity(
-                        saleId = saleId, medicineId = it.med.id, medicineName = it.med.name,
-                        qty = it.qty, price = it.unitPrice, priceType = it.priceType, buyPrice = it.med.buyPrice,
-                        subtotal = it.subtotal.toInt(), category = it.med.category, unit = it.med.unit,
-                        remoteId = genRemoteId("jualitem"), updatedAt = nowMillis()
-                    )
+            } catch (e: StokCloudException) {
+                if (e.cloudStock != null && e.cloudUpdatedAt != null) {
+                    db.medicineDao().setStockBersih(e.medicineId, e.cloudStock, e.cloudUpdatedAt)
                 }
+                throw e
+            }
+        } else null
+
+        val sudahSinkron = stokCloud != null
+        val kotorFlag = if (sudahSinkron) 0 else 1
+
+        db.withTransaction {
+            if (stokCloud != null) {
+                for ((medicineId, hasilStok) in stokCloud) {
+                    db.medicineDao().setStockBersih(medicineId, hasilStok.first, hasilStok.second)
+                }
+            } else {
+                // Kurangi stok secara atomik lokal; decrementStock return 0 = stok tidak cukup.
+                for ((medicineId, qty) in qtyById) {
+                    val changed = db.medicineDao().decrementStock(medicineId, qty, nowMs)
+                    if (changed == 0) throw IllegalStateException(tr("Stok ${nameById[medicineId] ?: "obat"} tidak cukup", "Not enough stock of ${nameById[medicineId] ?: "the medicine"}"))
+                }
+            }
+            val saleId = db.saleDao().insert(saleSeed.copy(kotor = kotorFlag)).toInt()
+            db.saleDao().insertItems(
+                itemSeeds.map { (item, _) -> item.copy(saleId = saleId, kotor = kotorFlag) }
             )
             // Catat kas masuk supaya Keuangan & Beranda ikut berubah
-            db.cashDao().insert(
-                CashEntryEntity(
-                    type = "in", category = "Penjualan", description = "Penjualan $invoiceNo",
-                    amount = total.toInt(), source = "sale", createdAt = createdAt,
-                    remoteId = genRemoteId("kas"), updatedAt = nowMillis()
-                )
-            )
+            db.cashDao().insert(cashSeed.copy(kotor = kotorFlag))
             CreateSaleResponse(saleId, invoiceNo, total.toInt(), change.toInt())
         }
     }

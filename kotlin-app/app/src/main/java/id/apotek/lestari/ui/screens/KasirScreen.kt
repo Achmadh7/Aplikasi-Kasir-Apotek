@@ -48,6 +48,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
@@ -152,6 +153,8 @@ fun KasirScreen() {
     var uangDiterima by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
     var payMsg by rememberSaveable { mutableStateOf("") }
     var payCount by remember { mutableIntStateOf(0) }
+    var isPaying by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     // Fase sukses besar setelah Bayar (varian 1 pilihan Achmad 2026-11-04):
     // sheet menampilkan centang besar di tengah sebelum struk muncul,
     // menggantikan baris centang kecil lama yang gampang terlewat.
@@ -796,40 +799,57 @@ fun KasirScreen() {
                     val bayarScale = pressBounceScale(bayarInteraction)
                     Button(
                         onClick = {
+                            if (isPaying) return@Button
+                            isPaying = true
                             scope.launch {
-                                // R44: amt Long -> Int; aman karena canPay
-                                // menjamin total <= Int.MAX_VALUE (paid pun Int).
-                                val amt = (if (method == "Tunai") paid.toLong() else total).toInt()
-                                val result = repo.createSale(CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty, it.useWholesale) }, method, amt))
-                                if (result is ApiResult.Success) {
-                                    // Masuk fase sukses besar: tangkap rincian
-                                    // pembayaran SEBELUM keranjang dikosongkan.
-                                    successMethod = method
-                                    successTotal = total.toInt()
-                                    successChange = change.toInt()
-                                    successPhase = true
-                                    payMsg = ""
-                                    payCount++
-                                    cart.clear()
-                                    savedCart = emptyList()
-                                    uangDiterima = TextFieldValue("")
-                                    val after = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
-                                    medicines = after
-                                    lastSale = (repo.getSaleById(result.data.id) as? ApiResult.Success)?.data
-                                    lastSaleId = result.data.id
-                                } else {
-                                    // Gagal: keranjang & uang diterima dibiarkan utuh supaya
-                                    // kasir bisa mencoba lagi tanpa mengulang input.
-                                    payMsg = tr("Pembayaran gagal: ", "Payment failed: ") + ((result as? ApiResult.Error)?.message ?: tr("tidak diketahui", "unknown"))
+                                try {
+                                    // R44: amt Long -> Int; aman karena canPay
+                                    // menjamin total <= Int.MAX_VALUE (paid pun Int).
+                                    val amt = (if (method == "Tunai") paid.toLong() else total).toInt()
+                                    val result = repo.createSale(
+                                        CreateSaleArgs(cart.map { CreateSaleItemArgs(it.medicine.id, it.qty, it.useWholesale) }, method, amt),
+                                        context = context
+                                    )
+                                    if (result is ApiResult.Success) {
+                                        // Masuk fase sukses besar: tangkap rincian
+                                        // pembayaran SEBELUM keranjang dikosongkan.
+                                        successMethod = method
+                                        successTotal = total.toInt()
+                                        successChange = change.toInt()
+                                        successPhase = true
+                                        payMsg = ""
+                                        payCount++
+                                        cart.clear()
+                                        savedCart = emptyList()
+                                        uangDiterima = TextFieldValue("")
+                                        val after = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines.orEmpty()
+                                        medicines = after
+                                        lastSale = (repo.getSaleById(result.data.id) as? ApiResult.Success)?.data
+                                        lastSaleId = result.data.id
+                                    } else {
+                                        // Gagal: keranjang & uang diterima dibiarkan utuh supaya
+                                        // kasir bisa mencoba lagi tanpa mengulang input; muat ulang
+                                        // stok bila server menolak karena stok berubah di kasir lain.
+                                        val refreshed = (repo.listMedicines() as? ApiResult.Success)?.data?.medicines
+                                        if (refreshed != null) medicines = refreshed
+                                        payMsg = tr("Pembayaran gagal: ", "Payment failed: ") + ((result as? ApiResult.Error)?.message ?: tr("tidak diketahui", "unknown"))
+                                    }
+                                } finally {
+                                    isPaying = false
                                 }
                             }
                         },
-                        enabled = canPay,
+                        enabled = canPay && !isPaying,
                         interactionSource = bayarInteraction,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                         shape = RoundedCornerShape(28.dp),
                         modifier = Modifier.fillMaxWidth().height(52.dp).graphicsLayer(scaleX = bayarScale, scaleY = bayarScale)
-                    ) { Text(tr("Bayar (${formatIDR(total)})", "Pay (${formatIDR(total)})"), style = MaterialTheme.typography.titleMedium) }
+                    ) {
+                        Text(
+                            if (isPaying) tr("Memproses...", "Processing...") else tr("Bayar (${formatIDR(total)})", "Pay (${formatIDR(total)})"),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                     // Pesan galat pembayaran saja (keberhasilan sekarang lewat
                     // fase sukses besar di atas). Sengaja TANPA AnimatedVisibility:
                     // animasi mengembangnya bertabrakan dengan animasi tinggi

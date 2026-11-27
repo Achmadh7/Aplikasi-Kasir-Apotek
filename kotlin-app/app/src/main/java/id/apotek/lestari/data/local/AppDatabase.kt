@@ -275,6 +275,9 @@ interface MedicineDao {
 
     @Query("UPDATE medicines SET stock = stock - :qty, kotor = 1, updatedAt = :now WHERE id = :id AND stock >= :qty AND terhapus = 0")
     suspend fun decrementStock(id: Int, qty: Int, now: Long): Int
+
+    @Query("UPDATE medicines SET stock = :stock, updatedAt = :updatedAt, kotor = 0 WHERE id = :id AND terhapus = 0")
+    suspend fun setStockBersih(id: Int, stock: Int, updatedAt: Long): Int
 }
 
 @Dao

@@ -178,4 +178,62 @@ class SyncLogicTest {
         val tanpaId = SyncLogic.pemasokKePeta(pemasok).toMutableMap().apply { put("remoteId", "") }
         assertNull(SyncLogic.pemasokDariPeta(tanpaId))
     }
+
+    @Test
+    fun hitungDeltaSinceMs_pakaiOverlapDanFallbackPenuhSaatPerlu() {
+        val base = 1_000_000L
+        assertEquals(
+            base - SyncLogic.DELTA_OVERLAP_MS,
+            SyncLogic.hitungDeltaSinceMs(
+                lastSyncAt = base,
+                pendingRestoreAt = 0L,
+                remoteResetAt = 500L,
+                lastResetSeenAt = 500L,
+                paksaPenuh = false
+            )
+        )
+        assertEquals(0L, SyncLogic.hitungDeltaSinceMs(0L, 0L, 0L, 0L, false))
+        assertEquals(0L, SyncLogic.hitungDeltaSinceMs(5_000L, 0L, 0L, 0L, false))
+        assertEquals(0L, SyncLogic.hitungDeltaSinceMs(base, 999L, 0L, 0L, false))
+        assertEquals(0L, SyncLogic.hitungDeltaSinceMs(base, 0L, 600L, 500L, false))
+        assertEquals(0L, SyncLogic.hitungDeltaSinceMs(base, 0L, 500L, 500L, true))
+    }
+
+    @Test
+    fun pakaiCekDokumenLangsung_hanyaUntukBatchKecilBelumTerCache() {
+        assertFalse(SyncLogic.pakaiCekDokumenLangsung(0, false))
+        assertTrue(SyncLogic.pakaiCekDokumenLangsung(1, false))
+        assertTrue(SyncLogic.pakaiCekDokumenLangsung(SyncLogic.TARGETED_PUSH_CHECK_LIMIT, false))
+        assertFalse(SyncLogic.pakaiCekDokumenLangsung(SyncLogic.TARGETED_PUSH_CHECK_LIMIT + 1, false))
+        assertFalse(SyncLogic.pakaiCekDokumenLangsung(3, true))
+    }
+
+    @Test
+    fun hitungNextDeltaCursor_pakaiWaktuServerDanResetBersih() {
+        assertEquals(500L, SyncLogic.hitungNextDeltaCursor(500L, 0L, 0L, false))
+        assertEquals(900L, SyncLogic.hitungNextDeltaCursor(500L, 900L, 0L, false))
+        assertEquals(700L, SyncLogic.hitungNextDeltaCursor(0L, 0L, 700L, false))
+        assertEquals(300L, SyncLogic.hitungNextDeltaCursor(999L, 300L, 0L, true))
+        assertEquals(400L, SyncLogic.hitungNextDeltaCursor(999L, 0L, 400L, true))
+    }
+
+    @Test
+    fun hitungStokCheckoutAtomik_tolakStokKurangDanMajukanUpdatedAt() {
+        assertNull(SyncLogic.hitungStokCheckoutAtomik(stokCloud = 2L, qty = 3, nowMs = 1000L, cloudUpdatedAt = 500L))
+        assertNull(SyncLogic.hitungStokCheckoutAtomik(stokCloud = 5L, qty = 0, nowMs = 1000L, cloudUpdatedAt = 500L))
+        // Jam lokal normal lebih besar dari cloudUpdatedAt
+        assertEquals(7 to 1000L, SyncLogic.hitungStokCheckoutAtomik(stokCloud = 10L, qty = 3, nowMs = 1000L, cloudUpdatedAt = 500L))
+        // Jam lokal telat dibanding cloudUpdatedAt -> tetap lebih baru +1ms agar menang LWW
+        assertEquals(0 to 2001L, SyncLogic.hitungStokCheckoutAtomik(stokCloud = 2L, qty = 2, nowMs = 1000L, cloudUpdatedAt = 2000L))
+    }
+
+    @Test
+    fun bolehFallbackOfflineCheckout_hanyaUntukGangguanJaringanAtauTimeout() {
+        assertTrue(SyncLogic.bolehFallbackOfflineCheckout(null, timeout = true))
+        assertTrue(SyncLogic.bolehFallbackOfflineCheckout("UNAVAILABLE", timeout = false))
+        assertTrue(SyncLogic.bolehFallbackOfflineCheckout("DEADLINE_EXCEEDED", timeout = false))
+        assertTrue(SyncLogic.bolehFallbackOfflineCheckout("ABORTED", timeout = false))
+        assertFalse(SyncLogic.bolehFallbackOfflineCheckout("PERMISSION_DENIED", timeout = false))
+        assertFalse(SyncLogic.bolehFallbackOfflineCheckout("FAILED_PRECONDITION", timeout = false))
+    }
 }

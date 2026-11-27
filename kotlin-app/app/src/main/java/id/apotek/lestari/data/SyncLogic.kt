@@ -19,6 +19,79 @@ import id.apotek.lestari.data.local.SupplierEntity
  */
 object SyncLogic {
 
+    const val DELTA_OVERLAP_MS = 120_000L
+    const val TARGETED_PUSH_CHECK_LIMIT = 30
+
+    /**
+     * Hitung batas waktu delta pull (`updatedAt > sinceMs`) agar sinkron rutin
+     * hanya menarik dokumen yang baru berubah, bukan seluruh koleksi.
+     * Kembali ke 0L (tarik penuh) saat sinkron pertama, ada restore backup,
+     * reset awan belum terlihat, atau diminta penuh secara eksplisit.
+     */
+    fun hitungDeltaSinceMs(
+        lastSyncAt: Long,
+        pendingRestoreAt: Long,
+        remoteResetAt: Long,
+        lastResetSeenAt: Long,
+        paksaPenuh: Boolean
+    ): Long {
+        if (
+            paksaPenuh ||
+            lastSyncAt <= 0L ||
+            pendingRestoreAt > 0L ||
+            remoteResetAt > lastResetSeenAt
+        ) {
+            return 0L
+        }
+        return (lastSyncAt - DELTA_OVERLAP_MS).coerceAtLeast(0L)
+    }
+
+    /**
+     * Hitung kursor delta berikutnya dari cap waktu server (`syncedAt`) yang
+     * pernah ditarik/dijangkarkan — bukan jam HP, supaya tahan beda jam HP
+     * dan transaksi offline lama dari perangkat lain.
+     */
+    fun hitungNextDeltaCursor(
+        prevCursor: Long,
+        maxPulledSyncedAt: Long,
+        anchorServerMs: Long = 0L,
+        baruReset: Boolean = false
+    ): Long {
+        val base = if (baruReset) 0L else prevCursor
+        return maxOf(base, maxPulledSyncedAt, anchorServerMs)
+    }
+
+    /**
+     * Hitung stok & updatedAt baru untuk checkout atomik di Firestore.
+     * Mengembalikan null bila stok server kurang dari qty (atau qty <= 0),
+     * supaya transaksi ditolak dan tidak terjadi overselling lintas kasir.
+     */
+    fun hitungStokCheckoutAtomik(
+        stokCloud: Long,
+        qty: Int,
+        nowMs: Long,
+        cloudUpdatedAt: Long
+    ): Pair<Int, Long>? {
+        if (qty <= 0 || stokCloud < qty.toLong()) return null
+        val stokBaru = (stokCloud - qty.toLong()).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+        val updatedAtBaru = maxOf(nowMs, cloudUpdatedAt + 1L)
+        return stokBaru to updatedAtBaru
+    }
+
+    /**
+     * True bila galat transaksi Firestore adalah gangguan jaringan/timeout
+     * sehingga checkout boleh jatuh kembali ke jalur offline Room.
+     */
+    fun bolehFallbackOfflineCheckout(kodeFirestore: String?, timeout: Boolean): Boolean =
+        timeout || kodeFirestore in setOf("UNAVAILABLE", "DEADLINE_EXCEEDED", "ABORTED", "CANCELLED")
+
+    /**
+     * True bila jumlah baris kotor kecil dan koleksi belum di-cache, sehingga
+     * lebih hemat membaca dokumen individual daripada memindai satu koleksi penuh.
+     */
+    fun pakaiCekDokumenLangsung(jumlahKotor: Int, sudahAdaCache: Boolean): Boolean =
+        !sudahAdaCache && jumlahKotor in 1..TARGETED_PUSH_CHECK_LIMIT
+
     /**
      * Aturan konflik: salinan remote menang bila cap waktunya lebih baru;
      * bila cap waktunya sama persis, tombstone (penghapusan) yang menang

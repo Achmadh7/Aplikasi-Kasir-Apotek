@@ -335,9 +335,16 @@ fun ApotekApp(isDark: Boolean, onToggleTheme: () -> Unit, appLang: String, onLan
                     }
                 }
                 repoOnline.hapusSemuaDataLokal()
+                val resetUid = FirebaseKit.auth()?.currentUser?.uid
                 onlinePrefs.edit()
                     .remove("online_sync_terakhir")
                     .remove("pending_restore_replace_at")
+                    .apply {
+                        if (resetUid != null) {
+                            remove("online_sync_synced_at_$resetUid")
+                            remove("online_sync_delta_at_$resetUid")
+                        }
+                    }
                     .remove("last_backup_at")
                     .remove("last_backup_name")
                     .remove(PREF_AUTO_BACKUP_TERAKHIR)

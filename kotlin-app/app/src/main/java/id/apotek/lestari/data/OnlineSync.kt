@@ -15,16 +15,27 @@ import androidx.credentials.GetCredentialRequest
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.FirebaseApp
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
+import id.apotek.lestari.data.local.CashEntryEntity
 import id.apotek.lestari.data.local.DatabaseProvider
+import id.apotek.lestari.data.local.MedicineEntity
+import id.apotek.lestari.data.local.SaleEntity
+import id.apotek.lestari.data.local.SaleItemEntity
+import id.apotek.lestari.ui.theme.tr
+import java.util.Date
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 
 /**
  * Lapisan online opsional (pola yang sama dengan KasBulanan, docs/ONLINE.md).
@@ -146,9 +157,16 @@ class SyncManager(private val repository: Repository) {
         akar: DocumentReference,
         koleksi: String,
         remoteId: String,
-        lokalUpdatedAt: Long
+        lokalUpdatedAt: Long,
+        cekLangsung: Boolean = false
     ): Boolean {
-        val remoteUpdatedAt = petaAwan(akar, koleksi)[remoteId] ?: return false
+        val remoteUpdatedAt = if (cekLangsung) {
+            val snap = akar.collection(koleksi).document(remoteId).get().await()
+            if (!snap.exists()) return false
+            snap.getLong("updatedAt") ?: 0L
+        } else {
+            petaAwan(akar, koleksi)[remoteId] ?: return false
+        }
         return remoteUpdatedAt > lokalUpdatedAt
     }
 
@@ -162,7 +180,7 @@ class SyncManager(private val repository: Repository) {
             firestore.code == FirebaseFirestoreException.Code.INVALID_ARGUMENT
     }
 
-    suspend fun sinkronSekarang(context: Context): HasilSync {
+    suspend fun sinkronSekarang(context: Context, paksaPenuh: Boolean = false): HasilSync {
         if (!FirebaseKit.siap(context)) return HasilSync.BelumDikonfigurasi
         val uid = FirebaseKit.auth()?.currentUser?.uid ?: return HasilSync.BelumMasuk
         val fs = FirebaseKit.firestore() ?: return HasilSync.BelumDikonfigurasi
@@ -170,14 +188,26 @@ class SyncManager(private val repository: Repository) {
         return try {
             var didorong = 0
             var ditarik = 0
+            var maxServerSyncedAt = 0L
             val akar = fs.collection("users").document(uid)
             val prefs = context.getSharedPreferences("apotek_prefs", Context.MODE_PRIVATE)
+            val deltaKey = "online_sync_synced_at_$uid"
 
             // Hormati reset epoch awan agar perangkat lain tidak membangkitkan data lama
             val akarSnap = akar.get().await()
             val remoteResetAt = akarSnap.getLong("resetAt") ?: 0L
             val lastResetSeen = prefs.getLong("last_reset_seen_at", 0L)
-            if (remoteResetAt > lastResetSeen) {
+            val pendingRestoreAt = prefs.getLong("pending_restore_replace_at", 0L)
+            val prevCursor = prefs.getLong(deltaKey, 0L)
+            val baruReset = remoteResetAt > lastResetSeen
+            val sinceMs = SyncLogic.hitungDeltaSinceMs(
+                lastSyncAt = prevCursor,
+                pendingRestoreAt = pendingRestoreAt,
+                remoteResetAt = remoteResetAt,
+                lastResetSeenAt = lastResetSeen,
+                paksaPenuh = paksaPenuh
+            )
+            if (baruReset) {
                 repository.bersihkanDataSebelumReset(remoteResetAt)
                 prefs.edit().putLong("last_reset_seen_at", remoteResetAt).apply()
             }
@@ -199,19 +229,31 @@ class SyncManager(private val repository: Repository) {
                 petaOf: suspend (T) -> Map<String, Any?>?,
                 tandaiBersih: suspend (String, Long) -> Unit
             ) {
-                val toPush = mutableListOf<Triple<String, Long, Map<String, Any?>>>()
+                if (rows.isEmpty()) return
+                val kandidat = mutableListOf<Triple<T, String, Long>>()
                 for (e in rows) {
                     val rid = remoteIdOf(e)
                     if (rid.isBlank() || !bolehDorong(e)) continue
-                    val uAt = updatedAtOf(e)
-                    if (awanLebihBaru(akar, koleksi, rid, uAt)) continue
+                    kandidat.add(Triple(e, rid, updatedAtOf(e)))
+                }
+                if (kandidat.isEmpty()) return
+                val cekLangsung = SyncLogic.pakaiCekDokumenLangsung(
+                    jumlahKotor = kandidat.size,
+                    sudahAdaCache = cacheAwan.containsKey(koleksi)
+                )
+                val toPush = mutableListOf<Triple<String, Long, Map<String, Any?>>>()
+                for ((e, rid, uAt) in kandidat) {
+                    if (awanLebihBaru(akar, koleksi, rid, uAt, cekLangsung = cekLangsung)) continue
                     val map = petaOf(e) ?: continue
                     toPush.add(Triple(rid, uAt, map))
                 }
                 for (potongan in toPush.chunked(400)) {
                     val batch = fs.batch()
                     for ((rid, _, map) in potongan) {
-                        batch.set(akar.collection(koleksi).document(rid), map)
+                        val payload = map.toMutableMap().apply {
+                            put("syncedAt", FieldValue.serverTimestamp())
+                        }
+                        batch.set(akar.collection(koleksi).document(rid), payload)
                     }
                     batch.commit().await()
                     for ((rid, uAt, _) in potongan) {
@@ -322,20 +364,25 @@ class SyncManager(private val repository: Repository) {
                 tandaiBersih = { rid, uAt -> repository.tandaiBersihItemPbf(rid, uAt) }
             )
 
-            // 2) Tarik semua dokumen dengan urutan yang sama; jika habis restore
-            // backup JSON, dokumen awan lama yang tidak ada di backup ditandai
-            // tombstone terlebih dahulu agar tidak ditarik turun lagi.
-            val pendingRestoreAt = prefs.getLong("pending_restore_replace_at", 0L)
+            // 2) Tarik dokumen (delta query bila sudah pernah sinkron penuh,
+            //    atau koleksi penuh saat pertama kali / restore / reset awan).
             val aktifIds = if (pendingRestoreAt > 0L) repository.remoteIdsAktif() else null
 
             suspend fun bacaDanBersihkan(
                 nama: String,
                 aktifSet: Set<String>?
             ): List<Map<String, Any>> {
-                val docs = akar.collection(nama).get().await().documents
+                val col = akar.collection(nama)
+                val docs = if (sinceMs > 0L) {
+                    col.whereGreaterThan("syncedAt", Timestamp(Date(sinceMs))).get().await().documents
+                } else {
+                    col.get().await().documents
+                }
                 val hasil = mutableListOf<Map<String, Any>>()
                 val stale = mutableListOf<DocumentSnapshot>()
                 for (doc in docs) {
+                    val sAt = doc.getTimestamp("syncedAt")?.toDate()?.time ?: 0L
+                    if (sAt > maxServerSyncedAt) maxServerSyncedAt = sAt
                     val data = doc.data ?: continue
                     val remUpdated = (data["updatedAt"] as? Number)?.toLong() ?: 0L
                     val sudahTerhapus = data["terhapus"] == true
@@ -353,6 +400,7 @@ class SyncManager(private val repository: Repository) {
                             merged["remoteId"] = d.id
                             merged["terhapus"] = true
                             merged["updatedAt"] = pendingRestoreAt
+                            merged["syncedAt"] = FieldValue.serverTimestamp()
                             batch.set(d.reference, merged)
                         }
                         batch.commit().await()
@@ -412,9 +460,21 @@ class SyncManager(private val repository: Repository) {
 
             // Setelah dorong+tarik, pastikan isi cacheAwan tidak dipakai lintas siklus
             cacheAwan.clear()
-            if (pendingRestoreAt > 0L) {
-                prefs.edit().remove("pending_restore_replace_at").apply()
+            var anchorMs = 0L
+            if ((if (baruReset) 0L else prevCursor) == 0L && maxServerSyncedAt == 0L) {
+                akar.set(mapOf("syncClock" to FieldValue.serverTimestamp()), SetOptions.merge()).await()
+                anchorMs = akar.get().await().getTimestamp("syncClock")?.toDate()?.time ?: 0L
             }
+            val nextCursor = SyncLogic.hitungNextDeltaCursor(
+                prevCursor = prevCursor,
+                maxPulledSyncedAt = maxServerSyncedAt,
+                anchorServerMs = anchorMs,
+                baruReset = baruReset
+            )
+            prefs.edit().apply {
+                if (nextCursor > 0L) putLong(deltaKey, nextCursor)
+                if (pendingRestoreAt > 0L) remove("pending_restore_replace_at")
+            }.apply()
 
             // M3 (audit 2026-11-16): rekonsiliasi silang setelah semua
             // item ditarik — penjualan yang totalnya tidak cocok dengan
@@ -456,10 +516,180 @@ class SyncManager(private val repository: Repository) {
                 .edit()
                 .putLong("last_reset_seen_at", resetMs)
                 .remove("pending_restore_replace_at")
+                .remove("online_sync_synced_at_$uid")
+                .remove("online_sync_delta_at_$uid")
                 .apply()
             HasilReset.Berhasil
         } catch (e: Exception) {
             HasilReset.Gagal(e.message ?: "Gagal menghapus data awan")
+        }
+    }
+}
+
+/**
+ * Penolakan checkout atomik karena stok di server tidak cukup atau obat
+ * sudah dihapus di perangkat lain. Menyimpan snapshot stok server (bila ada)
+ * supaya DB lokal bisa langsung diperbarui sebelum pesan galat tampil.
+ */
+class StokCloudException(
+    pesan: String,
+    val medicineId: Int,
+    val cloudStock: Int? = null,
+    val cloudUpdatedAt: Long? = null
+) : IllegalStateException(pesan)
+
+data class ItemCheckoutAtomik(val med: MedicineEntity, val qty: Int)
+
+/**
+ * Checkout atomik lintas 2+ perangkat via Firestore runTransaction:
+ * baca stok server terbaru, tolak jika kurang/terhapus, lalu kurangi stok
+ * dan tulis nota penjualan + item + kas dalam satu transaksi atomik dengan
+ * cap waktu server (`syncedAt`).
+ */
+object OnlineCheckout {
+    private const val TIMEOUT_MS = 12_000L
+
+    suspend fun bayarAtomik(
+        context: Context,
+        itemsUnik: List<ItemCheckoutAtomik>,
+        sale: SaleEntity,
+        saleItems: List<Pair<SaleItemEntity, String>>,
+        cash: CashEntryEntity,
+        nowMs: Long
+    ): Map<Int, Pair<Int, Long>>? {
+        if (!FirebaseKit.siap(context)) return null
+        val uid = FirebaseKit.auth()?.currentUser?.uid ?: return null
+        val fs = FirebaseKit.firestore() ?: return null
+        if (itemsUnik.isEmpty() || itemsUnik.any { it.med.remoteId.isBlank() }) return null
+
+        val akar = fs.collection("users").document(uid)
+        return try {
+            withTimeout(TIMEOUT_MS) {
+                fs.runTransaction { tx ->
+                    data class RencanaObat(
+                        val ref: DocumentReference,
+                        val sudahAda: Boolean,
+                        val medBaru: MedicineEntity
+                    )
+
+                    // 1) Semua baca dulu (syarat Firestore runTransaction)
+                    val rencana = mutableListOf<RencanaObat>()
+                    val hasil = mutableMapOf<Int, Pair<Int, Long>>()
+                    for (item in itemsUnik) {
+                        val ref = akar.collection("obat").document(item.med.remoteId)
+                        val snap = tx.get(ref)
+                        if (snap.exists()) {
+                            if (snap.getBoolean("terhapus") == true) {
+                                throw StokCloudException(
+                                    tr(
+                                        "Obat ${item.med.name} sudah dihapus di perangkat lain",
+                                        "Medicine ${item.med.name} was deleted on another device"
+                                    ),
+                                    medicineId = item.med.id
+                                )
+                            }
+                            val cloudStock = snap.getLong("stock") ?: 0L
+                            val cloudUpdatedAt = snap.getLong("updatedAt") ?: 0L
+                            val next = SyncLogic.hitungStokCheckoutAtomik(
+                                stokCloud = cloudStock,
+                                qty = item.qty,
+                                nowMs = nowMs,
+                                cloudUpdatedAt = cloudUpdatedAt
+                            ) ?: throw StokCloudException(
+                                tr(
+                                    "Stok ${item.med.name} di server tinggal $cloudStock, tidak cukup untuk ${item.qty}",
+                                    "Server stock for ${item.med.name} is only $cloudStock, not enough for ${item.qty}"
+                                ),
+                                medicineId = item.med.id,
+                                cloudStock = cloudStock.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt(),
+                                cloudUpdatedAt = cloudUpdatedAt
+                            )
+                            rencana.add(
+                                RencanaObat(
+                                    ref = ref,
+                                    sudahAda = true,
+                                    medBaru = item.med.copy(stock = next.first, updatedAt = next.second)
+                                )
+                            )
+                            hasil[item.med.id] = next
+                        } else {
+                            val next = SyncLogic.hitungStokCheckoutAtomik(
+                                stokCloud = item.med.stock.toLong(),
+                                qty = item.qty,
+                                nowMs = nowMs,
+                                cloudUpdatedAt = item.med.updatedAt
+                            ) ?: throw StokCloudException(
+                                tr(
+                                    "Stok ${item.med.name} tidak cukup",
+                                    "Not enough stock of ${item.med.name}"
+                                ),
+                                medicineId = item.med.id
+                            )
+                            rencana.add(
+                                RencanaObat(
+                                    ref = ref,
+                                    sudahAda = false,
+                                    medBaru = item.med.copy(stock = next.first, updatedAt = next.second)
+                                )
+                            )
+                            hasil[item.med.id] = next
+                        }
+                    }
+
+                    // 2) Semua tulis sesudah baca selesai
+                    for (r in rencana) {
+                        if (r.sudahAda) {
+                            tx.update(
+                                r.ref,
+                                mapOf(
+                                    "stock" to r.medBaru.stock.toLong(),
+                                    "updatedAt" to r.medBaru.updatedAt,
+                                    "syncedAt" to FieldValue.serverTimestamp()
+                                )
+                            )
+                        } else {
+                            val payload = SyncLogic.obatKePeta(r.medBaru).toMutableMap().apply {
+                                put("syncedAt", FieldValue.serverTimestamp())
+                            }
+                            tx.set(r.ref, payload)
+                        }
+                    }
+
+                    val salePayload = SyncLogic.penjualanKePeta(sale).toMutableMap().apply {
+                        put("syncedAt", FieldValue.serverTimestamp())
+                    }
+                    tx.set(akar.collection("penjualan").document(sale.remoteId), salePayload)
+
+                    for ((saleItem, medRemoteId) in saleItems) {
+                        val itemPayload = SyncLogic.itemJualKePeta(saleItem, sale.remoteId, medRemoteId)
+                            .toMutableMap()
+                            .apply { put("syncedAt", FieldValue.serverTimestamp()) }
+                        tx.set(akar.collection("penjualan_item").document(saleItem.remoteId), itemPayload)
+                    }
+
+                    val cashPayload = SyncLogic.kasKePeta(cash).toMutableMap().apply {
+                        put("syncedAt", FieldValue.serverTimestamp())
+                    }
+                    tx.set(akar.collection("kas").document(cash.remoteId), cashPayload)
+
+                    hasil
+                }.await()
+            }
+        } catch (e: TimeoutCancellationException) {
+            Log.w("OnlineCheckout", "Transaksi atomik timeout (${TIMEOUT_MS}ms), lanjut jalur offline Room")
+            null
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val stokErr = e as? StokCloudException ?: e.cause as? StokCloudException
+            if (stokErr != null) throw stokErr
+            val kode = (e as? FirebaseFirestoreException)?.code?.name
+            if (SyncLogic.bolehFallbackOfflineCheckout(kode, timeout = false)) {
+                Log.w("OnlineCheckout", "Offline/jaringan ($kode), lanjut jalur offline Room")
+            } else {
+                Log.e("OnlineCheckout", "Gagal transaksi atomik ($kode): ${e.message}, lanjut jalur offline Room")
+            }
+            null
         }
     }
 }
