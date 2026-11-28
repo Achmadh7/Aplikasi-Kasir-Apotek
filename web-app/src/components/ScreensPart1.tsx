@@ -41,8 +41,14 @@ import {
   TrendingUp,
   Package,
   CheckCircle2,
+  ShoppingCart,
   X,
 } from 'lucide-react';
+
+const formatThousands = (digits: string) =>
+  digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+
+const cleanDigits = (raw: string) => raw.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
 
 // ---- Shared Header (Opsi 3: Warm Paper & Forest) ----
 export const PageHeader: React.FC<{
@@ -1091,10 +1097,10 @@ export const StokScreen: React.FC = () => {
                   </label>
                   <input
                     id="med-buy"
-                    type="number"
-                    min="0"
-                    value={buyPrice}
-                    onChange={(e) => setBuyPrice(e.target.value)}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatThousands(buyPrice)}
+                    onChange={(e) => setBuyPrice(cleanDigits(e.target.value))}
                     className="w-full min-w-0 min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                     placeholder="0"
                   />
@@ -1105,10 +1111,10 @@ export const StokScreen: React.FC = () => {
                   </label>
                   <input
                     id="med-sell"
-                    type="number"
-                    min="0"
-                    value={sellPrice}
-                    onChange={(e) => setSellPrice(e.target.value)}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatThousands(sellPrice)}
+                    onChange={(e) => setSellPrice(cleanDigits(e.target.value))}
                     className="w-full min-w-0 min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                     placeholder="0"
                   />
@@ -1119,10 +1125,10 @@ export const StokScreen: React.FC = () => {
                   </label>
                   <input
                     id="med-wholesale"
-                    type="number"
-                    min="0"
-                    value={wholesalePrice}
-                    onChange={(e) => setWholesalePrice(e.target.value)}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatThousands(wholesalePrice)}
+                    onChange={(e) => setWholesalePrice(cleanDigits(e.target.value))}
                     className="w-full min-w-0 min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#FAF8F4] border border-[#B7D6C3] text-[#1C1917] placeholder:text-[#57534E]"
                     placeholder="0"
                   />
@@ -1341,19 +1347,16 @@ export const ReceiptModal: React.FC<{
   );
 };
 
-const formatThousands = (digits: string) =>
-  digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
-
 export const KasirScreen: React.FC = () => {
   const { medicines, createSale } = useStore();
   const { notify } = useFeedback();
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const pickerScrollRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
   const [cart, setCart] = useState<
     Array<{ medicineId: number; qty: number; useWholesale: boolean }>
   >([]);
+  const [cartModalOpen, setCartModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'Tunai' | 'QRIS' | 'Transfer'>(
     'Tunai'
   );
@@ -1382,8 +1385,20 @@ export const KasirScreen: React.FC = () => {
     initial: 60,
     step: 60,
     resetKey: deferredSearch.trim().toLowerCase(),
-    scrollContainerRef: pickerScrollRef,
   });
+
+  useEffect(() => {
+    if (cart.length === 0) setCartModalOpen(false);
+  }, [cart.length]);
+
+  useEffect(() => {
+    if (!cartModalOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCartModalOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [cartModalOpen]);
 
   const addToCart = (m: Medicine) => {
     if (m.stock <= 0) return;
@@ -1458,6 +1473,7 @@ export const KasirScreen: React.FC = () => {
       const res = await createSale(cart, paymentMethod, finalPaid);
       setCart([]);
       setAmountPaidStr('');
+      setCartModalOpen(false);
       setLastReceipt(res);
       notify('Transaksi berhasil disimpan', 'success');
     } catch (err: any) {
@@ -1472,251 +1488,298 @@ export const KasirScreen: React.FC = () => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F9') {
         e.preventDefault();
-        if (!checkingOutRef.current && !lastReceipt && cart.length > 0 && paidNum >= cartTotal) {
+        if (checkingOutRef.current || lastReceipt || cart.length === 0) return;
+        if (!cartModalOpen) {
+          setCartModalOpen(true);
+        } else if (paidNum >= cartTotal) {
           void handleCheckout();
         }
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [cart, paidNum, cartTotal, paymentMethod, lastReceipt]);
+  }, [cart, cartModalOpen, paidNum, cartTotal, paymentMethod, lastReceipt]);
 
   return (
-    <div className={cart.length > 0 ? 'pb-24 lg:pb-0' : ''}>
+    <div className={cart.length > 0 ? 'pb-24' : ''}>
       <PageHeader
         title="Kasir"
-        subtitle="Pilih obat, atur harga Ecer/Grosir, proses pembayaran & cetak struk"
+        subtitle="Klik obat untuk masuk ke keranjang, lalu buka keranjang untuk pembayaran & cetak struk"
+        action={
+          cart.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setCartModalOpen(true)}
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold flex items-center gap-2 transition"
+            >
+              <ShoppingCart className="w-4 h-4" aria-hidden="true" />
+              <span>Keranjang ({cartItemCount})</span>
+              <span className="px-2 py-0.5 rounded-lg bg-white/15 tabular-nums">
+                {formatIDR(cartTotal)}
+              </span>
+            </button>
+          ) : undefined
+        }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Medicine Picker */}
-        <div className="lg:col-span-7 min-w-0 space-y-3">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#57534E]" aria-hidden="true" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              aria-label="Cari obat atau scan barcode"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape' && search) {
-                  e.preventDefault();
+      {/* Full-Width Medicine Picker */}
+      <div className="min-w-0 space-y-3">
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#57534E]" aria-hidden="true" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            aria-label="Cari obat atau scan barcode"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && search) {
+                e.preventDefault();
+                setSearch('');
+                return;
+              }
+              if (e.key === 'Enter' && search.trim()) {
+                const q = search.trim().toLowerCase();
+                const exact = medicines.find(
+                  (m) => m.barcode?.toLowerCase() === q
+                );
+                if (exact) {
+                  addToCart(exact);
                   setSearch('');
                   return;
                 }
-                if (e.key === 'Enter' && search.trim()) {
-                  const q = search.trim().toLowerCase();
-                  const exact = medicines.find(
-                    (m) => m.barcode?.toLowerCase() === q
-                  );
-                  if (exact) {
-                    addToCart(exact);
-                    setSearch('');
-                    return;
-                  }
-                  const liveMatches = filterAndRankMedicines(medicines, search, {
-                    prioritizeSellable: true,
-                  });
-                  if (
-                    liveMatches.length === 1 &&
-                    liveMatches[0].stock > 0 &&
-                    liveMatches[0].sellPrice > 0
-                  ) {
-                    addToCart(liveMatches[0]);
-                    setSearch('');
-                  }
-                }
-              }}
-              placeholder="Cari obat (mis. para 500) atau scan barcode lalu Enter..."
-              className="w-full min-h-[44px] pl-10 pr-12 py-2.5 rounded-2xl bg-[#FAF8F4] border border-[#B7D6C3] text-sm text-[#1C1917] placeholder:text-[#57534E] focus:outline-none focus:ring-2 focus:ring-[#15803D]"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => {
+                const liveMatches = filterAndRankMedicines(medicines, search, {
+                  prioritizeSellable: true,
+                });
+                if (
+                  liveMatches.length === 1 &&
+                  liveMatches[0].stock > 0 &&
+                  liveMatches[0].sellPrice > 0
+                ) {
+                  addToCart(liveMatches[0]);
                   setSearch('');
-                  searchInputRef.current?.focus();
-                }}
-                aria-label="Hapus pencarian"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl text-[#57534E] hover:text-[#1C1917] hover:bg-[#DCEBE2]"
-              >
-                <X className="w-4 h-4" aria-hidden="true" />
-              </button>
-            )}
-          </div>
-
-          <div
-            ref={pickerScrollRef}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1 -m-1 lg:max-h-[65vh] lg:overflow-y-auto lg:overscroll-contain lg:pr-1"
-          >
-            {filteredMeds.length === 0 ? (
-              <div className="sm:col-span-2 rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] py-10 px-4 text-center text-sm text-[#57534E]">
-                Obat tidak ditemukan.
-              </div>
-            ) : (
-              kasirPager.visibleItems.map((m) => {
-                const inCart = cartQtyById.get(m.id) || 0;
-                const unavailable = m.stock <= 0 || m.sellPrice <= 0;
-                return (
-                  <button
-                    type="button"
-                    key={m.id}
-                    disabled={unavailable}
-                    onClick={() => addToCart(m)}
-                    className={`cv-card text-left p-4 rounded-2xl transition flex flex-col justify-between border shadow-xs ${
-                      inCart > 0
-                        ? 'bg-[#DCFCE7] border-[#15803D]'
-                        : 'bg-[#E8F2EC] border-[#B7D6C3] hover:border-[#15803D]'
-                    } ${unavailable ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  >
-                    <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-bold text-sm text-[#1C1917]">{m.name}</p>
-                        {inCart > 0 && (
-                          <span className="px-2 py-0.5 rounded-full bg-[#15803D] text-white text-xs font-bold">
-                            {inCart}x
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-[#57534E] mt-0.5">
-                        {m.category}
-                        {m.medicineType ? ` • ${m.medicineType}` : ''} • {m.unit}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-[#B7D6C3]">
-                      <div>
-                        <p className={`font-extrabold text-sm ${m.sellPrice > 0 ? 'text-[#166534]' : 'text-[#BA1A1A]'}`}>
-                          {m.sellPrice > 0 ? formatIDR(m.sellPrice) : 'Belum ada harga'}
-                        </p>
-                        {m.wholesalePrice > 0 && (
-                          <p className="text-[11px] text-[#57534E]">
-                            Grosir: {formatIDR(m.wholesalePrice)}
-                          </p>
-                        )}
-                      </div>
-                      <StockPill stock={m.stock} />
-                    </div>
-                  </button>
-                );
-              })
-            )}
-            <ListPaginationFooter
-              shown={kasirPager.shownCount}
-              total={kasirPager.total}
-              remaining={kasirPager.remaining}
-              step={kasirPager.step}
-              itemLabel="obat"
-              onLoadMore={kasirPager.loadMore}
-              sentinelRef={kasirPager.sentinelRef}
-              className="sm:col-span-2 rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3]"
-            />
-          </div>
+                }
+              }
+            }}
+            placeholder="Cari obat (mis. para 500) atau scan barcode lalu Enter..."
+            className="w-full min-h-[44px] pl-10 pr-12 py-2.5 rounded-2xl bg-[#FAF8F4] border border-[#B7D6C3] text-sm text-[#1C1917] placeholder:text-[#57534E] focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                searchInputRef.current?.focus();
+              }}
+              aria-label="Hapus pencarian"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl text-[#57534E] hover:text-[#1C1917] hover:bg-[#DCEBE2]"
+            >
+              <X className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
         </div>
 
-        {/* Cart & Payment Panel */}
-        <div id="kasir-cart" className="lg:col-span-5 scroll-mt-20">
-          <div className="rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] shadow-xs p-4 sm:p-5 lg:sticky lg:top-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-base text-[#1C1917]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {filteredMeds.length === 0 ? (
+            <div className="sm:col-span-2 lg:col-span-3 rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] py-10 px-4 text-center text-sm text-[#57534E]">
+              Obat tidak ditemukan.
+            </div>
+          ) : (
+            kasirPager.visibleItems.map((m) => {
+              const inCart = cartQtyById.get(m.id) || 0;
+              const unavailable = m.stock <= 0 || m.sellPrice <= 0;
+              return (
+                <button
+                  type="button"
+                  key={m.id}
+                  disabled={unavailable}
+                  onClick={() => addToCart(m)}
+                  className={`cv-card text-left p-4 rounded-2xl transition flex flex-col justify-between border shadow-xs ${
+                    inCart > 0
+                      ? 'bg-[#DCFCE7] border-[#15803D]'
+                      : 'bg-[#E8F2EC] border-[#B7D6C3] hover:border-[#15803D]'
+                  } ${unavailable ? 'opacity-60 cursor-not-allowed' : ''}`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-bold text-sm text-[#1C1917]">{m.name}</p>
+                      {inCart > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-[#15803D] text-white text-xs font-bold shrink-0">
+                          {inCart}x
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[#57534E] mt-0.5">
+                      {m.category}
+                      {m.medicineType ? ` • ${m.medicineType}` : ''} • {m.unit}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-[#B7D6C3]">
+                    <div>
+                      <p className={`font-extrabold text-sm ${m.sellPrice > 0 ? 'text-[#166534]' : 'text-[#BA1A1A]'}`}>
+                        {m.sellPrice > 0 ? formatIDR(m.sellPrice) : 'Belum ada harga'}
+                      </p>
+                      {m.wholesalePrice > 0 && (
+                        <p className="text-[11px] text-[#57534E]">
+                          Grosir: {formatIDR(m.wholesalePrice)}
+                        </p>
+                      )}
+                    </div>
+                    <StockPill stock={m.stock} />
+                  </div>
+                </button>
+              );
+            })
+          )}
+          <ListPaginationFooter
+            shown={kasirPager.shownCount}
+            total={kasirPager.total}
+            remaining={kasirPager.remaining}
+            step={kasirPager.step}
+            itemLabel="obat"
+            onLoadMore={kasirPager.loadMore}
+            sentinelRef={kasirPager.sentinelRef}
+            className="sm:col-span-2 lg:col-span-3 rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3]"
+          />
+        </div>
+      </div>
+
+      {/* Floating Cart Trigger Bar */}
+      {cart.length > 0 && !cartModalOpen && (
+        <div className="no-print fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] inset-x-3 md:left-[17.5rem] md:right-4 z-20 pointer-events-none flex justify-center">
+          <button
+            type="button"
+            onClick={() => setCartModalOpen(true)}
+            className="pointer-events-auto pill-pop w-full max-w-lg min-h-[52px] px-4 py-3 rounded-2xl bg-[#142E27] hover:bg-[#1D4036] text-white shadow-xl border border-[#244C41] flex items-center justify-between gap-3 transition"
+          >
+            <span className="flex items-center gap-2.5 text-xs sm:text-sm font-bold min-w-0">
+              <ShoppingCart className="w-4 h-4 shrink-0 text-[#86EFAC]" aria-hidden="true" />
+              <span className="truncate">
+                {cartItemCount} item • {formatIDR(cartTotal)}
+              </span>
+            </span>
+            <span className="px-3 py-1.5 rounded-xl bg-[#15803D] text-xs font-extrabold shrink-0">
+              Bayar / Keranjang
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* Cart & Payment Modal */}
+      {cartModalOpen && cart.length > 0 && createPortal(
+        <div
+          id="kasir-cart"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="kasir-cart-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setCartModalOpen(false);
+          }}
+          className="no-print fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4"
+        >
+          <div className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl bg-[#E8F2EC] border border-[#B7D6C3] shadow-2xl p-4 sm:p-5 max-h-[92dvh] overflow-y-auto overscroll-contain space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <h3 id="kasir-cart-title" className="font-extrabold text-base text-[#1C1917]">
                 Keranjang ({cartItemCount} item)
               </h3>
-              {cart.length > 0 && (
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => setCart([])}
-                  className="min-h-[44px] px-2 -mr-2 text-xs text-[#BA1A1A] font-bold hover:underline"
+                  className="min-h-[44px] px-2.5 text-xs text-[#BA1A1A] font-bold hover:underline"
                 >
                   Kosongkan
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setCartModalOpen(false)}
+                  aria-label="Tutup keranjang"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#1C1917] hover:bg-[#DCEBE2]"
+                >
+                  <X className="w-5 h-5" aria-hidden="true" />
+                </button>
+              </div>
             </div>
 
-            {cart.length === 0 ? (
-              <div className="py-12 text-center text-[#57534E] text-sm">
-                Ketuk obat di sebelah kiri untuk memasukkan ke keranjang.
-              </div>
-            ) : (
-              <div className="space-y-2.5 max-h-72 overflow-y-auto overscroll-contain pr-1">
-                {cart.map((c) => {
-                  const m = medById.get(c.medicineId);
-                  if (!m) return null;
-                  const unitPrice =
-                    c.useWholesale && m.wholesalePrice > 0
-                      ? m.wholesalePrice
-                      : m.sellPrice;
-                  return (
-                    <div
-                      key={c.medicineId}
-                      className="p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] space-y-2"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-bold text-sm text-[#1C1917]">{m.name}</p>
-                          <p className="text-xs text-[#57534E]">
-                            {formatIDR(unitPrice)} / {m.unit}
-                          </p>
-                        </div>
-                        <p className="font-extrabold text-sm text-[#1C1917]">
-                          {formatIDR(unitPrice * c.qty)}
+            <div className="space-y-2.5 max-h-72 overflow-y-auto overscroll-contain pr-1">
+              {cart.map((c) => {
+                const m = medById.get(c.medicineId);
+                if (!m) return null;
+                const unitPrice =
+                  c.useWholesale && m.wholesalePrice > 0
+                    ? m.wholesalePrice
+                    : m.sellPrice;
+                return (
+                  <div
+                    key={c.medicineId}
+                    className="p-3 rounded-2xl bg-[#DCEBE2] border border-[#B7D6C3] space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-bold text-sm text-[#1C1917]">{m.name}</p>
+                        <p className="text-xs text-[#57534E]">
+                          {formatIDR(unitPrice)} / {m.unit}
                         </p>
                       </div>
-                      <div className="flex items-center justify-between gap-2">
-                        {m.wholesalePrice > 0 ? (
-                          <div className="flex gap-1.5 text-xs font-bold">
-                            <button
-                              type="button"
-                              onClick={() => c.useWholesale && toggleWholesale(m.id)}
-                              className={`min-h-[44px] px-3 rounded-xl border ${
-                                !c.useWholesale
-                                  ? 'bg-[#15803D] border-[#15803D] text-white'
-                                  : 'bg-[#FAF8F4] border-[#B7D6C3] text-[#1C1917]'
-                              }`}
-                            >
-                              Ecer
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => !c.useWholesale && toggleWholesale(m.id)}
-                              className={`min-h-[44px] px-3 rounded-xl border ${
-                                c.useWholesale
-                                  ? 'bg-[#15803D] border-[#15803D] text-white'
-                                  : 'bg-[#FAF8F4] border-[#B7D6C3] text-[#1C1917]'
-                              }`}
-                            >
-                              Grosir
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-[#57534E]">Harga Ecer</span>
-                        )}
-                        <div className="flex items-center gap-1.5">
+                      <p className="font-extrabold text-sm text-[#1C1917]">
+                        {formatIDR(unitPrice * c.qty)}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      {m.wholesalePrice > 0 ? (
+                        <div className="flex gap-1.5 text-xs font-bold">
                           <button
                             type="button"
-                            onClick={() => updateQty(m.id, c.qty - 1)}
-                            aria-label={`Kurangi jumlah ${m.name}`}
-                            className="min-w-[44px] min-h-[44px] rounded-xl bg-[#FAF8F4] hover:bg-white border border-[#B7D6C3] font-bold text-[#1C1917]"
+                            onClick={() => c.useWholesale && toggleWholesale(m.id)}
+                            className={`min-h-[44px] px-3 rounded-xl border ${
+                              !c.useWholesale
+                                ? 'bg-[#15803D] border-[#15803D] text-white'
+                                : 'bg-[#FAF8F4] border-[#B7D6C3] text-[#1C1917]'
+                            }`}
                           >
-                            -
+                            Ecer
                           </button>
-                          <span className="font-bold text-sm w-6 text-center text-[#1C1917]">
-                            {c.qty}
-                          </span>
                           <button
                             type="button"
-                            onClick={() => updateQty(m.id, c.qty + 1)}
-                            aria-label={`Tambah jumlah ${m.name}`}
-                            className="min-w-[44px] min-h-[44px] rounded-xl bg-[#FAF8F4] hover:bg-white border border-[#B7D6C3] font-bold text-[#1C1917]"
+                            onClick={() => !c.useWholesale && toggleWholesale(m.id)}
+                            className={`min-h-[44px] px-3 rounded-xl border ${
+                              c.useWholesale
+                                ? 'bg-[#15803D] border-[#15803D] text-white'
+                                : 'bg-[#FAF8F4] border-[#B7D6C3] text-[#1C1917]'
+                            }`}
                           >
-                            +
+                            Grosir
                           </button>
                         </div>
+                      ) : (
+                        <span className="text-[11px] text-[#57534E]">Harga Ecer</span>
+                      )}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => updateQty(m.id, c.qty - 1)}
+                          aria-label={`Kurangi jumlah ${m.name}`}
+                          className="min-w-[44px] min-h-[44px] rounded-xl bg-[#FAF8F4] hover:bg-white border border-[#B7D6C3] font-bold text-[#1C1917]"
+                        >
+                          -
+                        </button>
+                        <span className="font-bold text-sm w-6 text-center text-[#1C1917]">
+                          {c.qty}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateQty(m.id, c.qty + 1)}
+                          aria-label={`Tambah jumlah ${m.name}`}
+                          className="min-w-[44px] min-h-[44px] rounded-xl bg-[#FAF8F4] hover:bg-white border border-[#B7D6C3] font-bold text-[#1C1917]"
+                        >
+                          +
+                        </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  </div>
+                );
+              })}
+            </div>
 
             <div className="border-t border-[#B7D6C3] pt-4 space-y-3">
               <div className="flex justify-between items-center">
@@ -1801,26 +1864,8 @@ export const KasirScreen: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
-      </div>
-
-      {cart.length > 0 && (
-        <div className="no-print lg:hidden fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] inset-x-3 z-20">
-          <button
-            type="button"
-            onClick={() =>
-              document.getElementById('kasir-cart')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }
-            className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#142E27] text-white shadow-xl border border-[#244C41] flex items-center justify-between gap-3"
-          >
-            <span className="text-xs font-bold">
-              {cartItemCount} item • {formatIDR(cartTotal)}
-            </span>
-            <span className="px-3 py-1 rounded-xl bg-[#15803D] text-xs font-extrabold">
-              Lihat Keranjang
-            </span>
-          </button>
-        </div>
+        </div>,
+        document.body
       )}
 
       {lastReceipt && (

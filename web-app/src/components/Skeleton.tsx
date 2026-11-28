@@ -28,33 +28,22 @@ export const PageSkeleton: React.FC<{ tab?: string }> = ({ tab = 'beranda' }) =>
       </div>
 
       {isPos ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className={`${CARD} lg:col-span-8 p-4 space-y-4`}>
-            <Bone className="h-11 w-full rounded-xl" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-xl border border-[#B7D6C3]/70 p-3 space-y-2.5"
-                >
-                  <Bone className="h-4 w-3/4" />
-                  <Bone className="h-3 w-1/2" />
-                  <div className="flex items-center justify-between pt-1">
-                    <Bone className="h-4 w-20" />
-                    <Bone className="h-7 w-7 rounded-lg" />
-                  </div>
+        <div className={`${CARD} p-4 space-y-4`}>
+          <Bone className="h-11 w-full rounded-xl" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-[#B7D6C3]/70 p-3 space-y-2.5"
+              >
+                <Bone className="h-4 w-3/4" />
+                <Bone className="h-3 w-1/2" />
+                <div className="flex items-center justify-between pt-1">
+                  <Bone className="h-4 w-20" />
+                  <Bone className="h-7 w-7 rounded-lg" />
                 </div>
-              ))}
-            </div>
-          </div>
-          <div className={`${CARD} lg:col-span-4 p-4 space-y-3`}>
-            <Bone className="h-5 w-32" />
-            <Bone className="h-16 w-full" />
-            <Bone className="h-16 w-full" />
-            <div className="pt-2 border-t border-[#B7D6C3] space-y-2.5">
-              <Bone className="h-5 w-full" />
-              <Bone className="h-11 w-full rounded-xl" />
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       ) : isList ? (
